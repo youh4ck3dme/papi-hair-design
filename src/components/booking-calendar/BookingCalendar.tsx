@@ -16,7 +16,11 @@ export interface BookingCalendarProps {
   onSelectSlot?: (slot: SlotInfo) => void;
   onSelectEvent?: (event: BookingCalendarEvent) => void;
   selectable?: boolean;
+  businessHours?: any;
+  resources?: any[];
 }
+
+
 
 export function BookingCalendar({
   events,
@@ -27,6 +31,8 @@ export function BookingCalendar({
   onSelectSlot,
   onSelectEvent,
   selectable = false,
+  businessHours,
+  resources,
 }: BookingCalendarProps) {
   return (
     <BookingCalendarProvider
@@ -38,7 +44,11 @@ export function BookingCalendar({
       onSelectSlot={onSelectSlot}
       onSelectEvent={onSelectEvent}
       selectable={selectable}
+      businessHours={businessHours}
+      resources={resources}
     >
+
+
       <div className="flex flex-col h-full min-h-0 booking-calendar">
         <CalendarHeader>
           <CalendarHeaderDate />

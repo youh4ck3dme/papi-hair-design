@@ -13,8 +13,12 @@ export const EVENT_COLOR_CLASSES: Record<string, string> = {
 };
 
 export function getEventColorClasses(color: string): string {
+  if (color.startsWith("#")) {
+    return "border-opacity-50"; // Base class for HEX colors
+  }
   return (
     EVENT_COLOR_CLASSES[color] ??
     "bg-muted hover:bg-muted/80 border-border text-foreground"
   );
 }
+

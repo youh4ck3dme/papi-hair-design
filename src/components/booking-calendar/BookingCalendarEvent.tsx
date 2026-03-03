@@ -12,7 +12,12 @@ interface EventPosition {
   width: string;
   top: string;
   height: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  color?: string;
+  borderLeftWidth?: string;
 }
+
 
 function getOverlappingEvents(
   current: EventType,
@@ -76,10 +81,22 @@ export function BookingCalendarEvent({
   className,
 }: BookingCalendarEventProps) {
   const { events, date, onSelectEvent } = useBookingCalendarContext();
-  const style = month ? undefined : calculateEventPosition(event, events);
+  let style = month ? undefined : calculateEventPosition(event, events);
+
+  if (event.color.startsWith("#") && style) {
+    style = {
+      ...style,
+      backgroundColor: `${event.color}25`, // 15% opacity
+      borderColor: event.color,
+      color: event.color,
+      borderLeftWidth: '4px'
+    };
+  }
+
   const isInCurrentMonth = isSameMonth(event.start, date);
   const animationKey = `${event.id}-${isInCurrentMonth ? "current" : "adjacent"}`;
   const colorClasses = getEventColorClasses(event.color);
+
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();

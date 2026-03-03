@@ -34,7 +34,10 @@ export interface PublicBusinessInfo {
     lead_time_minutes: number;
     max_days_ahead: number;
     cancellation_hours: number;
+    allow_admin_as_provider: boolean;
+    opening_hours: any;
   };
+
   hours: BusinessHourEntry[];
   overrides: DateOverride[];
   quick_links: QuickLink[];

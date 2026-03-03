@@ -33,8 +33,9 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
-  const [form, setForm] = useState({ display_name: "", email: "", phone: "" });
+  const [form, setForm] = useState({ display_name: "", email: "", phone: "", color: "#3B82F6" });
   const [schedule, setSchedule] = useState<ScheduleMap>(DEFAULT_SCHEDULE);
+
   const [allServices, setAllServices] = useState<any[]>([]);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -68,7 +69,7 @@ export default function EmployeesPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ display_name: "", email: "", phone: "" });
+    setForm({ display_name: "", email: "", phone: "", color: "#3B82F6" });
     setSchedule(DEFAULT_SCHEDULE);
     setSelectedServiceIds(allServices.map(s => s.id));
     setOpen(true);
@@ -76,7 +77,13 @@ export default function EmployeesPage() {
 
   const openEdit = (emp: any) => {
     setEditing(emp);
-    setForm({ display_name: emp.display_name, email: emp.email ?? "", phone: emp.phone ?? "" });
+    setForm({
+      display_name: emp.display_name,
+      email: emp.email ?? "",
+      phone: emp.phone ?? "",
+      color: emp.color ?? "#3B82F6"
+    });
+
     const sched: ScheduleMap = { ...DEFAULT_SCHEDULE };
     (schedules[emp.id] ?? []).forEach((s) => {
       sched[s.day_of_week as DayKey] = { start: s.start_time, end: s.end_time, active: true };
@@ -90,10 +97,11 @@ export default function EmployeesPage() {
 
     // Load employee services
     const loadEmpServices = async () => {
-      const { data } = await (supabase as any).from("employee_services").select("service_id").eq("employee_id", emp.id);
+      const { data } = await supabase.from("employee_services").select("service_id").eq("employee_id", emp.id);
       setSelectedServiceIds((data ?? []).map(d => d.service_id));
     };
     loadEmpServices();
+
 
     setOpen(true);
   };
@@ -107,17 +115,20 @@ export default function EmployeesPage() {
       await supabase.from("employees").update({
         display_name: form.display_name,
         email: form.email || null,
-        phone: form.phone || null
+        phone: form.phone || null,
+        color: form.color
       }).eq("id", editing.id);
     } else {
       const { data } = await supabase.from("employees").insert({
         business_id: businessId,
         display_name: form.display_name,
         email: form.email || null,
-        phone: form.phone || null
+        phone: form.phone || null,
+        color: form.color
       }).select().single();
       empId = data?.id;
     }
+
 
     if (empId) {
       // 1. Save schedules
@@ -132,14 +143,15 @@ export default function EmployeesPage() {
       if (rows.length) await supabase.from("schedules").insert(rows);
 
       // 2. Save service assignments
-      await (supabase as any).from("employee_services").delete().eq("employee_id", empId);
+      await supabase.from("employee_services").delete().eq("employee_id", empId);
       if (selectedServiceIds.length) {
         const serviceRows = selectedServiceIds.map(sid => ({
           employee_id: empId as string,
           service_id: sid
         }));
-        await (supabase as any).from("employee_services").insert(serviceRows);
+        await supabase.from("employee_services").insert(serviceRows);
       }
+
     }
 
     setSaving(false);
@@ -228,6 +240,20 @@ export default function EmployeesPage() {
                 <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+421 900 000 000" />
               </div>
             </div>
+
+            <div className="space-y-1.5">
+              <Label>Farba v kalendári</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  type="color"
+                  value={form.color}
+                  onChange={(e) => setForm(f => ({ ...f, color: e.target.value }))}
+                  className="w-12 h-10 p-1 cursor-pointer"
+                />
+                <span className="text-sm text-muted-foreground">{form.color}</span>
+              </div>
+            </div>
+
 
             <div className="space-y-2">
               <Label>Pracovné hodiny</Label>

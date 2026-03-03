@@ -15,7 +15,11 @@ export interface BookingCalendarContextValue {
   onSelectSlot?: (slot: SlotInfo) => void;
   onSelectEvent?: (event: BookingCalendarEvent) => void;
   selectable: boolean;
+  businessHours?: any; // Business opening hours
+  resources?: any[]; // List of resources (employees) for columns
 }
+
+
 
 export const BookingCalendarContext =
   createContext<BookingCalendarContextValue | undefined>(undefined);

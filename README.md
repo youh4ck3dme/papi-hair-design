@@ -1,6 +1,11 @@
 # PAPI HAIR DESIGN – Booking System
 
+> [!IMPORTANT]
+> **Hlavný cenník:** [papihairdesign.sk/cennik](https://papihairdesign.sk/cennik)  
+> Rezervačný systém: [booking.papihairdesign.sk](https://booking.papihairdesign.sk)
+
 > Moderný rezervačný systém pre salóny krásy. React 18 PWA. Backend: **Firebase** (Firestore + Cloud Functions + Auth) alebo Supabase (legacy). Pozri [docs/MIGRATION-FIREBASE.md](docs/MIGRATION-FIREBASE.md).
+
 
 ---
 
@@ -143,7 +148,34 @@ Keď sa vrátiš k projektu alebo ťaháš najnovšie zmeny:
 
 Podrobný návod: [docs/DEVELOPMENT-SETUP.md](docs/DEVELOPMENT-SETUP.md).
 
+### 5. Späť do Lovable
+
+Lovable má bidirectional sync s GitHubom. Po pushnutí do repozitára:
+
+1. Otvor tento projekt v Lovable editore.
+2. Zmeny sa automaticky synchronizujú (do ~1 minúty).
+3. Ak sa neaktualizuje, klikni na meno projektu (vľavo hore) → Settings → GitHub → overiť že sync je aktívny.
+
+### 6. Prompt pre Lovable po návrate
+
+Po synchronizácii pošli v Lovable chate:
+
+> Skontroluj či sa všetky zmeny z GitHubu správne synchronizovali. 
+> Spusti build a over že aplikácia funguje bez chýb. 
+> Ak nájdeš problémy, oprav ich.
+
+### Zhrnutie flow
+
+VS Code: `npm run lint` + `npx tsc --noEmit` → oprav chyby → `npm run build` → commit → push 
+    ↓
+GitHub: aktualizovaná vetva
+    ↓
+Lovable: automatický sync ← zmeny sa objavia v editore
+
+Celý proces trvá ~5-10 minút. Žiadne manuálne mergovanie nie je potrebné, ak pracuješ priamo na main vetve.
+
 ---
+
 
 ## Premenné prostredia
 

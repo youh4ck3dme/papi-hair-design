@@ -6,11 +6,46 @@ import { BookingCalendarEvent } from "../BookingCalendarEvent";
 import { CalendarBodyHeader } from "./CalendarBodyHeader";
 import { HOURS, PIXELS_PER_HOUR } from "../calendar-types";
 
-export function CalendarBodyDayContent({ date }: { date: Date }) {
-  const { events, onSelectSlot, selectable } = useBookingCalendarContext();
-  const dayEvents = events.filter((e) => isSameDay(e.start, date));
+export function CalendarBodyDayContent({ date, resourceId }: { date: Date; resourceId?: string }) {
+  const { events, onSelectSlot, selectable, businessHours } = useBookingCalendarContext();
+  const dayEvents = events.filter((e) => {
+    const sameDay = isSameDay(e.start, date);
+    if (!resourceId) return sameDay;
+    return sameDay && (e.resource as any)?.employee_id === resourceId;
+  });
+
+
+  const isClosed = (hour: number) => {
+    if (!businessHours || !businessHours.hours) return false;
+
+    const dayName = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(date).toLowerCase();
+    const dateStr = date.toLocaleDateString("en-CA"); // YYYY-MM-DD
+
+    // Check overrides
+    const override = businessHours.overrides?.find((o: any) => o.override_date === dateStr);
+    if (override) {
+      if (override.mode === "closed" || override.mode === "on_request") return true;
+      if (override.start_time && override.end_time) {
+        const timeStr = `${String(hour).padStart(2, '0')}:00`;
+        return timeStr < override.start_time || timeStr >= override.end_time;
+      }
+    }
+
+    // Check regular hours
+    const dayHours = businessHours.hours.filter((h: any) => h.day_of_week === dayName);
+    if (!dayHours.length) return true; // No hours defined means closed
+
+    const timeStr = `${String(hour).padStart(2, '0')}:00`;
+    const isOpen = dayHours.some((h: any) => {
+      if (h.mode !== "open") return false;
+      return timeStr >= h.start_time && timeStr < h.end_time;
+    });
+
+    return !isOpen;
+  };
 
   const getSlotRange = (hour: number) => {
+
     const start = addMinutes(
       startOfDay(date),
       Math.floor((hour * 60) / 30) * 30
@@ -48,25 +83,30 @@ export function CalendarBodyDayContent({ date }: { date: Date }) {
       <CalendarBodyHeader date={date} />
 
       <div className="flex-1 relative min-h-0">
-        {HOURS.map((hour) => (
-          <div
-            key={hour}
-            className={cn(
-              "h-32 border-b border-border/50 group transition-colors",
-              selectable && "cursor-pointer booking-calendar-slot"
-            )}
-            style={{ height: PIXELS_PER_HOUR }}
-            onClick={(e) =>
-              selectable && onSelectSlot && handleSlotClick(hour, e)
-            }
-            onKeyDown={(e) => handleSlotKeyDown(hour, e)}
-            role={selectable ? "button" : undefined}
-            tabIndex={selectable ? 0 : undefined}
-            aria-label={
-              selectable ? `Vybrať čas okolo ${hour}:00` : undefined
-            }
-          />
-        ))}
+        {HOURS.map((hour) => {
+          const closed = isClosed(hour);
+          return (
+            <div
+              key={hour}
+              className={cn(
+                "h-32 border-b border-border/50 group transition-colors",
+                selectable && "cursor-pointer booking-calendar-slot",
+                closed && "bg-muted/30 opacity-60 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"
+              )}
+              style={{ height: PIXELS_PER_HOUR }}
+              onClick={(e) =>
+                selectable && onSelectSlot && handleSlotClick(hour, e)
+              }
+              onKeyDown={(e) => handleSlotKeyDown(hour, e)}
+              role={selectable ? "button" : undefined}
+              tabIndex={selectable ? 0 : undefined}
+              aria-label={
+                selectable ? `Vybrať čas okolo ${hour}:00${closed ? ' (Zatvorené)' : ''}` : undefined
+              }
+            />
+          );
+        })}
+
 
         {dayEvents.map((event) => (
           <BookingCalendarEvent key={event.id} event={event} />

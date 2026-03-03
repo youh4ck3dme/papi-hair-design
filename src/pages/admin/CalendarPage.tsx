@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { addMinutes, startOfDay, addDays, format as fmtDate } from "date-fns";
 import { sk } from "date-fns/locale";
-import { getFirebaseFirestore } from "@/integrations/firebase/config";
+import { supabase } from "@/integrations/supabase/client";
 import { BookingCalendar, statusToColor, type BookingCalendarEvent, type BookingCalendarMode, type SlotInfo } from "@/components/booking-calendar";
-import { collection, doc, getDoc, getDocs, query, where, orderBy, addDoc, updateDoc } from "firebase/firestore";
+
 import { useBusiness } from "@/hooks/useBusiness";
+import { useBusinessInfoSupabase } from "@/integrations/supabase/useBusinessInfoSupabase";
 import { generateSlots, type BusinessHours, type EmployeeSchedule, type ExistingAppointment } from "@/lib/availability";
+
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -26,15 +28,20 @@ interface CalEvent {
 
 export default function CalendarPage() {
   const { businessId, isOwnerOrAdmin } = useBusiness();
+  const { info: businessInfo, loading: infoLoading } = useBusinessInfoSupabase(businessId);
+  const business = businessInfo?.business;
+  const openingHours = businessInfo?.hours;
+  const overrides = businessInfo?.overrides;
+
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [view, setView] = useState<BookingCalendarMode>("week");
   const [date, setDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
-  const [business, setBusiness] = useState<any>(null);
   const [schedules, setSchedules] = useState<Record<string, EmployeeSchedule[]>>({});
   const [memberships, setMemberships] = useState<{ profile_id: string; role: string }[]>([]);
+
 
   const [bookingModal, setBookingModal] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<SlotInfo | null>(null);
@@ -48,58 +55,98 @@ export default function CalendarPage() {
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
-    const firestore = getFirebaseFirestore();
-    if (!firestore) { setLoading(false); return; }
-    const apptSnap = await getDocs(query(collection(firestore, "appointments"), where("business_id", "==", businessId), orderBy("start_at")));
-    const eventsList: CalEvent[] = [];
-    for (const d of apptSnap.docs) {
-      const a = d.data();
-      const [custSnap, svcSnap] = await Promise.all([
-        getDoc(doc(firestore, "customers", a.customer_id)),
-        getDoc(doc(firestore, "services", a.service_id)),
-      ]);
-      eventsList.push({
-        id: d.id,
-        title: `${custSnap.data()?.full_name ?? "?"} – ${svcSnap.data()?.name_sk ?? "?"}`,
-        start: new Date(a.start_at),
-        end: new Date(a.end_at),
-        status: a.status,
-        resource: { ...a, id: d.id },
-      });
+    let query = supabase
+      .from("appointments")
+      .select("*, customers(*), services(*), employees(*)")
+      .eq("business_id", businessId);
+
+    if (!isOwnerOrAdmin) {
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) {
+        const { data: empId } = await supabase.rpc("get_employee_id", {
+          _business_id: businessId,
+          _user_id: userData.user.id
+        });
+        if (empId) {
+          query = query.eq("employee_id", empId);
+        }
+      }
     }
+
+    const { data, error } = await query.order("start_at");
+
+
+    if (error) {
+      console.error("CalendarPage: error loading events", error);
+      setLoading(false);
+      return;
+    }
+
+    const eventsList: CalEvent[] = (data ?? []).map((a: any) => ({
+      id: a.id,
+      title: `${a.customers?.full_name ?? "?"} – ${a.services?.name_sk ?? "?"}`,
+      start: new Date(a.start_at),
+      end: new Date(a.end_at),
+      status: a.status,
+      resource: a,
+    }));
+
     setEvents(eventsList);
     setLoading(false);
   }, [businessId]);
 
+
   useEffect(() => {
     loadEvents();
-    const firestore = getFirebaseFirestore();
-    if (!firestore) return;
-    getDoc(doc(firestore, "businesses", businessId)).then((snap) => { if (snap.exists()) setBusiness(snap.data()); });
-    getDocs(query(collection(firestore, "services"), where("business_id", "==", businessId), where("is_active", "==", true))).then((snap) => { setServices(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); });
-    getDocs(query(collection(firestore, "employees"), where("business_id", "==", businessId), where("is_active", "==", true))).then((snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setEmployees(data);
-      const ids = data.map((e: any) => e.id);
-      if (ids.length) getDocs(query(collection(firestore, "schedules"), where("employee_id", "in", ids.slice(0, 10)))).then((schedSnap) => {
-        const map: Record<string, EmployeeSchedule[]> = {};
-        schedSnap.docs.forEach((s) => { const d = s.data(); if (!map[d.employee_id]) map[d.employee_id] = []; map[d.employee_id].push({ day_of_week: d.day_of_week, start_time: d.start_time, end_time: d.end_time }); });
-        setSchedules(map);
-      });
-    });
-    getDocs(query(collection(firestore, "memberships"), where("business_id", "==", businessId))).then((snap) => { setMemberships(snap.docs.map((d) => d.data())); });
+
+    const loadData = async () => {
+      const [bizRes, svcRes, empRes, memRes] = await Promise.all([
+        supabase.from("businesses").select("*").eq("id", businessId).single(),
+        supabase.from("services").select("*").eq("business_id", businessId).eq("is_active", true),
+        supabase.from("employees").select("*").eq("business_id", businessId).eq("is_active", true),
+        supabase.from("memberships").select("*").eq("business_id", businessId)
+      ]);
+
+      if (svcRes.data) setServices(svcRes.data);
+      if (empRes.data) {
+
+        setEmployees(empRes.data);
+        const ids = empRes.data.map((e: any) => e.id);
+        if (ids.length) {
+          const { data: scheds } = await supabase.from("schedules").select("*").in("employee_id", ids.slice(0, 10));
+          const map: Record<string, EmployeeSchedule[]> = {};
+          (scheds ?? []).forEach((s: any) => {
+            const eid = s.employee_id;
+            if (!map[eid]) map[eid] = [];
+            map[eid].push({ day_of_week: s.day_of_week, start_time: s.start_time, end_time: s.end_time });
+          });
+          setSchedules(map);
+        }
+      }
+      if (memRes.data) setMemberships(memRes.data as any);
+    };
+
+    loadData();
   }, [businessId, loadEvents]);
 
-  // Filter employees based on allow_admin_as_provider setting
+
   const filteredEmployees = useCallback(() => {
-    if (business?.allow_admin_as_provider) return employees;
-    return employees.filter((emp: any) => {
-      if (!emp.profile_id) return true;
-      const membership = memberships.find((m) => m.profile_id === emp.profile_id);
-      if (!membership) return true;
-      return membership.role === "employee";
-    });
+    let list = employees;
+    if (!business?.allow_admin_as_provider) {
+      list = list.filter((emp: any) => {
+        if (!emp.profile_id) return true;
+        const membership = memberships.find((m) => m.profile_id === emp.profile_id);
+        if (!membership) return true;
+        return membership.role === "employee";
+      });
+    }
+
+    // Feature 5 extension: If NOT admin, show ONLY self in the selection (or filter has already done it)
+    // Actually, on the public booking page, we hide non-bookable.
+    // Here on the admin calendar, if I'm an employee, I should only be able to book for myself if I'm not an admin.
+    return list;
   }, [employees, business, memberships]);
+
 
   const loadAvailableSlots = useCallback(async (slotDate: Date, employeeId: string, serviceId: string) => {
     const service = services.find((s) => s.id === serviceId);
@@ -108,19 +155,18 @@ export default function CalendarPage() {
     const dayStart = startOfDay(slotDate);
     const dayEnd = addDays(dayStart, 1);
 
-    const firestore = getFirebaseFirestore();
     let existing: { start_at: string; end_at: string }[] = [];
-    if (firestore) {
-      const apptSnap = await getDocs(
-        query(
-          collection(firestore, "appointments"),
-          where("employee_id", "==", employeeId),
-          where("start_at", ">=", dayStart.toISOString()),
-          where("start_at", "<", dayEnd.toISOString())
-        )
-      );
-      existing = apptSnap.docs.filter((d) => d.data().status !== "cancelled").map((d) => ({ start_at: d.data().start_at, end_at: d.data().end_at }));
-    }
+    const { data: appts } = await supabase
+      .from("appointments")
+      .select("start_at, end_at")
+      .eq("employee_id", employeeId)
+      .neq("status", "cancelled")
+      .gte("start_at", dayStart.toISOString())
+      .lt("start_at", dayEnd.toISOString());
+
+
+    existing = (appts ?? []).map((a: any) => ({ start_at: a.start_at, end_at: a.end_at }));
+
 
     const slots = generateSlots({
       date: slotDate,
@@ -162,14 +208,18 @@ export default function CalendarPage() {
     setDetailModal(true);
   };
 
-  const bookingCalendarEvents: BookingCalendarEvent[] = events.map((e) => ({
-    id: e.id,
-    title: e.title,
-    start: e.start,
-    end: e.end,
-    color: statusToColor(e.status),
-    resource: e.resource,
-  }));
+  const bookingCalendarEvents: BookingCalendarEvent[] = events.map((e) => {
+    const employeeColor = (e.resource as any)?.employees?.color;
+    return {
+      id: e.id,
+      title: e.title,
+      start: e.start,
+      end: e.end,
+      color: employeeColor || statusToColor(e.status),
+      resource: e.resource,
+    };
+  });
+
 
   const handleBook = async () => {
     if (!bookForm.service_id || !bookForm.employee_id || !bookForm.start_at) { toast.error("Vyplňte všetky polia"); return; }
@@ -179,55 +229,80 @@ export default function CalendarPage() {
     const start = new Date(bookForm.start_at);
     const end = addMinutes(start, duration);
 
-    const firestore = getFirebaseFirestore();
-    if (!firestore) { setSaving(false); return; }
     const walkinEmail = `walkin-${Date.now()}@internal`;
-    const existingSnap = await getDocs(query(collection(firestore, "customers"), where("business_id", "==", businessId), where("email", "==", walkinEmail)));
+
+    // Check/Create internal customer
+    let { data: custData } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("business_id", businessId)
+      .eq("email", walkinEmail)
+      .maybeSingle();
+
     let customerId: string;
-    if (!existingSnap.empty) {
-      customerId = existingSnap.docs[0].id;
+    if (custData) {
+      customerId = custData.id;
     } else {
-      const newCust = await addDoc(collection(firestore, "customers"), {
-        business_id: businessId,
-        full_name: "Zákazník (osobne)",
-        email: walkinEmail,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      const { data: newCust, error: custErr } = await supabase
+        .from("customers")
+        .insert({
+          business_id: businessId,
+          full_name: "Zákazník (osobne)",
+          email: walkinEmail,
+        })
+        .select("id")
+        .single();
+
+      if (custErr) {
+        toast.error("Chyba pri vytváraní zákazníka");
+        setSaving(false);
+        return;
+      }
       customerId = newCust.id;
     }
-    await addDoc(collection(firestore, "appointments"), {
-      business_id: businessId,
-      customer_id: customerId,
-      employee_id: bookForm.employee_id,
-      service_id: bookForm.service_id,
-      start_at: start.toISOString(),
-      end_at: end.toISOString(),
-      status: "confirmed",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+
+    const { error: apptErr } = await supabase
+      .from("appointments")
+      .insert({
+        business_id: businessId,
+        customer_id: customerId,
+        employee_id: bookForm.employee_id,
+        service_id: bookForm.service_id,
+        start_at: start.toISOString(),
+        end_at: end.toISOString(),
+        status: "confirmed",
+      });
+
+    if (apptErr) {
+      toast.error("Chyba pri vytváraní rezervácie");
+    } else {
+      toast.success("Rezervácia vytvorená");
+      setBookingModal(false);
+      loadEvents();
+    }
     setSaving(false);
-    toast.success("Rezervácia vytvorená");
-    setBookingModal(false);
-    loadEvents();
+
   };
 
   const handleStatusChange = async (newStatus: "pending" | "confirmed" | "cancelled" | "completed") => {
     if (!selectedEvent) return;
     setUpdatingStatus(true);
-    const firestore = getFirebaseFirestore();
-    if (!firestore) { setUpdatingStatus(false); return; }
-    try {
-      await updateDoc(doc(firestore, "appointments", selectedEvent.id), { status: newStatus, updated_at: new Date().toISOString() });
-    } catch {
+
+    const { error } = await supabase
+      .from("appointments")
+      .update({ status: newStatus })
+      .eq("id", selectedEvent.id);
+
+    if (error) {
       toast.error("Chyba pri aktualizácii");
-      setUpdatingStatus(false);
-      return;
+    } else {
+      toast.success("Status aktualizovaný");
+      setDetailModal(false);
+      loadEvents();
     }
     setUpdatingStatus(false);
-    toast.success("Status aktualizovaný"); setDetailModal(false); loadEvents();
   };
+
 
   return (
     <div className="space-y-4 h-full">
@@ -246,7 +321,11 @@ export default function CalendarPage() {
           onSelectSlot={handleSelectSlot}
           onSelectEvent={handleSelectEvent}
           selectable={isOwnerOrAdmin}
+          businessHours={{ hours: openingHours, overrides }}
+          resources={isOwnerOrAdmin ? employees : employees.filter(e => e.profile_id === (businessInfo as any)?.profile_id)}
         />
+
+
       </div>
 
       {/* Booking Modal */}

@@ -12,6 +12,8 @@ export interface BookingCalendarProviderProps {
   onSelectSlot?: (slot: SlotInfo) => void;
   onSelectEvent?: (event: BookingCalendarEvent) => void;
   selectable: boolean;
+  businessHours?: any;
+  resources?: any[];
   children: ReactNode;
 }
 
@@ -24,6 +26,8 @@ export function BookingCalendarProvider({
   onSelectSlot,
   onSelectEvent,
   selectable,
+  businessHours,
+  resources,
   children,
 }: BookingCalendarProviderProps) {
   return (
@@ -37,8 +41,12 @@ export function BookingCalendarProvider({
         onSelectSlot,
         onSelectEvent,
         selectable,
+        businessHours,
+        resources,
       }}
     >
+
+
       {children}
     </BookingCalendarContext.Provider>
   );

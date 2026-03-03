@@ -34,6 +34,7 @@ const MySchedulePage = lazy(() => import("./pages/admin/MySchedulePage"));
 const ReceptionPage = lazy(() => import("./pages/ReceptionPage"));
 const DiagnosticsPage = lazy(() => import("./pages/DiagnosticsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const SalonLoginPage = lazy(() => import("./pages/SalonLoginPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 
 const LazyFallback = () => (
@@ -63,110 +64,115 @@ const App = () => {
   const speedInsightsEnabled = useSpeedInsightsEnabled();
 
   return (
-  <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <CookieConsent />
-        <AuthProvider>
-          <Suspense fallback={<LazyFallback />}>
-            <Routes>
-              <Route path="/" element={<LiquidPlayground />} />
-              <Route path="/demo" element={<DemoPage />} />
-              <Route path="/booking" element={<BookingPage />} />
-              
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/offline" element={<OfflinePage />} />
-              <Route path="/install" element={<InstallPage />} />
-              <Route path="/diagnostics" element={<DiagnosticsPage />} />
-              <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/privacy-policy" element={<TermsPage />} />
-              <Route path="/terms" element={<TermsPage />} />
-              <Route
-                path="/reception"
-                element={
-                  <ProtectedRoute>
-                    <ReceptionPage />
-                  </ProtectedRoute>
-                }
-              />
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <CookieConsent />
+            <AuthProvider>
+              <Suspense fallback={<LazyFallback />}>
+                <Routes>
+                  <Route path="/" element={<LiquidPlayground />} />
+                  <Route path="/demo" element={<DemoPage />} />
+                  <Route path="/booking" element={<BookingPage />} />
+                  {/* Secret salon staff login – not linked anywhere publicly */}
+                  <Route path="/papihairsalon2026" element={<SalonLoginPage />} />
 
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute>
-                    <AdminLayout><DashboardPage /></AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/calendar"
-                element={
-                  <ProtectedRoute allowedRoles={["owner", "admin"]}>
-                    <AdminLayout><CalendarPage /></AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/appointments"
-                element={
-                  <ProtectedRoute>
-                    <AdminLayout><AppointmentsPage /></AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/employees"
-                element={
-                  <ProtectedRoute allowedRoles={["owner", "admin"]}>
-                    <AdminLayout><EmployeesPage /></AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/services"
-                element={
-                  <ProtectedRoute allowedRoles={["owner", "admin"]}>
-                    <AdminLayout><ServicesPage /></AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/customers"
-                element={
-                  <ProtectedRoute allowedRoles={["owner", "admin"]}>
-                    <AdminLayout><CustomersPage /></AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/settings"
-                element={
-                  <ProtectedRoute allowedRoles={["owner", "admin"]}>
-                    <AdminLayout><SettingsPage /></AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/my"
-                element={
-                  <ProtectedRoute allowedRoles={["employee"]}>
-                    <AdminLayout><MySchedulePage /></AdminLayout>
-                  </ProtectedRoute>
-                }
-              />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </AuthProvider>
-      </BrowserRouter>
-      {speedInsightsEnabled && <SpeedInsights />}
-    </TooltipProvider>
-  </QueryClientProvider>
-  </ThemeProvider>
+                  <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/offline" element={<OfflinePage />} />
+                  <Route path="/install" element={<InstallPage />} />
+                  <Route path="/diagnostics" element={<DiagnosticsPage />} />
+                  <Route path="/privacy" element={<PrivacyPage />} />
+                  <Route path="/privacy-policy" element={<TermsPage />} />
+                  <Route path="/terms" element={<TermsPage />} />
+                  <Route
+                    path="/reception"
+                    element={
+                      <ProtectedRoute allowedRoles={["owner", "admin", "employee"]}>
+                        <ReceptionPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute allowedRoles={["owner", "admin"]}>
+                        <AdminLayout><DashboardPage /></AdminLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/calendar"
+                    element={
+                      <ProtectedRoute allowedRoles={["owner", "admin"]}>
+                        <AdminLayout><CalendarPage /></AdminLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/appointments"
+                    element={
+                      <ProtectedRoute allowedRoles={["owner", "admin", "employee"]}>
+                        <AdminLayout><AppointmentsPage /></AdminLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/employees"
+                    element={
+                      <ProtectedRoute allowedRoles={["owner", "admin"]}>
+                        <AdminLayout><EmployeesPage /></AdminLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/services"
+                    element={
+                      <ProtectedRoute allowedRoles={["owner", "admin"]}>
+                        <AdminLayout><ServicesPage /></AdminLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/customers"
+                    element={
+                      <ProtectedRoute allowedRoles={["owner", "admin"]}>
+                        <AdminLayout><CustomersPage /></AdminLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/settings"
+                    element={
+                      <ProtectedRoute allowedRoles={["owner", "admin"]}>
+                        <AdminLayout><SettingsPage /></AdminLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/my"
+                    element={
+                      <ProtectedRoute allowedRoles={["employee"]}>
+                        <AdminLayout><MySchedulePage /></AdminLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </AuthProvider>
+          </BrowserRouter>
+          {speedInsightsEnabled && <SpeedInsights />}
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 };
 

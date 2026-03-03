@@ -5,9 +5,11 @@ import { cn } from "@/lib/utils";
 interface Props {
   date: Date;
   onlyDay?: boolean;
+  resourceName?: string;
 }
 
-export function CalendarBodyHeader({ date, onlyDay = false }: Props) {
+export function CalendarBodyHeader({ date, onlyDay = false, resourceName }: Props) {
+
   const isToday = isSameDay(date, new Date());
 
   return (
@@ -30,6 +32,12 @@ export function CalendarBodyHeader({ date, onlyDay = false }: Props) {
           {format(date, "dd", { locale: sk })}
         </span>
       )}
+      {resourceName && (
+        <span className="block text-xs font-bold text-primary ml-2 border-l pl-2 border-border">
+          {resourceName}
+        </span>
+      )}
     </div>
+
   );
 }

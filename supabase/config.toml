@@ -1,5 +1,5 @@
 # Konfiguracny subor – NEVKLADAT do terminalu. Push do cloudu: .\supabase-push-auth-config.ps1
-project_id = "hrkwqdvfeudxkqttpgls"
+project_id = "zcbklrgrawjsshpoyolr"
 
 [auth]
 site_url = "https://booking.papihairdesign.sk"
