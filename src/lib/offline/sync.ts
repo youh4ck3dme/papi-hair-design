@@ -1,6 +1,5 @@
 import { getDB, type OfflineAction } from "./db";
-import { getFirebaseFunctions } from "@/integrations/firebase/config";
-import { httpsCallable } from "firebase/functions";
+import { supabase } from "@/integrations/supabase/client";
 
 function getAppointmentId(action: OfflineAction): string | undefined {
   if ("payload" in action && action.payload && "id" in action.payload) {
@@ -27,11 +26,6 @@ export async function runSync() {
   } catch {
     return;
   }
-  const functions = getFirebaseFunctions();
-  if (!functions) return;
-
-  const syncPush = httpsCallable<{ actions: OfflineAction[] }, SyncResponse>(functions, "syncPush");
-  const syncPull = httpsCallable<{ days?: number }, { ok: boolean; appointments?: unknown[] }>(functions, "syncPull");
 
   const allQueue = await db.getAllFromIndex("queue", "status");
   const pending = allQueue.filter((i: { status: string }) => i.status === "pending" || i.status === "failed");
@@ -41,7 +35,12 @@ export async function runSync() {
       if (!item.id) continue;
       await db.put("queue", { ...item, status: "processing", last_error: undefined });
       try {
-        const { data: resp } = await syncPush({ actions: [item.action] });
+        const { data: resp, error } = await supabase.functions.invoke<SyncResponse>("sync-push", {
+          body: { actions: [item.action] }
+        });
+
+        if (error) throw error;
+
         if (resp?.ok) {
           if (resp.conflicts?.length) {
             const conflict = resp.conflicts[0];
@@ -65,7 +64,12 @@ export async function runSync() {
   }
 
   try {
-    const { data } = await syncPull({ days: 2 });
+    const { data, error } = await supabase.functions.invoke<{ ok: boolean; appointments?: any[] }>("sync-pull", {
+      body: { days: 2 }
+    });
+
+    if (error) throw error;
+
     if (data?.ok && data.appointments && Array.isArray(data.appointments)) {
       const tx = db.transaction("appointments", "readwrite");
       for (const a of data.appointments) {

@@ -1,8 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { getFirebaseAuth, getFirebaseFirestore, getFirebaseFunctions, isFirebaseAuthEnabled } from "@/integrations/firebase/config";
-import type { User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Profile {
   id: string;
@@ -28,12 +25,12 @@ export interface AuthUser {
 
 interface AuthContextType {
   user: AuthUser | null;
-  session: null;
+  session: any | null;
   profile: Profile | null;
   memberships: Membership[];
   loading: boolean;
   signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: (userId?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -42,128 +39,110 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   memberships: [],
   loading: true,
-  signOut: async () => {},
-  refreshProfile: async () => {},
+  signOut: async () => { },
+  refreshProfile: async () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-function toAuthUser(firebaseUser: FirebaseUser): AuthUser {
-  return { id: firebaseUser.uid, email: firebaseUser.email ?? null, uid: firebaseUser.uid };
-}
-
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<any | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refreshProfile = useCallback(async () => {
-    const auth = getFirebaseAuth();
-    const firestore = getFirebaseFirestore();
-    if (!auth?.currentUser || !firestore) return;
-    const uid = auth.currentUser.uid;
-    const profileRef = doc(firestore, "profiles", uid);
-    const profileSnap = await getDoc(profileRef);
-    if (profileSnap.exists()) {
-      const d = profileSnap.data();
-      setProfile({
-        id: uid,
-        full_name: d.full_name ?? null,
-        email: d.email ?? null,
-        phone: d.phone ?? null,
-        avatar_url: d.avatar_url ?? null,
-      });
-    } else {
-      setProfile({
-        id: uid,
-        full_name: auth.currentUser.displayName ?? null,
-        email: auth.currentUser.email ?? null,
-        phone: null,
-        avatar_url: null,
-      });
+  const refreshProfile = useCallback(async (userId?: string) => {
+    const uid = userId || user?.id;
+    if (!uid) return;
+
+    try {
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", uid)
+        .single();
+
+      if (profileData) {
+        setProfile({
+          id: profileData.id,
+          full_name: profileData.full_name,
+          email: profileData.email,
+          phone: profileData.phone,
+          avatar_url: profileData.avatar_url,
+        });
+      }
+
+      const { data: membershipsData } = await supabase
+        .from("memberships")
+        .select("*")
+        .eq("profile_id", uid);
+
+      if (membershipsData) {
+        setMemberships(membershipsData as Membership[]);
+      }
+    } catch (err) {
+      console.error("Error fetching profile:", err);
     }
-    const membershipsSnap = await getDocs(
-      query(collection(firestore, "memberships"), where("profile_id", "==", uid))
-    );
-    setMemberships(
-      membershipsSnap.docs.map((d) => {
-        const data = d.data();
-        return {
-          id: d.id,
-          business_id: data.business_id,
-          profile_id: data.profile_id,
-          role: data.role,
-        };
-      })
-    );
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    if (!isFirebaseAuthEnabled()) {
-      setLoading(false);
-      return;
-    }
-    const auth = getFirebaseAuth();
-    if (!auth) {
-      setLoading(false);
-      return;
-    }
-    const unsub = auth.onAuthStateChanged(async (firebaseUser: FirebaseUser | null) => {
-      if (!firebaseUser) {
+    let mounted = true;
+
+    async function initSession() {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      setSession(currentSession);
+      if (currentSession?.user) {
+        const u = currentSession.user;
+        setUser({ id: u.id, uid: u.id, email: u.email ?? null });
+        await refreshProfile(u.id);
+      } else {
         setUser(null);
         setProfile(null);
         setMemberships([]);
-        setLoading(false);
-        return;
       }
-      setUser(toAuthUser(firebaseUser));
-      const firestore = getFirebaseFirestore();
-      if (!firestore) {
-        setLoading(false);
-        return;
-      }
-      try {
-        // Ensure Supabase accepts Firebase JWT: set custom claim role='authenticated' and refresh token
-        const functions = getFirebaseFunctions();
-        const ensureRole = functions
-          ? httpsCallable<unknown, { ok: boolean }>(functions, "ensureSupabaseRole")
-          : null;
-        if (ensureRole) await ensureRole({}).catch(() => { /* non-blocking; Supabase may still work if claim already set */ });
-        await firebaseUser.getIdToken(true);
+      setLoading(false);
+    }
 
-        const profileRef = doc(firestore, "profiles", firebaseUser.uid);
-        const profileSnap = await getDoc(profileRef);
-        if (!profileSnap.exists()) {
-          await setDoc(profileRef, {
-            email: firebaseUser.email ?? null,
-            full_name: firebaseUser.displayName ?? null,
-            phone: null,
-            avatar_url: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-        }
-        await refreshProfile();
-      } catch {
+    initSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
+      if (!mounted) return;
+
+      setSession(currentSession);
+      if (currentSession?.user) {
+        const u = currentSession.user;
+        setUser({ id: u.id, uid: u.id, email: u.email ?? null });
+        await refreshProfile(u.id);
+      } else {
+        setUser(null);
         setProfile(null);
         setMemberships([]);
       }
       setLoading(false);
     });
-    return () => unsub();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [refreshProfile]);
 
   const signOut = useCallback(async () => {
-    const auth = getFirebaseAuth();
-    await auth?.signOut();
+    await supabase.auth.signOut();
     setUser(null);
+    setSession(null);
     setProfile(null);
     setMemberships([]);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session: null, profile, memberships, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, memberships, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

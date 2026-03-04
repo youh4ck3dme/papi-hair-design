@@ -1,14 +1,6 @@
 import { useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getFirebaseAuth, getFirebaseFunctions } from "@/integrations/firebase/config";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  signInWithPopup,
-  GoogleAuthProvider,
-} from "firebase/auth";
-import { httpsCallable } from "firebase/functions";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,14 +64,11 @@ const AUTH_COPY: Record<
 // ---------------------------------------------------------------------------
 
 async function tryClaimBooking(claimToken: string): Promise<boolean> {
-  const functions = getFirebaseFunctions();
-  if (!functions) return false;
   try {
-    const claimBooking = httpsCallable<
-      { claim_token: string },
-      { success?: boolean }
-    >(functions, "claimBooking");
-    await claimBooking({ claim_token: claimToken });
+    const { data, error } = await supabase.functions.invoke("claim-booking", {
+      body: { claim_token: claimToken },
+    });
+    if (error) throw error;
     sessionStorage.removeItem("claim_token");
     return true;
   } catch {
@@ -144,11 +133,13 @@ function useAuthForm() {
         return;
       }
       setErrors({});
-      const auth = getFirebaseAuth();
-      if (!auth) return;
       setLoading(true);
       try {
-        await signInWithEmailAndPassword(auth, form.email, form.password);
+        const { error } = await supabase.auth.signInWithPassword({
+          email: form.email,
+          password: form.password,
+        });
+        if (error) throw error;
         persistSessionPreference(rememberMe);
         navigate("/admin");
       } catch (err: unknown) {
@@ -169,11 +160,13 @@ function useAuthForm() {
         return;
       }
       setErrors({});
-      const auth = getFirebaseAuth();
-      if (!auth) return;
       setLoading(true);
       try {
-        await createUserWithEmailAndPassword(auth, form.email, form.password);
+        const { error } = await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+        });
+        if (error) throw error;
         const claimed = await tryClaimBooking(claimToken);
         toast.success(
           claimed
@@ -191,16 +184,15 @@ function useAuthForm() {
   );
 
   const handleGoogleLogin = useCallback(async () => {
-    const auth = getFirebaseAuth();
-    if (!auth) return;
-    const provider = new GoogleAuthProvider();
-    const webClientId = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID as string | undefined;
-    if (webClientId?.trim()) {
-      provider.setCustomParameters({ client_id: webClientId.trim() });
-    }
     setLoading(true);
     try {
-      await signInWithPopup(auth, provider);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/admin`
+        }
+      });
+      if (error) throw error;
       persistSessionPreference(rememberMe);
       const token = sessionStorage.getItem("claim_token");
       if (token) {
@@ -209,13 +201,12 @@ function useAuthForm() {
           toast.success("Prihlásenie úspešné. Rezervácia bola prepojená s vaším účtom.");
         }
       }
-      navigate("/admin");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Prihlásenie cez Google zlyhalo");
     } finally {
       setLoading(false);
     }
-  }, [rememberMe, navigate, persistSessionPreference]);
+  }, [rememberMe, persistSessionPreference]);
 
   const handleForgot = useCallback(
     async (e: React.FormEvent) => {
@@ -224,11 +215,12 @@ function useAuthForm() {
         setErrors({ email: "Zadajte email" });
         return;
       }
-      const auth = getFirebaseAuth();
-      if (!auth) return;
       setLoading(true);
       try {
-        await sendPasswordResetEmail(auth, form.email);
+        const { error } = await supabase.auth.resetPasswordForEmail(form.email, {
+          redirectTo: `${window.location.origin}/auth?mode=reset`,
+        });
+        if (error) throw error;
         toast.success("Email na obnovenie hesla bol odoslaný");
         setMode("login");
       } catch (err: unknown) {
@@ -340,7 +332,8 @@ export default function AuthPage() {
     copy,
   } = useAuthForm();
 
-  const showGoogle = mode === "login" && getFirebaseAuth();
+  // Supabase má Google login povolený vždy (ak je nastavený v Dashboarde)
+  const showGoogle = mode === "login";
 
   return (
     <div

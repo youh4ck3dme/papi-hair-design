@@ -1,5 +1,6 @@
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://booking.papihairdesign.sk",
+  "http://localhost:5678",
   "http://localhost:8080",
   "http://localhost:5173",
 ];

@@ -1,408 +1,367 @@
 # PAPI HAIR DESIGN – Booking System
 
-> [!IMPORTANT]
-> **Hlavný cenník:** [papihairdesign.sk/cennik](https://papihairdesign.sk/cennik)  
-> Rezervačný systém: [booking.papihairdesign.sk](https://booking.papihairdesign.sk)
+## Lovable Sync
+Tento projekt je synchronizovaný s [Lovable](https://lovable.dev).
 
-> Moderný rezervačný systém pre salóny krásy. React 18 PWA. Backend: **Firebase** (Firestore + Cloud Functions + Auth) alebo Supabase (legacy). Pozri [docs/MIGRATION-FIREBASE.md](docs/MIGRATION-FIREBASE.md).
+### Späť do Lovable
+Lovable má bidirectional sync s GitHubom. Po pushnutí do main:
+1. Otvor tento projekt v Lovable editore.
+2. Zmeny sa automaticky synchronizujú (do ~1 minúty).
+3. Ak sa neaktualizuje, klikni na meno projektu (vľavo hore) → **Settings** → **GitHub** → overiť že sync je aktívny.
 
+### Prompt pre Lovable po návrate
+Po synchronizácii pošli v Lovable chate:
+> Skontroluj či sa všetky zmeny z GitHubu správne synchronizovali. Spusti build a over že aplikácia funguje bez chýb. Ak nájdeš problémy, oprav ich.
+
+### Zhrnutie flow
+1. **VS Code**: lint + tsc → oprav chyby → build → commit → push main
+2. **GitHub**: main vetva aktualizovaná
+3. **Lovable**: automatický sync ← zmeny sa objavia v editore
+
+---
+
+> **Rezervačný systém:** [booking.papihairdesign.sk](https://booking.papihairdesign.sk)
+> **Cenník:** [papihairdesign.sk/cennik](https://papihairdesign.sk/cennik)
+
+Moderný rezervačný systém pre salóny krásy. React 18 PWA + Supabase backend.
 
 ---
 
 ## Obsah
 
+- [Rýchly štart – príkazy](#rýchly-štart--príkazy)
 - [Architektúra](#architektúra)
-- [Rýchly štart](#rýchly-štart)
 - [Premenné prostredia](#premenné-prostredia)
-- [Auth na produkčnej doméne](#auth-na-produkčnej-doméne-bookingpapihairdesignsk)
-- [Firebase Auth (voliteľné)](#firebase-auth-voliteľné)
-- [Práca na projekte (prístup odkiaľkoľvek)](#práca-na-projekte-prístup-odkiaľkoľvek)
-- [Vercel Hobby a súkromný org repozitár](#vercel-hobby-a-súkromný-org-repozitár)
-- [Návod na používanie](#návod-na-používanie)
-  - [Zákazník](#zákazník--booking)
-  - [Zamestnanec](#zamestnanec--adminmy)
-  - [Admin / Majiteľ](#admin--majiteľ--admin)
-- [Demo účty](#demo-účty)
-- [Štruktúra projektu](#štruktúra-projektu)
 - [Stránky a routy](#stránky-a-routy)
-- [Edge Functions](#edge-functions)
+- [Štruktúra projektu](#štruktúra-projektu)
 - [Databáza a migrácie](#databáza-a-migrácie)
+- [Edge Functions](#edge-functions)
 - [Offline podpora](#offline-podpora)
 - [PWA inštalácia](#pwa-inštalácia)
 - [Bezpečnosť](#bezpečnosť)
-- [Package manager](#package-manager)
-- [Príprava na nový vývoj](#príprava-na-nový-vývoj-checklist)
-- [Vývoj a testovanie](#vývoj-a-testovanie)
+- [Testy](#testy)
+- [Vendor code splitting](#vendor-code-splitting)
+- [Vercel / deploy](#vercel--deploy)
 - [Changelog](#changelog)
+
+---
+
+## Rýchly štart – príkazy
+
+### Cesta k projektu
+
+```
+c:\Users\42195\Downloads\loveable-PHDbooking-finale-3-3-26
+```
+
+> Všetky príkazy spúšťaj z tohto adresára. V termináli:
+> ```sh
+> cd "c:\Users\42195\Downloads\loveable-PHDbooking-finale-3-3-26"
+> ```
+
+---
+
+### Node.js požiadavka
+
+Projekt vyžaduje **Node.js 20.19+ alebo 22.12+** (Vite 7).
+
+```sh
+# Skontrolovať verziu:
+node -v
+
+# Ak máš starú verziu, stiahni nvm-windows a:
+nvm install 22
+nvm use 22
+```
+
+---
+
+### Inštalácia závislostí
+
+```sh
+cd "c:\Users\42195\Downloads\loveable-PHDbooking-finale-3-3-26"
+npm install
+```
+
+---
+
+### Vývojový server
+
+```sh
+cd "c:\Users\42195\Downloads\loveable-PHDbooking-finale-3-3-26"
+npm run dev
+```
+
+App beží na → **http://localhost:5678**
+
+HMR (hot reload) je aktívny. Zmeny v `.tsx/.ts/.css` sa prejavia okamžite bez reštartu.
+
+---
+
+### Produkčný build
+
+```sh
+cd "c:\Users\42195\Downloads\loveable-PHDbooking-finale-3-3-26"
+npm run build
+```
+
+Výstup: `dist/` — statické súbory pripravené na deploy (Vercel / Nginx / Firebase Hosting).
+
+---
+
+### Náhľad buildu lokálne
+
+```sh
+cd "c:\Users\42195\Downloads\loveable-PHDbooking-finale-3-3-26"
+npm run preview
+```
+
+Spustí statický server nad `dist/` → http://localhost:4173
+
+---
+
+### Všetky dostupné príkazy
+
+| Príkaz | Popis |
+|--------|-------|
+| `npm run dev` | Vývojový server s HMR (port 5678) |
+| `npm run build` | Produkčný build → `dist/` |
+| `npm run build:dev` | Build v dev móde (so source maps) |
+| `npm run preview` | Statický náhľad `dist/` lokálne |
+| `npm run typecheck` | TypeScript kontrola bez buildu |
+| `npm run lint` | ESLint kontrola kódu |
+| `npm run test` | Vitest – jednorazový beh |
+| `npm run test:watch` | Vitest – sledovací mód |
+| `npm run test:coverage` | Testy + coverage report |
+| `npm run setup` | Automatická príprava prostredia (PowerShell) |
+
+---
+
+### Príprava na nový vývoj (checklist)
+
+```sh
+cd "c:\Users\42195\Downloads\loveable-PHDbooking-finale-3-3-26"
+
+# 1. Stiahnuť zmeny
+git pull origin main
+
+# 2. Závislosti
+npm install
+
+# 3. Skontrolovať .env (Supabase URL + anon key)
+# (pozri sekciu Premenné prostredia)
+
+# 4. Overiť že build prechádza
+npm run typecheck
+npm run build
+
+# 5. Spustiť
+npm run dev
+```
 
 ---
 
 ## Architektúra
 
 ```
-React 18 + Vite + TypeScript
-├── shadcn/ui + Tailwind CSS        — UI komponenty a štýlovanie
-├── Framer Motion                   — Animácie
-├── TanStack React Query            — Server state management
-├── Dexie.js (IndexedDB)            — Offline-first lokálna databáza
-├── vite-plugin-pwa (Workbox)       — PWA + service worker
-└── Backend (Firebase alebo Supabase)
-    Firebase (odporúčané po migrácii):
-    ├── Firestore                  — Databáza, pravidlá (docs/FIRESTORE-SCHEMA.md)
-    ├── Firebase Auth              — Autentifikácia (email, Passkeys cez custom token)
-    └── Cloud Functions (Node)      — createPublicBooking, claimBooking, sync, webauthn, SMTP, …
-    Supabase (legacy):
+React 18 + Vite 7 + TypeScript
+├── shadcn/ui + Tailwind CSS 4    — UI komponenty
+├── TanStack React Query           — Server state
+├── Dexie.js (IndexedDB)           — Offline-first lokálna DB
+├── vite-plugin-pwa (Workbox)      — PWA + service worker
+└── Supabase (100% backend)
     ├── PostgreSQL + RLS            — Databáza
-    ├── Supabase Auth               — Autentifikácia
+    ├── Supabase Auth               — Autentifikácia (email/heslo)
     └── Edge Functions (Deno)       — Serverless logika
 ```
+
+> Firebase bol kompletne odstránený. Všetok kód v `src/integrations/firebase/` je dead code a nie je importovaný v produkcii.
 
 ### Tok dát
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌───────────────────┐
 │  Zákazník   │────▶│  /booking    │────▶│  create-public-   │
-│  (telefón)  │     │  výber       │     │  booking (edge fn)│
-└─────────────┘     │  termínu     │     └────────┬──────────┘
-                    └──────────────┘              │ e-mail
-                                                  ▼
+│  (telefón)  │     │  výber slot  │     │  booking (edge fn)│
+└─────────────┘     └──────────────┘     └────────┬──────────┘
+                                                   │ e-mail
+                                                   ▼
 ┌─────────────┐     ┌──────────────┐     ┌───────────────────┐
 │  Admin      │◀────│  /admin      │◀────│  Nová rezervácia  │
-│  (dashboard)│     │  kalendár    │     │  v databáze       │
+│  (dashboard)│     │  kalendár    │     │  v Supabase DB    │
 └─────────────┘     └──────────────┘     └───────────────────┘
 ```
 
 ---
 
-## Rýchly štart
-
-### Požiadavky
-
-- Node.js 18+
-- Git
-- **Package manager:** npm (projekt používa `package-lock.json`).
-
-### Inštalácia
-
-**Automatická príprava prostredia (odporúčané):**
-
-```sh
-# Z koreňa projektu (Node.js 18+ potrebný)
-npm run setup
-# alebo priamo:
-.\setup.ps1
-```
-
-Skript skontroluje Node.js, nainštaluje závislosti cez **npm** a vytvorí `.env` z `.env.example` (ak ešte neexistuje).
-
-**Manuálne:**
-
-```sh
-# 1. Klonuj repozitár
-git clone https://github.com/EB-EU-s-r-o/nimble-agenda.git
-cd nimble-agenda
-
-# 2. (Voliteľne) Nastav Node 18+ cez nvm: nvm use
-# 3. Nainštaluj závislosti (použi jeden prístup)
-npm install
-
-# 4. Nastav premenné prostredia
-cp .env.example .env   # na Windows: copy .env.example .env
-# Vyplň hodnoty v .env
-
-# 5. Spusti vývojový server
-npm run dev
-```
-
-App bude dostupná na **http://localhost:8080**
-
-### Package manager
-
-Projekt používa **npm** a `package-lock.json`. Príkazy spúšťaj cez `npm run …`. Viac: [docs/DEVELOPMENT-SETUP.md](docs/DEVELOPMENT-SETUP.md).
-
-### Dostupné príkazy
-
-| Príkaz | Popis |
-|--------|-------|
-| `npm run dev` | Spustí vývojový server (Vite HMR) |
-| `npm run build` | Produkčný build |
-| `npm run build:dev` | Build v dev móde (so zdrojovými mapami) |
-| `npm run preview` | Náhľad produkčného buildu lokálne |
-| `npm run lint` | ESLint kontrola kódu |
-| `npm run test` | Spusti všetky testy (Vitest) |
-| `npm run test:coverage` | Unit testy + coverage report |
-| `npm run test:watch` | Testy v sledovacom móde |
-| `npm run budget` | Kontrola veľkosti `dist/` (po build) |
-| `npm run lockin:check` | Kontrola Node verzie (`engines`) |
-| `npm run deploy:firebase` | Build + deploy na Firebase Hosting |
-
-### Príprava na nový vývoj (checklist)
-
-Keď sa vrátiš k projektu alebo ťaháš najnovšie zmeny:
-
-1. **Stiahnuť zmeny:** `git pull origin main`
-2. **Závislosti:** `npm run setup` (alebo `npm install` + manuálne `.env`)
-3. **Premenné:** Skontrolovať `.env` (Supabase URL a anon key)
-4. **Overiť:** `npm run lint`, `npm run test`, `npm run build`
-5. **Štart:** `npm run dev` → http://localhost:8080
-
-Podrobný návod: [docs/DEVELOPMENT-SETUP.md](docs/DEVELOPMENT-SETUP.md).
-
-### 5. Späť do Lovable
-
-Lovable má bidirectional sync s GitHubom. Po pushnutí do repozitára:
-
-1. Otvor tento projekt v Lovable editore.
-2. Zmeny sa automaticky synchronizujú (do ~1 minúty).
-3. Ak sa neaktualizuje, klikni na meno projektu (vľavo hore) → Settings → GitHub → overiť že sync je aktívny.
-
-### 6. Prompt pre Lovable po návrate
-
-Po synchronizácii pošli v Lovable chate:
-
-> Skontroluj či sa všetky zmeny z GitHubu správne synchronizovali. 
-> Spusti build a over že aplikácia funguje bez chýb. 
-> Ak nájdeš problémy, oprav ich.
-
-### Zhrnutie flow
-
-VS Code: `npm run lint` + `npx tsc --noEmit` → oprav chyby → `npm run build` → commit → push 
-    ↓
-GitHub: aktualizovaná vetva
-    ↓
-Lovable: automatický sync ← zmeny sa objavia v editore
-
-Celý proces trvá ~5-10 minút. Žiadne manuálne mergovanie nie je potrebné, ak pracuješ priamo na main vetve.
-
----
-
-
 ## Premenné prostredia
 
-Skopíruj `.env.example` do `.env` a vyplň hodnoty:
+Skopíruj `.env.example` do `.env`:
+
+```sh
+# Windows:
+copy .env.example .env
+# Unix/Mac:
+cp .env.example .env
+```
+
+Vyplň v `.env`:
 
 ```env
-VITE_SUPABASE_PROJECT_ID=tvoj-project-id
-VITE_SUPABASE_URL=https://tvoj-project-id.supabase.co
+# ── Supabase ──────────────────────────────────────────────────────────────────
+VITE_SUPABASE_URL=https://zcbklrgrawjsshpoyolr.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=tvoj-anon-key
+
+# ── Prihlásenie personálu (/papihairsalon2026) ─────────────────────────────────
+VITE_PAPI_EMAIL=papi@papihairdesign.sk
+VITE_MISKA_EMAIL=miska@papihairdesign.sk
+VITE_MATO_EMAIL=mato@papihairdesign.sk
+
+# ── Prisma (voliteľné – len ak používaš Prisma CLI) ───────────────────────────
+DATABASE_URL="postgresql://postgres.zcbklrgrawjsshpoyolr:[HESLO]@aws-1-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres.zcbklrgrawjsshpoyolr:[HESLO]@aws-1-eu-central-1.pooler.supabase.com:5432/postgres"
 ```
 
-> Hodnoty nájdeš v Supabase dashboarde pod **Settings → API**.
+> Anon key nájdeš v Supabase Dashboard → **Settings → API → Project API keys → anon public**.
 
-**Kde ukladať kľúče a čo necommituj:** Tabuľka (Publishable Key, Anon Key, Service Role, DB heslo, ACCESS_TOKEN), priame pripojenie k DB a nastavenie na hostingu – všetko je v **[docs/CREDENTIALS-STORE.md](docs/CREDENTIALS-STORE.md)**. Skutočné heslo a secret kľúče ukladaj len do password managera a do lokálneho `.env`; na hostingu nastav Environment Variables podľa toho istého dokumentu.
+### Supabase projekt
 
-### Auth na produkčnej doméne (booking.papihairdesign.sk)
-
-Aby prihlásenie fungovalo na **https://booking.papihairdesign.sk**, treba v Supabase nastaviť Site URL a Redirect URLs (cez `.\supabase-push-auth-config.ps1` alebo ručne v Dashboarde). Kompletný postup, čo nerobiť (napr. nevkladať obsah `config.toml` do terminálu) a kde hľadať chybu: **[docs/AUTH-BOOKING-DOMAIN.md](docs/AUTH-BOOKING-DOMAIN.md)**.
-
-### Firebase Auth (voliteľné)
-
-Ak chceš použiť **Firebase Authentication** namiesto Supabase Auth (email/heslo, Google), nastav v `.env` premenné `VITE_FIREBASE_*` a v Supabase povol Third-Party Auth (Firebase). Plný návod: **[docs/FIREBASE-AUTH-SETUP.md](docs/FIREBASE-AUTH-SETUP.md)**.
-
-### Práca na projekte (prístup odkiaľkoľvek)
-
-- **Práca s kódom a deploy (GitHub + Vercel)**  
-  Stačí prihlásenie na GitHub a prístup k Vercel projektu. Môžeš klonovať repozitár, pushovať zmeny a spúšťať deploy odkiaľkoľvek. Env premenné sú nastavené v Vercel projekte; na novom počítači po clone pridaj lokálne `.env` podľa `.env.example` (ak potrebuješ lokálny vývoj).
-
-- **Plná správa Supabase projektu (auth URL, CLI)**  
-  Na správu Supabase z ktoréhokoľvek miesta (vrátane `supabase link` a `supabase config push`) musíš byť pridaný do **Supabase tímu**: Owner/Admin ťa pozve v **Supabase Dashboard → Organization → Team → Invite** (email). Po prijatí pozvánky môžeš odkiaľkoľvek spustiť `supabase login` a `.\supabase-push-auth-config.ps1`. Ak si v tíme a pozvánku si prijal, ďalšie nastavenie nie je potrebné.
-
-Ak na produkcii (Vercel) **/booking neukazuje služby** a diagnostika hlási chýbajúce tabuľky/RPC, pozri **[docs/FIX-PRODUCTION.md](docs/FIX-PRODUCTION.md)**.
-
-Ak Vercel zobrazí *"The repository is private and owned by an organization, which is not supported on the Hobby plan"*, pozri **[docs/VERCEL-HOBBY-ORG-REPO.md](docs/VERCEL-HOBBY-ORG-REPO.md)** (prevod repa na osobný účet alebo nové osobné repo).
-
-### Vercel Hobby a súkromný org repozitár
-
-Vercel Hobby nepodporuje deploy zo súkromného repozitára vlastneného **organizáciou**. Ak pripájaš taký repo, dostaneš chybu. Riešenie: mať repozitár pod osobným účtom (prevod vlastníctva alebo nové osobné repo). Detailný postup a pomocné skripty: **[docs/VERCEL-HOBBY-ORG-REPO.md](docs/VERCEL-HOBBY-ORG-REPO.md)**.
-
-### Firebase Hosting
-
-Projekt má pripravený deploy na **Firebase Hosting**. Pred prvým deployom:
-
-1. V [Firebase Console](https://console.firebase.google.com/) vytvor projekt (alebo zvoľ existujúci) a skopíruj **Project ID**.
-2. Do súboru **`.firebaserc`** nahraď `your-firebase-project-id` skutočným Project ID.
-3. Nainštaluj CLI: `npm install -g firebase-tools`, prihlás sa: `firebase login`.
-4. (Voliteľne) Ak ešte nebol: `firebase init` v koreni projektu – tento repo už má `firebase.json` a `functions/`.
-5. Build a deploy: `npm run deploy:firebase` (len hosting) alebo `npm run deploy:firebase:first` (hosting + firestore). Pre deploy **Functions** je potrebný Blaze plán; postup: [docs/MIGRATION-FIREBASE.md](docs/MIGRATION-FIREBASE.md#set-up-functions-inštalácia-a-prvý-deploy). Audit čo funguje na Spark (zadarmo) vs Blaze: [docs/FIREBASE-SPARK-AUDIT.md](docs/FIREBASE-SPARK-AUDIT.md).
-
-Aplikácia bude na `https://<tvoj-project-id>.web.app`. SPA routing je nakonfigurovaný v `firebase.json` (rewrite na `index.html`).
-
-**Aktuálny Firebase projekt (produkcia):**
-
-| Pole | Hodnota |
-|------|---------|
-| Project name | PHD-BOOKING |
-| Project ID | phd-booking |
-| Project number | 1054453277711 |
-
----
-
-## Návod na používanie
-
-### Zákazník – `/booking`
-
-Verejná stránka, nevyžaduje prihlásenie.
-
-1. **Výber služby** – Zákazník vyberie typ služby (strihanie, farbenie, atď.)
-2. **Výber zamestnanca** – Voliteľne konkrétny zamestnanec alebo „ktokoľvek dostupný"
-3. **Výber termínu** – Kalendár s dostupnými slotmi generovanými v reálnom čase
-4. **Kontaktné údaje** – Meno, email/telefón, poznámka
-5. **Potvrdenie** – Systém pošle e-mail s potvrdením rezervácie
-
-**Pravidlá rezervácie** (konfigurovateľné v nastaveniach prevádzky):
-- `lead_time_minutes` – minimálny čas dopredu
-- `max_days_ahead` – maximálny horizont rezervácie
-- `cancellation_hours` – do kedy je možné stornovať
-
----
-
-### Zamestnanec – `/admin/my`
-
-Prihlásenie na `/auth` s rolou `employee`.
-
-1. **Môj rozvrh** – Zobrazuje iba vlastné termíny (vynútené RLS politikami)
-2. **Označenie stavu** – Termín je možné označiť ako `completed`
-3. **Detaily termínu** – Zákazník, služba, čas, poznámka
-
-> Zamestnanec nevidí termíny kolegov ani obchodné štatistiky.
-
----
-
-### Admin / Majiteľ – `/admin`
-
-Prihlásenie na `/auth` s rolou `admin` alebo `owner`.
-
-| Sekcia | Route | Popis |
-|--------|-------|-------|
-| Dashboard | `/admin` | Dnešné termíny, štatistiky, prehľad |
-| Kalendár | `/admin/calendar` | Deň / týždeň / mesiac zobrazenie |
-| Termíny | `/admin/appointments` | Zoznam, filtrovanie, zmena stavu |
-| Zamestnanci | `/admin/employees` | Správa personálu, rozvrhy |
-| Služby | `/admin/services` | Katalóg, ceny, trvanie |
-| Zákazníci | `/admin/customers` | Databáza zákazníkov s históriou |
-| Nastavenia | `/admin/settings` | Prevádzka, hodiny, pravidlá |
-| Recepcia | `/reception` | Rýchle rezervácie, offline mód |
-
----
-
-## Demo účty
-
-| Rola | Email | Heslo | Prístup |
-|------|-------|-------|---------|
-| Zákazník | `demo@papihairdesign.sk` | `PapiDemo2025!` | `/booking` |
-| Majiteľ / Admin | `owner@papihairdesign.sk` | `PapiDemo2025!` | `/admin` (plný prístup) |
-| Superadmin | `larsenevans@proton.me` | — kontaktujte nás — | Multi-business správa |
-
-**Demo prevádzka:** Papi Hair Studio
-**Demo business ID:** `a1b2c3d4-0000-0000-0000-000000000001`
-**Seed dáta:** `docs/seed-demo.sql`
-
----
-
-## Štruktúra projektu
-
-```
-nimble-agenda/
-├── src/
-│   ├── App.tsx                    # Hlavný komponent, routing
-│   ├── main.tsx                   # Entry point
-│   ├── pages/
-│   │   ├── Auth.tsx               # Prihlásenie / registrácia
-│   │   ├── BookingPage.tsx        # Verejná rezervácia
-│   │   ├── DemoPage.tsx           # Showcase demo stránka
-│   │   ├── ReceptionPage.tsx      # Recepcia
-│   │   ├── OfflinePage.tsx        # Offline fallback
-│   │   ├── InstallPage.tsx        # PWA inštalačný sprievodca
-│   │   └── admin/
-│   │       ├── DashboardPage.tsx
-│   │       ├── CalendarPage.tsx
-│   │       ├── AppointmentsPage.tsx
-│   │       ├── EmployeesPage.tsx
-│   │       ├── ServicesPage.tsx
-│   │       ├── CustomersPage.tsx
-│   │       ├── SettingsPage.tsx
-│   │       └── MySchedulePage.tsx
-│   ├── components/
-│   │   ├── AdminLayout.tsx        # Admin sidebar + layout wrapper
-│   │   ├── ProtectedRoute.tsx     # Route ochrana (auth guard)
-│   │   ├── OnboardingWizard.tsx   # Setup pre nové prevádzky
-│   │   ├── booking/               # Booking komponenty
-│   │   ├── calendar/              # Kalendárové zobrazenia
-│   │   └── ui/                    # shadcn/ui komponenty (70+)
-│   ├── contexts/
-│   │   └── AuthContext.tsx        # Globálny auth stav (user, memberships)
-│   ├── hooks/
-│   │   ├── useBusiness.ts         # Aktívna prevádzka + rola
-│   │   ├── useBusinessInfo.ts     # Verejné info o prevádzke (RPC)
-│   │   ├── useOnboarding.ts       # Onboarding stav
-│   │   └── useWebAuthn.ts         # Passkey autentifikácia
-│   ├── lib/
-│   │   ├── availability.ts        # Generátor dostupných slotov
-│   │   ├── timezone.ts            # Timezone utility (Intl API, bez závislostí)
-│   │   └── offline/
-│   │       ├── db.ts              # Dexie IndexedDB schéma
-│   │       ├── reception.ts       # Offline dáta pre recepciu
-│   │       └── sync.ts            # Sync engine (push/pull, každých 30s)
-│   └── integrations/supabase/
-│       ├── client.ts              # Supabase klient
-│       └── types.ts               # Auto-generované DB typy
-├── supabase/
-│   ├── config.toml                # Supabase projekt konfigurácia
-│   ├── functions/                 # Edge Functions (Deno)
-│   └── migrations/                # SQL migrácie (verzionované)
-├── docs/
-│   ├── DEVELOPMENT-SETUP.md       # Príprava prostredia, npm, troubleshooting
-│   ├── E2E-TESTING.md             # Release gate, E2E pravidlá, data-testid matica, truth switch
-│   ├── seed-demo.sql              # Demo seed dáta pre lokálny vývoj
-│   └── ARCHITECTURE.md            # Detailná technická dokumentácia
-├── .env.example                   # Vzor premenných prostredia
-├── .firebaserc                    # Firebase project ID (nahraď your-firebase-project-id)
-├── .gitignore
-├── firebase.json                  # Firebase Hosting (dist, SPA rewrites)
-├── package.json
-├── vite.config.ts                 # Vite + PWA konfigurácia
-├── tailwind.config.ts
-└── tsconfig.json
-```
+| | |
+|---|---|
+| Project ID | `zcbklrgrawjsshpoyolr` |
+| Region | EU Central (Frankfurt) |
+| Dashboard | https://supabase.com/dashboard/project/zcbklrgrawjsshpoyolr |
 
 ---
 
 ## Stránky a routy
 
 | Route | Komponent | Auth | Popis |
-|-------|-----------|------|-------|
+|-------|-----------|:----:|-------|
 | `/` | LiquidPlayground | — | Landing / úvodná stránka |
 | `/demo` | DemoPage | — | Feature showcase |
-| `/booking` | BookingPage | — | Verejná rezervácia |
-| `/auth` | Auth | — | Prihlásenie / registrácia |
+| `/booking` | BookingPage | — | Verejná rezervácia zákazníka |
+| `/papihairsalon2026` | SalonLoginPage | — | Prihlásenie personálu (súkromné) |
+| `/auth` | Auth | — | Štandardné prihlásenie / registrácia |
 | `/offline` | OfflinePage | — | Offline fallback |
 | `/install` | InstallPage | — | PWA inštalačný sprievodca |
+### 7. Deployment Preparedness (F10)
+- **Routing Support**: Added `public/.htaccess` (for Apache servers like Websupport) and `public/_redirects` (for Netlify/Vercel) to ensure React Router client-side routes (like `/booking` and `/admin`) work out-of-the-box upon direct hits without returning 404 errors.
+
+## Verification Done
+
+- **Linting**: PASSED (`npm run lint` clean).
+- **Type-checking**: PASSED (`npx tsc --noEmit` clean).
+- **Responsive E2E Tests**: PASSED (80/80 tests on all certified viewports).
+- **Production Build**: SUCCESSFUL (`npm run build`).
+- **Role-Based Access**: Verified that employees see only their own data and owners see everything.
+- **Node.js Environment**: Upgraded to v22.22.0 to support Vite 7 requirements.
+
+- Checked RLS policies in the migration script.
+- Verified filtering logic for employees in `CalendarPage.tsx` and `BookingPage.tsx`.
+- Confirmed the multi-column day view implementation in `CalendarBodyDay.tsx`.
+- Ensured color mapping in `BookingCalendarEvent.tsx` supports dynamic HEX values.
+- Validated role-based route protection in `App.tsx`.
+- Confirmed the Secret Salon profile picker functions correctly.
+
+No active Firebase references were found in the critical paths (fetching businesses, services, appointments).
+| `/diagnostics` | DiagnosticsPage | — | Test Supabase pripojenia |
+| `/privacy` | PrivacyPage | — | Zásady ochrany súkromia |
 | `/reception` | ReceptionPage | ✅ | Recepcia / front desk |
-| `/admin` | DashboardPage | ✅ | Admin dashboard |
-| `/admin/calendar` | CalendarPage | ✅ | Kalendár termínov |
-| `/admin/appointments` | AppointmentsPage | ✅ | Zoznam termínov |
-| `/admin/employees` | EmployeesPage | ✅ | Správa zamestnancov |
-| `/admin/services` | ServicesPage | ✅ | Katalóg služieb |
-| `/admin/customers` | CustomersPage | ✅ | Databáza zákazníkov |
-| `/admin/settings` | SettingsPage | ✅ | Nastavenia prevádzky |
-| `/admin/my` | MySchedulePage | ✅ | Osobný rozvrh zamestnanca |
+| `/admin` | DashboardPage | ✅ Admin | Dashboard |
+| `/admin/calendar` | CalendarPage | ✅ Admin | Kalendár termínov |
+| `/admin/appointments` | AppointmentsPage | ✅ Admin | Zoznam termínov |
+| `/admin/employees` | EmployeesPage | ✅ Admin | Správa zamestnancov |
+| `/admin/services` | ServicesPage | ✅ Admin | Katalóg služieb |
+| `/admin/customers` | CustomersPage | ✅ Admin | Databáza zákazníkov |
+| `/admin/settings` | SettingsPage | ✅ Admin | Nastavenia prevádzky |
+| `/admin/my` | MySchedulePage | ✅ Employee | Osobný rozvrh |
+
+> `/papihairsalon2026` nie je nikde verejne linkovaná. Prihlasovacie emaile sa čítajú z `VITE_PAPI_EMAIL`, `VITE_MISKA_EMAIL`, `VITE_MATO_EMAIL`.
 
 ---
 
-## Edge Functions
+## Štruktúra projektu
 
-Serverless funkcie na Supabase Edge (Deno runtime). Všetky majú `verify_jwt = false` – vlastná auth logika.
+```
+loveable-PHDbooking-finale-3-3-26/
+├── src/
+│   ├── App.tsx                        # Routing
+│   ├── main.tsx                       # Entry point
+│   ├── pages/
+│   │   ├── SalonLoginPage.tsx         # /papihairsalon2026 – personál login (WebGL)
+│   │   ├── BookingPage.tsx            # Verejná rezervácia
+│   │   ├── DiagnosticsPage.tsx        # Supabase diagnostika
+│   │   ├── Auth.tsx                   # Štandardné prihlásenie
+│   │   ├── LiquidPlayground.tsx       # Landing page
+│   │   └── admin/                     # Admin stránky
+│   ├── components/
+│   │   ├── AdminLayout.tsx
+│   │   ├── ProtectedRoute.tsx
+│   │   ├── booking/
+│   │   ├── booking-calendar/          # WebGL-enhanced kalendár
+│   │   └── ui/                        # shadcn/ui (70+ komponentov)
+│   ├── contexts/
+│   │   └── AuthContext.tsx            # Globálny auth stav (Supabase)
+│   ├── hooks/
+│   │   ├── useBusinessInfo.ts
+│   │   └── useWebAuthn.ts
+│   ├── integrations/
+│   │   └── supabase/
+│   │       ├── client.ts              # Supabase klient
+│   │       ├── types.ts               # Auto-generované DB typy
+│   │       └── createPublicBooking.ts # Edge function wrapper
+│   └── lib/
+│       ├── availability.ts
+│       ├── timezone.ts
+│       └── offline/                   # Dexie IndexedDB
+├── supabase/
+│   ├── config.toml                    # project_id = zcbklrgrawjsshpoyolr
+│   ├── functions/                     # Edge Functions (Deno)
+│   └── migrations/                    # SQL migrácie
+├── prisma/
+│   └── schema.prisma                  # Prisma schéma (Supabase PostgreSQL)
+├── docs/                              # Dokumentácia
+├── public/
+│   ├── papi.webp                      # Foto – Papi
+│   ├── miska.webp                     # Foto – Miska
+│   └── mato.webp                      # Foto – Mato
+├── .env                               # Lokálne premenné (nekopíruj do gitu!)
+├── .env.example                       # Vzor premenných
+├── vite.config.ts
+├── tailwind.config.ts
+└── package.json
+```
 
-| Funkcia | Popis |
-|---------|-------|
-| `create-public-booking` | Vytvorenie rezervácie, validácia konfliktov, spustenie e-mailu |
-| `claim-booking` | Priradenie rezervácie k účtu cez jednorazový token |
-| `sync-push` | Odoslanie offline akcií na server (idempotentné) |
-| `sync-pull` | Stiahnutie aktuálnych dát do offline DB |
-| `send-booking-email` | Odoslanie e-mailového potvrdenia (SMTP) |
-| `webauthn-register` | Registrácia passkey (WebAuthn challenge generation) |
-| `webauthn-authenticate` | Prihlásenie passkey, generovanie magic link tokenu |
-| `seed-demo-accounts` | Inicializácia demo dát (len pre development) |
+---
+
+## Otváracie hodiny
+
+| Deň | Stav | Čas |
+|-----|------|-----|
+| Pondelok | Otvorené | 08:00 – 17:00 |
+| Utorok | Otvorené | 08:00 – 17:00 |
+| Streda | Otvorené | 08:00 – 17:00 |
+| Štvrtok | Otvorené | 08:00 – 17:00 |
+| Piatok | Otvorené | 08:00 – 17:00 |
+| Sobota | Podľa objednávok | 08:00 – 17:00 |
+| Nedeľa | Zavreté | — |
+
+Hodiny sú uložené v tabuľke `business_hours` (Supabase) a sú **jediným zdrojom pravdy** pre celý systém:
+
+- Zobrazenie "Otvorené / Zatvorené" na stránke `/booking`
+- Generovanie dostupných termínov (slot generation v `BookingPage.tsx`)
+- Hook `useBusinessInfoSupabase.ts` → `computeOpenStatus()` + `computeNextOpening()`
+
+**Zmena hodín** — spusti v Supabase SQL Editore:
+```sql
+UPDATE business_hours
+SET start_time = '09:00', end_time = '18:00'
+WHERE business_id = 'a1b2c3d4-0000-0000-0000-000000000001'
+  AND day_of_week = 'monday';
+```
+
+Alebo cez admin panel: `/admin/settings` → sekcia Pracovné hodiny.
 
 ---
 
@@ -412,17 +371,17 @@ Serverless funkcie na Supabase Edge (Deno runtime). Všetky majú `verify_jwt = 
 
 | Tabuľka | Popis |
 |---------|-------|
-| `profiles` | Profily užívateľov (prepojené na `auth.users`) |
-| `businesses` | Prevádzky s nastaveniami a konfigom |
+| `profiles` | Profily užívateľov |
+| `businesses` | Prevádzky s nastaveniami |
 | `memberships` | Vzťah profil ↔ prevádzka ↔ rola |
-| `employees` | Zamestnanci prevádzky |
-| `services` | Katalóg služieb (cena, trvanie, buffer čas) |
+| `employees` | Zamestnanci (farba, kalendár, bookable flag) |
+| `employee_services` | Prepojenie zamestnanec ↔ služba |
+| `services` | Katalóg služieb |
 | `appointments` | Rezervácie |
 | `customers` | Zákazníci |
-| `business_hours` | Pracovné hodiny po dňoch týždňa |
-| `business_date_overrides` | Výnimky (sviatky, špeciálne dni) |
+| `business_hours` | Pracovné hodiny po dňoch |
+| `business_date_overrides` | Výnimky (sviatky) |
 | `passkeys` | WebAuthn credentials |
-| `sync_dedup` | Idempotency keys pre offline sync |
 
 ### RLS pomocné funkcie
 
@@ -430,29 +389,46 @@ Serverless funkcie na Supabase Edge (Deno runtime). Všetky majú `verify_jwt = 
 is_business_admin(user_id uuid, business_id uuid)    → boolean
 is_business_employee(user_id uuid, business_id uuid) → boolean
 get_employee_id(user_id uuid, business_id uuid)      → uuid
+rpc_get_public_business_info(_business_id uuid)      → json
 ```
 
-### Lokálny vývoj s Supabase CLI
+### Migrácie (Supabase CLI)
 
 ```sh
-# Spusti lokálny Supabase stack (Docker)
+cd "c:\Users\42195\Downloads\loveable-PHDbooking-finale-3-3-26"
+
+# Prepojiť na produkčný projekt
+supabase link --project-ref zcbklrgrawjsshpoyolr
+
+# Vytvoriť novú migráciu
+supabase migration new nazov-migracie
+
+# Pushnúť migrácie na produkciu
+supabase db push
+
+# Lokálny stack (Docker)
 supabase start
-
-# Reset DB + aplikuj migrácie
 supabase db reset
-
-# Seed demo dát
-psql postgresql://postgres:postgres@localhost:54322/postgres -f docs/seed-demo.sql
-
-# Deploy edge functions lokálne
-supabase functions serve
 ```
 
 ---
 
-## Offline podpora
+## Edge Functions
 
-Systém funguje aj bez internetu pomocou **Dexie.js (IndexedDB)**.
+| Funkcia | Popis |
+|---------|-------|
+| `create-public-booking` | Vytvorenie rezervácie, validácia, e-mail |
+| `claim-booking` | Priradenie rezervácie k účtu |
+| `sync-push` | Offline → server (idempotentné) |
+| `sync-pull` | Server → offline DB |
+| `send-booking-email` | SMTP e-mailové potvrdenie |
+| `webauthn-register` | Registrácia passkey |
+| `webauthn-authenticate` | Prihlásenie passkey |
+| `seed-demo-accounts` | Demo dáta (len dev) |
+
+---
+
+## Offline podpora
 
 ```
 Online  ──▶  Supabase Cloud
@@ -463,94 +439,129 @@ Offline ──▶  IndexedDB (Dexie)
                └── meta          (čas posledného syncu)
 ```
 
-**Sync flow:**
-1. **PUSH** – pending akcie (create/update/cancel) sa odošlú cez `sync-push`
-2. **PULL** – aktuálne dáta sa stiahnu cez `sync-pull`
-3. **Konflikty** – server navrhuje alternatívne termíny
-4. **Idempotentnosť** – každá akcia má `idempotency_key`
-
-**OfflineBanner** sa zobrazí automaticky pri strate pripojenia.
-
 ---
 
 ## PWA inštalácia
-
-Aplikácia je plnohodnotná Progressive Web App.
-
-**Inštalácia:**
-1. Otvor `/install` pre krok-za-krokom sprievodcu
-2. Alebo klikni "Pridať na plochu" v prehliadači
 
 | Vlastnosť | Hodnota |
 |-----------|---------|
 | Start URL | `/booking` |
 | Display | `standalone` |
-| Orientation | `portrait` |
-| Theme color | `#0b0b0b` (AMOLED čierna) |
-| Icons | 192×192 a 512×512 PNG |
-
-**Caching (Workbox):**
-
-| Typ obsahu | Stratégia | TTL |
-|------------|-----------|-----|
-| Supabase API | NetworkFirst | 1 hodina |
-| Statické assety (JS/CSS/img) | CacheFirst | 30 dní |
+| Theme color | `#0b0b0b` |
+| Icons | 192×192 a 512×512 |
+| Caching | Workbox (NetworkFirst pre API, CacheFirst pre assety) |
 
 ---
 
 ## Bezpečnosť
 
-- **Row Level Security (RLS)** – každá tabuľka, dáta izolované podľa `business_id`
+- **RLS** – každá tabuľka, dáta izolované podľa `business_id`
 - **Multi-tenant** – každá prevádzka vidí iba svoje dáta
 - **Passkeys (WebAuthn)** – passwordless biometrické prihlásenie
-- **Role-based access** – 4 roly: `owner` › `admin` › `employee` › `customer`
-- **Zod validácia** – všetky vstupy validované na frontende aj v edge functions
-- **Input sanitizácia** – v `create-public-booking` edge function
-- **SMTP secrets** – uložené v Supabase edge function secrets (nie v kóde)
+- **Role-based access** – 4 roly: `owner › admin › employee › customer`
+- **Zod validácia** – vstupy validované na FE aj v edge functions
+- **SMTP secrets** – v Supabase edge function secrets (nie v kóde)
+- **SalonLoginPage** – route `/papihairsalon2026` nie je verejne linkovaná
 
 ---
 
-## Vývoj a testovanie
-
-### Testy
+## Testy
 
 ```sh
-npm run test         # jednorazový beh
-npm run test:watch   # sledovací mód
-npm run lint         # kontrola kódu
+cd "c:\Users\42195\Downloads\loveable-PHDbooking-finale-3-3-26"
+
+npm run test              # jednorazový beh (85+ testov)
+npm run test:watch        # sledovací mód
+npm run test:coverage     # + coverage report
+npm run typecheck         # TS kontrola bez buildu
+npm run lint              # ESLint
 ```
 
-Testy: `src/test/` | Framework: **Vitest** + **@testing-library/react** + **jsdom**. Odporúčané poradie v CI a E2E pravidlá: [docs/E2E-TESTING.md](docs/E2E-TESTING.md).
+Framework: **Vitest** + `@testing-library/react` + `jsdom`
 
-Ak IDE hlási, že Vitest nie je nájdený, spusti v koreni `npm install`. Viď [docs/DEVELOPMENT-SETUP.md](docs/DEVELOPMENT-SETUP.md).
+---
 
-### Vývojové nástroje
+## Vendor code splitting
 
-- **Lovable Tagger** – tagovanie komponentov pre Lovable AI
-- **Source Maps** – povolené aj v produkčnom builde (pre debugging)
-- **HMR** – Hot Module Replacement v dev móde (overlay vypnutý)
+| Chunk | Obsah | Gzip |
+|-------|-------|------|
+| `vendor-react` | React, ReactDOM, React Router | ~8 kB |
+| `vendor-supabase` | @supabase/supabase-js | ~46 kB |
+| `vendor-query` | @tanstack/react-query | ~7 kB |
+| `vendor-ui` | Sonner, Recharts, Lucide | ~75 kB |
 
-### Vendor code splitting
+---
 
-| Chunk | Obsah |
-|-------|-------|
-| `vendor-react` | React, ReactDOM, React Router |
-| `vendor-supabase` | @supabase/supabase-js |
-| `vendor-query` | @tanstack/react-query |
-| `vendor-ui` | Sonner, Recharts, Lucide React |
+## Vercel / deploy
+
+```sh
+# Vercel CLI deploy
+vercel --prod
+
+# Alebo cez GitHub – automatický deploy pri push na main
+```
+
+**Env premenné na Vercel** (nastav v Dashboard → Project → Settings → Environment Variables):
+
+| Premenná | Hodnota |
+|----------|---------|
+| `VITE_SUPABASE_URL` | `https://zcbklrgrawjsshpoyolr.supabase.co` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | anon key z Supabase Dashboard → API |
+| `VITE_PAPI_EMAIL` | email Supabase Auth používateľa Papi |
+| `VITE_MISKA_EMAIL` | email Supabase Auth používateľa Miška |
+| `VITE_MATO_EMAIL` | email Supabase Auth používateľa Maťo |
+| `VITE_VERCEL` | `true` |
+| `VITE_RECAPTCHA_SITE_KEY` | voliteľné — reCAPTCHA v3 site key |
+
+> **Dôležité:** Emaily (VITE_PAPI_EMAIL atď.) musia zodpovedať používateľom v Supabase Auth (Dashboard → Authentication → Users).
+
+> Vercel Hobby nepodporuje deploy zo súkromného org repozitára. Repozitár musí byť pod osobným účtom.
 
 ---
 
 ## Changelog
 
-Kompletná história zmien v [CHANGELOG.md](CHANGELOG.md).
+### 2026-03-04 – Cenník seednutý do DB + sort_order + Vercel env
 
-**Posledná verzia – `checkpoint/e2e-rls-claim-stable` (2026-02-19):**
-- Opravený onboarding gating (`businesses.onboarding_completed`)
-- Pridaný employee self-service view (`/admin/my`)
-- Claim flow pre neprihlásených zákazníkov
-- RLS politiky pre izoláciu zamestnancov
-- Soft-delete pre services/employees (zachovanie FK integrity)
+- **34 služieb** seednutých do `services` tabuľky (migrácia `20260304120000_seed_papi_services.sql`)
+  - 21 dámskych: Strih & Styling, Farbenie, Balayage & Melír, Odfarbovanie & Regenerácia, Predlžovanie & Účesy
+  - 13 pánskych: Vlasy, Brada & Kombinácie, Farbenie, Doplnkové Služby
+  - Aktualizované ceny: Pánsky strih 24 €, Kombinácia vlasy a brada 29 €
+  - Nová služba: Strihanie len strojčekom 19 €
+  - Strih Junior premenovaný na "do 10r."
+- **`services.sort_order`** – nový stĺpec, zoradenie podľa cenníka (nie abecedne)
+- **BookingPage** – query zmenená na `.order("sort_order").order("name_sk")`
+- **employee_services** – auto-assign všetkých 34 služieb všetkým aktívnym zamestnancom
+- **Vercel env** – doplnená tabuľka všetkých potrebných env premenných vrátane `VITE_VERCEL=true`
+- **.env.example** – opravený project_ref (bol `hrkwqdvfeudxkqttpgls`, správny: `zcbklrgrawjsshpoyolr`)
+
+### 2026-03-03 – SalonLoginPage vyladenie + build fix
+
+- **SalonLoginPage** (`/papihairsalon2026`):
+  - Responzívny layout `h-[100dvh]` – presne 100% výšky viewportu na všetkých zariadeniach
+  - Logo blur-reveal animácia (`phd-logo-in`) → WebGL electric canvas → gold VSTÚPIŤ button
+  - Responsive logo: `h-32 xs:h-36 sm:h-44 md:h-52 lg:h-64 xl:h-72`
+  - Avatar karty vždy horizontálne, JS-responsive veľkosť (88–178px)
+  - WebGL canvas výška: `h-12 sm:h-16 lg:h-20`
+  - Touch targets ≥ 44px, `prefers-reduced-motion` podpora
+  - Safe area (`safe-y`) pre iPhone notch + home indicator
+- **Auth.tsx**: Opravené git diff znaky (`-/+`) ktoré spôsobovali build chybu
+- **Build**: Prechádza čisto, 3472 modulov, ~15s
+
+### 2026-03-03 – Supabase migrácia + testy
+
+- Supabase prepojený na `zcbklrgrawjsshpoyolr`
+- Migrácia `nova-migracia` pushnutá (employee_services, business_hours, business_date_overrides, RLS)
+- 97 unit testov prechádza (19 test súborov)
+- Firebase kompletne odstránený z produkčného bundlu
+- `createPublicBooking.test.ts` – 8 testov pre Edge Function wrapper
+- `useBusinessInfoSupabase.test.ts` – 13 testov pre business info hook
+- `.env` opravený (odstránený neplatný riadok `prisma/schema.prisma`)
+- `prisma/schema.prisma` vytvorený pre Supabase PostgreSQL
+
+### Staršie záznamy
+
+Kompletná história zmien: [CHANGELOG.md](CHANGELOG.md)
 
 ---
 

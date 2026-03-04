@@ -140,7 +140,7 @@ export default function BookingPage() {
       try {
         const [bizRes, svcRes, empRes, bhRes, bdoRes] = await Promise.all([
           supabase.from("businesses").select("*").eq("id", DEMO_BUSINESS_ID).single(),
-          supabase.from("services").select("*").eq("business_id", DEMO_BUSINESS_ID).eq("is_active", true).order("name_sk"),
+          supabase.from("services").select("*").eq("business_id", DEMO_BUSINESS_ID).eq("is_active", true).order("sort_order").order("name_sk"),
           supabase.from("employees").select("*").eq("business_id", DEMO_BUSINESS_ID).eq("is_active", true).order("display_name"),
           supabase.from("business_hours").select("*").eq("business_id", DEMO_BUSINESS_ID).order("sort_order"),
           supabase.from("business_date_overrides").select("*").eq("business_id", DEMO_BUSINESS_ID).gte("override_date", new Date().toISOString().slice(0, 10)),
