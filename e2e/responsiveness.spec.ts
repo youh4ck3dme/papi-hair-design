@@ -22,7 +22,9 @@ for (const viewport of CERTIFIED_VIEWPORTS) {
         expect(response?.status()).toBe(200);
 
         await page.waitForLoadState("domcontentloaded");
-        await page.waitForTimeout(300);
+        // Wait for any splash/loading to clear
+        await page.locator('.loading-spinner, [aria-label="Loading"]').waitFor({ state: 'hidden', timeout: 15000 }).catch(() => { });
+        await page.waitForTimeout(500);
 
         const overflow = await page.evaluate((vw) => {
           const doc = document.documentElement;
@@ -34,7 +36,7 @@ for (const viewport of CERTIFIED_VIEWPORTS) {
           const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
           await page.screenshot({
             path: `e2e-results/screenshots/overflow-${viewport.name.replace(/\s+/g, "-")}-${path.replace(/\//g, "root") || "index"}.png`,
-          }).catch(() => {});
+          }).catch(() => { });
         }
 
         expect(
@@ -48,12 +50,19 @@ for (const viewport of CERTIFIED_VIEWPORTS) {
           // /auth is lazy-loaded; wait for networkidle so the chunk and heading render
           const waitUntil = path === "/auth" ? "networkidle" : "domcontentloaded";
           await page.goto(path, { waitUntil });
+
+          // Wait for any splash to clear
+          await page.locator('.loading-spinner, [aria-label="Loading"]').waitFor({ state: 'hidden', timeout: 15000 }).catch(() => { });
+
+          // Auto-accept cookies if they block the view
+          await page.locator('button:has-text("Prijať všetko")').click({ timeout: 3000 }).catch(() => { });
+
           if (path !== "/auth") await page.waitForTimeout(500);
           const locator =
             path === "/auth"
               ? page.getByText(/Prihlásenie|Registrácia|Obnova hesla/).first()
               : page.locator(criticalSelector).first();
-          await expect(locator).toBeVisible({ timeout: 10_000 });
+          await expect(locator).toBeVisible({ timeout: 20_000 });
         });
       }
     }

@@ -27,7 +27,7 @@ interface CalEvent {
 }
 
 export default function CalendarPage() {
-  const { businessId, isOwnerOrAdmin } = useBusiness();
+  const { businessId, isOwnerOrAdmin, activeMembership } = useBusiness();
   const { info: businessInfo, loading: infoLoading } = useBusinessInfoSupabase(businessId);
   const business = businessInfo?.business;
   const openingHours = businessInfo?.hours;
@@ -232,7 +232,7 @@ export default function CalendarPage() {
     const walkinEmail = `walkin-${Date.now()}@internal`;
 
     // Check/Create internal customer
-    let { data: custData } = await supabase
+    const { data: custData } = await supabase
       .from("customers")
       .select("id")
       .eq("business_id", businessId)
@@ -322,7 +322,7 @@ export default function CalendarPage() {
           onSelectEvent={handleSelectEvent}
           selectable={isOwnerOrAdmin}
           businessHours={{ hours: openingHours, overrides }}
-          resources={isOwnerOrAdmin ? employees : employees.filter(e => e.profile_id === (businessInfo as any)?.profile_id)}
+          resources={isOwnerOrAdmin ? employees : employees.filter(e => e.profile_id === activeMembership?.profile_id)}
         />
 
 
