@@ -27,6 +27,21 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [
+    // Build-time guard: fails vite build (and Vercel deploy) if required env vars are missing
+    {
+      name: 'validate-env-vars',
+      buildStart() {
+        if (mode === 'development') return; // skip in dev server
+        const required = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'];
+        const missing = required.filter(k => !process.env[k]);
+        if (missing.length) {
+          throw new Error(
+            `\n🔴 BUILD FAILED – chýbajú povinné env vars:\n  ${missing.join('\n  ')}\n` +
+            `Nastav ich v Vercel Dashboard → Settings → Environment Variables.\n`
+          );
+        }
+      },
+    },
     react(),
     mode === "development" && componentTagger(),
     VitePWA({

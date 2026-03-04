@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build)",
+      "Bash(npm run lint)",
+      "Bash(netsh advfirewall firewall add rule name=\"PHD Dev Server 5678\" dir=in action=allow protocol=TCP localport=5678)",
+      "Bash(npx kill-port 5678 5679 8080 8081 8082)",
+      "Bash(npm run test:responsive)",
+      "Bash(npx supabase db push)",
+      "Bash(npx supabase db dump --data-only --linked)",
+      "Bash(psql --version)",
+      "Read(//c/Users/42195/.cursor/**)",
+      "Bash(node -e \":*)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\42195\\.cursor"
+    ]
+  }
+}
