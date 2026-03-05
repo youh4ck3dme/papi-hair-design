@@ -34,7 +34,7 @@ export default {
         touch: "44px",
       },
       fontFamily: {
-        sans: ["-apple-system", "BlinkMacSystemFont", '"SF Pro Display"', '"SF Pro Text"', '"Helvetica Neue"', "Arial", "sans-serif"],
+        sans: ["-apple-system", "BlinkMacSystemFont", '"Inter"', '"SF Pro Display"', '"SF Pro Text"', '"Helvetica Neue"', "Arial", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

@@ -14,14 +14,14 @@
     --popover-foreground: 20 15% 5%;
 
     /* Premium Champagne Gold */
-    --primary: 43 70% 55%; 
-    --primary-foreground: 0 0% 100%;
+    --primary: 43 70% 55%;
+    --primary-foreground: 20 15% 5%;
 
     --secondary: 40 5% 95%;
     --secondary-foreground: 20 20% 15%;
 
     --muted: 40 5% 92%;
-    --muted-foreground: 20 10% 45%;
+    --muted-foreground: 20 12% 38%;
 
     --accent: 43 40% 90%;
     --accent-foreground: 43 70% 25%;
@@ -70,14 +70,14 @@
     --popover-foreground: 40 10% 95%;
 
     /* Polished Gold accent */
-    --primary: 43 70% 60%;
+    --primary: 43 80% 68%;
     --primary-foreground: 0 0% 0%;
 
     --secondary: 0 0% 8%;
     --secondary-foreground: 40 10% 85%;
 
     --muted: 0 0% 6%;
-    --muted-foreground: 40 5% 55%;
+    --muted-foreground: 40 8% 65%;
 
     --accent: 43 30% 15%;
     --accent-foreground: 43 70% 75%;
@@ -87,12 +87,12 @@
 
     --border: 0 0% 12%;
     --input: 0 0% 12%;
-    --ring: 43 70% 60%;
+    --ring: 43 80% 68%;
 
-    --gold: 43 70% 60%;
+    --gold: 43 80% 68%;
     --gold-foreground: 0 0% 5%;
 
-    --calendar-pending: 43 70% 60%;
+    --calendar-pending: 43 80% 68%;
     --calendar-pending-fg: 0 0% 0%;
     --calendar-confirmed: 142 30% 45%;
     --calendar-confirmed-fg: 0 0% 100%;
@@ -103,24 +103,30 @@
 
     --sidebar-background: 0 0% 2%;
     --sidebar-foreground: 40 10% 90%;
-    --sidebar-primary: 43 70% 60%;
+    --sidebar-primary: 43 80% 68%;
     --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 0 0% 6%;
     --sidebar-accent-foreground: 43 70% 90%;
     --sidebar-border: 0 0% 8%;
-    --sidebar-ring: 43 70% 60%;
+    --sidebar-ring: 43 80% 68%;
   }
 }
 
 @layer base {
   html {
-    font-size: 13px; /* base 16px minus 3px for site-wide smaller text */
+    font-size: 15px;
     overflow-x: hidden;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground antialiased;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
     overflow-x: hidden;
     min-height: 100vh;
     min-height: 100dvh;
