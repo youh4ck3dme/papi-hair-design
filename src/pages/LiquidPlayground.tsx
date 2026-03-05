@@ -241,8 +241,6 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
   );
 }
 
-import cardBgQr3d from "@/assets/luxury-qr-3d.png";
-
 function BookingContent() {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-8 text-center px-6">
