@@ -4,101 +4,111 @@
 
 @layer base {
   :root {
-    --background: 40 20% 97%;
-    --foreground: 20 15% 10%;
+    --background: 40 10% 98%;
+    --foreground: 20 15% 5%;
 
-    --card: 40 15% 99%;
-    --card-foreground: 20 15% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 15% 5%;
 
-    --popover: 40 15% 99%;
-    --popover-foreground: 20 15% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 15% 5%;
 
-    --primary: 43 74% 49%;
+    /* Premium Champagne Gold */
+    --primary: 43 70% 55%; 
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 38 18% 92%;
-    --secondary-foreground: 20 25% 18%;
+    --secondary: 40 5% 95%;
+    --secondary-foreground: 20 20% 15%;
 
-    --muted: 35 12% 93%;
-    --muted-foreground: 20 8% 40%;
+    --muted: 40 5% 92%;
+    --muted-foreground: 20 10% 45%;
 
-    --accent: 38 25% 90%;
-    --accent-foreground: 20 30% 22%;
+    --accent: 43 40% 90%;
+    --accent-foreground: 43 70% 25%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 60 9.1% 97.8%;
 
-    --border: 35 14% 86%;
-    --input: 35 14% 86%;
-    --ring: 43 74% 49%;
+    --border: 43 20% 90%;
+    --input: 43 20% 90%;
+    --ring: 43 70% 55%;
 
-    --radius: 0.625rem;
+    --radius: 1rem;
 
-    --gold: 43 74% 49%;
-    --gold-foreground: 20 15% 10%;
+    --gold: 43 70% 55%;
+    --gold-foreground: 20 15% 5%;
 
-    /* Booking calendar – status (light). Kontrast textu vs pozadie ≥ 4.5:1 (WCAG AA). */
-    --calendar-pending: 43 74% 49%;
-    --calendar-pending-fg: 22 18% 8%;
-    --calendar-confirmed: 142 48% 30%;
+    /* Booking calendar statuses - more elegant tones */
+    --calendar-pending: 43 70% 55%;
+    --calendar-pending-fg: 0 0% 100%;
+    --calendar-confirmed: 142 30% 35%;
     --calendar-confirmed-fg: 0 0% 100%;
-    --calendar-cancelled: 0 72% 48%;
+    --calendar-cancelled: 0 60% 50%;
     --calendar-cancelled-fg: 0 0% 100%;
-    --calendar-completed: 220 14% 24%;
-    --calendar-completed-fg: 0 0% 98%;
+    --calendar-completed: 215 15% 40%;
+    --calendar-completed-fg: 0 0% 100%;
 
-    --sidebar-background: 20 15% 10%;
-    --sidebar-foreground: 35 10% 88%;
-    --sidebar-primary: 43 74% 55%;
+    --sidebar-background: 20 15% 5%;
+    --sidebar-foreground: 40 10% 90%;
+    --sidebar-primary: 43 70% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 25 18% 16%;
-    --sidebar-accent-foreground: 35 10% 88%;
-    --sidebar-border: 25 15% 18%;
-    --sidebar-ring: 43 74% 55%;
+    --sidebar-accent: 25 15% 12%;
+    --sidebar-accent-foreground: 43 70% 90%;
+    --sidebar-border: 25 15% 12%;
+    --sidebar-ring: 43 70% 55%;
   }
 
   .dark {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 90%;
+    /* Obsidian Black Depth */
+    --background: 0 0% 2%;
+    --foreground: 40 10% 95%;
+
     --card: 0 0% 4%;
-    --card-foreground: 0 0% 90%;
+    --card-foreground: 40 10% 95%;
+
     --popover: 0 0% 4%;
-    --popover-foreground: 0 0% 90%;
-    --primary: 43 74% 52%;
-    --primary-foreground: 0 0% 100%;
+    --popover-foreground: 40 10% 95%;
+
+    /* Polished Gold accent */
+    --primary: 43 70% 60%;
+    --primary-foreground: 0 0% 0%;
+
     --secondary: 0 0% 8%;
-    --secondary-foreground: 0 0% 75%;
+    --secondary-foreground: 40 10% 85%;
+
     --muted: 0 0% 6%;
-    --muted-foreground: 0 0% 50%;
-    --accent: 0 0% 8%;
-    --accent-foreground: 43 50% 70%;
-    --destructive: 0 65% 55%;
-    --destructive-foreground: 0 0% 100%;
+    --muted-foreground: 40 5% 55%;
+
+    --accent: 43 30% 15%;
+    --accent-foreground: 43 70% 75%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 60 9.1% 97.8%;
+
     --border: 0 0% 12%;
     --input: 0 0% 12%;
-    --ring: 43 74% 52%;
+    --ring: 43 70% 60%;
 
-    --gold: 43 74% 52%;
+    --gold: 43 70% 60%;
     --gold-foreground: 0 0% 5%;
 
-    /* Booking calendar – status (dark). Kontrast textu vs pozadie ≥ 4.5:1 (WCAG AA). */
-    --calendar-pending: 43 70% 55%;
-    --calendar-pending-fg: 22 20% 6%;
-    --calendar-confirmed: 142 38% 38%;
+    --calendar-pending: 43 70% 60%;
+    --calendar-pending-fg: 0 0% 0%;
+    --calendar-confirmed: 142 30% 45%;
     --calendar-confirmed-fg: 0 0% 100%;
-    --calendar-cancelled: 0 62% 52%;
+    --calendar-cancelled: 0 60% 45%;
     --calendar-cancelled-fg: 0 0% 100%;
-    --calendar-completed: 220 12% 38%;
-    --calendar-completed-fg: 0 0% 92%;
+    --calendar-completed: 215 15% 50%;
+    --calendar-completed-fg: 0 0% 100%;
 
-    --sidebar-background: 0 0% 0%;
-    --sidebar-foreground: 0 0% 85%;
-    --sidebar-primary: 43 74% 52%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-background: 0 0% 2%;
+    --sidebar-foreground: 40 10% 90%;
+    --sidebar-primary: 43 70% 60%;
+    --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 0 0% 6%;
-    --sidebar-accent-foreground: 0 0% 85%;
-    --sidebar-border: 0 0% 10%;
-    --sidebar-ring: 43 74% 52%;
+    --sidebar-accent-foreground: 43 70% 90%;
+    --sidebar-border: 0 0% 8%;
+    --sidebar-ring: 43 70% 60%;
   }
 }
 

@@ -13,11 +13,11 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import "@/styles/expanding-cards.css";
 
-import cardBgHero from "@/assets/card-bg-hero.jpg";
-import cardBgHow from "@/assets/card-bg-how.jpg";
-import cardBgFeatures from "@/assets/card-bg-features.jpg";
-import cardBgQr from "@/assets/card-bg-qr.jpg";
-import cardBgAccounts from "@/assets/card-bg-accounts.jpg";
+import cardBgHero from "@/assets/luxury-hero.png";
+import cardBgHow from "@/assets/luxury-hours.png";
+import cardBgFeatures from "@/assets/luxury-features.png";
+import cardBgQr from "@/assets/luxury-qr.png";
+import cardBgAccounts from "@/assets/luxury-accounts.png";
 
 const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
 
@@ -28,13 +28,13 @@ const DAY_LABELS: Record<string, string> = {
 const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 const CATEGORIES: { label: string; icon: string; match: (name: string) => boolean }[] = [
-  { label: "Dámsky – Strih & Styling", icon: "✂️", match: (n) => /dámsky strih|fúkaná|finálny styling/i.test(n) },
+  { label: "Dámsky – Strih & Styling", icon: "💎", match: (n) => /dámsky strih|fúkaná|finálny styling/i.test(n) },
   { label: "Dámsky – Farbenie", icon: "🎨", match: (n) => /farben|kompletné farb/i.test(n) },
   { label: "Dámsky – Balayage & Melír", icon: "🌟", match: (n) => /balayage|melír/i.test(n) },
-  { label: "Dámsky – Regenerácia", icon: "💎", match: (n) => /gumovanie|sťahovanie|methamorphyc|keratín/i.test(n) },
+  { label: "Dámsky – Regenerácia", icon: "✨", match: (n) => /gumovanie|sťahovanie|methamorphyc|keratín/i.test(n) },
   { label: "Dámsky – Predlžovanie", icon: "👑", match: (n) => /tape-in|vrkôč|spoločenský/i.test(n) },
   { label: "Pánsky – Vlasy", icon: "💈", match: (n) => /junior|pánsky strih/i.test(n) },
-  { label: "Pánsky – Brada", icon: "🧔", match: (n) => /brad[ay]|kombinácia|špeciál/i.test(n) },
+  { label: "Pánsky – Brada", icon: " Beard", match: (n) => /brad[ay]|kombinácia|špeciál/i.test(n) },
   { label: "Pánsky – Farbenie", icon: "🖌️", match: (n) => /trvalá|zosvetlenie|farbenie brady|tónovanie/i.test(n) },
   { label: "Doplnkové služby", icon: "✨", match: (n) => /depilác|sviečk|maska/i.test(n) },
 ];
@@ -64,25 +64,25 @@ const cardBgs: Record<string, string> = {
 };
 
 const cards = [
-  { id: "brand",   label: "PAPI",       sub: "Hair Design", Icon: Sparkles },
-  { id: "hours",   label: "Hodiny",     sub: "Prevádzky",   Icon: Clock    },
-  { id: "prices",  label: "Cenník",     sub: "Služieb",     Icon: Euro     },
-  { id: "booking", label: "Rezervácia", sub: "Online",      Icon: Calendar },
-  { id: "contact", label: "Kontakt",    sub: "Košice",      Icon: Phone    },
+  { id: "brand", label: "LUXURY", sub: "Salon Experience", Icon: Sparkles },
+  { id: "hours", label: "TIME", sub: "Opening Hours", Icon: Clock },
+  { id: "prices", label: "PRICES", sub: "Services Menu", Icon: Euro },
+  { id: "booking", label: "RESERVE", sub: "Online Booking", Icon: Calendar },
+  { id: "contact", label: "DETAILS", sub: "Find us in Košice", Icon: Phone },
 ];
 
 const contentAnim: any = {
   initial: { opacity: 0, y: 16, filter: "blur(4px)" },
   animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] as const } },
-  exit:    { opacity: 0, y: -6, filter: "blur(2px)", transition: { duration: 0.35, ease: "easeIn" as const } },
+  exit: { opacity: 0, y: -6, filter: "blur(2px)", transition: { duration: 0.35, ease: "easeIn" as const } },
 };
 
 /* ── Card content components ── */
 
 function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null; navigate: ReturnType<typeof useNavigate> }) {
   const modeColors: Record<string, string> = {
-    open:       "bg-green-500/15 text-green-400 border-green-500/30",
-    closed:     "bg-red-500/15 text-red-400 border-red-500/30",
+    open: "bg-green-500/15 text-green-400 border-green-500/30",
+    closed: "bg-red-500/15 text-red-400 border-red-500/30",
     on_request: "bg-amber-500/15 text-amber-400 border-amber-500/30",
   };
   const modeLabels: Record<string, string> = {
@@ -93,31 +93,47 @@ function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null;
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-5 text-center">
-      <LogoIcon size="lg" />
-      <div>
-        <h1 className="text-4xl sm:text-5xl font-semibold tracking-widest uppercase">
-          PAPI HAIR DESIGN
+    <div className="flex flex-col items-center justify-center h-full gap-8 text-center px-4">
+      <div className="relative group">
+        <LogoIcon size="lg" className="relative z-10" />
+        <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full scale-150 group-hover:bg-primary/30 transition-all duration-700" />
+      </div>
+      <div className="space-y-3">
+        <h1 className="text-5xl sm:text-7xl font-bold tracking-[0.2em] uppercase leading-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/60">
+          PAPI HAIR
         </h1>
-        <p className="text-xs mt-1 text-muted-foreground tracking-widest uppercase">
+        <h2 className="text-2xl sm:text-3xl font-light tracking-[0.4em] uppercase text-primary -mt-2">
+          DESIGN
+        </h2>
+        <div className="h-px w-24 bg-gradient-to-r from-transparent via-primary to-transparent mx-auto mt-6" />
+        <p className="text-xs mt-4 text-muted-foreground tracking-[0.3em] uppercase opacity-60">
           est. 2018 · Košice
         </p>
-        <p className="text-sm mt-2 text-amber-400 font-medium">
-          Ambasádor GOLD Haircare Slovakia
+        <p className="text-sm mt-2 text-amber-200/80 font-medium tracking-wide italic">
+          Official Gold Haircare Slovakia Ambassador
         </p>
       </div>
       {openStatus && (
-        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border ${modeColors[openStatus.mode] ?? modeColors.closed}`}>
-          <span className={`w-2 h-2 rounded-full ${dotColors[openStatus.mode] ?? dotColors.closed}`} />
+        <div className={`inline-flex items-center gap-3 px-4 py-2 rounded-full text-xs font-semibold tracking-widest uppercase border backdrop-blur-md ${modeColors[openStatus.mode] ?? modeColors.closed}`}>
+          <span className={`w-2 h-2 rounded-full animate-pulse ${dotColors[openStatus.mode] ?? dotColors.closed}`} />
           {modeLabels[openStatus.mode] ?? "Zatvorené"}
         </div>
       )}
-      <div className="flex flex-col sm:flex-row gap-3 mt-2">
-        <Button size="lg" onClick={() => navigate("/booking")}>
-          Rezervovať termín →
+      <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full max-w-md">
+        <Button
+          size="lg"
+          className="h-14 bg-gradient-to-r from-primary via-[#ffd700] to-primary text-black font-bold uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-transform shadow-[0_10px_30px_-10px_rgba(218,165,32,0.5)]"
+          onClick={() => navigate("/booking")}
+        >
+          Reserve Your Slot
         </Button>
-        <Button size="lg" variant="outline" onClick={() => navigate("/auth")}>
-          Prihlásiť sa
+        <Button
+          size="lg"
+          variant="outline"
+          className="h-14 border-white/10 hover:border-primary/50 text-white font-medium uppercase tracking-widest rounded-xl backdrop-blur-sm"
+          onClick={() => navigate("/auth")}
+        >
+          Member Access
         </Button>
       </div>
     </div>
@@ -146,11 +162,11 @@ function HoursContent({ info, openStatus, nextOpening }: { info: PublicBusinessI
         <div key={day} className="flex items-center justify-between text-base py-1.5 border-b border-white/5 last:border-0">
           <span className="font-medium text-muted-foreground w-8">{DAY_LABELS[day]}</span>
           <span className={
-            mode === "closed"     ? "text-red-400"   :
-            mode === "on_request" ? "text-amber-400" : "text-foreground"
+            mode === "closed" ? "text-red-400" :
+              mode === "on_request" ? "text-amber-400" : "text-foreground"
           }>
-            {mode === "closed"     ? "Zatvorené"            :
-             mode === "on_request" ? "Podľa objednávok"     : time}
+            {mode === "closed" ? "Zatvorené" :
+              mode === "on_request" ? "Podľa objednávok" : time}
           </span>
         </div>
       ))}
@@ -165,61 +181,81 @@ function HoursContent({ info, openStatus, nextOpening }: { info: PublicBusinessI
 
 function PricesContent({ services }: { services: ServiceItem[] }) {
   const groups = categorizeServices(services);
-  if (!groups.length) return <p className="text-sm text-muted-foreground">Načítavam cenník...</p>;
+
+  if (!groups.length) return (
+    <div className="flex items-center justify-center h-full">
+      <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+    </div>
+  );
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold">Cenník služieb</h2>
-      {groups.map((g) => (
-        <div key={g.label}>
-          <h3 className="text-[15px] font-bold mb-1.5 flex items-center gap-1.5 text-amber-400">
-            <span>{g.icon}</span> {g.label}
-          </h3>
-          <div className="space-y-1">
-            {g.items.map((svc) => (
-              <div key={svc.id} className="flex items-center justify-between text-[15px] px-1">
-                <span className="text-muted-foreground">{svc.name_sk}</span>
-                <span className="font-semibold tabular-nums">
-                  {svc.price != null ? `${Number(svc.price).toFixed(0)} €` : "—"}
-                </span>
-              </div>
-            ))}
+    <div className="space-y-8 px-2 pb-10">
+      <div className="space-y-1">
+        <h2 className="text-3xl font-bold tracking-tight">Luxury Services</h2>
+        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">Exquisite Hair Mastery</p>
+      </div>
+
+      <div className="grid gap-8">
+        {groups.map((g) => (
+          <div key={g.label} className="space-y-4">
+            <h3 className="text-xs font-bold tracking-[0.3em] uppercase flex items-center gap-3 text-primary/80">
+              <span className="text-lg grayscale">{g.icon}</span>
+              {g.label}
+              <div className="h-px flex-1 bg-gradient-to-r from-primary/30 to-transparent" />
+            </h3>
+            <div className="grid gap-3">
+              {g.items.map((svc) => (
+                <div key={svc.id} className="flex items-baseline justify-between group">
+                  <span className="text-sm font-medium text-muted-foreground group-hover:text-white transition-colors tracking-wide">{svc.name_sk}</span>
+                  <div className="flex-1 border-b border-white/5 border-dotted mx-4 mb-1" />
+                  <span className="font-bold tabular-nums text-white tracking-widest">
+                    {svc.price != null ? `${Number(svc.price).toFixed(0)}€` : "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
-      <p className="text-[10px] italic text-center text-muted-foreground mt-2">
-        Ceny sú orientačné – závisia od dĺžky a hustoty vlasov.
-      </p>
+        ))}
+      </div>
+
+      <div className="pt-6 border-t border-white/5">
+        <p className="text-[10px] italic text-center text-muted-foreground tracking-widest uppercase opacity-40">
+          Prices are subject to change based on hair length and complexity.
+        </p>
+      </div>
     </div>
   );
 }
 
 function BookingContent() {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-5 text-center">
-      <Calendar className="w-12 h-12 text-amber-400" />
-      <div>
-        <h2 className="text-2xl font-bold">Online rezervácia</h2>
-        <p className="text-sm text-muted-foreground mt-2 max-w-xs">
-          Rezervujte si termín kedykoľvek – vyberte službu, zamestnanca a čas.
+    <div className="flex flex-col items-center justify-center h-full gap-8 text-center px-6">
+      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center border border-primary/20">
+        <Calendar className="w-10 h-10 text-primary" />
+      </div>
+      <div className="space-y-3">
+        <h2 className="text-3xl font-bold tracking-tight">Seamless Booking</h2>
+        <p className="text-base text-muted-foreground max-w-xs leading-relaxed">
+          Experience effortless scheduling. Choose your therapist, select premium services, and secure your appointment in seconds.
         </p>
       </div>
       <Link
         to="/booking"
-        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-black shadow-lg transition-all hover:scale-105 hover:shadow-amber-500/30"
-        style={{ background: "linear-gradient(135deg, #b8860b, #daa520)" }}
+        className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-xl text-sm font-bold text-black shadow-2xl transition-all hover:scale-105 active:scale-95 overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #b8860b, #daa520, #ffd700)" }}
       >
-        <Calendar className="w-4 h-4" />
-        Rezervovať termín
+        <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+        <Calendar className="w-5 h-5 relative z-10" />
+        <span className="relative z-10 uppercase tracking-widest">Begin Reservation</span>
       </Link>
-      <div className="mt-2">
+      <div className="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm group hover:border-primary/30 transition-colors">
         <img
-          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(window.location.origin + "/booking")}&bgcolor=transparent&color=daa520&format=svg`}
+          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(window.location.origin + "/booking")}&bgcolor=00000000&color=daa520&format=svg`}
           alt="QR kód"
-          className="w-28 h-28 rounded-lg opacity-80"
+          className="w-32 h-32 rounded-lg opacity-90 group-hover:opacity-100 transition-opacity"
           loading="lazy"
         />
-        <p className="text-xs text-muted-foreground mt-2">Naskenujte a rezervujte</p>
+        <p className="text-[10px] text-muted-foreground mt-3 uppercase tracking-[0.2em] font-medium">Scan to Book Anywhere</p>
       </div>
     </div>
   );
@@ -236,56 +272,59 @@ function ContactContent() {
   };
 
   return (
-    <div className="flex flex-col h-full gap-4">
-      <h2 className="text-xl font-bold">Kontakt</h2>
-      <div className="space-y-4">
-        <div className="flex items-start gap-3">
-          <MapPin className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-medium">Trieda SNP 61</p>
-            <p className="text-xs text-muted-foreground">Spoločenský pavilón, Košice</p>
-          </div>
-        </div>
-        <button
-          onClick={() => copy("+421949459624", "phone")}
-          className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
-        >
-          <Phone className="w-5 h-5 text-amber-400 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium">+421 949 459 624</p>
-            <p className="text-xs text-muted-foreground">Volajte alebo WhatsApp</p>
-          </div>
-          {copied === "phone" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-muted-foreground/50" />}
-        </button>
-        <button
-          onClick={() => copy("papihairdesign@gmail.com", "email")}
-          className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
-        >
-          <Mail className="w-5 h-5 text-amber-400 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium">papihairdesign@gmail.com</p>
-            <p className="text-xs text-muted-foreground">Napíšte nám</p>
-          </div>
-          {copied === "email" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-muted-foreground/50" />}
-        </button>
-        <div className="flex items-center gap-3">
-          <Star className="w-5 h-5 text-amber-400 shrink-0" />
-          <div>
-            <p className="text-sm font-medium">Gold Haircare Slovakia</p>
-            <p className="text-xs text-muted-foreground">Prémiové produkty</p>
-          </div>
-        </div>
+    <div className="flex flex-col h-full gap-6 px-2">
+      <div className="space-y-1">
+        <h2 className="text-3xl font-bold tracking-tight">Get in Touch</h2>
+        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">Location & Communication</p>
       </div>
 
-      {/* Google Maps – Trieda SNP 61, Košice */}
+      <div className="grid gap-4 mt-2">
+        <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-primary/20 transition-all">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <MapPin className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white uppercase tracking-wider">Trieda SNP 61</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest leading-loose">Spoločenský pavilón, Košice</p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => copy("+421949459624", "phone")}
+          className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-primary/30 hover:bg-white/[0.05] transition-all group"
+        >
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+            <Phone className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-bold text-white tracking-widest">+421 949 459 624</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-[0.1em]">WhatsApp & Calls</p>
+          </div>
+          {copied === "phone" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-white/20 group-hover:text-white/40" />}
+        </button>
+
+        <button
+          onClick={() => copy("papihairdesign@gmail.com", "email")}
+          className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-primary/30 hover:bg-white/[0.05] transition-all group"
+        >
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+            <Mail className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-bold text-white tracking-widest">papihairdesign@gmail.com</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-[0.1em]">Direct Inquiry</p>
+          </div>
+          {copied === "email" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-white/20 group-hover:text-white/40" />}
+        </button>
+      </div>
+
       <div
-        className="mt-auto rounded-xl overflow-hidden border border-white/10"
-        style={{ height: "220px", minHeight: "180px" }}
+        className="mt-4 rounded-3xl overflow-hidden border border-white/10 shadow-2xl group relative"
+        style={{ height: "200px" }}
         onMouseEnter={() => setMapLit(true)}
         onMouseLeave={() => setMapLit(false)}
-        onTouchStart={() => setMapLit(true)}
-        onTouchEnd={() => setMapLit(false)}
       >
+        <div className="absolute inset-0 bg-primary/5 pointer-events-none group-hover:bg-transparent transition-colors z-10" />
         <iframe
           title="Mapa – PAPI HAIR DESIGN"
           src="https://www.openstreetmap.org/export/embed.html?bbox=21.2336%2C48.7168%2C21.2436%2C48.7218&layer=mapnik&marker=48.7193%2C21.2386"
@@ -294,12 +333,11 @@ function ContactContent() {
           style={{
             border: 0,
             filter: mapLit
-              ? "grayscale(0) brightness(1) contrast(1)"
-              : "grayscale(0.7) brightness(0.49) contrast(1.1)",
-            transition: "filter 0.5s ease",
+              ? "grayscale(0.2) brightness(0.9) contrast(1.1)"
+              : "grayscale(1) brightness(0.4) contrast(1.2) invert(1)",
+            transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
           loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
         />
       </div>
     </div>
@@ -325,9 +363,9 @@ export default function LiquidPlayground() {
   }, []);
 
   const contentMap: Record<string, React.ReactNode> = {
-    brand:   <BrandContent openStatus={openStatus} navigate={navigate} />,
-    hours:   <HoursContent info={info} openStatus={openStatus} nextOpening={nextOpening} />,
-    prices:  <PricesContent services={services} />,
+    brand: <BrandContent openStatus={openStatus} navigate={navigate} />,
+    hours: <HoursContent info={info} openStatus={openStatus} nextOpening={nextOpening} />,
+    prices: <PricesContent services={services} />,
     booking: <BookingContent />,
     contact: <ContactContent />,
   };
