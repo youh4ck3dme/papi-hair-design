@@ -10,18 +10,21 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Schemas & validation
 // ---------------------------------------------------------------------------
 
-const loginSchema = z.object({
-  email: z.string().email("Neplatný email"),
-  password: z.string().min(6, "Heslo musí mať aspoň 6 znakov"),
-});
-
-const registerSchema = loginSchema;
+function buildSchemas(t: (k: string) => string) {
+  const loginSchema = z.object({
+    email: z.string().email(t("auth.invalidEmail")),
+    password: z.string().min(6, t("auth.passwordMin")),
+  });
+  return { loginSchema, registerSchema: loginSchema };
+}
 
 function parseZodErrors(error: z.ZodError): Record<string, string> {
   const errs: Record<string, string> = {};
@@ -37,27 +40,6 @@ function parseZodErrors(error: z.ZodError): Record<string, string> {
 // ---------------------------------------------------------------------------
 
 export type AuthMode = "login" | "register" | "forgot";
-
-const AUTH_COPY: Record<
-  AuthMode,
-  { title: string; description: string; submitText: string }
-> = {
-  login: {
-    title: "Prihlásenie",
-    description: "Prihláste sa do svojho účtu",
-    submitText: "Prihlásiť sa",
-  },
-  register: {
-    title: "Registrácia",
-    description: "Vytvorte si nový účet",
-    submitText: "Zaregistrovať sa",
-  },
-  forgot: {
-    title: "Obnova hesla",
-    description: "Zadajte email pre obnovu hesla",
-    submitText: "Odoslať email",
-  },
-};
 
 // ---------------------------------------------------------------------------
 // Claim booking (shared after register / Google sign-in)
@@ -93,6 +75,7 @@ function getFormSubmitHandler(
 // ---------------------------------------------------------------------------
 
 function useAuthForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const urlMode = searchParams.get("mode");
@@ -127,6 +110,7 @@ function useAuthForm() {
   const handleLogin = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
+      const { loginSchema } = buildSchemas(t);
       const result = loginSchema.safeParse(form);
       if (!result.success) {
         setErrors(parseZodErrors(result.error));
@@ -143,17 +127,18 @@ function useAuthForm() {
         persistSessionPreference(rememberMe);
         navigate("/admin");
       } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : "Prihlásenie zlyhalo");
+        toast.error(err instanceof Error ? err.message : t("auth.toastLoginFail"));
       } finally {
         setLoading(false);
       }
     },
-    [form, rememberMe, navigate, persistSessionPreference]
+    [form, rememberMe, navigate, persistSessionPreference, t]
   );
 
   const handleRegister = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
+      const { registerSchema } = buildSchemas(t);
       const result = registerSchema.safeParse(form);
       if (!result.success) {
         setErrors(parseZodErrors(result.error));
@@ -168,19 +153,15 @@ function useAuthForm() {
         });
         if (error) throw error;
         const claimed = await tryClaimBooking(claimToken);
-        toast.success(
-          claimed
-            ? "Registrácia úspešná! Rezervácia bola prepojená s vaším účtom."
-            : "Registrácia úspešná."
-        );
+        toast.success(claimed ? t("auth.toastRegisterOkBooking") : t("auth.toastRegisterOk"));
         navigate("/admin");
       } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : "Registrácia zlyhala");
+        toast.error(err instanceof Error ? err.message : t("auth.toastRegisterFail"));
       } finally {
         setLoading(false);
       }
     },
-    [form, claimToken, navigate]
+    [form, claimToken, navigate, t]
   );
 
   const handleGoogleLogin = useCallback(async () => {
@@ -198,21 +179,21 @@ function useAuthForm() {
       if (token) {
         const claimed = await tryClaimBooking(token);
         if (claimed) {
-          toast.success("Prihlásenie úspešné. Rezervácia bola prepojená s vaším účtom.");
+          toast.success(t("auth.toastLoginOkBooking"));
         }
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Prihlásenie cez Google zlyhalo");
+      toast.error(err instanceof Error ? err.message : t("auth.toastGoogleFail"));
     } finally {
       setLoading(false);
     }
-  }, [rememberMe, persistSessionPreference]);
+  }, [rememberMe, persistSessionPreference, t]);
 
   const handleForgot = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!form.email) {
-        setErrors({ email: "Zadajte email" });
+        setErrors({ email: t("auth.toastEnterEmail") });
         return;
       }
       setLoading(true);
@@ -221,20 +202,24 @@ function useAuthForm() {
           redirectTo: `${window.location.origin}/auth?mode=reset`,
         });
         if (error) throw error;
-        toast.success("Email na obnovenie hesla bol odoslaný");
+        toast.success(t("auth.toastResetSent"));
         setMode("login");
       } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : "Odoslanie zlyhalo");
+        toast.error(err instanceof Error ? err.message : t("auth.toastResetFail"));
       } finally {
         setLoading(false);
       }
     },
-    [form.email]
+    [form.email, t]
   );
 
   const handleFormSubmit = getFormSubmitHandler(mode, handleLogin, handleRegister, handleForgot);
 
-  const copy = AUTH_COPY[mode];
+  const copy = {
+    login: { title: t("auth.loginTitle"), description: t("auth.loginDesc"), submitText: t("auth.loginBtn") },
+    register: { title: t("auth.registerTitle"), description: t("auth.registerDesc"), submitText: t("auth.registerBtn") },
+    forgot: { title: t("auth.forgotTitle"), description: t("auth.forgotDesc"), submitText: t("auth.forgotBtn") },
+  }[mode];
 
   return {
     mode,
@@ -248,6 +233,7 @@ function useAuthForm() {
     handleFormSubmit,
     handleGoogleLogin,
     copy,
+    t,
   };
 }
 
@@ -269,9 +255,11 @@ function GoogleIcon() {
 function AuthModeLinks({
   mode,
   onModeChange,
+  t,
 }: Readonly<{
   mode: AuthMode;
   onModeChange: (m: AuthMode) => void;
+  t: (k: string) => string;
 }>) {
   if (mode === "login") {
     return (
@@ -281,12 +269,12 @@ function AuthModeLinks({
           onClick={() => onModeChange("forgot")}
           className="text-primary hover:underline block w-full"
         >
-          Zabudnuté heslo?
+          {t("auth.forgotLink")}
         </button>
         <p className="text-muted-foreground">
-          Nemáte účet?{" "}
+          {t("auth.noAccount")}{" "}
           <button type="button" onClick={() => onModeChange("register")} className="text-primary hover:underline">
-            Zaregistrovať sa
+            {t("auth.registerBtn")}
           </button>
         </p>
       </>
@@ -295,9 +283,9 @@ function AuthModeLinks({
   if (mode === "register") {
     return (
       <p className="text-muted-foreground">
-        Máte účet?{" "}
+        {t("auth.hasAccount")}{" "}
         <button type="button" onClick={() => onModeChange("login")} className="text-primary hover:underline">
-          Prihlásiť sa
+          {t("auth.loginBtn")}
         </button>
       </p>
     );
@@ -308,7 +296,7 @@ function AuthModeLinks({
       onClick={() => onModeChange("login")}
       className="text-primary hover:underline"
     >
-      Späť na prihlásenie
+      {t("auth.backToLogin")}
     </button>
   );
 }
@@ -330,9 +318,9 @@ export default function AuthPage() {
     handleFormSubmit,
     handleGoogleLogin,
     copy,
+    t,
   } = useAuthForm();
 
-  // Supabase má Google login povolený vždy (ak je nastavený v Dashboarde)
   const showGoogle = mode === "login";
 
   return (
@@ -341,12 +329,13 @@ export default function AuthPage() {
       data-testid="auth-page"
     >
       <div
-        className="fixed top-4 right-4 z-50 safe-top safe-right"
+        className="fixed top-4 right-4 z-50 flex items-center gap-1 safe-top safe-right"
         style={{
           top: "max(1rem, env(safe-area-inset-top))",
           right: "max(1rem, env(safe-area-inset-right))",
         }}
       >
+        <LanguageToggle />
         <ThemeToggle />
       </div>
 
@@ -364,12 +353,12 @@ export default function AuthPage() {
           <CardContent className="space-y-4">
             <form onSubmit={handleFormSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("auth.email")}</Label>
                 <Input
                   id="email"
                   type="email"
                   autoComplete="email"
-                  placeholder="jana@example.sk"
+                  placeholder={t("auth.emailPlaceholder")}
                   value={form.email}
                   onChange={setField("email")}
                   disabled={loading}
@@ -380,7 +369,7 @@ export default function AuthPage() {
 
               {mode !== "forgot" && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="password">Heslo</Label>
+                  <Label htmlFor="password">{t("auth.password")}</Label>
                   <Input
                     id="password"
                     type="password"
@@ -402,7 +391,7 @@ export default function AuthPage() {
                     onCheckedChange={(checked) => setRememberMePersisted(checked === true)}
                   />
                   <Label htmlFor="rememberMe" className="text-sm font-normal cursor-pointer">
-                    Zapamätať si ma
+                    {t("auth.rememberMe")}
                   </Label>
                 </div>
               )}
@@ -419,7 +408,7 @@ export default function AuthPage() {
                       <span className="w-full border-t border-border" />
                     </span>
                     <span className="relative flex justify-center text-xs uppercase text-muted-foreground bg-card px-2">
-                      alebo
+                      {t("common.or")}
                     </span>
                   </div>
                   <Button
@@ -431,26 +420,26 @@ export default function AuthPage() {
                     data-testid="auth-google-btn"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <GoogleIcon />}
-                    Prihlásiť sa cez Google
+                    {t("auth.googleBtn")}
                   </Button>
                 </>
               )}
             </form>
 
             <div className="text-center text-sm space-y-2">
-              <AuthModeLinks mode={mode} onModeChange={setMode} />
+              <AuthModeLinks mode={mode} onModeChange={setMode} t={t} />
             </div>
           </CardContent>
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-4 space-y-1">
           <a href="/demo" className="text-primary hover:underline block">
-            Demo účet – vyskúšať bez registrácie
+            {t("auth.demoLink")}
           </a>
           <span>
-            Rezervácia?{" "}
+            {t("auth.bookingLink")}{" "}
             <a href="/booking" className="text-primary hover:underline">
-              Online rezervácia
+              {t("auth.bookingLinkLabel")}
             </a>
           </span>
         </p>

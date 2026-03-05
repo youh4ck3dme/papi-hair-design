@@ -1,11 +1,14 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/ – env reload
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  return ({
   build: {
     sourcemap: true,
     rollupOptions: {
@@ -14,7 +17,9 @@ export default defineConfig(({ mode }) => ({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-query': ['@tanstack/react-query'],
-          'vendor-ui': ['sonner', 'recharts', 'lucide-react'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-charts': ['recharts'],
+          'vendor-ui': ['sonner', 'lucide-react', 'class-variance-authority', 'tailwind-merge'],
         },
       },
     },
@@ -33,7 +38,7 @@ export default defineConfig(({ mode }) => ({
       buildStart() {
         if (mode === 'development') return; // skip in dev server
         const required = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'];
-        const missing = required.filter(k => !process.env[k]);
+        const missing = required.filter(k => !env[k] && !process.env[k]);
         if (missing.length) {
           throw new Error(
             `\n🔴 BUILD FAILED – chýbajú povinné env vars:\n  ${missing.join('\n  ')}\n` +
@@ -43,6 +48,19 @@ export default defineConfig(({ mode }) => ({
       },
     },
     react(),
+    sentryVitePlugin({
+      org: "YOUR_SENTRY_ORG",
+      project: "YOUR_SENTRY_PROJECT",
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      // Upload source maps in production builds
+      sourcemaps: {
+        assets: ["dist/**/*.js"],
+      },
+      release: {
+        name: `${process.env.npm_package_version}-${process.env.GIT_SHA || 'dev'}`,
+        finalize: true,
+      },
+    }),
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
@@ -94,4 +112,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+});});

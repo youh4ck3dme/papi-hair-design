@@ -8,6 +8,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { LogoIcon } from "@/components/LogoIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { useTranslation } from "react-i18next";
 import { useBusinessInfo, type OpenStatus, type PublicBusinessInfo, type NextOpening, type BusinessHourEntry } from "@/hooks/useBusinessInfo";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -18,31 +20,36 @@ import cardBgHow from "@/assets/luxury-hours.png";
 import cardBgFeatures from "@/assets/luxury-features.png";
 import cardBgQr from "@/assets/luxury-qr.png";
 import cardBgAccounts from "@/assets/luxury-accounts.png";
+import cardBgQr3d from "@/assets/luxury-qr-3d.png";
 
 const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
 
-const DAY_LABELS: Record<string, string> = {
+const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
+const DAY_LABELS_SK: Record<string, string> = {
   monday: "Po", tuesday: "Ut", wednesday: "St",
   thursday: "Št", friday: "Pi", saturday: "So", sunday: "Ne",
 };
-const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
-
-const CATEGORIES: { label: string; icon: string; match: (name: string) => boolean }[] = [
-  { label: "Dámsky – Strih & Styling", icon: "💎", match: (n) => /dámsky strih|fúkaná|finálny styling/i.test(n) },
-  { label: "Dámsky – Farbenie", icon: "🎨", match: (n) => /farben|kompletné farb/i.test(n) },
-  { label: "Dámsky – Balayage & Melír", icon: "🌟", match: (n) => /balayage|melír/i.test(n) },
-  { label: "Dámsky – Regenerácia", icon: "✨", match: (n) => /gumovanie|sťahovanie|methamorphyc|keratín/i.test(n) },
-  { label: "Dámsky – Predlžovanie", icon: "👑", match: (n) => /tape-in|vrkôč|spoločenský/i.test(n) },
-  { label: "Pánsky – Vlasy", icon: "💈", match: (n) => /junior|pánsky strih/i.test(n) },
-  { label: "Pánsky – Brada", icon: " Beard", match: (n) => /brad[ay]|kombinácia|špeciál/i.test(n) },
-  { label: "Pánsky – Farbenie", icon: "🖌️", match: (n) => /trvalá|zosvetlenie|farbenie brady|tónovanie/i.test(n) },
-  { label: "Doplnkové služby", icon: "✨", match: (n) => /depilác|sviečk|maska/i.test(n) },
-];
+const DAY_LABELS_EN: Record<string, string> = {
+  monday: "Mo", tuesday: "Tu", wednesday: "We",
+  thursday: "Th", friday: "Fr", saturday: "Sa", sunday: "Su",
+};
 
 type ServiceRow = Tables<"services">;
 type ServiceItem = Pick<ServiceRow, "id" | "name_sk" | "price">;
 
-function categorizeServices(services: ServiceItem[]) {
+function categorizeServices(services: ServiceItem[], t: (k: string) => string) {
+  const CATEGORIES = [
+    { label: t("liquid.catWomenHair"), icon: "💎", match: (n: string) => /dámsky strih|fúkaná|finálny styling/i.test(n) },
+    { label: t("liquid.catWomenColor"), icon: "🎨", match: (n: string) => /farben|kompletné farb/i.test(n) },
+    { label: t("liquid.catWomenBalayage"), icon: "🌟", match: (n: string) => /balayage|melír/i.test(n) },
+    { label: t("liquid.catWomenRegen"), icon: "✨", match: (n: string) => /gumovanie|sťahovanie|methamorphyc|keratín/i.test(n) },
+    { label: t("liquid.catWomenExtend"), icon: "👑", match: (n: string) => /tape-in|vrkôč|spoločenský/i.test(n) },
+    { label: t("liquid.catMenHair"), icon: "💈", match: (n: string) => /junior|pánsky strih/i.test(n) },
+    { label: t("liquid.catMenBeard"), icon: "✂️", match: (n: string) => /brad[ay]|kombinácia|špeciál/i.test(n) },
+    { label: t("liquid.catMenColor"), icon: "🖌️", match: (n: string) => /trvalá|zosvetlenie|farbenie brady|tónovanie/i.test(n) },
+    { label: t("liquid.catExtra"), icon: "✨", match: (n: string) => /depilác|sviečk|maska/i.test(n) },
+  ];
   const assigned = new Set<string>();
   const groups: { label: string; icon: string; items: ServiceItem[] }[] = [];
   for (const cat of CATEGORIES) {
@@ -51,11 +58,9 @@ function categorizeServices(services: ServiceItem[]) {
     if (items.length) groups.push({ label: cat.label, icon: cat.icon, items });
   }
   const rest = services.filter((s) => !assigned.has(s.id));
-  if (rest.length) groups.push({ label: "Ostatné", icon: "📋", items: rest });
+  if (rest.length) groups.push({ label: t("liquid.pricesOther"), icon: "📋", items: rest });
   return groups;
 }
-
-import cardBgQr3d from "@/assets/luxury-qr-3d.png";
 
 const cardBgs: Record<string, string> = {
   brand: cardBgHero,
@@ -64,14 +69,6 @@ const cardBgs: Record<string, string> = {
   booking: cardBgQr,
   contact: cardBgAccounts,
 };
-
-const cards = [
-  { id: "brand", label: "LUXURY", sub: "Salon Experience", Icon: Sparkles },
-  { id: "hours", label: "TIME", sub: "Opening Hours", Icon: Clock },
-  { id: "prices", label: "PRICES", sub: "Services Menu", Icon: Euro },
-  { id: "booking", label: "RESERVE", sub: "Online Booking", Icon: Calendar },
-  { id: "contact", label: "DETAILS", sub: "Find us in Košice", Icon: Phone },
-];
 
 const contentAnim: any = {
   initial: { opacity: 0, y: 16, filter: "blur(4px)" },
@@ -82,13 +79,16 @@ const contentAnim: any = {
 /* ── Card content components ── */
 
 function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null; navigate: ReturnType<typeof useNavigate> }) {
+  const { t } = useTranslation();
   const modeColors: Record<string, string> = {
     open: "bg-green-500/15 text-green-400 border-green-500/30",
     closed: "bg-red-500/15 text-red-400 border-red-500/30",
     on_request: "bg-amber-500/15 text-amber-400 border-amber-500/30",
   };
   const modeLabels: Record<string, string> = {
-    open: "Otvorené", closed: "Zatvorené", on_request: "Podľa objednávok",
+    open: t("liquid.statusOpen"),
+    closed: t("liquid.statusClosed"),
+    on_request: t("liquid.statusOnRequest"),
   };
   const dotColors: Record<string, string> = {
     open: "bg-green-500", closed: "bg-red-500", on_request: "bg-amber-500",
@@ -108,17 +108,17 @@ function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null;
           DESIGN
         </h2>
         <div className="h-px w-24 bg-gradient-to-r from-transparent via-primary to-transparent mx-auto mt-6" />
-        <p className="text-xs mt-4 text-muted-foreground tracking-[0.3em] uppercase opacity-60">
+        <p className="text-xs mt-4 text-white/50 tracking-[0.3em] uppercase">
           est. 2018 · Košice
         </p>
         <p className="text-sm mt-2 text-amber-200/80 font-medium tracking-wide italic">
-          Official Gold Haircare Slovakia Ambassador
+          {t("liquid.brandTagline")}
         </p>
       </div>
       {openStatus && (
         <div className={`inline-flex items-center gap-3 px-4 py-2 rounded-full text-xs font-semibold tracking-widest uppercase border backdrop-blur-md ${modeColors[openStatus.mode] ?? modeColors.closed}`}>
           <span className={`w-2 h-2 rounded-full animate-pulse ${dotColors[openStatus.mode] ?? dotColors.closed}`} />
-          {modeLabels[openStatus.mode] ?? "Zatvorené"}
+          {modeLabels[openStatus.mode] ?? t("liquid.statusClosed")}
         </div>
       )}
       <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full max-w-md">
@@ -127,7 +127,7 @@ function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null;
           className="h-14 bg-gradient-to-r from-primary via-[#ffd700] to-primary text-black font-bold uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-transform shadow-[0_10px_30px_-10px_rgba(218,165,32,0.5)]"
           onClick={() => navigate("/booking")}
         >
-          Reserve Your Slot
+          {t("liquid.reserveBtn")}
         </Button>
         <Button
           size="lg"
@@ -135,7 +135,7 @@ function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null;
           className="h-14 border-white/10 hover:border-primary/50 text-white font-medium uppercase tracking-widest rounded-xl backdrop-blur-sm"
           onClick={() => navigate("/auth")}
         >
-          Member Access
+          {t("liquid.memberBtn")}
         </Button>
       </div>
     </div>
@@ -143,6 +143,9 @@ function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null;
 }
 
 function HoursContent({ info, openStatus, nextOpening }: { info: PublicBusinessInfo | null; openStatus: OpenStatus | null; nextOpening: NextOpening | null }) {
+  const { t, i18n } = useTranslation();
+  const dayLabels = i18n.language === "en" ? DAY_LABELS_EN : DAY_LABELS_SK;
+
   if (!info) return (
     <div className="flex items-center justify-center h-full">
       <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -164,19 +167,19 @@ function HoursContent({ info, openStatus, nextOpening }: { info: PublicBusinessI
   return (
     <div className="flex flex-col justify-center h-full gap-6 px-4">
       <div className="space-y-1">
-        <h2 className="text-3xl font-bold tracking-tight">Gallery Hours</h2>
-        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">Availability & Schedule</p>
+        <h2 className="text-3xl font-bold tracking-tight">{t("liquid.hoursTitle")}</h2>
+        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">{t("liquid.hoursSub")}</p>
       </div>
 
       <div className="space-y-1">
         {hoursByDay.map(({ day, mode, time }) => (
           <div key={day} className="flex items-center justify-between py-2.5 border-b border-white/5 last:border-0 group hover:bg-white/[0.02] transition-colors rounded-lg px-2">
-            <span className="font-semibold text-sm tracking-widest uppercase text-muted-foreground group-hover:text-white transition-colors w-10">{DAY_LABELS[day]}</span>
+            <span className="font-semibold text-sm tracking-widest uppercase text-white/60 group-hover:text-white transition-colors w-10">{dayLabels[day]}</span>
             <span className={`text-sm font-medium ${mode === "closed" ? "text-red-400/80" :
               mode === "on_request" ? "text-primary italic" : "text-white"
               }`}>
-              {mode === "closed" ? "Closed" :
-                mode === "on_request" ? "By Appointment" : time}
+              {mode === "closed" ? t("liquid.daysClosed") :
+                mode === "on_request" ? t("liquid.daysOnRequest") : time}
             </span>
           </div>
         ))}
@@ -185,7 +188,7 @@ function HoursContent({ info, openStatus, nextOpening }: { info: PublicBusinessI
       {openStatus && !openStatus.is_open && nextOpening && (
         <div className="mt-2 p-4 rounded-xl bg-primary/5 border border-primary/10 text-center">
           <p className="text-[11px] text-muted-foreground uppercase tracking-widest">
-            Next Opening: <span className="text-primary font-bold ml-1">{nextOpening.time?.slice(0, 5)}</span>
+            {t("liquid.nextOpening")} <span className="text-primary font-bold ml-1">{nextOpening.time?.slice(0, 5)}</span>
           </p>
         </div>
       )}
@@ -194,7 +197,8 @@ function HoursContent({ info, openStatus, nextOpening }: { info: PublicBusinessI
 }
 
 function PricesContent({ services }: { services: ServiceItem[] }) {
-  const groups = categorizeServices(services);
+  const { t } = useTranslation();
+  const groups = categorizeServices(services, t);
 
   if (!groups.length) return (
     <div className="flex items-center justify-center h-full">
@@ -205,8 +209,8 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
   return (
     <div className="space-y-8 px-2 pb-10">
       <div className="space-y-1">
-        <h2 className="text-3xl font-bold tracking-tight">Luxury Services</h2>
-        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">Exquisite Hair Mastery</p>
+        <h2 className="text-3xl font-bold tracking-tight">{t("liquid.pricesTitle")}</h2>
+        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">{t("liquid.pricesSub")}</p>
       </div>
 
       <div className="grid gap-8">
@@ -220,7 +224,7 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
             <div className="grid gap-3">
               {g.items.map((svc) => (
                 <div key={svc.id} className="flex items-baseline justify-between group">
-                  <span className="text-sm font-medium text-muted-foreground group-hover:text-white transition-colors tracking-wide">{svc.name_sk}</span>
+                  <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors tracking-wide">{svc.name_sk}</span>
                   <div className="flex-1 border-b border-white/5 border-dotted mx-4 mb-1" />
                   <span className="font-bold tabular-nums text-white tracking-widest">
                     {svc.price != null ? `${Number(svc.price).toFixed(0)}€` : "—"}
@@ -234,7 +238,7 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
 
       <div className="pt-6 border-t border-white/5">
         <p className="text-[10px] italic text-center text-muted-foreground tracking-widest uppercase opacity-40">
-          Prices are subject to change based on hair length and complexity.
+          {t("liquid.priceNote")}
         </p>
       </div>
     </div>
@@ -242,22 +246,19 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
 }
 
 function BookingContent() {
+  const { t } = useTranslation();
   const qrUrl = "https://papi-hair-design.vercel.app/booking";
-  // Mathematically accurate Gold QR Code for 100% camera scannability
   const functionalQr = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrUrl)}&bgcolor=000000&color=daa520&format=png`;
 
   return (
     <div className="flex flex-col items-center justify-center h-full gap-8 text-center px-6">
       <div className="relative group perspective-1000">
-        {/* Luxury 3D Visual Base - The Artwork */}
         <div className="w-56 h-56 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(218,165,32,0.4)] border border-primary/30 bg-black relative transform-gpu group-hover:rotate-y-12 transition-transform duration-700">
           <img
             src={cardBgQr3d}
             alt="PAPI 3D Artwork"
             className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity"
           />
-
-          {/* THE REAL QR CODE - Guaranteed Scannable */}
           <div className="absolute inset-0 flex items-center justify-center p-8">
             <div className="relative p-1 rounded-2xl bg-gradient-to-br from-primary/40 to-transparent backdrop-blur-sm border border-primary/20 shadow-2xl">
               <img
@@ -265,21 +266,18 @@ function BookingContent() {
                 alt="Original Scannable PAPI QR"
                 className="w-28 h-28 rounded-xl opacity-90 brightness-110 contrast-125"
               />
-              {/* Subtle Scan Glow */}
               <div className="absolute -inset-1 bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity animate-pulse" />
             </div>
           </div>
         </div>
-
-        {/* Floating Scan Label */}
         <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-primary/20 border border-primary/30 backdrop-blur-xl text-[10px] font-bold tracking-[0.3em] uppercase text-primary shadow-lg group-hover:scale-110 transition-transform">
-          Scan Now
+          {t("liquid.scanNow")}
         </div>
       </div>
 
       <div className="space-y-2 mt-4">
-        <h2 className="text-3xl font-bold tracking-tight">Seamless Booking</h2>
-        <p className="text-[10px] text-primary tracking-[0.3em] uppercase font-bold opacity-80">Original PAPI 3D Hybrid</p>
+        <h2 className="text-3xl font-bold tracking-tight">{t("liquid.bookingTitle")}</h2>
+        <p className="text-[10px] text-primary tracking-[0.3em] uppercase font-bold opacity-80">{t("liquid.bookingDesc")}</p>
       </div>
 
       <Link
@@ -289,17 +287,18 @@ function BookingContent() {
       >
         <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
         <Calendar className="w-5 h-5 relative z-10" />
-        <span className="relative z-10 uppercase tracking-[0.2em]">Begin Reservation</span>
+        <span className="relative z-10 uppercase tracking-[0.2em]">{t("liquid.bookingBtn")}</span>
       </Link>
 
       <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-medium opacity-40">
-        Ready for any phone camera
+        {t("liquid.bookingQr")}
       </p>
     </div>
   );
 }
 
 function ContactContent() {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState<string | null>(null);
   const [mapLit, setMapLit] = useState(false);
 
@@ -312,8 +311,8 @@ function ContactContent() {
   return (
     <div className="flex flex-col h-full gap-6 px-2">
       <div className="space-y-1">
-        <h2 className="text-3xl font-bold tracking-tight">Get in Touch</h2>
-        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">Location & Communication</p>
+        <h2 className="text-3xl font-bold tracking-tight">{t("liquid.contactTitle")}</h2>
+        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">{t("liquid.contactSub")}</p>
       </div>
 
       <div className="grid gap-4 mt-2">
@@ -322,8 +321,8 @@ function ContactContent() {
             <MapPin className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <p className="text-sm font-bold text-white uppercase tracking-wider">Trieda SNP 61</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest leading-loose">Spoločenský pavilón, Košice</p>
+            <p className="text-sm font-bold text-white uppercase tracking-wider">{t("liquid.contactAddr1")}</p>
+            <p className="text-xs text-white/60 uppercase tracking-widest leading-loose">{t("liquid.contactAddr2")}</p>
           </div>
         </div>
 
@@ -335,8 +334,8 @@ function ContactContent() {
             <Phone className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1 text-left">
-            <p className="text-sm font-bold text-white tracking-widest">+421 949 459 624</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-[0.1em]">WhatsApp & Calls</p>
+            <p className="text-sm font-bold text-white tracking-widest">{t("liquid.contactPhone")}</p>
+            <p className="text-xs text-white/40 uppercase tracking-[0.1em]">{t("liquid.contactPhoneLabel")}</p>
           </div>
           {copied === "phone" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-white/20 group-hover:text-white/40" />}
         </button>
@@ -349,8 +348,8 @@ function ContactContent() {
             <Mail className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1 text-left">
-            <p className="text-sm font-bold text-white tracking-widest">papihairdesign@gmail.com</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-[0.1em]">Direct Inquiry</p>
+            <p className="text-sm font-bold text-white tracking-widest">{t("liquid.contactEmail")}</p>
+            <p className="text-xs text-white/40 uppercase tracking-[0.1em]">{t("liquid.contactEmailLabel")}</p>
           </div>
           {copied === "email" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-white/20 group-hover:text-white/40" />}
         </button>
@@ -364,7 +363,7 @@ function ContactContent() {
       >
         <div className="absolute inset-0 bg-primary/5 pointer-events-none group-hover:bg-transparent transition-colors z-10" />
         <iframe
-          title="Mapa – PAPI HAIR DESIGN"
+          title={t("liquid.mapTitle")}
           src="https://www.openstreetmap.org/export/embed.html?bbox=21.2336%2C48.7168%2C21.2436%2C48.7218&layer=mapnik&marker=48.7193%2C21.2386"
           width="100%"
           height="100%"
@@ -387,6 +386,7 @@ function ContactContent() {
 export default function LiquidPlayground() {
   const [activeCard, setActiveCard] = useState(0);
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { info, openStatus, nextOpening } = useBusinessInfo(DEMO_BUSINESS_ID);
   const [services, setServices] = useState<ServiceItem[]>([]);
 
@@ -400,6 +400,14 @@ export default function LiquidPlayground() {
       .then(({ data }) => setServices(data ?? []));
   }, []);
 
+  const cards = [
+    { id: "brand", label: t("liquid.cardLuxury"), sub: t("liquid.cardLuxurySub"), Icon: Sparkles },
+    { id: "hours", label: t("liquid.cardTime"), sub: t("liquid.cardTimeSub"), Icon: Clock },
+    { id: "prices", label: t("liquid.cardPrices"), sub: t("liquid.cardPricesSub"), Icon: Euro },
+    { id: "booking", label: t("liquid.cardReserve"), sub: t("liquid.cardReserveSub"), Icon: Calendar },
+    { id: "contact", label: t("liquid.cardDetails"), sub: t("liquid.cardDetailsSub"), Icon: Phone },
+  ];
+
   const contentMap: Record<string, React.ReactNode> = {
     brand: <BrandContent openStatus={openStatus} navigate={navigate} />,
     hours: <HoursContent info={info} openStatus={openStatus} nextOpening={nextOpening} />,
@@ -410,7 +418,8 @@ export default function LiquidPlayground() {
 
   return (
     <div className="bg-background min-h-[100dvh] flex items-center justify-center relative overflow-hidden safe-y safe-x">
-      <div className="fixed top-4 right-4 z-50 safe-top safe-right" style={{ top: "max(1rem, env(safe-area-inset-top))" }}>
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-1 safe-top safe-right" style={{ top: "max(1rem, env(safe-area-inset-top))" }}>
+        <LanguageToggle />
         <ThemeToggle />
       </div>
 
@@ -465,7 +474,7 @@ export default function LiquidPlayground() {
       </div>
 
       <div className="fixed bottom-4 left-0 right-0 text-center text-muted-foreground text-xs opacity-40 safe-x safe-bottom" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
-        © 2026 PAPI HAIR DESIGN · Košice · <Link to="/privacy" className="text-muted-foreground hover:underline">Zásady ochrany osobných údajov</Link>
+        © 2026 PAPI HAIR DESIGN · Košice · <Link to="/privacy" className="text-muted-foreground hover:underline">{t("liquid.footerPrivacy")}</Link>
       </div>
     </div>
   );

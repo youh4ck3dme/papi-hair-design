@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { LogoIcon } from "@/components/LogoIcon";
 import { Button } from "@/components/ui/button";
-import { Download, Share, CheckCircle2, Smartphone, Monitor, Wifi, WifiOff, Bell, Zap } from "lucide-react";
+import { Download, Share, CheckCircle2, Smartphone, Monitor, WifiOff, Bell, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -10,18 +11,17 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export default function InstallPage() {
+  const { t } = useTranslation();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
-    // Detect iOS
     const ua = navigator.userAgent;
     const ios = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
     setIsIOS(ios);
 
-    // Check if already installed
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
     }
@@ -57,10 +57,10 @@ export default function InstallPage() {
   };
 
   const features = [
-    { icon: Zap, title: "Bleskovo rýchla", desc: "Natívny výkon bez čakania" },
-    { icon: WifiOff, title: "Funguje offline", desc: "Recepcia aj bez internetu" },
-    { icon: Bell, title: "Notifikácie", desc: "Upozornenia na nové rezervácie" },
-    { icon: Smartphone, title: "Na domovskej obrazovke", desc: "Ako natívna aplikácia" },
+    { icon: Zap, title: t("install.feat1"), desc: t("install.feat1Sub") },
+    { icon: WifiOff, title: t("install.feat2"), desc: t("install.feat2Sub") },
+    { icon: Bell, title: t("install.feat3"), desc: t("install.feat3Sub") },
+    { icon: Smartphone, title: t("install.feat4"), desc: t("install.feat4Sub") },
   ];
 
   return (
@@ -96,7 +96,7 @@ export default function InstallPage() {
           transition={{ delay: 0.25 }}
           className="text-muted-foreground text-center max-w-xs mb-8"
         >
-          Nainštaluj si aplikáciu pre najlepší zážitok z rezervácie
+          {t("install.title")}
         </motion.p>
 
         {/* Install Button / Status */}
@@ -111,12 +111,12 @@ export default function InstallPage() {
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <CheckCircle2 className="w-8 h-8 text-primary" />
               </div>
-              <p className="text-primary font-semibold text-lg">Aplikácia je nainštalovaná!</p>
+              <p className="text-primary font-semibold text-lg">{t("install.installed")}</p>
               <a
                 href="/"
                 className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
               >
-                Otvoriť aplikáciu
+                {t("install.openApp")}
               </a>
             </motion.div>
           ) : deferredPrompt ? (
@@ -128,7 +128,7 @@ export default function InstallPage() {
                 className="gap-2 text-base px-8 py-6 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25"
               >
                 <Download className={`w-5 h-5 ${installing ? "animate-bounce" : ""}`} />
-                {installing ? "Inštalujem…" : "Nainštalovať aplikáciu"}
+                {installing ? t("install.installing") : t("install.installBtn")}
               </Button>
             </motion.div>
           ) : isIOS ? (
@@ -140,19 +140,19 @@ export default function InstallPage() {
             >
               <div className="bg-card border border-border rounded-2xl p-5 text-center space-y-3">
                 <Share className="w-6 h-6 mx-auto text-primary" />
-                <p className="text-sm font-medium">Návod pre iPhone / iPad:</p>
+                <p className="text-sm font-medium">{t("install.iosGuide")}</p>
                 <ol className="text-sm text-muted-foreground text-left space-y-2">
                   <li className="flex items-start gap-2">
                     <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</span>
-                    Klikni na tlačidlo <Share className="w-4 h-4 inline text-primary" /> <strong>Zdieľať</strong>
+                    {t("install.iosStep1a")} <Share className="w-4 h-4 inline text-primary" /> <strong>{t("install.iosStep1b")}</strong>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</span>
-                    Vyber <strong>"Pridať na plochu"</strong>
+                    {t("install.iosStep2a")} <strong>{t("install.iosStep2b")}</strong>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</span>
-                    Potvrď kliknutím na <strong>"Pridať"</strong>
+                    {t("install.iosStep3a")} <strong>{t("install.iosStep3b")}</strong>
                   </li>
                 </ol>
               </div>
@@ -167,7 +167,7 @@ export default function InstallPage() {
               <div className="bg-card border border-border rounded-2xl p-5 text-center space-y-2">
                 <Monitor className="w-6 h-6 mx-auto text-primary" />
                 <p className="text-sm text-muted-foreground">
-                  Otvor stránku v <strong>Chrome</strong> alebo <strong>Edge</strong> na mobile pre inštaláciu
+                  {t("install.desktopFallback1")} <strong>Chrome</strong> {t("install.desktopFallback2")} <strong>Edge</strong> {t("install.desktopFallback3")}
                 </p>
               </div>
             </motion.div>
@@ -197,7 +197,7 @@ export default function InstallPage() {
       {/* Footer */}
       <div className="text-center py-6 text-xs text-muted-foreground">
         <a href="/booking" className="underline underline-offset-4 hover:text-foreground transition-colors">
-          Pokračovať bez inštalácie →
+          {t("install.skipLink")}
         </a>
       </div>
     </div>

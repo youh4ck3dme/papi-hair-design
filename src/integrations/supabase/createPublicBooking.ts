@@ -30,7 +30,12 @@ export async function createPublicBooking(body: CreatePublicBookingBody): Promis
         });
 
         if (error) {
-            console.error("createPublicBooking error:", error);
+            console.error("createPublicBooking error detail:", {
+                message: error.message,
+                name: (error as any).name,
+                status: (error as any).status,
+                context: error
+            });
             return { error: error.message || "Chyba pri vytváraní rezervácie" };
         }
 

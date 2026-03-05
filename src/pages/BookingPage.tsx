@@ -5,8 +5,10 @@ import { getRecaptchaToken } from "@/lib/recaptcha";
 import { generateSlots, getEffectiveIntervals, type BusinessHours, type EmployeeSchedule, type ExistingAppointment, type BusinessHourEntry, type DateOverrideEntry } from "@/lib/availability";
 
 import { toast } from "sonner";
-import { format, addDays, startOfDay, isSameDay, isAfter, isBefore, getDaysInMonth, getDay, startOfMonth } from "date-fns";
-import { sk } from "date-fns/locale";
+import { startOfDay, startOfMonth, getDaysInMonth, getDay, format, isBefore, isAfter, addDays, isSameDay } from "date-fns";
+import { sk, enGB } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { z } from "zod";
 import { useTheme } from "next-themes";
 import { User, Mail, Phone, PenLine, ChevronLeft, ChevronRight, Star, Check, Moon, Sun, Loader2 } from "lucide-react";
@@ -15,82 +17,26 @@ import matoImg from "@/assets/employee-mato.jpg";
 
 const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
 
+import { BookingHeader } from "@/components/booking/BookingHeader";
+import { ServiceSelection } from "@/components/booking/ServiceSelection";
+import { EmployeeSelection } from "@/components/booking/EmployeeSelection";
+import { DateTimeSelection } from "@/components/booking/DateTimeSelection";
+import { ContactConfirmation } from "@/components/booking/ContactConfirmation";
+import { BookingSuccess } from "@/components/booking/BookingSuccess";
+import { ServiceRow, EmployeeRow, BookingResult, contactSchema, MembershipRow } from "@/components/booking/types";
+import { GoldText } from "@/components/booking/BookingUI";
+
 // Map employee IDs to local photos
 const EMPLOYEE_PHOTOS: Record<string, string> = {
   "c1000000-0000-0000-0000-000000000001": miskaImg,
   "c1000000-0000-0000-0000-000000000002": matoImg,
 };
 
-const contactSchema = z.object({
-  meno: z.string().min(2, "Meno musí mať aspoň 2 znaky"),
-  priezvisko: z.string().min(2, "Priezvisko musí mať aspoň 2 znaky"),
-  email: z.string().email("Neplatný email"),
-  phone: z.string().optional(),
-});
-
-interface ServiceRow {
-  id: string;
-  name_sk: string;
-  description_sk: string | null;
-  price: number | null;
-  duration_minutes: number;
-  buffer_minutes: number;
-  is_active: boolean;
-  business_id: string;
-  category: string | null;
-  subcategory: string | null;
-}
-
-interface EmployeeRow {
-  id: string;
-  display_name: string;
-  email: string | null;
-  phone: string | null;
-  is_active: boolean;
-  business_id: string;
-  photo_url: string | null;
-  profile_id: string | null;
-}
-
-interface MembershipRow {
-  profile_id: string;
-  role: "owner" | "admin" | "employee" | "customer";
-}
-
-interface BookingResult {
-  claim_token?: string;
-  customer_email?: string;
-  customer_name?: string;
-}
-
-function GoldText({ children, className = "" }: Readonly<{ children: React.ReactNode; className?: string }>) {
-  return <span className={`text-primary ${className}`}>{children}</span>;
-}
-
-function StepHeader({ num, title, extra }: Readonly<{ num: string; title: string; extra?: React.ReactNode }>) {
-  return (
-    <div className="flex items-center justify-between mt-8 mb-4">
-      <div className="flex items-center gap-4">
-        <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm bg-primary text-primary-foreground dark:text-background">
-          {num}
-        </div>
-        <h2 className="text-xl font-medium tracking-wide text-foreground">{title}</h2>
-      </div>
-      {extra == null ? null : <div>{extra}</div>}
-    </div>
-  );
-}
-
-function RadioIcon({ selected }: Readonly<{ selected: boolean }>) {
-  const borderClass = selected ? "border-primary" : "border-muted-foreground/40";
-  return (
-    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${borderClass}`}>
-      {selected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-    </div>
-  );
-}
-
 export default function BookingPage() {
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language;
+  const dateLocale = currentLang === "en" ? enGB : sk;
+
   const { theme, setTheme } = useTheme();
   const isDark = theme === "dark";
 
@@ -184,7 +130,12 @@ export default function BookingPage() {
           setSchedules(map);
         }
 
-        const { data: esData } = await supabase.from("employee_services").select("*").eq("business_id", DEMO_BUSINESS_ID);
+        const { data: esData } = await supabase
+          .from("employee_services")
+          .select("employee_id, service_id, employees!inner(business_id)")
+          .eq("employees.business_id", DEMO_BUSINESS_ID);
+        // FORCE RE-PATCH: We ensured this query uses employees!inner to avoid 400 error.
+        // If 400 persists in browser, a full rebuild/sync is required.
         const eMap: Record<string, string[]> = {};
         (esData ?? []).forEach((d: any) => {
           const eid = d.employee_id;
@@ -356,7 +307,7 @@ export default function BookingPage() {
       return;
     }
     if (!formData.terms) {
-      toast.error("Musíte súhlasiť s obchodnými podmienkami");
+      toast.error(t("booking.toastTermsRequired"));
       return;
     }
     setContactErrors({});
@@ -365,7 +316,7 @@ export default function BookingPage() {
     // Find the actual slot Date
     const slotDate = availableSlots.find((s) => format(s, "HH:mm") === selectedTime);
     if (!slotDate) {
-      toast.error("Vybraný čas už nie je dostupný");
+      toast.error(t("booking.toastSlotTaken"));
       setSubmitting(false);
       return;
     }
@@ -397,9 +348,9 @@ export default function BookingPage() {
 
       setBookingResult(data);
       setBookingDone(true);
-      toast.success("Rezervácia úspešne vytvorená!");
+      toast.success(t("booking.toastSuccess"));
     } catch {
-      toast.error("Chyba pri komunikácii so serverom");
+      toast.error(t("booking.toastServerError"));
     }
     setSubmitting(false);
   };
@@ -414,456 +365,89 @@ export default function BookingPage() {
 
   if (bookingDone && bookingResult) {
     return (
-      <div className="min-h-screen bg-background" data-testid="booking-success">
-        <header className="sticky top-0 z-50 px-4 py-3 flex items-center justify-between bg-background/90 border-b border-border backdrop-blur-sm">
-          <div className="flex flex-col">
-            <span className="text-lg font-bold tracking-widest uppercase font-serif text-foreground">
-              PAPI <GoldText>HAIR</GoldText> DESIGN
-            </span>
-          </div>
-        </header>
-        <div className="max-w-md mx-auto px-4 py-12 text-center space-y-6">
-          <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
-            <Check className="w-8 h-8 text-primary" />
-          </div>
-          <h2 className="text-xl font-bold text-foreground">Rezervácia potvrdená!</h2>
-          <p className="text-muted-foreground text-sm">
-            Vaša rezervácia bola úspešne vytvorená. Potvrdenie vám príde na email.
-          </p>
-          <div className="rounded-2xl border border-border bg-card p-4 text-left space-y-2 text-sm">
-            <p><strong className="text-foreground">Služba:</strong> <span className="text-muted-foreground">{selectedService?.name_sk}</span></p>
-            <p><strong className="text-foreground">Zamestnanec:</strong> <span className="text-muted-foreground">{selectedEmployee?.display_name}</span></p>
-            <p><strong className="text-foreground">Dátum:</strong> <span className="text-muted-foreground">{selectedFullDate && format(selectedFullDate, "d. MMMM yyyy", { locale: sk })}</span></p>
-            <p><strong className="text-foreground">Čas:</strong> <span className="text-muted-foreground">{selectedTime}</span></p>
-          </div>
-          <button
-            onClick={() => {
-              sessionStorage.setItem("claim_token", bookingResult.claim_token);
-              globalThis.location.href = `/auth?mode=register&email=${encodeURIComponent(bookingResult.customer_email)}&name=${encodeURIComponent(bookingResult.customer_name)}`;
-            }}
-            className="w-full font-bold py-4 rounded-full text-lg bg-primary text-primary-foreground dark:text-background hover:bg-primary/90 transition-all"
-          >
-            Dokonči registráciu
-          </button>
-          <button
-            onClick={() => globalThis.location.reload()}
-            className="text-sm text-primary hover:underline"
-          >
-            Nová rezervácia
-          </button>
-        </div>
-      </div>
+      <BookingSuccess
+        bookingResult={bookingResult}
+        selectedService={selectedService}
+        selectedEmployee={selectedEmployee}
+        selectedFullDate={selectedFullDate}
+        selectedTime={selectedTime}
+        dateLocale={dateLocale}
+      />
     );
   }
 
   return (
     <div className="min-h-[100dvh] font-sans pb-24 max-w-md w-full mx-auto shadow-2xl relative overflow-x-hidden transition-colors duration-300 bg-background text-foreground safe-x" data-testid="booking-page">
-      {/* Header */}
-      <header className="sticky top-0 z-50 px-4 py-3 safe-x flex items-center justify-between bg-background/90 border-b border-border backdrop-blur-sm pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <div className="flex flex-col">
-          <span className="text-lg font-bold tracking-widest uppercase font-serif">
-            PAPI <GoldText>HAIR</GoldText> DESIGN
-          </span>
-          <span className="text-xs text-muted-foreground">papihairdesign.sk</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setTheme(isDark ? "light" : "dark")}
-            className="p-2 rounded-full hover:bg-accent transition-colors"
-          >
-            {isDark ? <Sun size={20} className="text-primary" /> : <Moon size={20} className="text-foreground" />}
-          </button>
-          <div className="w-6 h-6 rounded-full overflow-hidden border border-border">
-            <div className="w-full h-1/3 bg-white" />
-            <div className="w-full h-1/3 bg-blue-600" />
-            <div className="w-full h-1/3 bg-red-600" />
-          </div>
-        </div>
-      </header>
+      <BookingHeader isDark={isDark} setTheme={setTheme} />
 
-      <div className="px-4">
-        {/* Step 1: Kategória */}
-        <StepHeader num="1" title="Vyberte kategóriu" extra={
-          <div className="flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium border border-primary text-primary">
-            4.9 <Star size={14} className="fill-primary" />
-          </div>
-        } />
+      <ServiceSelection
+        category={category}
+        setCategory={setCategory}
+        subcategory={subcategory}
+        setSubcategory={setSubcategory}
+        subcategories={subcategories}
+        filteredServices={filteredServices}
+        selectedServiceId={selectedServiceId}
+        setSelectedServiceId={setSelectedServiceId}
+        onCategoryChange={() => {
+          setSelectedWorkerId(null);
+          setSelectedDate(null);
+          setSelectedTime(null);
+        }}
+      />
 
-        <div className="flex flex-col gap-3" data-testid="booking-step-category">
-          {(["damske", "panske"] as const).map((cat) => (
-            <button
-              key={cat}
-              onClick={() => { setCategory(cat); setSubcategory(null); setSelectedServiceId(null); setSelectedWorkerId(null); setSelectedDate(null); setSelectedTime(null); }}
-              className={`w-full py-3.5 rounded-full font-medium text-lg transition-all ${category === cat
-                ? "bg-primary text-primary-foreground dark:text-background shadow-lg shadow-primary/20"
-                : "bg-card text-muted-foreground border border-border"
-                }`}
-            >
-              {cat === "damske" ? "Dámske Služby" : "Pánske Služby"}
-            </button>
-          ))}
-        </div>
+      {selectedServiceId && (
+        <EmployeeSelection
+          filteredEmployees={filteredEmployees}
+          selectedWorkerId={selectedWorkerId}
+          setSelectedWorkerId={setSelectedWorkerId}
+          employeePhotos={EMPLOYEE_PHOTOS}
+          onEmployeeSelect={() => {
+            setSelectedDate(null);
+            setSelectedTime(null);
+          }}
+        />
+      )}
 
-        <div className="mt-6 flex flex-col gap-3">
-          {subcategories.map((sub) => (
-            <button
-              key={sub}
-              onClick={() => { setSubcategory(sub); setSelectedServiceId(null); }}
-              className={`w-full py-3.5 rounded-full border transition-all duration-200 text-sm font-medium uppercase tracking-wider ${subcategory === sub
-                ? "border-primary bg-card text-primary"
-                : "border-border text-muted-foreground bg-card hover:border-muted-foreground/50"
-                }`}
-            >
-              {sub}
-            </button>
-          ))}
-        </div>
+      {selectedWorkerId && (
+        <DateTimeSelection
+          calendarMonth={calendarMonth}
+          setCalendarMonth={setCalendarMonth}
+          dateLocale={dateLocale}
+          firstDayOffset={firstDayOffset}
+          daysInMonth={daysInMonth}
+          today={today}
+          maxDays={maxDays}
+          selectedWorkerId={selectedWorkerId}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          selectedFullDate={selectedFullDate}
+          setSelectedTime={setSelectedTime}
+          isBusinessOpenOnDay={isBusinessOpenOnDay}
+          isEmployeeAvailableOnDay={isEmployeeAvailableOnDay}
+          loadingSlots={loadingSlots}
+          availableSlots={availableSlots}
+          selectedTime={selectedTime}
+          timeGroups={timeGroups}
+        />
+      )}
 
-        {/* Step 2: Služba */}
-        {subcategory && filteredServices.length > 0 && (
-          <div className="animate-fade-in">
-            <StepHeader num="2" title="Vyberte službu" />
-            <div className="flex flex-col gap-3">
-              {filteredServices.map((srv) => (
-                <button
-                  type="button"
-                  key={srv.id}
-                  onClick={() => setSelectedServiceId(srv.id)}
-                  className={`w-full text-left border rounded-[2rem] p-4 flex items-center gap-4 cursor-pointer transition-all duration-200 ${selectedServiceId === srv.id
-                    ? "border-primary bg-card"
-                    : "border-border bg-card"
-                    }`}
-                >
-                  <RadioIcon selected={selectedServiceId === srv.id} />
-                  <div className="flex flex-col flex-1">
-                    <span className="font-bold text-sm text-foreground">{srv.name_sk}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {srv.duration_minutes} min
-                      {srv.price != null && (
-                        <> – <GoldText className="font-medium">{srv.price} €</GoldText></>
-                      )}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Pracovník */}
-        {selectedServiceId && (
-          <div className="animate-fade-in" data-testid="booking-step-employee">
-            <StepHeader num="3" title="Vyberte pracovníka" />
-            <div className="flex flex-col gap-4">
-              {filteredEmployees.map((w) => (
-                <button
-                  type="button"
-                  key={w.id}
-                  onClick={() => { setSelectedWorkerId(w.id); setSelectedDate(null); setSelectedTime(null); }}
-                  className={`w-full text-left border rounded-[2rem] p-2 flex items-center gap-4 cursor-pointer transition-all duration-200 ${selectedWorkerId === w.id
-                    ? "border-primary bg-card"
-                    : "border-border bg-card"
-                    }`}
-                >
-                  <div className="pl-2"><RadioIcon selected={selectedWorkerId === w.id} /></div>
-                  <div className="flex w-full h-24 rounded-2xl overflow-hidden border border-primary/30">
-                    <div className="w-1/3 h-full relative">
-                      <img
-                        src={EMPLOYEE_PHOTOS[w.id] || w.photo_url || ""}
-                        alt={w.display_name}
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
-                    <div className="w-2/3 flex items-center justify-center bg-background dark:bg-card">
-                      <span className="font-bold text-lg tracking-wide text-primary">{w.display_name}</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Dátum */}
-        {selectedWorkerId && (
-          <div className="animate-fade-in">
-            <StepHeader num="4" title="Vyberte dátum" />
-            <div className="rounded-xl p-4 border border-border bg-card">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-lg ml-2 text-foreground">
-                  {format(calendarMonth, "LLLL yyyy", { locale: sk })}
-                </h3>
-                <div className="flex rounded-full overflow-hidden border border-border">
-                  <button
-                    onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
-                    className="p-2 px-4 bg-card text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-                  <button
-                    onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
-                    className="p-2 px-4 bg-primary text-primary-foreground dark:text-background hover:bg-primary/80 transition-colors"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-7 gap-y-4 text-center mb-2">
-                {["Po", "Ut", "St", "Št", "Pi", "So", "Ne"].map((d) => (
-                  <div key={d} className="font-medium text-sm text-muted-foreground">{d}</div>
-                ))}
-
-                {Array.from({ length: firstDayOffset }, (_, i) => <div key={`empty-${calendarMonth.getTime()}-${i}`} className="py-1" />)}
-                {Array.from({ length: daysInMonth }, (_, i) => {
-                  const day = i + 1;
-                  const dayDate = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day);
-                  const isPast = isBefore(dayDate, today);
-                  const isTooFar = isAfter(dayDate, addDays(today, maxDays));
-                  const isClosed = !isBusinessOpenOnDay(dayDate);
-                  const empAvailable = selectedWorkerId ? isEmployeeAvailableOnDay(selectedWorkerId, dayDate) : false;
-                  const disabled = isPast || isTooFar || isClosed || !empAvailable;
-                  const isSelected = selectedDate === day && isSameDay(dayDate, selectedFullDate ?? new Date(0));
-                  const isToday = isSameDay(dayDate, today);
-                  let dayBtnClass = "text-foreground hover:bg-accent";
-                  if (isSelected) dayBtnClass = "bg-primary text-primary-foreground dark:text-background font-bold shadow-md";
-                  else if (isToday) dayBtnClass = "border border-muted-foreground/40 text-foreground";
-                  else if (isPast || isTooFar) dayBtnClass = "text-muted-foreground/20 cursor-not-allowed";
-                  else if (isClosed) dayBtnClass = "bg-muted/40 text-muted-foreground/30 cursor-not-allowed";
-                  else if (!empAvailable) dayBtnClass = "text-muted-foreground/20 cursor-not-allowed";
-
-                  return (
-                    <div key={day} className="flex justify-center">
-                      <button
-                        onClick={() => { if (!disabled) { setSelectedDate(day); setSelectedTime(null); } }}
-                        disabled={disabled}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all ${dayBtnClass}`}
-                      >
-                        {day}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 5: Čas */}
-        {Boolean(selectedDate) && (
-          <div className="animate-fade-in">
-            <StepHeader num="5" title="Vyberte čas" />
-            {(() => {
-              if (loadingSlots) {
-                return (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                );
-              }
-              if (availableSlots.length === 0) {
-                return <p className="text-center text-muted-foreground py-4">Žiadne dostupné termíny v tento deň</p>;
-              }
-              return (
-                <>
-                  {timeGroups.dopoludnia.length > 0 && (
-                    <div className="mb-8">
-                      <h4 className="text-sm font-bold uppercase tracking-wider mb-4 text-muted-foreground">Dopoludnia</h4>
-                      <div className="flex flex-wrap gap-x-4 gap-y-3">
-                        {timeGroups.dopoludnia.map((t) => {
-                          const isSelected = selectedTime === t;
-                          const timeBtnClass = isSelected
-                            ? "bg-primary text-primary-foreground dark:text-background border-primary"
-                            : "bg-card text-foreground border-border hover:border-primary/50";
-                          return (
-                            <button
-                              key={t}
-                              onClick={() => setSelectedTime(t)}
-                              className={`text-base px-4 py-2 rounded-full transition-all font-medium border ${timeBtnClass}`}
-                            >
-                              {t}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  {timeGroups.popoludni.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-bold uppercase tracking-wider mb-4 text-muted-foreground">Popoludní</h4>
-                      <div className="flex flex-wrap gap-x-4 gap-y-3">
-                        {timeGroups.popoludni.map((t) => {
-                          const isSelected = selectedTime === t;
-                          const timeBtnClass = isSelected
-                            ? "bg-primary text-primary-foreground dark:text-background border-primary"
-                            : "bg-card text-foreground border-border hover:border-primary/50";
-                          return (
-                            <button
-                              key={t}
-                              onClick={() => setSelectedTime(t)}
-                              className={`text-base px-4 py-2 rounded-full transition-all font-medium border ${timeBtnClass}`}
-                            >
-                              {t}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        )}
-
-        {/* Step 6: Údaje */}
-        {selectedTime && (
-          <div className="animate-fade-in pb-10" data-testid="booking-step-details">
-            <StepHeader num="6" title="Vyplňte Vaše údaje" />
-
-            <div className="flex flex-col gap-4 mb-6">
-              {[
-                { icon: User, placeholder: "Meno", field: "meno" as const, type: "text" },
-                { icon: User, placeholder: "Priezvisko", field: "priezvisko" as const, type: "text" },
-                { icon: Mail, placeholder: "Email", field: "email" as const, type: "email" },
-              ].map((input) => (
-                <div key={input.field}>
-                  <div className={`flex border rounded-full overflow-hidden transition-colors border-border focus-within:border-primary`}>
-                    <div className="w-12 flex items-center justify-center bg-muted text-primary">
-                      <input.icon size={18} />
-                    </div>
-                    <input
-                      type={input.type}
-                      placeholder={input.placeholder}
-                      className="flex-1 py-3 px-4 outline-none bg-card text-foreground placeholder:text-muted-foreground"
-                      value={formData[input.field]}
-                      onChange={(e) => setFormData({ ...formData, [input.field]: e.target.value })}
-                    />
-                  </div>
-                  {contactErrors[input.field] && (
-                    <p className="text-destructive text-xs mt-1 ml-4">{contactErrors[input.field]}</p>
-                  )}
-                </div>
-              ))}
-
-              {/* Telefón */}
-              <div className="flex border rounded-full overflow-hidden transition-colors border-border focus-within:border-primary">
-                <div className="w-12 flex items-center justify-center bg-muted text-primary">
-                  <Phone size={18} />
-                </div>
-                <div className="flex items-center px-3 border-r border-border bg-card">
-                  <div className="w-4 h-3 rounded-sm overflow-hidden flex flex-col border border-muted-foreground/30">
-                    <div className="h-1/3 bg-white w-full" />
-                    <div className="h-1/3 bg-blue-600 w-full" />
-                    <div className="h-1/3 bg-red-600 w-full" />
-                  </div>
-                  <span className="ml-2 text-sm text-muted-foreground">+421</span>
-                </div>
-                <input
-                  type="tel"
-                  className="flex-1 py-3 px-4 outline-none bg-card text-foreground"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-              </div>
-
-              {/* Poznámka */}
-              <div className="flex border rounded-3xl overflow-hidden transition-colors min-h-[100px] border-border focus-within:border-primary">
-                <div className="w-12 flex items-start justify-center pt-4 bg-muted text-primary">
-                  <PenLine size={18} />
-                </div>
-                <textarea
-                  placeholder="Poznámka"
-                  className="flex-1 py-3 px-4 outline-none resize-none bg-card text-foreground placeholder:text-muted-foreground"
-                  value={formData.note}
-                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Consents */}
-            <div className="flex flex-col gap-4 text-sm mb-8 text-muted-foreground">
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={formData.all}
-                  onChange={() => handleCheckAll()}
-                  className="sr-only"
-                  aria-label="Označiť všetky možnosti"
-                />
-                <div className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${formData.all
-                  ? "border-primary bg-primary"
-                  : "border-muted-foreground/40 bg-transparent group-hover:border-primary"
-                  }`}>
-                  {formData.all && <Check size={14} className="text-primary-foreground dark:text-background" />}
-                </div>
-                <span className="font-medium text-foreground">Označiť všetky možnosti</span>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={formData.marketing}
-                  onChange={() => handleConsentChange("marketing")}
-                  className="sr-only"
-                  aria-label="Súhlas s marketingom"
-                />
-                <div className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${formData.marketing
-                  ? "border-primary bg-primary"
-                  : "border-muted-foreground/40 bg-transparent group-hover:border-primary"
-                  }`}>
-                  {formData.marketing && <Check size={14} className="text-primary-foreground dark:text-background" />}
-                </div>
-                <div className="leading-snug">
-                  Súhlasím so spracovaním osobných údajov pre <strong className="text-foreground">Papi Hair Design</strong> na marketingové účely{" "}
-                  <span className="text-primary cursor-pointer hover:underline">Podrobnosti tu</span>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={formData.terms}
-                  onChange={() => handleConsentChange("terms")}
-                  className="sr-only"
-                  aria-label="Súhlas s obchodnými podmienkami"
-                />
-                <div className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${formData.terms
-                  ? "border-primary bg-primary"
-                  : "border-muted-foreground/40 bg-transparent group-hover:border-primary"
-                  }`}>
-                  {formData.terms && <Check size={14} className="text-primary-foreground dark:text-background" />}
-                </div>
-                <div>
-                  Súhlasím so <span className="text-primary cursor-pointer hover:underline">všeobecnými obchodnými podmienkami</span>
-                </div>
-              </label>
-
-              <div className="text-right text-primary text-sm mt-2 cursor-pointer hover:underline">
-                Zásady ochrany osobných údajov
-              </div>
-            </div>
-
-            {/* Summary */}
-            {selectedService && selectedFullDate && (
-              <div className="text-center text-sm font-medium mb-6 text-foreground">
-                Váš termín: <strong className="text-primary">{selectedService.name_sk}</strong> u <strong className="text-primary">{selectedEmployee?.display_name}</strong>
-                {" "}dňa <strong className="text-primary">{format(selectedFullDate, "d. MMMM", { locale: sk })}</strong> o <strong className="text-primary">{selectedTime}</strong>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="w-full font-bold py-4 rounded-full text-lg transition-all transform active:scale-[0.98] bg-primary text-primary-foreground dark:text-background hover:bg-primary/90 shadow-lg shadow-primary/30 disabled:opacity-50"
-              data-testid="booking-submit"
-            >
-              {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "REZERVOVAŤ ONLINE"}
-            </button>
-          </div>
-        )}
-      </div>
+      {selectedTime && (
+        <ContactConfirmation
+          formData={formData}
+          setFormData={setFormData}
+          contactErrors={contactErrors}
+          handleCheckAll={handleCheckAll}
+          handleConsentChange={handleConsentChange}
+          selectedService={selectedService}
+          selectedEmployee={selectedEmployee}
+          selectedFullDate={selectedFullDate}
+          selectedTime={selectedTime}
+          dateLocale={dateLocale}
+          submitting={submitting}
+          handleSubmit={handleSubmit}
+        />
+      )}
     </div>
   );
 }

@@ -229,22 +229,41 @@ DIRECT_URL="postgresql://postgres.zcbklrgrawjsshpoyolr:[HESLO]@aws-1-eu-central-
 | | |
 |---|---|
 | Project ID | `zcbklrgrawjsshpoyolr` |
+| Account | `you@h4dk3d.me` (you640's Org) |
 | Region | EU Central (Frankfurt) |
 | Dashboard | https://supabase.com/dashboard/project/zcbklrgrawjsshpoyolr |
+| Tabuľky (SQL editor) | https://supabase.com/dashboard/project/zcbklrgrawjsshpoyolr/editor/42124?schema=public |
+| Auth providers | https://supabase.com/dashboard/project/zcbklrgrawjsshpoyolr/auth/providers |
 
 ---
 
 ## Stránky a routy
 
-| Route | Komponent | Auth | Popis |
-|-------|-----------|:----:|-------|
-| `/` | LiquidPlayground | — | Landing / úvodná stránka |
-| `/demo` | DemoPage | — | Feature showcase |
-| `/booking` | BookingPage | — | Verejná rezervácia zákazníka |
-| `/papihairsalon2026` | SalonLoginPage | — | Prihlásenie personálu (súkromné) |
-| `/auth` | Auth | — | Štandardné prihlásenie / registrácia |
-| `/offline` | OfflinePage | — | Offline fallback |
-| `/install` | InstallPage | — | PWA inštalačný sprievodca |
+Produkčná doména: **`https://papi-hair-design.vercel.app`**
+
+| Route | Plná URL (Vercel) | Auth | Popis |
+|-------|-------------------|:----:|-------|
+| `/` | https://papi-hair-design.vercel.app/ | — | Landing / luxusná úvodná stránka |
+| `/booking` | https://papi-hair-design.vercel.app/booking | — | Verejná rezervácia zákazníka |
+| `/demo` | https://papi-hair-design.vercel.app/demo | — | Feature showcase |
+| `/auth` | https://papi-hair-design.vercel.app/auth | — | Štandardné prihlásenie / registrácia |
+| `/papihairsalon2026` | https://papi-hair-design.vercel.app/papihairsalon2026 | — | Prihlásenie personálu (skryté) |
+| `/reception` | https://papi-hair-design.vercel.app/reception | 🔒 employee+ | Recepcia — denný prehľad |
+| `/admin` | https://papi-hair-design.vercel.app/admin | 🔒 admin+ | Admin dashboard |
+| `/admin/calendar` | https://papi-hair-design.vercel.app/admin/calendar | 🔒 admin+ | Kalendár rezervácií |
+| `/admin/appointments` | https://papi-hair-design.vercel.app/admin/appointments | 🔒 employee+ | Správa rezervácií |
+| `/admin/employees` | https://papi-hair-design.vercel.app/admin/employees | 🔒 admin+ | Správa zamestnancov |
+| `/admin/services` | https://papi-hair-design.vercel.app/admin/services | 🔒 admin+ | Správa služieb |
+| `/admin/customers` | https://papi-hair-design.vercel.app/admin/customers | 🔒 admin+ | Správa zákazníkov |
+| `/admin/settings` | https://papi-hair-design.vercel.app/admin/settings | 🔒 admin+ | Nastavenia salóna |
+| `/admin/my` | https://papi-hair-design.vercel.app/admin/my | 🔒 employee+ | Môj profil / zmena hesla |
+| `/privacy` | https://papi-hair-design.vercel.app/privacy | — | Ochrana osobných údajov |
+| `/privacy-policy` | https://papi-hair-design.vercel.app/privacy-policy | — | Podmienky (alias) |
+| `/terms` | https://papi-hair-design.vercel.app/terms | — | Obchodné podmienky |
+| `/diagnostics` | https://papi-hair-design.vercel.app/diagnostics | — | Diagnostika (dev) |
+| `/install` | https://papi-hair-design.vercel.app/install | — | PWA inštalačný sprievodca |
+| `/offline` | https://papi-hair-design.vercel.app/offline | — | Offline fallback |
+| `*` | https://papi-hair-design.vercel.app/čokoľvek | — | 404 Not Found |
 ### 7. Deployment Preparedness (F10)
 - **Routing Support**: Added `public/.htaccess` (for Apache servers like Websupport) and `public/_redirects` (for Netlify/Vercel) to ensure React Router client-side routes (like `/booking` and `/admin`) work out-of-the-box upon direct hits without returning 404 errors.
 
@@ -494,28 +513,47 @@ Framework: **Vitest** + `@testing-library/react` + `jsdom`
 
 ## Vercel / deploy
 
-```sh
-# Vercel CLI deploy
-vercel --prod
+### Aktuálny stav nasadenia
 
-# Alebo cez GitHub – automatický deploy pri push na main
+| | |
+|---|---|
+| **Platform** | Vercel (Hobby) |
+| **GitHub repo** | https://github.com/youh4ck3dme/papi-hair-design (private) |
+| **Vercel projekt** | `papi-hair-design` (tím: `yyys-projects-639e38fd`) |
+| **Vercel dashboard** | https://vercel.com/yyys-projects-639e38fd/papi-hair-design |
+| **Aktívny deployment** | https://papi-hair-design-99ruydqcl-yyys-projects-639e38fd.vercel.app ✅ |
+| **Produkčná doména** | https://papi-hair-design.vercel.app |
+| **Vlastná doména** | `booking.papihairdesign.sk` — ⚠️ zatiaľ nepripojená k Vercel |
+| **Auto-deploy** | ✅ každý push na `main` → automatický deploy |
+
+> **Poznámka:** Vercel Hobby nepodporuje deploy zo súkromného org repozitára — repo musí byť pod osobným účtom (`youh4ck3dme`). ✅
+
+### Manuálny deploy
+
+```sh
+npx vercel --prod
 ```
 
-**Env premenné na Vercel** (nastav v Dashboard → Project → Settings → Environment Variables):
+### Env premenné na Vercel
+
+Nastav v: https://vercel.com/yyys-projects-639e38fd/papi-hair-design/settings/environment-variables
 
 | Premenná | Hodnota |
 |----------|---------|
 | `VITE_SUPABASE_URL` | `https://zcbklrgrawjsshpoyolr.supabase.co` |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | anon key z Supabase Dashboard → API |
-| `VITE_PAPI_EMAIL` | email Supabase Auth používateľa Papi |
-| `VITE_MISKA_EMAIL` | email Supabase Auth používateľa Miška |
-| `VITE_MATO_EMAIL` | email Supabase Auth používateľa Maťo |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | anon key zo Supabase Dashboard → Settings → API |
+| `VITE_PAPI_EMAIL` | `papi@papihairdesign.sk` |
+| `VITE_MISKA_EMAIL` | `miske@papihairdesign.sk` |
+| `VITE_MATO_EMAIL` | `mato@papihairdesign.sk` |
 | `VITE_VERCEL` | `true` |
 | `VITE_RECAPTCHA_SITE_KEY` | voliteľné — reCAPTCHA v3 site key |
 
-> **Dôležité:** Emaily (VITE_PAPI_EMAIL atď.) musia zodpovedať používateľom v Supabase Auth (Dashboard → Authentication → Users).
+### Pripojenie vlastnej domény `booking.papihairdesign.sk`
 
-> Vercel Hobby nepodporuje deploy zo súkromného org repozitára. Repozitár musí byť pod osobným účtom.
+1. Vercel Dashboard → projekt → **Domains** → pridať `booking.papihairdesign.sk`
+2. Vercel ukáže DNS záznamy (CNAME alebo A record)
+3. Nastaviť DNS u registrátora (Websupport): CNAME → `cname.vercel-dns.com`
+4. Počkať na propagáciu (5–30 min)
 
 ---
 

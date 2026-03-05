@@ -6,6 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="preconnect" href="https://zcbklrgrawjsshpoyolr.supabase.co" />
   <link rel="dns-prefetch" href="https://zcbklrgrawjsshpoyolr.supabase.co" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <script>
+    (function() {
+      const isLowEnd = (navigator.deviceMemory && navigator.deviceMemory < 4) || 
+                       (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4);
+      if (isLowEnd || /Mobi|Android/i.test(navigator.userAgent)) {
+        document.documentElement.classList.add('phd-low-power');
+      }
+    })();
+  </script>
 
   <title>PAPI HAIR DESIGN BOOKING</title>
   <meta name="description" content="Prémiový rezervačný systém – PAPI HAIR DESIGN">

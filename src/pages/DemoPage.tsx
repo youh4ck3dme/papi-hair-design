@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LogoIcon } from "@/components/LogoIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { useTranslation } from "react-i18next";
 import "@/styles/expanding-cards.css";
 
 import cardBgHero from "@/assets/card-bg-hero.jpg";
@@ -24,55 +26,6 @@ const cardBackgrounds: Record<string, string> = {
   features: cardBgFeatures,
   qr: cardBgQr,
 };
-
-/* ── Data ── */
-
-const demoAccounts = [
-  {
-    role: "Zákazník", icon: User,
-    email: "demo@papihairdesign.sk", password: "PapiDemo2025!",
-    badge: "bg-primary/20 text-primary border-primary/30",
-    description: "Vidíte booking flow, históriu rezervácií a profil zákazníka",
-    redirect: "/booking",
-  },
-  {
-    role: "Majiteľ / Admin", icon: Shield,
-    email: "owner@papihairdesign.sk", password: "PapiDemo2025!",
-    badge: "bg-accent text-accent-foreground border-border",
-    description: "Spravujete kalendár, zamestnancov, služby a štatistiky",
-    redirect: "/admin",
-  },
-  {
-    role: "Superadmin", icon: Crown,
-    email: "larsenevans@proton.me", password: null,
-    badge: "bg-primary/15 text-primary border-primary/25",
-    description: "Plný prístup k systému, multi-business správa",
-    redirect: "/admin",
-  },
-];
-
-const steps = [
-  { num: "1", title: "Rezervácia", desc: "Zákazník si otvorí /booking a vyberie termín" },
-  { num: "2", title: "Notifikácia", desc: "Salón dostane notifikáciu, termín sa zapíše do kalendára" },
-  { num: "3", title: "Správa", desc: "Admin spravuje všetko z dashboardu v reálnom čase" },
-];
-
-const features = [
-  { icon: Calendar, title: "Online rezervácie 24/7", desc: "Zákazníci si rezervujú kedykoľvek" },
-  { icon: Users, title: "Správa zamestnancov", desc: "Rozvrhy, služby, profily" },
-  { icon: BarChart3, title: "Štatistiky a prehľady", desc: "Dáta o výkonnosti salónu" },
-  { icon: Bell, title: "Automatické notifikácie", desc: "E-mail pripomienky pre zákazníkov" },
-  { icon: Smartphone, title: "PWA – funguje ako app", desc: "Inštalácia na telefón jedným kliknutím" },
-  { icon: Lock, title: "Bezpečné a spoľahlivé", desc: "RLS politiky, šifrované dáta" },
-];
-
-const cards = [
-  { id: "hero", label: "PAPI", sub: "Hair Design", Icon: Sparkles },
-  { id: "accounts", label: "Demo", sub: "Účty", Icon: User },
-  { id: "how", label: "Ako", sub: "Funguje", Icon: Zap },
-  { id: "features", label: "Funkcie", sub: "Systému", Icon: Calendar },
-  { id: "qr", label: "QR", sub: "Kód", Icon: QrCode },
-];
 
 /* ── Helpers ── */
 
@@ -97,22 +50,23 @@ const contentAnim: any = {
 /* ── Card Content Components ── */
 
 function HeroContent({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center h-full gap-6 text-center">
       <LogoIcon size="lg" />
       <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-        Rezervačný systém<br />
-        <span className="text-primary">pre moderné salóny</span>
+        {t("demo.heroTitle")}<br />
+        <span className="text-primary">{t("demo.heroSub")}</span>
       </h1>
       <p className="text-sm text-muted-foreground max-w-md">
-        Vyskúšajte PAPI booking system naživo – žiadna registrácia
+        {t("demo.heroDesc")}
       </p>
       <div className="flex flex-col sm:flex-row gap-3">
         <Button size="lg" onClick={() => navigate("/booking")}>
-          Rezervovať termín →
+          {t("demo.bookBtn")}
         </Button>
         <Button size="lg" variant="outline" onClick={() => navigate("/auth")}>
-          Prihlásiť sa
+          {t("demo.loginBtn")}
         </Button>
       </div>
     </div>
@@ -120,9 +74,35 @@ function HeroContent({ navigate }: { navigate: ReturnType<typeof useNavigate> })
 }
 
 function AccountsContent({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
+  const { t } = useTranslation();
+
+  const demoAccounts = [
+    {
+      role: t("demo.roleCustomer"), icon: User,
+      email: "demo@papihairdesign.sk", password: "PapiDemo2025!",
+      badge: "bg-primary/20 text-primary border-primary/30",
+      description: t("demo.customerDesc"),
+      redirect: "/booking",
+    },
+    {
+      role: t("demo.roleOwner"), icon: Shield,
+      email: "owner@papihairdesign.sk", password: "PapiDemo2025!",
+      badge: "bg-accent text-accent-foreground border-border",
+      description: t("demo.ownerDesc"),
+      redirect: "/admin",
+    },
+    {
+      role: t("demo.roleSuperadmin"), icon: Crown,
+      email: "larsenevans@proton.me", password: null,
+      badge: "bg-primary/15 text-primary border-primary/25",
+      description: t("demo.superadminDesc"),
+      redirect: "/admin",
+    },
+  ];
+
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold mb-4">Demo účty</h2>
+      <h2 className="text-xl font-bold mb-4">{t("demo.demoTitle")}</h2>
       {demoAccounts.map((acc) => (
         <div key={acc.email} className="rounded-xl border border-border/30 bg-card/20 p-4 space-y-2">
           <div className="flex items-center gap-2">
@@ -132,24 +112,24 @@ function AccountsContent({ navigate }: { navigate: ReturnType<typeof useNavigate
           <p className="text-xs text-muted-foreground">{acc.description}</p>
           <div className="text-xs space-y-1">
             <div className="flex items-center">
-              <span className="text-muted-foreground w-12">Email:</span>
+              <span className="text-muted-foreground w-12">{t("demo.emailLabel")}</span>
               <code className="text-foreground/80">{acc.email}</code>
               <CopyButton text={acc.email} />
             </div>
             <div className="flex items-center">
-              <span className="text-muted-foreground w-12">Heslo:</span>
+              <span className="text-muted-foreground w-12">{t("demo.passwordLabel")}</span>
               {acc.password ? (
                 <>
                   <code className="text-foreground/80">{acc.password}</code>
                   <CopyButton text={acc.password} />
                 </>
               ) : (
-                <span className="text-primary text-xs">Kontaktujte nás</span>
+                <span className="text-primary text-xs">{t("demo.contactForPass")}</span>
               )}
             </div>
           </div>
           <Button size="sm" variant="outline" className="w-full mt-2" onClick={(e) => { e.stopPropagation(); navigate(`/auth?redirect=${acc.redirect}`); }}>
-            Prihlásiť sa
+            {t("demo.loginBtn2")}
           </Button>
         </div>
       ))}
@@ -158,9 +138,15 @@ function AccountsContent({ navigate }: { navigate: ReturnType<typeof useNavigate
 }
 
 function HowContent() {
+  const { t } = useTranslation();
+  const steps = [
+    { num: "1", title: t("demo.step1Title"), desc: t("demo.step1Desc") },
+    { num: "2", title: t("demo.step2Title"), desc: t("demo.step2Desc") },
+    { num: "3", title: t("demo.step3Title"), desc: t("demo.step3Desc") },
+  ];
   return (
     <div className="flex flex-col justify-center h-full gap-8">
-      <h2 className="text-xl font-bold">Ako to funguje</h2>
+      <h2 className="text-xl font-bold">{t("demo.howTitle")}</h2>
       {steps.map((s) => (
         <div key={s.num} className="flex items-start gap-4">
           <div className="w-12 h-12 rounded-full border border-primary/30 bg-card/30 flex items-center justify-center text-lg font-bold text-primary shrink-0">
@@ -177,9 +163,18 @@ function HowContent() {
 }
 
 function FeaturesContent() {
+  const { t } = useTranslation();
+  const features = [
+    { icon: Calendar, title: t("demo.feat1"), desc: t("demo.feat1Sub") },
+    { icon: Users, title: t("demo.feat2"), desc: t("demo.feat2Sub") },
+    { icon: BarChart3, title: t("demo.feat3"), desc: t("demo.feat3Sub") },
+    { icon: Bell, title: t("demo.feat4"), desc: t("demo.feat4Sub") },
+    { icon: Smartphone, title: t("demo.feat5"), desc: t("demo.feat5Sub") },
+    { icon: Lock, title: t("demo.feat6"), desc: t("demo.feat6Sub") },
+  ];
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold">Funkcie</h2>
+      <h2 className="text-xl font-bold">{t("demo.featTitle")}</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {features.map((f) => (
           <div key={f.title} className="flex gap-3 items-start rounded-lg border border-border/20 bg-card/20 p-3">
@@ -198,17 +193,18 @@ function FeaturesContent() {
 }
 
 function QrContent() {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
       <img
         src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + "/booking")}&bgcolor=transparent&color=c8a864&format=svg`}
-        alt="QR kód pre rezerváciu"
+        alt={t("demo.qrAlt")}
         className="w-32 h-32 rounded-lg"
         loading="lazy"
       />
-      <h3 className="font-semibold text-lg">QR kód na stole</h3>
+      <h3 className="font-semibold text-lg">{t("demo.qrTitle")}</h3>
       <p className="text-sm text-muted-foreground max-w-xs">
-        Fyzický QR kód na stole – zákazník si rezervuje kým sedí v kresle
+        {t("demo.qrDesc")}
       </p>
     </div>
   );
@@ -219,6 +215,15 @@ function QrContent() {
 export default function DemoPage() {
   const [activeCard, setActiveCard] = useState(0);
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  const cards = [
+    { id: "hero", label: t("demo.cardPapi"), sub: t("demo.cardPapiSub"), Icon: Sparkles },
+    { id: "accounts", label: t("demo.cardDemo"), sub: t("demo.cardDemoSub"), Icon: User },
+    { id: "how", label: t("demo.cardHow"), sub: t("demo.cardHowSub"), Icon: Zap },
+    { id: "features", label: t("demo.cardFeatures"), sub: t("demo.cardFeaturesSub"), Icon: Calendar },
+    { id: "qr", label: t("demo.cardQr"), sub: t("demo.cardQrSub"), Icon: QrCode },
+  ];
 
   const contentMap: Record<string, React.ReactNode> = {
     hero: <HeroContent navigate={navigate} />,
@@ -230,8 +235,8 @@ export default function DemoPage() {
 
   return (
     <div className="bg-background min-h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Theme toggle */}
-      <div className="fixed top-4 right-4 z-50">
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-1">
+        <LanguageToggle />
         <ThemeToggle />
       </div>
 
@@ -244,21 +249,14 @@ export default function DemoPage() {
               className={`expanding-cards__option ${isActive ? "expanding-cards__option--active" : ""}`}
               onClick={() => setActiveCard(i)}
             >
-              {/* Background image */}
               <div
                 className="expanding-cards__bg"
                 style={{ backgroundImage: `url(${cardBackgrounds[card.id]})` }}
               />
-
-              {/* Collapsed label */}
               {!isActive && (
                 <span className="expanding-cards__collapsed-label">{card.label}</span>
               )}
-
-              {/* Shadow overlay */}
               <div className="expanding-cards__shadow" />
-
-              {/* Bottom label */}
               <div className="expanding-cards__label">
                 <div className="expanding-cards__label-icon">
                   <card.Icon className="w-5 h-5" />
@@ -272,8 +270,6 @@ export default function DemoPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Content */}
               <AnimatePresence mode="wait">
                 {isActive && (
                   <motion.div
@@ -290,9 +286,8 @@ export default function DemoPage() {
         })}
       </div>
 
-      {/* Footer */}
       <div className="fixed bottom-4 left-0 right-0 text-center text-muted-foreground text-xs opacity-50">
-        Vyvinuté s ❤️ pre slovenské salóny
+        {t("demo.footer")}
       </div>
     </div>
   );

@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Eye, EyeOff, ChevronLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 // ── Profile definitions ──────────────────────────────────────────────────────
 const PROFILES = [
@@ -20,7 +23,7 @@ const PROFILES = [
         label: "Miska",
         role: "Stylistka",
         email: import.meta.env.VITE_MISKA_EMAIL ?? "",
-        color: "#8B5CF6",
+        color: "#B794F4", // Lighter Violet for better contrast
         photo: "/miska.webp",
         initials: "M",
     },
@@ -29,7 +32,7 @@ const PROFILES = [
         label: "Mato",
         role: "Barber",
         email: import.meta.env.VITE_MATO_EMAIL ?? "",
-        color: "#3B82F6",
+        color: "#60A5FA", // Lighter Blue for better contrast
         photo: "/mato.webp",
         initials: "M",
     },
@@ -210,6 +213,7 @@ function LiquidGoldBg({ mouseRef }: { mouseRef: React.RefObject<[number, number]
     const ref = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
+        if (document.documentElement.classList.contains("phd-low-power")) return;
         const canvas = ref.current;
         if (!canvas) return;
 
@@ -220,7 +224,7 @@ function LiquidGoldBg({ mouseRef }: { mouseRef: React.RefObject<[number, number]
         if (!gl) return;
 
         const sync = () => {
-            canvas.width  = window.innerWidth;
+            canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             gl.viewport(0, 0, canvas.width, canvas.height);
         };
@@ -256,16 +260,16 @@ function LiquidGoldBg({ mouseRef }: { mouseRef: React.RefObject<[number, number]
         gl.enableVertexAttribArray(posLoc);
         gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
-        const tLoc     = gl.getUniformLocation(prog, "u_time");
-        const rLoc     = gl.getUniformLocation(prog, "u_res");
+        const tLoc = gl.getUniformLocation(prog, "u_time");
+        const rLoc = gl.getUniformLocation(prog, "u_res");
         const mouseLoc = gl.getUniformLocation(prog, "u_mouse");
 
         gl.clearColor(0.03, 0.014, 0.003, 1);
 
-        const isMobile   = window.innerWidth < 768;
+        const isMobile = window.innerWidth < 768;
         const minInterval = isMobile ? 1000 / 30 : 1000 / 60;
         let last = 0;
-        let raf  = 0;
+        let raf = 0;
         const t0 = performance.now();
 
         const frame = (now: number) => {
@@ -309,6 +313,7 @@ function ElectricCanvas() {
     const ref = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
+        if (document.documentElement.classList.contains("phd-low-power")) return;
         const canvas = ref.current;
         if (!canvas) return;
 
@@ -350,7 +355,7 @@ function ElectricCanvas() {
 
         const buf = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
         const posLoc = gl.getAttribLocation(prog, "a_pos");
         gl.enableVertexAttribArray(posLoc);
         gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
@@ -421,13 +426,13 @@ function PickerCard({
     avatarPx: number;
     onPick: (id: ProfileId) => void;
 }) {
-    const [tilt, setTilt]       = useState({ x: 0, y: 0 });
+    const [tilt, setTilt] = useState({ x: 0, y: 0 });
     const [hovered, setHovered] = useState(false);
 
     const onMove = (e: React.MouseEvent<HTMLButtonElement>) => {
         const rect = e.currentTarget.getBoundingClientRect();
-        const cx = (e.clientX - rect.left) / rect.width  - 0.5;
-        const cy = (e.clientY - rect.top)  / rect.height - 0.5;
+        const cx = (e.clientX - rect.left) / rect.width - 0.5;
+        const cy = (e.clientY - rect.top) / rect.height - 0.5;
         setTilt({ x: cx * 16, y: cy * -12 });
     };
 
@@ -502,7 +507,7 @@ function PickerCard({
             {/* Name */}
             <span
                 className="text-xs sm:text-sm lg:text-base font-bold tracking-wider transition-colors duration-200"
-                style={{ color: hovered ? "#ffffff" : "rgba(255,255,255,0.78)" }}
+                style={{ color: hovered ? "#ffffff" : "rgba(255,255,255,0.92)" }}
             >
                 {p.label}
             </span>
@@ -510,7 +515,7 @@ function PickerCard({
             {/* Role label — new */}
             <span
                 className="text-[9px] sm:text-[10px] font-medium tracking-[0.14em] uppercase transition-colors duration-300"
-                style={{ color: hovered ? p.color : "rgba(255,255,255,0.25)" }}
+                style={{ color: hovered ? p.color : "rgba(255,255,255,0.55)" }}
             >
                 {p.role}
             </span>
@@ -554,7 +559,7 @@ const STYLES = `
   }
   .phd-logo  { animation: phd-logo-in 1.5s cubic-bezier(.22,1,.36,1) forwards; }
   .phd-slide { animation: phd-slide   .6s  cubic-bezier(.22,1,.36,1) forwards; }
-  .phd-pwd-input::placeholder { color: rgba(201,168,76,0.38); }
+  .phd-pwd-input::placeholder { color: rgba(201,168,76,0.65); }
   @media (prefers-reduced-motion: reduce) {
     .phd-logo, .phd-slide {
       animation: none !important;
@@ -567,15 +572,16 @@ const STYLES = `
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function SalonLoginPage() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
-    const [phase, setPhase]         = useState<Phase>("intro");
-    const [animStep, setAnimStep]   = useState(0);
-    const [selected, setSelected]   = useState<ProfileId | null>(null);
-    const [password, setPassword]   = useState("");
-    const [showPwd, setShowPwd]     = useState(false);
-    const [loading, setLoading]     = useState(false);
-    const [venetian, setVenetian]   = useState(true);
-    const [avatarPx, setAvatarPx]   = useState(() =>
+    const [phase, setPhase] = useState<Phase>("intro");
+    const [animStep, setAnimStep] = useState(0);
+    const [selected, setSelected] = useState<ProfileId | null>(null);
+    const [password, setPassword] = useState("");
+    const [showPwd, setShowPwd] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [venetian, setVenetian] = useState(true);
+    const [avatarPx, setAvatarPx] = useState(() =>
         typeof window !== "undefined" ? calcAvatarPx(window.innerWidth) : 138,
     );
 
@@ -617,25 +623,25 @@ export default function SalonLoginPage() {
         return () => window.removeEventListener("resize", onResize);
     }, []);
 
-    const enter  = () => setPhase("picker");
-    const pick   = (id: ProfileId) => { setSelected(id); setPhase("login"); setPassword(""); };
+    const enter = () => setPhase("picker");
+    const pick = (id: ProfileId) => { setSelected(id); setPhase("login"); setPassword(""); };
     const goBack = () => { setSelected(null); setPhase("picker"); setPassword(""); };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!profile || !password) return;
         if (!profile.email) {
-            toast.error(`Email pre ${profile.label} nie je nakonfigurovaný. Nastav VITE_${profile.id.toUpperCase()}_EMAIL v .env`);
+            toast.error(t("salonLogin.toastEmailMissing", { name: profile.label }));
             return;
         }
         setLoading(true);
         const { error } = await supabase.auth.signInWithPassword({ email: profile.email, password });
         if (error) {
-            toast.error("Nesprávne heslo. Skús znova.");
+            toast.error(t("salonLogin.toastWrongPassword"));
             setPassword(""); setLoading(false);
             return;
         }
-        toast.success(`Vitaj, ${profile.label}! 👋`);
+        toast.success(t("salonLogin.toastWelcome", { name: profile.label }));
         navigate("/admin/calendar");
     };
 
@@ -648,6 +654,11 @@ export default function SalonLoginPage() {
 
             {/* NÁPAD 1: Full-screen Liquid Gold WebGL background */}
             <LiquidGoldBg mouseRef={mouseRef} />
+
+            <div className="fixed top-4 right-4 z-[70] flex items-center gap-1">
+                <LanguageToggle />
+                <ThemeToggle />
+            </div>
 
             {/* NÁPAD 2: Venetian blinds opening on page load */}
             <VenetianOverlay active={venetian} strips={14} />
@@ -714,11 +725,11 @@ export default function SalonLoginPage() {
                                         textShadow: "0 1px 0 rgba(255,255,255,0.38)",
                                     }}
                                 >
-                                    VSTÚPIŤ DO PAPI HAIR DESIGN
+                                    {t("salonLogin.enterBtn")}
                                 </button>
 
                                 <p className="text-white/32 text-[10px] xs:text-[11px] tracking-[0.16em] uppercase mt-0.5">
-                                    Prihláste sa svojim heslom…
+                                    {t("salonLogin.passwordHint")}
                                 </p>
                             </div>
                         )}
@@ -736,7 +747,7 @@ export default function SalonLoginPage() {
                                 textShadow: "0 0 18px rgba(201,168,76,0.22)",
                             }}
                         >
-                            Za každým dokonalým strihom stojí ruka, ktorá to robí srdcom.
+                            {t("salonLogin.quote")}
                         </p>
 
                         {/* NÁPAD 3: Holographic 3D tilt member cards */}
@@ -772,7 +783,7 @@ export default function SalonLoginPage() {
                             className="self-start flex items-center gap-1 min-h-[44px] text-white/40 hover:text-white/70 text-sm transition-colors"
                         >
                             <ChevronLeft size={16} />
-                            Späť
+                            {t("salonLogin.back")}
                         </button>
 
                         <div
@@ -790,7 +801,7 @@ export default function SalonLoginPage() {
                             </h2>
                             <span
                                 className="text-[10px] tracking-[0.14em] uppercase font-medium"
-                                style={{ color: profile.color + "99" }}
+                                style={{ color: profile.color }}
                             >
                                 {profile.role}
                             </span>
@@ -806,7 +817,7 @@ export default function SalonLoginPage() {
                             >
                                 <input
                                     type={showPwd ? "text" : "password"}
-                                    placeholder="Heslo"
+                                    placeholder={t("salonLogin.passwordPlaceholder")}
                                     autoFocus
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
@@ -830,10 +841,10 @@ export default function SalonLoginPage() {
                                         ? `linear-gradient(135deg, ${profile.color} 0%, ${profile.color}99 100%)`
                                         : "#ffffff11",
                                     color: password ? "#0d0d0d" : "#ffffff44",
-                                    boxShadow: password ? `0 4px 24px ${profile.color}44` : "none",
+                                    boxShadow: `0 8px 32px -4px ${profile.color}40`,
                                 }}
                             >
-                                {loading ? "Prihlasovanie…" : "Prihlásiť sa"}
+                                {loading ? "..." : t("salonLogin.loginBtn")}
                             </button>
                         </form>
                     </div>
@@ -842,14 +853,14 @@ export default function SalonLoginPage() {
 
             {/* CSS gold particles */}
             {([
-                { left: "8%",  bottom: "25%", size: 2, dur: "12s", delay: "0s"   },
-                { left: "18%", bottom: "10%", size: 1, dur: "9s",  delay: "2.5s" },
-                { left: "32%", bottom: "32%", size: 2, dur: "15s", delay: "1s"   },
-                { left: "45%", bottom: "8%",  size: 1, dur: "11s", delay: "3.5s" },
+                { left: "8%", bottom: "25%", size: 2, dur: "12s", delay: "0s" },
+                { left: "18%", bottom: "10%", size: 1, dur: "9s", delay: "2.5s" },
+                { left: "32%", bottom: "32%", size: 2, dur: "15s", delay: "1s" },
+                { left: "45%", bottom: "8%", size: 1, dur: "11s", delay: "3.5s" },
                 { left: "58%", bottom: "20%", size: 2, dur: "13s", delay: "0.5s" },
-                { left: "70%", bottom: "5%",  size: 1, dur: "10s", delay: "4s"   },
-                { left: "82%", bottom: "28%", size: 2, dur: "14s", delay: "2s"   },
-                { left: "91%", bottom: "14%", size: 1, dur: "8s",  delay: "6s"   },
+                { left: "70%", bottom: "5%", size: 1, dur: "10s", delay: "4s" },
+                { left: "82%", bottom: "28%", size: 2, dur: "14s", delay: "2s" },
+                { left: "91%", bottom: "14%", size: 1, dur: "8s", delay: "6s" },
             ] as const).map((pt, i) => (
                 <div
                     key={i}

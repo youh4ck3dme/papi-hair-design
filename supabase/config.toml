@@ -3,7 +3,7 @@ project_id = "zcbklrgrawjsshpoyolr"
 
 [auth]
 site_url = "https://booking.papihairdesign.sk"
-additional_redirect_urls = ["https://booking.papihairdesign.sk/**"]
+additional_redirect_urls = ["https://booking.papihairdesign.sk/**", "http://localhost:5678/**", "https://papi-hair-design.vercel.app/**"]
 
 # Firebase ako Third-Party Auth – musí sedieť s Firebase projektom (phd-booking)
 [auth.third_party.firebase]
