@@ -3,7 +3,8 @@
     "allow": [
       "Bash(node -e \":*)",
       "Bash(vercel --prod --yes)",
-      "Bash(npm test -- src/lib/wcag.test.ts --run)"
+      "Bash(npm test -- src/lib/wcag.test.ts --run)",
+      "Bash(curl -s -H \"Authorization: Bearer vca_6h2DxgWEav7CSN49JijqsVxu95U6rKiJqHFVPHvzliF2VBSzjt05RXSv\" \"https://api.vercel.com/v9/projects/prj_HfyKODmZ2EpjhmnnLLibOYGWVGow?teamId=team_YhnhMAWJg8SBIujKmoPzg98L\")"
     ]
   }
 }

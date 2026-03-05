@@ -55,6 +55,8 @@ function categorizeServices(services: ServiceItem[]) {
   return groups;
 }
 
+import cardBgQr3d from "@/assets/luxury-qr-3d.png";
+
 const cardBgs: Record<string, string> = {
   brand: cardBgHero,
   hours: cardBgHow,
@@ -171,7 +173,7 @@ function HoursContent({ info, openStatus, nextOpening }: { info: PublicBusinessI
           <div key={day} className="flex items-center justify-between py-2.5 border-b border-white/5 last:border-0 group hover:bg-white/[0.02] transition-colors rounded-lg px-2">
             <span className="font-semibold text-sm tracking-widest uppercase text-muted-foreground group-hover:text-white transition-colors w-10">{DAY_LABELS[day]}</span>
             <span className={`text-sm font-medium ${mode === "closed" ? "text-red-400/80" :
-                mode === "on_request" ? "text-primary italic" : "text-white"
+              mode === "on_request" ? "text-primary italic" : "text-white"
               }`}>
               {mode === "closed" ? "Closed" :
                 mode === "on_request" ? "By Appointment" : time}
@@ -239,18 +241,37 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
   );
 }
 
+import cardBgQr3d from "@/assets/luxury-qr-3d.png";
+
 function BookingContent() {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-8 text-center px-6">
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center border border-primary/20">
-        <Calendar className="w-10 h-10 text-primary" />
+      <div className="relative group">
+        {/* Luxury 3D Visual Asset */}
+        <div className="w-56 h-56 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(218,165,32,0.3)] border border-primary/20 bg-black group-hover:scale-105 transition-transform duration-700">
+          <img
+            src={cardBgQr3d}
+            alt="Premium QR 3D"
+            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+          />
+          {/* Functional QR Overlay */}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+            <div className="bg-white p-2 rounded-xl scale-90">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent("https://papi-hair-design.vercel.app/booking")}&bgcolor=ffffff&color=000000&format=svg`}
+                alt="Functional QR"
+                className="w-32 h-32"
+              />
+            </div>
+          </div>
+        </div>
       </div>
+
       <div className="space-y-3">
         <h2 className="text-3xl font-bold tracking-tight">Seamless Booking</h2>
-        <p className="text-base text-muted-foreground max-w-xs leading-relaxed">
-          Experience effortless scheduling. Choose your therapist, select premium services, and secure your appointment in seconds.
-        </p>
+        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">Original PAPI 3D Design</p>
       </div>
+
       <Link
         to="/booking"
         className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-xl text-sm font-bold text-black shadow-2xl transition-all hover:scale-105 active:scale-95 overflow-hidden"
@@ -260,15 +281,8 @@ function BookingContent() {
         <Calendar className="w-5 h-5 relative z-10" />
         <span className="relative z-10 uppercase tracking-widest">Begin Reservation</span>
       </Link>
-      <div className="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm group hover:border-primary/30 transition-colors">
-        <img
-          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(window.location.origin + "/booking")}&bgcolor=00000000&color=daa520&format=svg`}
-          alt="QR kód"
-          className="w-32 h-32 rounded-lg opacity-90 group-hover:opacity-100 transition-opacity"
-          loading="lazy"
-        />
-        <p className="text-[10px] text-muted-foreground mt-3 uppercase tracking-[0.2em] font-medium">Scan to Book Anywhere</p>
-      </div>
+
+      <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-medium opacity-60">Scan to Book Anywhere</p>
     </div>
   );
 }
