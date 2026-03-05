@@ -45,9 +45,11 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: "prompt",
+      registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "placeholder.svg", "pwa-icon-192.png", "pwa-icon-512.png"],
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         navigateFallbackDenylist: [/^\/~oauth/],
         runtimeCaching: [
           {

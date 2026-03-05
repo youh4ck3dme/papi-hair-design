@@ -52,8 +52,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refreshProfile = useCallback(async (userId?: string) => {
-    const uid = userId || user?.id;
+  const refreshProfile = useCallback(async (uid: string) => {
     if (!uid) return;
 
     try {
@@ -84,7 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err) {
       console.error("Error fetching profile:", err);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -117,7 +116,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(currentSession);
       if (currentSession?.user) {
         const u = currentSession.user;
-        setUser({ id: u.id, uid: u.id, email: u.email ?? null });
+        // Only update user if ID actually changed to prevent loops
+        setUser(prev => (prev?.id === u.id ? prev : { id: u.id, uid: u.id, email: u.email ?? null }));
         await refreshProfile(u.id);
       } else {
         setUser(null);

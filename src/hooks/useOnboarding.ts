@@ -15,41 +15,38 @@ export function useOnboarding() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !isOwnerOrAdmin) {
+    // Demo ID placeholder or no user should not trigger network heavy checks
+    if (!user || !isOwnerOrAdmin || businessId === "a1b2c3d4-0000-0000-0000-000000000001") {
       setNeedsOnboarding(false);
       setLoading(false);
       return;
     }
 
     const check = async () => {
-      setLoading(true);
+      try {
+        setLoading(true);
 
-      // Primary: check the deterministic flag on the business
-      const { data: biz, error: bizErr } = await supabase
-        .from("businesses")
-        .select("onboarding_completed")
-        .eq("id", businessId)
-        .maybeSingle();
+        const { data: biz, error: bizErr } = await supabase
+          .from("businesses")
+          .select("onboarding_completed")
+          .eq("id", businessId)
+          .maybeSingle();
 
-      if (bizErr || !biz) {
-        setNeedsOnboarding(false);
+        if (bizErr || !biz) {
+          setNeedsOnboarding(false);
+          return;
+        }
+
+        setNeedsOnboarding(!biz.onboarding_completed);
+      } catch (err) {
+        console.error("Onboarding check failed:", err);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      if (biz.onboarding_completed) {
-        setNeedsOnboarding(false);
-        setLoading(false);
-        return;
-      }
-
-      // Not yet completed — show wizard
-      setNeedsOnboarding(true);
-      setLoading(false);
     };
 
     check();
-  }, [user, businessId, isOwnerOrAdmin]);
+  }, [user?.id, businessId, isOwnerOrAdmin]);
 
   const markComplete = () => setNeedsOnboarding(false);
 
