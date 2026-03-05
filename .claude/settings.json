@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(node -e \":*)",
-      "Bash(vercel --prod --yes)"
+      "Bash(vercel --prod --yes)",
+      "Bash(npm test -- src/lib/wcag.test.ts --run)"
     ]
   }
 }
