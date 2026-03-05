@@ -7,8 +7,23 @@ const SUPABASE_URL = stripBom(import.meta.env.VITE_SUPABASE_URL);
 const SUPABASE_PUBLISHABLE_KEY = stripBom(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY || SUPABASE_URL === "" || SUPABASE_PUBLISHABLE_KEY === "") {
-  console.error("FATAL: Missing Supabase environment variables. Please check your .env file.");
-  throw new Error("Supabase URL and Publishable Key are required check your environment variables.");
+  const errorMsg = "FATAL: Missing Supabase environment variables! " +
+    "VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY is not defined. " +
+    "If you are on Vercel, go to Project Settings -> Environment Variables and add them.";
+  console.error(errorMsg);
+  // In production/Vercel, we can try to show a visible error if it's a browser
+  if (typeof window !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+      const root = document.getElementById('root');
+      if (root) {
+        root.innerHTML = `<div style="padding: 20px; color: white; background: red; font-family: sans-serif;">
+          <h1>Configuration Error</h1>
+          <p>${errorMsg}</p>
+        </div>`;
+      }
+    });
+  }
+  throw new Error(errorMsg);
 }
 
 const supabaseOptions = {
