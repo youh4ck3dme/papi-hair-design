@@ -1,126 +1,120 @@
 # Príprava prostredia a vývoj – Nimble Agenda
 
-Návod na prvotný setup, prípravu na nový vývoj (po clone alebo po `git pull`) a riešenie bežných problémov.
-
----
-
-## Obsah
-
-- [Požiadavky](#požiadavky)
-- [Prvotný setup (nový clone)](#prvotný-setup-nový-clone)
-- [Príprava na nový vývoj (existujúci projekt)](#príprava-na-nový-vývoj-existujúci-projekt)
-- [Package manager: npm vs pnpm](#package-manager-npm-vs-pnpm)
-- [Riešenie problémov](#riešenie-problémov)
-- [Súvisiace dokumenty](#súvisiace-dokumenty)
-
----
+Aktuálny repo setup je `npm`-only. Produkčný runtime je Firebase-only. Tento dokument popisuje iba aktuálne podporovanú cestu.
 
 ## Požiadavky
 
-- **Node.js 18+** (odporúčané LTS)
-- **Git**
-- **Package manager:** npm (súčasť Node.js) alebo [pnpm](https://pnpm.io/) – v jednom clone používaj **iba jeden**
+- Node.js `20.19.0+`
+- npm `10+`
+- Git
 
----
-
-## Prvotný setup (nový clone)
+## Rýchly setup
 
 ```powershell
-# 1. Klonovanie
 git clone https://github.com/EB-EU-s-r-o/nimble-agenda.git
 cd nimble-agenda
-
-# 2. Automatická príprava (Node.js check + npm install + .env z .env.example)
 npm run setup
-# alebo priamo:
-.\setup.ps1
-
-# 3. Ak používaš pnpm, ešte:
-pnpm install
-
-# 4. Doplň .env (VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY)
-# 5. Spusti vývoj
-npm run dev   # alebo: pnpm dev
 ```
 
-Aplikácia: **http://localhost:8080**
+`npm run setup`:
+- overí verziu Node.js,
+- nainštaluje závislosti pre root app, `functions/` a `booking-papihairdesign-sk/`,
+- vytvorí `.env` z `.env.example`, ak ešte neexistuje.
 
----
+## Povinné prostredie
 
-## Príprava na nový vývoj (existujúci projekt)
+Vyplň aspoň tieto Firebase klientské premenné v `.env`:
 
-Keď sa vrátiš k projektu alebo potiahneš najnovšie zmeny z repozitára:
+```env
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+VITE_FIREBASE_MEASUREMENT_ID=
+VITE_FIREBASE_FUNCTIONS_URL=
+```
 
-| Krok | Príkaz (npm) | Príkaz (pnpm) |
-|------|--------------|----------------|
-| 1. Stiahnuť zmeny | `git pull origin main` | to isté |
-| 2. Závislosti | `npm run setup` alebo `npm install` | `pnpm install` |
-| 3. Overiť .env | Skontrolovať `.env` (Supabase) | to isté |
-| 4. Lint | `npm run lint` | `pnpm lint` |
-| 5. Testy | `npm run test` | `pnpm test` |
-| 6. Build | `npm run build` | `pnpm build` |
-| 7. Dev server | `npm run dev` | `pnpm dev` |
+Voliteľné:
 
-Všetko prebehne bez chýb = prostredie je pripravené na ďalší vývoj.
+```env
+VITE_RECAPTCHA_SITE_KEY=
+VITE_SENTRY_DSN=
+VITE_SENTRY_ENABLE_DEV=false
+SENTRY_AUTH_TOKEN=
+```
 
----
+## Lokálny vývoj
 
-## Package manager: npm vs pnpm
+Root app:
 
-### Pravidlo: jeden package manager na jeden clone
+```powershell
+npm run dev
+```
 
-- **Nemiešaj** v tom istom priečinku `npm install` a `pnpm install`. Každý manager má vlastný layout `node_modules` (pnpm používa symlinky a vlastný store).
-- Ak spúšťaš príkazy cez **pnpm** (`pnpm test`, `pnpm run dev`), závislosti musia byť nainštalované cez **pnpm** – teda aspoň raz spusti `pnpm install`.
+Root app je dostupná na `http://localhost:5678`.
 
-### Prečo „Vitest not found“ pri pnpm?
+Firebase Functions build:
 
-Rozšírenie Vitest v Cursor/VS Code alebo priame volanie `pnpm test` hľadá binárku `vitest` v `node_modules/.bin`. Tá sa tam dostane až po inštalácii závislostí **tým istým** package managerom, akým spúšťaš skripty:
+```powershell
+npm --prefix functions run build
+```
 
-- Projekt bol pripravený cez `npm run setup` (volá `npm install`) → `node_modules` má npm štruktúru.
-- Keď potom spustíš `pnpm test`, pnpm môže očakávať svoj vlastný strom (ak si predtým nikdy nespustil `pnpm install`), a binárka `vitest` nie je nájdená.
+Nested Next app:
 
-**Riešenie:** V koreni projektu spusti `pnpm install`. Potom `pnpm test` (a ostatné `pnpm run …`) budú fungovať.
+```powershell
+npm --prefix booking-papihairdesign-sk run dev
+```
 
-### Setup.ps1 a pnpm
+## Overenie pred PR
 
-Skript `setup.ps1` **automaticky detekuje pnpm**: ak je `pnpm` v PATH, spustí `pnpm install`, inak `npm install`. Po `.\setup.ps1` už nemusíš nič meniť – ďalej používaj ten istý package manager (pnpm alebo npm) pri `pnpm test` / `npm run test`, `pnpm dev` / `npm run dev` atď.
+Root app:
 
----
+```powershell
+npm run verify
+```
 
-## Riešenie problémov
+Celý workspace:
 
-### „vitest is not recognized“ / „Vitest not found“
+```powershell
+npm run verify:workspace
+```
 
-- **Používaš pnpm:** Spusti v koreni projektu `pnpm install`. Potom `pnpm test`.
-- **Používaš npm:** Spusti `npm install` (alebo `npm run setup`). Potom `npm run test`.
-- V IDE (Vitest extension): over, že project root je `nimble-agenda` a že závislosti sú nainštalované tým package managerom, ktorý v projekte používaš.
+`verify:workspace` spúšťa:
+- root lint,
+- root typecheck,
+- root unit tests,
+- root build,
+- Firebase Functions build,
+- nested app lint,
+- nested app build.
 
-### Node.js verzia
+## Bežné problémy
 
-- Minimálna požiadavka: Node.js 18.  
-- Skontrolovať: `node -v`.  
-- Odporúčané: LTS (20 alebo 22).
+### Chýbajúce binárky (`eslint`, `tsc`, `vitest`, `esbuild`)
 
-### Závislosti sa neinštalovali
+Typický root cause je poškodený alebo prerušovaný install. Na Windows sa to často stane po prerušení `npm install` alebo po zamknutom `node.exe`.
 
-- Skontroluj sieť / proxy.  
-- Skús vymazať `node_modules` a lockfile (iba ten, ktorý používaš):  
-  - pri npm: zmaž `node_modules` a `package-lock.json`, potom `npm install`;  
-  - pri pnpm: zmaž `node_modules` a `pnpm-lock.yaml`, potom `pnpm install`.
+Odporúčaný postup:
 
-### Build / test zlyháva
+```powershell
+Remove-Item -Recurse -Force node_modules
+npm ci
+```
 
-- `npm run lint` alebo `pnpm lint` – overenie kódu  
-- `npm run test` alebo `pnpm test` – unit testy  
-- `npm run build` alebo `pnpm build` – overenie produkčného buildu  
+Ak problém ostáva, ukonči visiace Node procesy a zopakuj install. Rovnaký postup platí aj pre `functions/` a `booking-papihairdesign-sk/`.
 
-Chyby z týchto príkazov treba odstrániť pred commitom.
+### Build zlyhá na chýbajúcich env premenných
 
----
+Root build používa Firebase klientské premenné. Skontroluj `.env` alebo CI secrets. Lokálne build kontrola chýbajúce premenné blokuje; v CI len varuje.
+
+### E2E testy
+
+Playwright existuje, ale live E2E je závislé od funkčného Firebase prostredia a E2E credentialov. Bez nich sa nedá poctivo tvrdiť end-to-end korektnosť admin flow.
 
 ## Súvisiace dokumenty
 
-- [README.md](../README.md) – rýchly štart, príkazy, premenné prostredia
-- [ARCHITECTURE.md](ARCHITECTURE.md) – technická architektúra
-- [AUTH-BOOKING-DOMAIN.md](AUTH-BOOKING-DOMAIN.md) – auth na produkčnej doméne
-- [scripts/README.md](../scripts/README.md) – Vercel deploy skripty (build sa volá cez `npm run build`; pri pnpm použite `pnpm run build`)
+- [README.md](../README.md)
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [AUTH-BOOKING-DOMAIN.md](AUTH-BOOKING-DOMAIN.md)
