@@ -2,15 +2,15 @@ import * as admin from "firebase-admin";
 
 admin.initializeApp();
 
-// @ts-ignore
+// @ts-expect-error: Module export type mismatch in Cloud Functions v2
 export { claimBooking } from "./claimBooking";
-// @ts-ignore
+// @ts-expect-error: Module export type mismatch in Cloud Functions v2
 export { createPublicBooking } from "./createPublicBooking";
-// @ts-ignore
+// @ts-expect-error: Module export type mismatch in Cloud Functions v2
 export { saveSmtpConfig } from "./saveSmtpConfig";
-// @ts-ignore
+// @ts-expect-error: Module export type mismatch in Cloud Functions v2
 export { consentEvent } from "./consentEvent";
-// @ts-ignore
+// @ts-expect-error: Module export type mismatch in Cloud Functions v2
 export { listBookableProviders } from "./listBookableProviders";
-// @ts-ignore
+// @ts-expect-error: Module export type mismatch in Cloud Functions v2
 export { syncOfflineData } from "./syncOfflineData";
