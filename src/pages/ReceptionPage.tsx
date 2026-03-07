@@ -186,9 +186,9 @@ export default function ReceptionPage() {
   // Initial sync on mount
   useEffect(() => {
     if (navigator.onLine) {
-      runSync().then(load);
+      runSync(businessId).then(load);
     }
-  }, [load]);
+  }, [businessId, load]);
 
   const handleQuickWalkin = async () => {
     const id = crypto.randomUUID();

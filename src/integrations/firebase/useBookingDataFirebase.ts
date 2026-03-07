@@ -164,15 +164,20 @@ export function useBookingDataFirebase() {
                 });
                 setEmployeeServiceMap(eMap);
 
-                // 4. Memberships
-                const memSnap = await getDocs(query(
-                    collection(db, "memberships"),
-                    where("business_id", "==", DEMO_BUSINESS_ID)
-                ));
-                setMemberships(memSnap.docs.map(d => {
-                    const data = d.data();
-                    return { profile_id: data.profile_id, role: data.role };
-                }) as MembershipRow[]);
+                // 4. Memberships (best-effort: public booking users may not have permission)
+                try {
+                    const memSnap = await getDocs(query(
+                        collection(db, "memberships"),
+                        where("business_id", "==", DEMO_BUSINESS_ID)
+                    ));
+                    setMemberships(memSnap.docs.map(d => {
+                        const data = d.data();
+                        return { profile_id: data.profile_id, role: data.role };
+                    }) as MembershipRow[]);
+                } catch (membershipError) {
+                    console.warn("useBookingDataFirebase: memberships unavailable for current user", membershipError);
+                    setMemberships([]);
+                }
 
             } catch (error_) {
                 console.warn("useBookingDataFirebase: failed to load Firestore data", error_);

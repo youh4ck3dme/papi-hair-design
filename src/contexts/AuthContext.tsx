@@ -94,7 +94,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           id: currentFbUser.uid,
           email: currentFbUser.email ?? null
         });
-        await refreshProfile(currentFbUser.uid);
+        try {
+          await refreshProfile(currentFbUser.uid);
+        } catch (err) {
+          console.error("AuthContext: Failed to refresh profile on auth change:", err);
+        }
       } else {
         setUser(null);
         setProfile(null);

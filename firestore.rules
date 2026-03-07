@@ -1,32 +1,187 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAuthenticated() {
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    match /businesses/{businessId} {
-      allow read, write: if isAuthenticated();
+    function membershipPath(businessId) {
+      return /databases/$(database)/documents/memberships/$(request.auth.uid + "_" + businessId);
+    }
+
+    function hasMembership(businessId) {
+      return isSignedIn() && exists(membershipPath(businessId));
+    }
+
+    function membershipRole(businessId) {
+      return get(membershipPath(businessId)).data.role;
+    }
+
+    function isOwnerOrAdmin(businessId) {
+      return hasMembership(businessId) && (
+        membershipRole(businessId) == "owner" ||
+        membershipRole(businessId) == "admin"
+      );
+    }
+
+    function isStaff(businessId) {
+      return hasMembership(businessId) && (
+        membershipRole(businessId) == "owner" ||
+        membershipRole(businessId) == "admin" ||
+        membershipRole(businessId) == "employee"
+      );
+    }
+
+    function employeePath(employeeId) {
+      return /databases/$(database)/documents/employees/$(employeeId);
+    }
+
+    function employeeExists(employeeId) {
+      return employeeId is string && exists(employeePath(employeeId));
+    }
+
+    function employeeBusinessId(employeeId) {
+      return get(employeePath(employeeId)).data.business_id;
     }
 
     match /profiles/{userId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
     match /memberships/{membershipId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isSignedIn() && (
+        resource.data.profile_id == request.auth.uid ||
+        (resource.data.business_id is string && isOwnerOrAdmin(resource.data.business_id))
+      );
+
+      // Temporarily allow create for initial bootstrap, then set to false
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    match /businesses/{businessId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isOwnerOrAdmin(businessId);
     }
 
     match /services/{serviceId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isSignedIn();
+      allow create: if request.resource.data.business_id is string &&
+        isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if resource.data.business_id is string &&
+        request.resource.data.business_id == resource.data.business_id &&
+        isOwnerOrAdmin(resource.data.business_id);
+      allow delete: if resource.data.business_id is string &&
+        isOwnerOrAdmin(resource.data.business_id);
     }
 
     match /employees/{employeeId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isSignedIn();
+      allow create: if request.resource.data.business_id is string &&
+        isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if resource.data.business_id is string &&
+        request.resource.data.business_id == resource.data.business_id &&
+        isOwnerOrAdmin(resource.data.business_id);
+      allow delete: if resource.data.business_id is string &&
+        isOwnerOrAdmin(resource.data.business_id);
     }
 
     match /appointments/{appointmentId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isSignedIn();
+      allow create: if request.resource.data.business_id is string &&
+        isStaff(request.resource.data.business_id);
+      allow update: if resource.data.business_id is string &&
+        request.resource.data.business_id == resource.data.business_id &&
+        isStaff(resource.data.business_id);
+      allow delete: if resource.data.business_id is string &&
+        isStaff(resource.data.business_id);
+    }
+
+    match /customers/{customerId} {
+      allow read: if isSignedIn();
+      allow create: if request.resource.data.business_id is string &&
+        isStaff(request.resource.data.business_id);
+      allow update: if resource.data.business_id is string &&
+        request.resource.data.business_id == resource.data.business_id &&
+        isStaff(resource.data.business_id);
+      allow delete: if resource.data.business_id is string &&
+        isStaff(resource.data.business_id);
+    }
+
+    match /business_hours/{hoursId} {
+      allow read: if isSignedIn();
+      allow create: if request.resource.data.business_id is string &&
+        isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if resource.data.business_id is string &&
+        request.resource.data.business_id == resource.data.business_id &&
+        isOwnerOrAdmin(resource.data.business_id);
+      allow delete: if resource.data.business_id is string &&
+        isOwnerOrAdmin(resource.data.business_id);
+    }
+
+    match /business_date_overrides/{overrideId} {
+      allow read: if isSignedIn();
+      allow create: if request.resource.data.business_id is string &&
+        isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if resource.data.business_id is string &&
+        request.resource.data.business_id == resource.data.business_id &&
+        isOwnerOrAdmin(resource.data.business_id);
+      allow delete: if resource.data.business_id is string &&
+        isOwnerOrAdmin(resource.data.business_id);
+    }
+
+    match /business_quick_links/{linkId} {
+      allow read: if isSignedIn();
+      allow create: if request.resource.data.business_id is string &&
+        isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if resource.data.business_id is string &&
+        request.resource.data.business_id == resource.data.business_id &&
+        isOwnerOrAdmin(resource.data.business_id);
+      allow delete: if resource.data.business_id is string &&
+        isOwnerOrAdmin(resource.data.business_id);
+    }
+
+    match /schedules/{scheduleId} {
+      allow read: if isSignedIn();
+      allow create: if employeeExists(request.resource.data.employee_id) &&
+        isOwnerOrAdmin(employeeBusinessId(request.resource.data.employee_id));
+      allow update: if employeeExists(resource.data.employee_id) &&
+        request.resource.data.employee_id == resource.data.employee_id &&
+        isOwnerOrAdmin(employeeBusinessId(resource.data.employee_id));
+      allow delete: if employeeExists(resource.data.employee_id) &&
+        isOwnerOrAdmin(employeeBusinessId(resource.data.employee_id));
+    }
+
+    match /employee_services/{rowId} {
+      allow read: if isSignedIn();
+      allow create: if employeeExists(request.resource.data.employee_id) &&
+        isOwnerOrAdmin(employeeBusinessId(request.resource.data.employee_id));
+      allow update: if employeeExists(resource.data.employee_id) &&
+        request.resource.data.employee_id == resource.data.employee_id &&
+        isOwnerOrAdmin(employeeBusinessId(resource.data.employee_id));
+      allow delete: if employeeExists(resource.data.employee_id) &&
+        isOwnerOrAdmin(employeeBusinessId(resource.data.employee_id));
+    }
+
+    match /onboarding_answers/{answerId} {
+      allow read: if isSignedIn();
+      allow create: if request.resource.data.business_id is string &&
+        isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if resource.data.business_id is string &&
+        request.resource.data.business_id == resource.data.business_id &&
+        isOwnerOrAdmin(resource.data.business_id);
+      allow delete: if resource.data.business_id is string &&
+        isOwnerOrAdmin(resource.data.business_id);
+    }
+
+    // Sensitive collections are server-only.
+    match /booking_claims/{claimId} {
+      allow read, write: if false;
+    }
+
+    match /consent_events/{eventId} {
+      allow read, write: if false;
     }
   }
 }

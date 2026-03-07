@@ -65,17 +65,18 @@ export const claimBooking = functions.https.onCall(async (request: CallableReque
     const membershipsSnap = await db.collection("memberships")
         .where("business_id", "==", claim.business_id)
         .where("profile_id", "==", userId)
-        .limit(1)
         .get();
 
-    if (membershipsSnap.empty) {
-        const memRef = db.collection("memberships").doc();
+    const canonicalMembershipId = `${userId}_${claim.business_id}`;
+    const hasCanonicalMembership = membershipsSnap.docs.some((docSnap) => docSnap.id === canonicalMembershipId);
+    if (!hasCanonicalMembership) {
+        const memRef = db.collection("memberships").doc(canonicalMembershipId);
         batch.set(memRef, {
             business_id: claim.business_id,
             profile_id: userId,
             role: "customer",
             created_at: new Date().toISOString()
-        });
+        }, { merge: true });
     }
 
     await batch.commit();

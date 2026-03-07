@@ -64,26 +64,13 @@ export default defineConfig(({ mode }) => {
           navigateFallbackDenylist: [/^\/~oauth/],
           runtimeCaching: [
             {
-              urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
-              handler: "NetworkFirst",
-              options: {
-                cacheName: "firebase-firestore-cache",
-                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/europe-west1-.*\.cloudfunctions\.net\/.*/i,
-              handler: "NetworkFirst",
-              options: {
-                cacheName: "firebase-functions-cache",
-                expiration: { maxEntries: 20, maxAgeSeconds: 60 * 30 },
-              },
-            },
-            {
-              urlPattern: /\.(js|css|png|jpg|jpeg|svg|gif|woff2?)$/i,
+              urlPattern: ({ request, url }) =>
+                url.origin === self.location.origin &&
+                ["script", "style", "image", "font"].includes(request.destination),
               handler: "CacheFirst",
               options: {
                 cacheName: "static-assets",
+                cacheableResponse: { statuses: [200] },
                 expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
               },
             },

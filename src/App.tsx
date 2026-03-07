@@ -63,6 +63,10 @@ function useSpeedInsightsEnabled() {
 
 const App = () => {
   const speedInsightsEnabled = useSpeedInsightsEnabled();
+  const salonLoginEnabled =
+    import.meta.env.DEV || import.meta.env.VITE_ENABLE_SALON_LOGIN === "true";
+  const bootstrapEnabled =
+    import.meta.env.DEV || import.meta.env.VITE_ENABLE_BOOTSTRAP === "true";
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
@@ -78,8 +82,10 @@ const App = () => {
                   <Route path="/" element={<LiquidPlayground />} />
                   <Route path="/demo" element={<DemoPage />} />
                   <Route path="/booking" element={<BookingPage />} />
-                  {/* Secret salon staff login – not linked anywhere publicly */}
-                  <Route path="/papihairsalon2026" element={<SalonLoginPage />} />
+                  <Route
+                    path="/papihairsalon2026"
+                    element={salonLoginEnabled ? <SalonLoginPage /> : <Navigate to="/auth" replace />}
+                  />
 
                   <Route path="/auth" element={<AuthPage />} />
                   <Route path="/offline" element={<OfflinePage />} />
@@ -88,7 +94,10 @@ const App = () => {
                   <Route path="/privacy" element={<PrivacyPage />} />
                   <Route path="/privacy-policy" element={<TermsPage />} />
                   <Route path="/terms" element={<TermsPage />} />
-                  <Route path="/bootstrap" element={<BootstrapPage />} />
+                  <Route
+                    path="/bootstrap"
+                    element={bootstrapEnabled ? <BootstrapPage /> : <Navigate to="/auth" replace />}
+                  />
                   <Route
                     path="/reception"
                     element={
