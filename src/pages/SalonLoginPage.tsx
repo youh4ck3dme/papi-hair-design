@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { auth } from "@/integrations/firebase/config";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { toast } from "sonner";
 import { Eye, EyeOff, ChevronLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -635,8 +636,9 @@ export default function SalonLoginPage() {
             return;
         }
         setLoading(true);
-        const { error } = await supabase.auth.signInWithPassword({ email: profile.email, password });
-        if (error) {
+        try {
+            await signInWithEmailAndPassword(auth, profile.email, password);
+        } catch {
             toast.error(t("salonLogin.toastWrongPassword"));
             setPassword(""); setLoading(false);
             return;

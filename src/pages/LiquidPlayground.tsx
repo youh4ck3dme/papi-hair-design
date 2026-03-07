@@ -11,8 +11,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useTranslation } from "react-i18next";
 import { useBusinessInfo, type OpenStatus, type PublicBusinessInfo, type NextOpening, type BusinessHourEntry } from "@/hooks/useBusinessInfo";
-import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import { db } from "@/integrations/firebase/config";
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 import "@/styles/expanding-cards.css";
 
 import cardBgHero from "@/assets/luxury-hero.png";
@@ -35,8 +35,11 @@ const DAY_LABELS_EN: Record<string, string> = {
   thursday: "Th", friday: "Fr", saturday: "Sa", sunday: "Su",
 };
 
-type ServiceRow = Tables<"services">;
-type ServiceItem = Pick<ServiceRow, "id" | "name_sk" | "price">;
+interface ServiceItem {
+  id: string;
+  name_sk: string;
+  price: number | null;
+}
 
 function categorizeServices(services: ServiceItem[], t: (k: string) => string) {
   const CATEGORIES = [
@@ -391,13 +394,25 @@ export default function LiquidPlayground() {
   const [services, setServices] = useState<ServiceItem[]>([]);
 
   useEffect(() => {
-    supabase
-      .from("services")
-      .select("*")
-      .eq("business_id", DEMO_BUSINESS_ID)
-      .eq("is_active", true)
-      .order("name_sk")
-      .then(({ data }) => setServices(data ?? []));
+    const loadServices = async () => {
+      const servicesSnap = await getDocs(query(
+        collection(db, "services"),
+        where("business_id", "==", DEMO_BUSINESS_ID),
+        where("is_active", "==", true),
+        orderBy("name_sk"),
+      ));
+
+      setServices(servicesSnap.docs.map((doc) => {
+        const service = doc.data();
+        return {
+          id: doc.id,
+          name_sk: service.name_sk ?? "",
+          price: typeof service.price === "number" ? service.price : null,
+        };
+      }));
+    };
+
+    loadServices();
   }, []);
 
   const cards = [

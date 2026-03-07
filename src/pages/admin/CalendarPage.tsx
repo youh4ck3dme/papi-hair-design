@@ -1,11 +1,24 @@
 import { useEffect, useState, useCallback } from "react";
 import { addMinutes, startOfDay, addDays, format as fmtDate } from "date-fns";
 import { sk } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
+import { auth, db } from "@/integrations/firebase/config";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  getDoc,
+  doc,
+  orderBy,
+  addDoc,
+  updateDoc,
+  limit,
+  Timestamp
+} from "firebase/firestore";
 import { BookingCalendar, statusToColor, type BookingCalendarEvent, type BookingCalendarMode, type SlotInfo } from "@/components/booking-calendar";
 
 import { useBusiness } from "@/hooks/useBusiness";
-import { useBusinessInfoSupabase } from "@/integrations/supabase/useBusinessInfoSupabase";
+import { useBusinessInfo } from "@/hooks/useBusinessInfo";
 import { generateSlots, type BusinessHours, type EmployeeSchedule, type ExistingAppointment } from "@/lib/availability";
 
 import { Button } from "@/components/ui/button";
@@ -28,7 +41,7 @@ interface CalEvent {
 
 export default function CalendarPage() {
   const { businessId, isOwnerOrAdmin, activeMembership } = useBusiness();
-  const { info: businessInfo, loading: infoLoading } = useBusinessInfoSupabase(businessId);
+  const { info: businessInfo, loading: infoLoading } = useBusinessInfo(businessId);
   const business = businessInfo?.business;
   const openingHours = businessInfo?.hours;
   const overrides = businessInfo?.overrides;
@@ -55,75 +68,100 @@ export default function CalendarPage() {
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
-    let query = supabase
-      .from("appointments")
-      .select("*, customers(*), services(*), employees(*)")
-      .eq("business_id", businessId);
+    try {
+      let apptsQuery = query(
+        collection(db, "appointments"),
+        where("business_id", "==", businessId)
+      );
 
-    if (!isOwnerOrAdmin) {
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData?.user) {
-        const { data: empId } = await supabase.rpc("get_employee_id", {
-          _business_id: businessId,
-          _user_id: userData.user.id
-        });
-        if (empId) {
-          query = query.eq("employee_id", empId);
+      if (!isOwnerOrAdmin) {
+        const user = auth.currentUser;
+        if (user) {
+          // Find employee ID for this user
+          const empSnap = await getDocs(query(
+            collection(db, "employees"),
+            where("business_id", "==", businessId),
+            where("profile_id", "==", user.uid),
+            limit(1)
+          ));
+
+          if (!empSnap.empty) {
+            const empId = empSnap.docs[0].id;
+            apptsQuery = query(apptsQuery, where("employee_id", "==", empId));
+          }
         }
       }
-    }
 
-    const { data, error } = await query.order("start_at");
+      const apptsSnap = await getDocs(apptsQuery);
 
+      // In Firestore, we don't have automatic foreign key joining like Supabase 'select(*, customers(*))'
+      // For small sets, we can fetch related data manually or denormalize.
+      // For the blueprint, we'll assume we either denormalized or we fetch basic info.
+      // But to match the UI perfectly, we might need a helper to fetch customers/services/employees.
 
-    if (error) {
-      console.error("CalendarPage: error loading events", error);
+      const eventsList: CalEvent[] = apptsSnap.docs.map((doc) => {
+        const a = doc.data();
+        return {
+          id: doc.id,
+          // Use denormalized labels if available or placeholder
+          title: `${a.customer_name ?? "Zákazník"} – ${a.service_name ?? "Služba"}`,
+          start: a.start_at instanceof Timestamp ? a.start_at.toDate() : new Date(a.start_at),
+          end: a.end_at instanceof Timestamp ? a.end_at.toDate() : new Date(a.end_at),
+          status: a.status,
+          resource: { ...a, id: doc.id },
+        };
+      });
+
+      setEvents(eventsList);
+    } catch (err) {
+      console.error("CalendarPage: error loading events", err);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const eventsList: CalEvent[] = (data ?? []).map((a: any) => ({
-      id: a.id,
-      title: `${a.customers?.full_name ?? "?"} – ${a.services?.name_sk ?? "?"}`,
-      start: new Date(a.start_at),
-      end: new Date(a.end_at),
-      status: a.status,
-      resource: a,
-    }));
-
-    setEvents(eventsList);
-    setLoading(false);
-  }, [businessId]);
+  }, [businessId, isOwnerOrAdmin]);
 
 
   useEffect(() => {
     loadEvents();
 
     const loadData = async () => {
-      const [bizRes, svcRes, empRes, memRes] = await Promise.all([
-        supabase.from("businesses").select("*").eq("id", businessId).single(),
-        supabase.from("services").select("*").eq("business_id", businessId).eq("is_active", true),
-        supabase.from("employees").select("*").eq("business_id", businessId).eq("is_active", true),
-        supabase.from("memberships").select("*").eq("business_id", businessId)
-      ]);
+      try {
+        const [bizSnap, svcSnap, empSnap, memSnap] = await Promise.all([
+          getDoc(doc(db, "businesses", businessId)),
+          getDocs(query(collection(db, "services"), where("business_id", "==", businessId), where("is_active", "==", true))),
+          getDocs(query(collection(db, "employees"), where("business_id", "==", businessId), where("is_active", "==", true))),
+          getDocs(query(collection(db, "memberships"), where("business_id", "==", businessId)))
+        ]);
 
-      if (svcRes.data) setServices(svcRes.data);
-      if (empRes.data) {
+        setServices(svcSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        if (!empSnap.empty) {
+          const emps = empSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setEmployees(emps);
 
-        setEmployees(empRes.data);
-        const ids = empRes.data.map((e: any) => e.id);
-        if (ids.length) {
-          const { data: scheds } = await supabase.from("schedules").select("*").in("employee_id", ids.slice(0, 10));
+          const ids = emps.map(e => e.id);
+          // Fetch schedules for these employees
+          const schedSnap = await getDocs(query(
+            collection(db, "schedules"),
+            where("employee_id", "in", ids.slice(0, 10))
+          ));
+
           const map: Record<string, EmployeeSchedule[]> = {};
-          (scheds ?? []).forEach((s: any) => {
-            const eid = s.employee_id;
+          schedSnap.forEach((s) => {
+            const d = s.data();
+            const eid = d.employee_id;
             if (!map[eid]) map[eid] = [];
-            map[eid].push({ day_of_week: s.day_of_week, start_time: s.start_time, end_time: s.end_time });
+            map[eid].push({
+              day_of_week: d.day_of_week,
+              start_time: d.start_time,
+              end_time: d.end_time
+            });
           });
           setSchedules(map);
         }
+        setMemberships(memSnap.docs.map(d => ({ profile_id: d.data().profile_id, role: d.data().role })));
+      } catch (err) {
+        console.error("CalendarPage: error loading secondary data", err);
       }
-      if (memRes.data) setMemberships(memRes.data as any);
     };
 
     loadData();
@@ -137,13 +175,9 @@ export default function CalendarPage() {
         if (!emp.profile_id) return true;
         const membership = memberships.find((m) => m.profile_id === emp.profile_id);
         if (!membership) return true;
-        return membership.role === "employee";
+        return membership.role === "employee" || membership.role === "owner" || membership.role === "admin";
       });
     }
-
-    // Feature 5 extension: If NOT admin, show ONLY self in the selection (or filter has already done it)
-    // Actually, on the public booking page, we hide non-bookable.
-    // Here on the admin calendar, if I'm an employee, I should only be able to book for myself if I'm not an admin.
     return list;
   }, [employees, business, memberships]);
 
@@ -155,30 +189,37 @@ export default function CalendarPage() {
     const dayStart = startOfDay(slotDate);
     const dayEnd = addDays(dayStart, 1);
 
-    let existing: { start_at: string; end_at: string }[] = [];
-    const { data: appts } = await supabase
-      .from("appointments")
-      .select("start_at, end_at")
-      .eq("employee_id", employeeId)
-      .neq("status", "cancelled")
-      .gte("start_at", dayStart.toISOString())
-      .lt("start_at", dayEnd.toISOString());
+    try {
+      const apptsSnap = await getDocs(query(
+        collection(db, "appointments"),
+        where("employee_id", "==", employeeId),
+        where("status", "!=", "cancelled"),
+        where("start_at", ">=", dayStart.toISOString()),
+        where("start_at", "<", dayEnd.toISOString())
+      ));
 
+      const existing: ExistingAppointment[] = apptsSnap.docs.map(d => {
+        const a = d.data();
+        return {
+          start_at: a.start_at instanceof Timestamp ? a.start_at.toDate().toISOString() : a.start_at,
+          end_at: a.end_at instanceof Timestamp ? a.end_at.toDate().toISOString() : a.end_at,
+        };
+      });
 
-    existing = (appts ?? []).map((a: any) => ({ start_at: a.start_at, end_at: a.end_at }));
+      const slots = generateSlots({
+        date: slotDate,
+        serviceDuration: service.duration_minutes,
+        serviceBuffer: service.buffer_minutes ?? 0,
+        openingHours: (business.opening_hours ?? {}) as BusinessHours,
+        employeeSchedules: schedules[employeeId] ?? [],
+        existingAppointments: existing,
+        leadTimeMinutes: 0,
+      });
 
-
-    const slots = generateSlots({
-      date: slotDate,
-      serviceDuration: service.duration_minutes,
-      serviceBuffer: service.buffer_minutes ?? 0,
-      openingHours: (business.opening_hours ?? {}) as BusinessHours,
-      employeeSchedules: schedules[employeeId] ?? [],
-      existingAppointments: (existing ?? []) as ExistingAppointment[],
-      leadTimeMinutes: 0, // Admin can book anytime
-    });
-
-    setAvailableSlots(slots);
+      setAvailableSlots(slots);
+    } catch (err) {
+      console.error("Error loading slots:", err);
+    }
   }, [services, business, schedules]);
 
   useEffect(() => {
@@ -209,7 +250,7 @@ export default function CalendarPage() {
   };
 
   const bookingCalendarEvents: BookingCalendarEvent[] = events.map((e) => {
-    const employeeColor = (e.resource as any)?.employees?.color;
+    const employeeColor = (e.resource as any)?.employee_color;
     return {
       id: e.id,
       title: e.title,
@@ -224,83 +265,59 @@ export default function CalendarPage() {
   const handleBook = async () => {
     if (!bookForm.service_id || !bookForm.employee_id || !bookForm.start_at) { toast.error("Vyplňte všetky polia"); return; }
     setSaving(true);
-    const service = services.find((s) => s.id === bookForm.service_id);
-    const duration = (service?.duration_minutes ?? 30) + (service?.buffer_minutes ?? 0);
-    const start = new Date(bookForm.start_at);
-    const end = addMinutes(start, duration);
+    try {
+      const service = services.find((s) => s.id === bookForm.service_id);
+      const employee = employees.find((e) => e.id === bookForm.employee_id);
+      const duration = (service?.duration_minutes ?? 30) + (service?.buffer_minutes ?? 0);
+      const start = new Date(bookForm.start_at);
+      const end = addMinutes(start, duration);
 
-    const walkinEmail = `walkin-${Date.now()}@internal`;
+      const walkinEmail = `walkin-${Date.now()}@internal`;
 
-    // Check/Create internal customer
-    const { data: custData } = await supabase
-      .from("customers")
-      .select("id")
-      .eq("business_id", businessId)
-      .eq("email", walkinEmail)
-      .maybeSingle();
-
-    let customerId: string;
-    if (custData) {
-      customerId = custData.id;
-    } else {
-      const { data: newCust, error: custErr } = await supabase
-        .from("customers")
-        .insert({
-          business_id: businessId,
-          full_name: "Zákazník (osobne)",
-          email: walkinEmail,
-        })
-        .select("id")
-        .single();
-
-      if (custErr) {
-        toast.error("Chyba pri vytváraní zákazníka");
-        setSaving(false);
-        return;
-      }
-      customerId = newCust.id;
-    }
-
-    const { error: apptErr } = await supabase
-      .from("appointments")
-      .insert({
+      // Simplified walk-in creation: add a guest user or use denormalized info
+      await addDoc(collection(db, "appointments"), {
         business_id: businessId,
-        customer_id: customerId,
+        customer_name: "Zákazník (osobne)",
+        customer_email: walkinEmail,
         employee_id: bookForm.employee_id,
+        employee_name: employee?.display_name ?? "?",
+        employee_color: employee?.color ?? null,
         service_id: bookForm.service_id,
+        service_name: service?.name_sk ?? "?",
         start_at: start.toISOString(),
         end_at: end.toISOString(),
         status: "confirmed",
+        created_at: new Date().toISOString()
       });
 
-    if (apptErr) {
-      toast.error("Chyba pri vytváraní rezervácie");
-    } else {
       toast.success("Rezervácia vytvorená");
       setBookingModal(false);
       loadEvents();
+    } catch (err) {
+      console.error("handleBook error:", err);
+      toast.error("Chyba pri vytváraní rezervácie");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-
   };
 
   const handleStatusChange = async (newStatus: "pending" | "confirmed" | "cancelled" | "completed") => {
     if (!selectedEvent) return;
     setUpdatingStatus(true);
-
-    const { error } = await supabase
-      .from("appointments")
-      .update({ status: newStatus })
-      .eq("id", selectedEvent.id);
-
-    if (error) {
-      toast.error("Chyba pri aktualizácii");
-    } else {
+    try {
+      await updateDoc(doc(db, "appointments", selectedEvent.id), {
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      });
       toast.success("Status aktualizovaný");
       setDetailModal(false);
       loadEvents();
+    } catch (err) {
+      console.error("handleStatusChange error:", err);
+      toast.error("Chyba pri aktualizácii");
+    } finally {
+      setUpdatingStatus(false);
     }
-    setUpdatingStatus(false);
   };
 
 
@@ -324,8 +341,6 @@ export default function CalendarPage() {
           businessHours={{ hours: openingHours, overrides }}
           resources={isOwnerOrAdmin ? employees : employees.filter(e => e.profile_id === activeMembership?.profile_id)}
         />
-
-
       </div>
 
       {/* Booking Modal */}
@@ -390,20 +405,20 @@ export default function CalendarPage() {
                 <div className="flex items-center gap-2 text-sm">
                   <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <span className="font-medium">
-                    {selectedEvent.resource?.customers?.full_name ?? selectedEvent.title}
+                    {selectedEvent.resource?.customer_name ?? selectedEvent.title}
                   </span>
                 </div>
-                {selectedEvent.resource?.customers?.phone && (
+                {selectedEvent.resource?.customer_phone && (
                   <div className="flex items-center gap-2 text-sm">
                     <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <span>{selectedEvent.resource.customers.phone}</span>
+                    <span>{selectedEvent.resource.customer_phone}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-sm">
                   <LogoIcon size="sm" className="w-4 h-4 flex-shrink-0" />
                   <span>
-                    {selectedEvent.resource?.services?.name_sk && selectedEvent.resource?.employees?.display_name
-                      ? `${selectedEvent.resource.services.name_sk} · ${selectedEvent.resource.employees.display_name}`
+                    {selectedEvent.resource?.service_name && selectedEvent.resource?.employee_name
+                      ? `${selectedEvent.resource.service_name} · ${selectedEvent.resource.employee_name}`
                       : selectedEvent.title}
                   </span>
                 </div>

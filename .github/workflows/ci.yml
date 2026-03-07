@@ -73,6 +73,20 @@ jobs:
           name: dist
           path: dist/
           retention-days: 7
+      - name: Upload source maps to Sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: YOUR_SENTRY_ORG
+          SENTRY_PROJECT: YOUR_SENTRY_PROJECT
+        run: |
+          npx @sentry/cli releases new ${{ github.sha }}
+          npx @sentry/cli releases files ${{ github.sha }} upload-sourcemaps ./dist --rewrite
+          npx @sentry/cli releases finalize ${{ github.sha }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
 
   e2e:
     name: E2E (Playwright)

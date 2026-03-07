@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { auth, db } from "@/integrations/firebase/config";
+import { onAuthStateChanged, signOut as firebaseSignOut, User } from "firebase/auth";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 interface Profile {
   id: string;
@@ -16,16 +18,14 @@ interface Membership {
   role: "owner" | "admin" | "employee" | "customer";
 }
 
-/** Normalized user for components that expect .id (Firebase uses .uid) */
 export interface AuthUser {
   id: string;
   email: string | null;
-  uid: string;
 }
 
 interface AuthContextType {
   user: AuthUser | null;
-  session: any | null;
+  fbUser: User | null; // Keep raw firebase user for lower level operations
   profile: Profile | null;
   memberships: Membership[];
   loading: boolean;
@@ -35,7 +35,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  session: null,
+  fbUser: null,
   profile: null,
   memberships: [],
   loading: true,
@@ -47,78 +47,54 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<any | null>(null);
+  const [fbUser, setFbUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refreshProfile = useCallback(async (uid: string) => {
-    if (!uid) return;
+  const refreshProfile = useCallback(async (uid?: string) => {
+    const targetUid = uid || fbUser?.uid;
+    if (!targetUid) return;
 
     try {
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", uid)
-        .single();
+      const profileSnap = await getDoc(doc(db, "profiles", targetUid));
 
-      if (profileData) {
+      if (profileSnap.exists()) {
+        const data = profileSnap.data();
         setProfile({
-          id: profileData.id,
-          full_name: profileData.full_name,
-          email: profileData.email,
-          phone: profileData.phone,
-          avatar_url: profileData.avatar_url,
+          id: profileSnap.id,
+          full_name: data.full_name ?? null,
+          email: data.email ?? null,
+          phone: data.phone ?? null,
+          avatar_url: data.avatar_url ?? null,
         });
       }
 
-      const { data: membershipsData } = await supabase
-        .from("memberships")
-        .select("*")
-        .eq("profile_id", uid);
+      const membershipsSnap = await getDocs(query(
+        collection(db, "memberships"),
+        where("profile_id", "==", targetUid)
+      ));
 
-      if (membershipsData) {
-        setMemberships(membershipsData as Membership[]);
-      }
+      setMemberships(membershipsSnap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      })) as Membership[]);
+
     } catch (err) {
-      console.error("Error fetching profile:", err);
+      console.error("AuthContext: Error fetching profile/memberships:", err);
     }
-  }, []);
+  }, [fbUser]);
 
   useEffect(() => {
-    let mounted = true;
+    const unsubscribe = onAuthStateChanged(auth, async (currentFbUser) => {
+      setFbUser(currentFbUser);
 
-    async function initSession() {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
-      setSession(currentSession);
-      if (currentSession?.user) {
-        const u = currentSession.user;
-        setUser({ id: u.id, uid: u.id, email: u.email ?? null });
-        await refreshProfile(u.id);
-      } else {
-        setUser(null);
-        setProfile(null);
-        setMemberships([]);
-      }
-      setLoading(false);
-    }
-
-    initSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
-      if (!mounted) return;
-
-      setSession(currentSession);
-      if (currentSession?.user) {
-        const u = currentSession.user;
-        // Only update user if ID actually changed to prevent loops
-        setUser(prev => (prev?.id === u.id ? prev : { id: u.id, uid: u.id, email: u.email ?? null }));
-        await refreshProfile(u.id);
+      if (currentFbUser) {
+        setUser({
+          id: currentFbUser.uid,
+          email: currentFbUser.email ?? null
+        });
+        await refreshProfile(currentFbUser.uid);
       } else {
         setUser(null);
         setProfile(null);
@@ -127,22 +103,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     });
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    return () => unsubscribe();
   }, [refreshProfile]);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setProfile(null);
-    setMemberships([]);
+    try {
+      await firebaseSignOut(auth);
+      setUser(null);
+      setFbUser(null);
+      setProfile(null);
+      setMemberships([]);
+    } catch (err) {
+      console.error("AuthContext: Error during signOut:", err);
+    }
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, memberships, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, fbUser, profile, memberships, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

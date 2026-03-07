@@ -46,134 +46,135 @@ export function DateTimeSelection({
 }: DateTimeSelectionProps) {
     const { t } = useTranslation();
 
+    const prevMonth = () => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
+    const nextMonth = () => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1));
+
     return (
-        <div className="animate-fade-in">
+        <div className="animate-fade-in px-4">
             <StepHeader num="4" title={t("booking.step4")} />
-            <div className="rounded-xl p-4 border border-border bg-card">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-bold text-lg ml-2 text-foreground">
+            <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+                {/* Month nav bar */}
+                <div className="flex justify-between items-center px-4 pt-4 pb-3 border-b border-border/40">
+                    <button
+                        onClick={prevMonth}
+                        className="w-8 h-8 rounded-full border border-border/60 flex items-center justify-center hover:bg-accent hover:border-primary/40 transition-all active:scale-90"
+                    >
+                        <ChevronLeft size={16} />
+                    </button>
+                    <h3 className="font-bold text-base capitalize text-foreground tracking-wide">
                         {format(calendarMonth, "LLLL yyyy", { locale: dateLocale })}
                     </h3>
-                    <div className="flex rounded-full overflow-hidden border border-border">
-                        <button
-                            onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
-                            className="p-2 px-4 bg-card text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                            <ChevronLeft size={20} />
-                        </button>
-                        <button
-                            onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
-                            className="p-2 px-4 bg-primary text-primary-foreground dark:text-background hover:bg-primary/80 transition-colors"
-                        >
-                            <ChevronRight size={20} />
-                        </button>
-                    </div>
+                    <button
+                        onClick={nextMonth}
+                        className="w-8 h-8 rounded-full bg-primary text-primary-foreground dark:text-background flex items-center justify-center hover:bg-primary/80 transition-all active:scale-90"
+                    >
+                        <ChevronRight size={16} />
+                    </button>
                 </div>
 
-                <div className="grid grid-cols-7 gap-y-4 text-center mb-2">
-                    {["Po", "Ut", "St", "Št", "Pi", "So", "Ne"].map((d) => (
-                        <div key={d} className="font-medium text-sm text-muted-foreground">{d}</div>
-                    ))}
+                <div className="p-3">
+                    {/* Weekday labels */}
+                    <div className="grid grid-cols-7 mb-1">
+                        {["Po", "Ut", "St", "Št", "Pi", "So", "Ne"].map((d) => (
+                            <div key={d} className="text-[10px] font-bold uppercase tracking-wider text-center text-muted-foreground/70 py-1">{d}</div>
+                        ))}
+                    </div>
 
-                    {Array.from({ length: firstDayOffset }, (_, i) => <div key={`empty-${calendarMonth.getTime()}-${i}`} className="py-1" />)}
-                    {Array.from({ length: daysInMonth }, (_, i) => {
-                        const day = i + 1;
-                        const dayDate = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day);
-                        const isPast = isBefore(dayDate, today);
-                        const isTooFar = isAfter(dayDate, addDays(today, maxDays));
-                        const isClosed = !isBusinessOpenOnDay(dayDate);
-                        const empAvailable = selectedWorkerId ? isEmployeeAvailableOnDay(selectedWorkerId, dayDate) : false;
-                        const disabled = isPast || isTooFar || isClosed || !empAvailable;
-                        const isSelected = selectedDate === day && isSameDay(dayDate, selectedFullDate ?? new Date(0));
-                        const isToday = isSameDay(dayDate, today);
-                        let dayBtnClass = "text-foreground hover:bg-accent";
-                        if (isSelected) dayBtnClass = "bg-primary text-primary-foreground dark:text-background font-bold shadow-md";
-                        else if (isToday) dayBtnClass = "border border-muted-foreground/40 text-foreground";
-                        else if (isPast || isTooFar) dayBtnClass = "text-muted-foreground/20 cursor-not-allowed";
-                        else if (isClosed) dayBtnClass = "bg-muted/40 text-muted-foreground/30 cursor-not-allowed";
-                        else if (!empAvailable) dayBtnClass = "text-muted-foreground/20 cursor-not-allowed";
+                    {/* Calendar grid */}
+                    <div className="grid grid-cols-7 gap-y-1">
+                        {Array.from({ length: firstDayOffset }, (_, i) => (
+                            <div key={`empty-${calendarMonth.getTime()}-${i}`} />
+                        ))}
+                        {Array.from({ length: daysInMonth }, (_, i) => {
+                            const day = i + 1;
+                            const dayDate = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day);
+                            const isPast = isBefore(dayDate, today);
+                            const isTooFar = isAfter(dayDate, addDays(today, maxDays));
+                            const isClosed = !isBusinessOpenOnDay(dayDate);
+                            const empAvailable = selectedWorkerId ? isEmployeeAvailableOnDay(selectedWorkerId, dayDate) : false;
+                            const disabled = isPast || isTooFar || isClosed || !empAvailable;
+                            const isSelected = selectedDate === day && isSameDay(dayDate, selectedFullDate ?? new Date(0));
+                            const isToday = isSameDay(dayDate, today);
 
-                        return (
-                            <div key={day} className="flex justify-center">
-                                <button
-                                    data-testid={disabled ? undefined : `date-btn-${day}`}
-                                    onClick={() => { if (!disabled) { setSelectedDate(day); setSelectedTime(null); } }}
-                                    disabled={disabled}
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all ${dayBtnClass}`}
-                                >
-                                    {day}
-                                </button>
-                            </div>
-                        );
-                    })}
+                            let cls = "";
+                            if (isSelected) cls = "bg-primary text-primary-foreground dark:text-background font-bold shadow-md ring-2 ring-primary/30";
+                            else if (isToday) cls = "ring-1 ring-primary/60 text-primary font-semibold";
+                            else if (disabled) cls = "text-muted-foreground/20 cursor-not-allowed";
+                            else cls = "text-foreground hover:bg-accent hover:text-foreground";
+
+                            return (
+                                <div key={day} className="flex justify-center">
+                                    <button
+                                        data-testid={disabled ? undefined : `date-btn-${day}`}
+                                        onClick={() => { if (!disabled) { setSelectedDate(day); setSelectedTime(null); } }}
+                                        disabled={disabled}
+                                        className={`w-9 h-9 rounded-full flex items-center justify-center text-sm transition-all duration-150 ${cls}`}
+                                    >
+                                        {day}
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 
+            {/* Time slots */}
             {Boolean(selectedDate) && (
                 <div className="animate-fade-in mt-6">
                     <StepHeader num="5" title={t("booking.step5")} />
-                    {(() => {
-                        if (loadingSlots) {
-                            return (
-                                <div className="flex justify-center py-8">
-                                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    {loadingSlots ? (
+                        <div className="flex justify-center py-10">
+                            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                        </div>
+                    ) : availableSlots.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground/70 text-sm border border-dashed border-border rounded-2xl">
+                            {t("booking.noSlots")}
+                        </div>
+                    ) : (
+                        <>
+                            {timeGroups.dopoludnia.length > 0 && (
+                                <div className="mb-6">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70 mb-3">{t("booking.timeAm")}</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {timeGroups.dopoludnia.map((tVal) => (
+                                            <button
+                                                key={tVal}
+                                                data-testid="time-slot"
+                                                onClick={() => setSelectedTime(tVal)}
+                                                className={`text-sm px-4 py-2 rounded-full transition-all duration-150 font-semibold border ${selectedTime === tVal
+                                                    ? "bg-primary text-primary-foreground dark:text-background border-primary shadow-md shadow-primary/20"
+                                                    : "bg-card text-foreground border-border/60 hover:border-primary/50 hover:text-primary hover:bg-primary/5"
+                                                    }`}
+                                            >
+                                                {tVal}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            );
-                        }
-                        if (availableSlots.length === 0) {
-                            return <p className="text-center text-muted-foreground py-4">{t("booking.noSlots")}</p>;
-                        }
-                        return (
-                            <>
-                                {timeGroups.dopoludnia.length > 0 && (
-                                    <div className="mb-8">
-                                        <h4 className="text-sm font-bold uppercase tracking-wider mb-4 text-muted-foreground">{t("booking.timeAm")}</h4>
-                                        <div className="flex flex-wrap gap-x-4 gap-y-3">
-                                            {timeGroups.dopoludnia.map((tVal) => {
-                                                const isSelected = selectedTime === tVal;
-                                                const timeBtnClass = isSelected
-                                                    ? "bg-primary text-primary-foreground dark:text-background border-primary"
-                                                    : "bg-card text-foreground border-border hover:border-primary/50";
-                                                return (
-                                                    <button
-                                                        key={tVal}
-                                                        data-testid="time-slot"
-                                                        onClick={() => setSelectedTime(tVal)}
-                                                        className={`text-base px-4 py-2 rounded-full transition-all font-medium border ${timeBtnClass}`}
-                                                    >
-                                                        {tVal}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
+                            )}
+                            {timeGroups.popoludni.length > 0 && (
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70 mb-3">{t("booking.timePm")}</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {timeGroups.popoludni.map((tVal) => (
+                                            <button
+                                                key={tVal}
+                                                data-testid="time-slot"
+                                                onClick={() => setSelectedTime(tVal)}
+                                                className={`text-sm px-4 py-2 rounded-full transition-all duration-150 font-semibold border ${selectedTime === tVal
+                                                    ? "bg-primary text-primary-foreground dark:text-background border-primary shadow-md shadow-primary/20"
+                                                    : "bg-card text-foreground border-border/60 hover:border-primary/50 hover:text-primary hover:bg-primary/5"
+                                                    }`}
+                                            >
+                                                {tVal}
+                                            </button>
+                                        ))}
                                     </div>
-                                )}
-                                {timeGroups.popoludni.length > 0 && (
-                                    <div>
-                                        <h4 className="text-sm font-bold uppercase tracking-wider mb-4 text-muted-foreground">{t("booking.timePm")}</h4>
-                                        <div className="flex flex-wrap gap-x-4 gap-y-3">
-                                            {timeGroups.popoludni.map((tVal) => {
-                                                const isSelected = selectedTime === tVal;
-                                                const timeBtnClass = isSelected
-                                                    ? "bg-primary text-primary-foreground dark:text-background border-primary"
-                                                    : "bg-card text-foreground border-border hover:border-primary/50";
-                                                return (
-                                                    <button
-                                                        key={tVal}
-                                                        data-testid="time-slot"
-                                                        onClick={() => setSelectedTime(tVal)}
-                                                        className={`text-base px-4 py-2 rounded-full transition-all font-medium border ${timeBtnClass}`}
-                                                    >
-                                                        {tVal}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        );
-                    })()}
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             )}
         </div>

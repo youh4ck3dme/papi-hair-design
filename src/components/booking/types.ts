@@ -14,6 +14,7 @@ export interface ServiceRow {
     price: number | null;
     duration_minutes: number;
     buffer_minutes: number;
+    sort_order?: number | null;
     is_active: boolean;
     business_id: string;
     category: string | null;

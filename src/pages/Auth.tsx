@@ -1,6 +1,14 @@
 import { useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { auth, functions } from "@/integrations/firebase/config";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  sendPasswordResetEmail
+} from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,13 +55,12 @@ export type AuthMode = "login" | "register" | "forgot";
 
 async function tryClaimBooking(claimToken: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.functions.invoke("claim-booking", {
-      body: { claim_token: claimToken },
-    });
-    if (error) throw error;
+    const claimBookingFn = httpsCallable(functions, "claimBooking");
+    await claimBookingFn({ claim_token: claimToken });
     sessionStorage.removeItem("claim_token");
     return true;
-  } catch {
+  } catch (err) {
+    console.warn("Claim booking failed:", err);
     sessionStorage.removeItem("claim_token");
     return false;
   }
@@ -119,12 +126,7 @@ function useAuthForm() {
       setErrors({});
       setLoading(true);
       try {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: form.email,
-          password: form.password,
-        });
-        if (error) throw error;
-        persistSessionPreference(rememberMe);
+        await signInWithEmailAndPassword(auth, form.email, form.password);
         navigate("/admin");
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : t("auth.toastLoginFail"));
@@ -132,7 +134,7 @@ function useAuthForm() {
         setLoading(false);
       }
     },
-    [form, rememberMe, navigate, persistSessionPreference, t]
+    [form, navigate, t]
   );
 
   const handleRegister = useCallback(
@@ -147,11 +149,7 @@ function useAuthForm() {
       setErrors({});
       setLoading(true);
       try {
-        const { error } = await supabase.auth.signUp({
-          email: form.email,
-          password: form.password,
-        });
-        if (error) throw error;
+        await createUserWithEmailAndPassword(auth, form.email, form.password);
         const claimed = await tryClaimBooking(claimToken);
         toast.success(claimed ? t("auth.toastRegisterOkBooking") : t("auth.toastRegisterOk"));
         navigate("/admin");
@@ -167,14 +165,9 @@ function useAuthForm() {
   const handleGoogleLogin = useCallback(async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/admin`
-        }
-      });
-      if (error) throw error;
-      persistSessionPreference(rememberMe);
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+
       const token = sessionStorage.getItem("claim_token");
       if (token) {
         const claimed = await tryClaimBooking(token);
@@ -182,12 +175,13 @@ function useAuthForm() {
           toast.success(t("auth.toastLoginOkBooking"));
         }
       }
+      navigate("/admin");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t("auth.toastGoogleFail"));
     } finally {
       setLoading(false);
     }
-  }, [rememberMe, persistSessionPreference, t]);
+  }, [navigate, t]);
 
   const handleForgot = useCallback(
     async (e: React.FormEvent) => {
@@ -198,10 +192,7 @@ function useAuthForm() {
       }
       setLoading(true);
       try {
-        const { error } = await supabase.auth.resetPasswordForEmail(form.email, {
-          redirectTo: `${window.location.origin}/auth?mode=reset`,
-        });
-        if (error) throw error;
+        await sendPasswordResetEmail(auth, form.email);
         toast.success(t("auth.toastResetSent"));
         setMode("login");
       } catch (err: unknown) {

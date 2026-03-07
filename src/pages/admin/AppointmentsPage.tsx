@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/firebase/config";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  orderBy,
+  updateDoc,
+  Timestamp
+} from "firebase/firestore";
 import { useBusiness } from "@/hooks/useBusiness";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,39 +41,58 @@ export default function AppointmentsPage() {
 
   const load = async () => {
     setLoading(true);
-    const statuses = ["pending", "confirmed", "cancelled", "completed"] as const;
-    type AppStatus = typeof statuses[number];
+    try {
+      const statuses = ["pending", "confirmed", "cancelled", "completed"] as const;
+      type AppStatus = typeof statuses[number];
 
-    let q = supabase
-      .from("appointments")
-      .select("*, customers(full_name, email, phone), services(name_sk, price), employees(display_name)")
-      .eq("business_id", businessId)
-      .order("start_at", { ascending: false });
+      let q = query(
+        collection(db, "appointments"),
+        where("business_id", "==", businessId),
+        orderBy("start_at", "desc")
+      );
 
-    if (statusFilter !== "all" && statuses.includes(statusFilter as AppStatus)) {
-      q = q.eq("status", statusFilter as AppStatus);
+      if (statusFilter !== "all" && statuses.includes(statusFilter as AppStatus)) {
+        // Redefine query with filter
+        q = query(
+          collection(db, "appointments"),
+          where("business_id", "==", businessId),
+          where("status", "==", statusFilter),
+          orderBy("start_at", "desc")
+        );
+      }
+
+      const snap = await getDocs(q);
+      setAppointments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error("AppointmentsPage: error loading data", err);
+    } finally {
+      setLoading(false);
     }
-
-    const { data } = await q;
-    setAppointments(data ?? []);
-    setLoading(false);
   };
 
   useEffect(() => { load(); }, [businessId, statusFilter]);
 
   const updateStatus = async (id: string, status: "pending" | "confirmed" | "cancelled" | "completed") => {
     setUpdating(true);
-    const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
-    setUpdating(false);
-    if (error) { toast.error("Chyba pri aktualizácii"); return; }
-    toast.success("Status aktualizovaný");
-    setSelected(null);
-    load();
+    try {
+      await updateDoc(doc(db, "appointments", id), {
+        status,
+        updated_at: new Date().toISOString()
+      });
+      toast.success("Status aktualizovaný");
+      setSelected(null);
+      load();
+    } catch (err) {
+      console.error("updateStatus error:", err);
+      toast.error("Chyba pri aktualizácii");
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const filtered = appointments.filter((a) => {
-    const name = a.customers?.full_name?.toLowerCase() ?? "";
-    const svc = a.services?.name_sk?.toLowerCase() ?? "";
+    const name = (a.customer_name ?? "").toLowerCase();
+    const svc = (a.service_name ?? "").toLowerCase();
     const q = search.toLowerCase();
     return name.includes(q) || svc.includes(q);
   });
@@ -101,6 +130,7 @@ export default function AppointmentsPage() {
         <div className="space-y-2">
           {filtered.map((a) => {
             const s = STATUS_MAP[a.status] ?? STATUS_MAP.pending;
+            const startDate = a.start_at instanceof Timestamp ? a.start_at.toDate() : new Date(a.start_at);
             return (
               <button
                 key={a.id}
@@ -108,15 +138,15 @@ export default function AppointmentsPage() {
                 className="w-full text-left flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:shadow-sm hover:border-primary/30 transition-all"
               >
                 <div className="text-center w-14 flex-shrink-0">
-                  <p className="text-xs text-muted-foreground">{format(new Date(a.start_at), "d. M.", { locale: sk })}</p>
-                  <p className="text-sm font-bold text-foreground">{format(new Date(a.start_at), "HH:mm")}</p>
+                  <p className="text-xs text-muted-foreground">{format(startDate, "d. M.", { locale: sk })}</p>
+                  <p className="text-sm font-bold text-foreground">{format(startDate, "HH:mm")}</p>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{a.customers?.full_name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{a.services?.name_sk} · {a.employees?.display_name}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">{a.customer_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{a.service_name} · {a.employee_name}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {a.services?.price && <span className="text-sm font-medium text-foreground">{a.services.price}€</span>}
+                  {a.service_price && <span className="text-sm font-medium text-foreground">{a.service_price}€</span>}
                   <Badge className={`text-xs border-0 ${s.className}`}>{s.label}</Badge>
                 </div>
               </button>
@@ -133,27 +163,29 @@ export default function AppointmentsPage() {
               <div className="space-y-2.5 text-sm">
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium">{selected.customers?.full_name}</span>
+                  <span className="font-medium">{selected.customer_name}</span>
                 </div>
-                {selected.customers?.email && (
+                {selected.customer_email && (
                   <div className="flex items-center gap-2">
                     <span className="w-4 h-4 text-muted-foreground text-center">@</span>
-                    <span>{selected.customers.email}</span>
+                    <span>{selected.customer_email}</span>
                   </div>
                 )}
-                {selected.customers?.phone && (
+                {selected.customer_phone && (
                   <div className="flex items-center gap-2">
                     <span className="w-4 h-4 text-muted-foreground">📞</span>
-                    <span>{selected.customers.phone}</span>
+                    <span>{selected.customer_phone}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
                   <LogoIcon size="sm" className="w-4 h-4" />
-                  <span>{selected.services?.name_sk}</span>
+                  <span>{selected.service_name}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span>{format(new Date(selected.start_at), "d. MMMM yyyy HH:mm", { locale: sk })} – {format(new Date(selected.end_at), "HH:mm")}</span>
+                  <span>
+                    {format(selected.start_at instanceof Timestamp ? selected.start_at.toDate() : new Date(selected.start_at), "d. MMMM yyyy HH:mm", { locale: sk })} – {format(selected.end_at instanceof Timestamp ? selected.end_at.toDate() : new Date(selected.end_at), "HH:mm")}
+                  </span>
                 </div>
               </div>
 

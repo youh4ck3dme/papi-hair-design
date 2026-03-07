@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { db, functions } from "@/integrations/firebase/config";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
 import { Button } from "@/components/ui/button";
@@ -40,47 +42,69 @@ export default function SettingsPage() {
 
   useEffect(() => {
     // Load business WITHOUT smtp_config – passwords should never reach the client
-    supabase.from("businesses").select("id, name, address, phone, email, timezone, lead_time_minutes, max_days_ahead, cancellation_hours, onboarding_completed, opening_hours, logo_url, slug, smtp_config, allow_admin_as_provider").eq("id", businessId).single().then(({ data }) => {
-      if (data) {
-        setBusiness(data);
-        const smtp = (data as any).smtp_config as any ?? {};
-        setSmtpForm({
-          host: (smtp.host ?? "").trim() || DEFAULT_SMTP.host,
-          port: String(smtp.port ?? "").trim() || DEFAULT_SMTP.port,
-          user: (smtp.user ?? "").trim() || DEFAULT_SMTP.user,
-          from: (smtp.from ?? "").trim() || DEFAULT_SMTP.from,
-          pass: "", // Never load actual password to client
-        });
-        setSmtpHasPassword(!!(smtp.pass));
+    const loadBusiness = async () => {
+      try {
+        const docRef = doc(db, "businesses", businessId);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          setBusiness({ id: snap.id, ...data });
+          const smtp = data.smtp_config as any ?? {};
+          setSmtpForm({
+            host: (smtp.host ?? "").trim() || DEFAULT_SMTP.host,
+            port: String(smtp.port ?? "").trim() || DEFAULT_SMTP.port,
+            user: (smtp.user ?? "").trim() || DEFAULT_SMTP.user,
+            from: (smtp.from ?? "").trim() || DEFAULT_SMTP.from,
+            pass: "", // Never load actual password to client
+          });
+          setSmtpHasPassword(!!(smtp.pass));
+        }
+      } catch (err) {
+        console.error("Error loading business info:", err);
       }
-    });
+    };
+    loadBusiness();
   }, [businessId]);
 
   const saveProfile = async () => {
+    if (!profile) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({ full_name: profileForm.full_name, phone: profileForm.phone || null }).eq("id", profile!.id);
-    setSaving(false);
-    if (error) { toast.error("Chyba pri ukladaní"); return; }
-    await refreshProfile();
-    toast.success("Profil aktualizovaný");
+    try {
+      await updateDoc(doc(db, "profiles", profile.id), {
+        full_name: profileForm.full_name,
+        phone: profileForm.phone || null,
+        updated_at: new Date().toISOString()
+      });
+      await refreshProfile();
+      toast.success("Profil aktualizovaný");
+    } catch (err) {
+      toast.error("Chyba pri ukladaní");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const saveBusiness = async () => {
     if (!business) return;
     setSaving(true);
-    const { error } = await supabase.from("businesses").update({
-      name: business.name,
-      address: business.address,
-      phone: business.phone,
-      email: business.email,
-      timezone: business.timezone,
-      lead_time_minutes: business.lead_time_minutes,
-      max_days_ahead: business.max_days_ahead,
-      cancellation_hours: business.cancellation_hours,
-    }).eq("id", businessId);
-    setSaving(false);
-    if (error) { toast.error("Chyba pri ukladaní"); return; }
-    toast.success("Nastavenia firmy aktualizované");
+    try {
+      await updateDoc(doc(db, "businesses", businessId), {
+        name: business.name,
+        address: business.address,
+        phone: business.phone,
+        email: business.email,
+        timezone: business.timezone,
+        lead_time_minutes: business.lead_time_minutes,
+        max_days_ahead: business.max_days_ahead,
+        cancellation_hours: business.cancellation_hours,
+        updated_at: new Date().toISOString()
+      });
+      toast.success("Nastavenia firmy aktualizované");
+    } catch (err) {
+      toast.error("Chyba pri ukladaní");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const setB = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -89,21 +113,26 @@ export default function SettingsPage() {
   const saveSmtp = async () => {
     setSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("save-smtp-config", {
-        body: {
-          business_id: businessId,
-          host: smtpForm.host,
-          port: smtpForm.port,
-          user: smtpForm.user,
-          from: smtpForm.from,
-          pass: smtpForm.pass || undefined, // Only send if user typed a new password
-        },
+      const saveSmtpConfigFn = httpsCallable<any, any>(functions, "saveSmtpConfig");
+      const { data } = await saveSmtpConfigFn({
+        business_id: businessId,
+        host: smtpForm.host,
+        port: Number(smtpForm.port) || 465,
+        user: smtpForm.user,
+        from: smtpForm.from,
+        pass: smtpForm.pass || undefined, // Only send if user typed a new password
       });
-      if (error) { toast.error("Chyba pri ukladaní SMTP"); return; }
+
+      if (!data.success) {
+        toast.error("Chyba pri ukladaní SMTP");
+        return;
+      }
+
       toast.success("SMTP nastavenia uložené");
       if (smtpForm.pass) setSmtpHasPassword(true);
       setSmtpForm((f) => ({ ...f, pass: "" })); // Clear password from memory
-    } catch {
+    } catch (err) {
+      console.error("SMTP save error:", err);
       toast.error("Chyba pri ukladaní SMTP");
     } finally {
       setSaving(false);
@@ -113,16 +142,17 @@ export default function SettingsPage() {
   const saveBookingSettings = async () => {
     if (!business) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("businesses")
-      .update({ allow_admin_as_provider: business.allow_admin_as_provider })
-      .eq("id", businessId);
-    setSaving(false);
-    if (error) {
+    try {
+      await updateDoc(doc(db, "businesses", businessId), {
+        allow_admin_as_provider: business.allow_admin_as_provider,
+        updated_at: new Date().toISOString()
+      });
+      toast.success("Nastavenia booking uložené");
+    } catch (err) {
       toast.error("Chyba pri ukladaní nastavení booking");
-      return;
+    } finally {
+      setSaving(false);
     }
-    toast.success("Nastavenia booking uložené");
   };
 
   return (
@@ -204,7 +234,7 @@ export default function SettingsPage() {
                       </Label>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Keď je zapnuté, administrátori a majitelia s priradeným profilom zamestnanca 
+                      Keď je zapnuté, administrátori a majitelia s priradeným profilom zamestnanca
                       budú dostupní vo výbere pracovníkov pri vytváraní rezervácie služby.
                     </p>
                   </div>

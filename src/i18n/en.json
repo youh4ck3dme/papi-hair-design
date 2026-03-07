@@ -242,7 +242,7 @@
     "s4Title": "4. Cookies and Consent Audit",
     "s4Body": "We use functional cookies (login, language setting) and a marketing consent audit table. No analytics or advertising cookies without your consent.",
     "s5Title": "5. Sharing and Processors",
-    "s5Body": "Supabase Inc. (cloud database, USA – standard contractual clauses). Vercel Inc. (hosting). No other third parties without your consent.",
+    "s5Body": "Google Firebase (cloud database and authentication). Vercel Inc. (hosting). No other third parties without your consent.",
     "s6Title": "6. Retention Period",
     "s6Body": "Bookings: 3 years from last activity. Marketing consent: until withdrawal. Logs: 90 days.",
     "s7Title": "7. Your Rights (GDPR)",

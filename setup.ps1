@@ -43,7 +43,7 @@ $envExample = Join-Path $ProjectRoot ".env.example"
 $envFile   = Join-Path $ProjectRoot ".env"
 if (-not (Test-Path $envFile) -and (Test-Path $envExample)) {
     Copy-Item $envExample $envFile
-    Write-Host "[OK] Vytvoreny .env z .env.example – DOPLN hodnoty (Supabase URL a anon key)." -ForegroundColor Yellow
+    Write-Host "[OK] Vytvoreny .env z .env.example – DOPLN hodnoty (Firebase API keys)." -ForegroundColor Yellow
 } elseif (Test-Path $envFile) {
     Write-Host "[OK] .env uz existuje." -ForegroundColor Green
 } else {
@@ -52,7 +52,7 @@ if (-not (Test-Path $envFile) -and (Test-Path $envExample)) {
 
 Write-Host "`nProstredie je pripravene.`n" -ForegroundColor Green
 Write-Host "Dalsie kroky:" -ForegroundColor Cyan
-Write-Host "  1. Uprav .env (VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY)" -ForegroundColor White
+Write-Host "  1. Uprav .env (VITE_FIREBASE_API_KEY, VITE_FIREBASE_PROJECT_ID, atď.)" -ForegroundColor White
 Write-Host "  2. Spust dev server:  npm run dev" -ForegroundColor White
 Write-Host "  3. Aplikacia:        http://localhost:8080" -ForegroundColor White
 Write-Host "  Doc: docs/DEVELOPMENT-SETUP.md (priprava na vyvoj)`n" -ForegroundColor Gray
