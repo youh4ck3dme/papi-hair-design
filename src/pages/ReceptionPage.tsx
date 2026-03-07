@@ -186,9 +186,9 @@ export default function ReceptionPage() {
   // Initial sync on mount
   useEffect(() => {
     if (navigator.onLine) {
-      runSync().then(load);
+      runSync(businessId).then(load);
     }
-  }, [load]);
+  }, [load, businessId]);
 
   const handleQuickWalkin = async () => {
     const id = crypto.randomUUID();
@@ -265,7 +265,7 @@ export default function ReceptionPage() {
 
   return (
     <div className="min-h-screen bg-background p-4 max-w-2xl mx-auto space-y-4" data-testid="reception-page">
-      <OfflineBanner onConflictsClick={() => setShowConflicts(true)} />
+      <OfflineBanner onConflictsClick={() => setShowConflicts(true)} businessId={businessId} />
 
       {/* Date navigation */}
       <div className="flex items-center justify-between">

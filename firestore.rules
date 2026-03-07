@@ -6,11 +6,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper to check if user has a specific role in a business
+    // Helper to check if user has a specific role in a business.
+    // Membership documents use a deterministic ID: ${uid}_${businessId}
     function hasRole(businessId, role) {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
         exists(/databases/$(database)/documents/memberships/$(request.auth.uid + '_' + businessId)) &&
         get(/databases/$(database)/documents/memberships/$(request.auth.uid + '_' + businessId)).data.role == role;
+    }
+
+    function isOwnerOrAdmin(businessId) {
+      return hasRole(businessId, 'owner') || hasRole(businessId, 'admin');
     }
 
     match /businesses/{businessId} {
@@ -20,28 +25,46 @@ service cloud.firestore {
 
     match /services/{serviceId} {
       allow read: if true;
-      allow write: if hasRole(request.resource.data.business_id, 'owner') || 
-                   hasRole(request.resource.data.business_id, 'admin');
+      // For creates, check the incoming business_id. For updates/deletes, check the
+      // existing document's business_id to prevent cross-business privilege escalation.
+      allow create: if isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if isOwnerOrAdmin(resource.data.business_id) &&
+                       request.resource.data.business_id == resource.data.business_id;
+      allow delete: if isOwnerOrAdmin(resource.data.business_id);
     }
 
     match /employees/{employeeId} {
       allow read: if true;
-      allow write: if hasRole(request.resource.data.business_id, 'owner') || 
-                   hasRole(request.resource.data.business_id, 'admin');
+      allow create: if isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if isOwnerOrAdmin(resource.data.business_id) &&
+                       request.resource.data.business_id == resource.data.business_id;
+      allow delete: if isOwnerOrAdmin(resource.data.business_id);
     }
 
     match /appointments/{appointmentId} {
-      allow read: if isAuthenticated();
-      // Only Cloud Functions should create public bookings, but admins can manage
-      allow write: if isAuthenticated() && (
-        hasRole(request.resource.data.business_id, 'owner') || 
-        hasRole(request.resource.data.business_id, 'admin') ||
-        request.auth.uid == resource.data.profile_id
+      // Restrict reads to participants: the customer, employees, admins, or owners
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.profile_id ||
+        hasRole(resource.data.business_id, 'owner') ||
+        hasRole(resource.data.business_id, 'admin') ||
+        hasRole(resource.data.business_id, 'employee')
       );
+      // Owners/admins create appointments; Cloud Functions also create via Admin SDK
+      allow create: if isOwnerOrAdmin(request.resource.data.business_id);
+      // Updates: staff based on existing doc's business_id; customers may update their own
+      allow update: if (
+          isOwnerOrAdmin(resource.data.business_id) &&
+          request.resource.data.business_id == resource.data.business_id
+        ) || (
+          request.auth.uid == resource.data.profile_id &&
+          request.resource.data.business_id == resource.data.business_id
+        );
+      allow delete: if isOwnerOrAdmin(resource.data.business_id);
     }
 
     match /profiles/{userId} {
-      allow read: if isAuthenticated();
+      // Profile data is personal; only the owning user may read or write it
+      allow read: if request.auth.uid == userId;
       allow write: if request.auth.uid == userId;
     }
 
@@ -50,7 +73,70 @@ service cloud.firestore {
         request.auth.uid == resource.data.profile_id ||
         hasRole(resource.data.business_id, 'owner')
       );
-      allow write: if hasRole(request.resource.data.business_id, 'owner');
+      // Use existing document's business_id for updates/deletes to prevent cross-business writes
+      allow create: if hasRole(request.resource.data.business_id, 'owner');
+      allow update: if hasRole(resource.data.business_id, 'owner') &&
+                       request.resource.data.business_id == resource.data.business_id;
+      allow delete: if hasRole(resource.data.business_id, 'owner');
+    }
+
+    match /business_hours/{docId} {
+      allow read: if true;
+      allow create: if isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if isOwnerOrAdmin(resource.data.business_id) &&
+                       request.resource.data.business_id == resource.data.business_id;
+      allow delete: if isOwnerOrAdmin(resource.data.business_id);
+    }
+
+    match /business_date_overrides/{docId} {
+      allow read: if true;
+      allow create: if isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if isOwnerOrAdmin(resource.data.business_id) &&
+                       request.resource.data.business_id == resource.data.business_id;
+      allow delete: if isOwnerOrAdmin(resource.data.business_id);
+    }
+
+    match /business_quick_links/{docId} {
+      allow read: if true;
+      allow create: if isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if isOwnerOrAdmin(resource.data.business_id) &&
+                       request.resource.data.business_id == resource.data.business_id;
+      allow delete: if isOwnerOrAdmin(resource.data.business_id);
+    }
+
+    match /customers/{customerId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.profile_id ||
+        hasRole(resource.data.business_id, 'owner') ||
+        hasRole(resource.data.business_id, 'admin') ||
+        hasRole(resource.data.business_id, 'employee')
+      );
+      allow create: if isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if isOwnerOrAdmin(resource.data.business_id) &&
+                       request.resource.data.business_id == resource.data.business_id;
+      allow delete: if isOwnerOrAdmin(resource.data.business_id);
+    }
+
+    match /schedules/{docId} {
+      allow read: if true;
+      allow create: if isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if isOwnerOrAdmin(resource.data.business_id) &&
+                       request.resource.data.business_id == resource.data.business_id;
+      allow delete: if isOwnerOrAdmin(resource.data.business_id);
+    }
+
+    match /employee_services/{docId} {
+      allow read: if true;
+      allow create: if isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if isOwnerOrAdmin(resource.data.business_id) &&
+                       request.resource.data.business_id == resource.data.business_id;
+      allow delete: if isOwnerOrAdmin(resource.data.business_id);
+    }
+
+    match /booking_claims/{claimId} {
+      // Only the email recipient may read their own claim; writes are handled by Cloud Functions
+      allow read: if isAuthenticated() && request.auth.token.email == resource.data.email;
+      allow write: if false;
     }
   }
 }

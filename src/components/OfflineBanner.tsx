@@ -7,9 +7,10 @@ import { Wifi, WifiOff, RefreshCw, AlertTriangle } from "lucide-react";
 
 interface OfflineBannerProps {
   onConflictsClick?: () => void;
+  businessId?: string;
 }
 
-export function OfflineBanner({ onConflictsClick }: OfflineBannerProps = {}) {
+export function OfflineBanner({ onConflictsClick, businessId }: OfflineBannerProps = {}) {
   const [online, setOnline] = useState(true);
   const [pending, setPending] = useState(0);
   const [conflicts, setConflicts] = useState(0);
@@ -36,7 +37,7 @@ export function OfflineBanner({ onConflictsClick }: OfflineBannerProps = {}) {
     window.addEventListener("online", handler);
     window.addEventListener("offline", handler);
 
-    const unsub = installAutoSync();
+    const unsub = installAutoSync(businessId);
     const t = setInterval(update, 2000);
 
     return () => {
@@ -45,12 +46,12 @@ export function OfflineBanner({ onConflictsClick }: OfflineBannerProps = {}) {
       unsub?.();
       clearInterval(t);
     };
-  }, []);
+  }, [businessId]);
 
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await runSync();
+      await runSync(businessId);
     } finally {
       setSyncing(false);
     }

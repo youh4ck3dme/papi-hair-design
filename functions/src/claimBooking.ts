@@ -69,7 +69,8 @@ export const claimBooking = functions.https.onCall(async (request: CallableReque
         .get();
 
     if (membershipsSnap.empty) {
-        const memRef = db.collection("memberships").doc();
+        // Use a deterministic ID so the Firestore rules' hasRole() lookup works
+        const memRef = db.collection("memberships").doc(`${userId}_${claim.business_id}`);
         batch.set(memRef, {
             business_id: claim.business_id,
             profile_id: userId,

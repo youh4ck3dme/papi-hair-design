@@ -21,7 +21,7 @@ interface SyncResponse {
   error?: string;
 }
 
-export async function runSync() {
+export async function runSync(businessId?: string) {
   let db;
   try {
     db = await getDB();
@@ -40,7 +40,8 @@ export async function runSync() {
       await db.put("queue", { ...item, status: "processing", last_error: undefined });
       try {
         const { data: resp } = await syncOfflineDataFn({
-          actions: [item.action]
+          actions: [item.action],
+          ...(businessId ? { business_id: businessId } : {}),
         });
 
         if (resp?.success) {
@@ -65,26 +66,28 @@ export async function runSync() {
     }
   }
 
-  try {
-    // Also pull latest updates
-    const { data } = await syncOfflineDataFn({ days: 2 });
+  // Only pull if we have a business_id to scope the query and enforce access control
+  if (businessId) {
+    try {
+      const { data } = await syncOfflineDataFn({ business_id: businessId, days: 2 });
 
-    if (data?.success && data.appointments && Array.isArray(data.appointments)) {
-      const tx = db.transaction("appointments", "readwrite");
-      for (const a of data.appointments) {
-        await tx.store.put({ ...a, synced: true });
+      if (data?.success && data.appointments && Array.isArray(data.appointments)) {
+        const tx = db.transaction("appointments", "readwrite");
+        for (const a of data.appointments) {
+          await tx.store.put({ ...a, synced: true });
+        }
+        await tx.done;
       }
-      await tx.done;
+    } catch {
+      // ignore pull errors when offline
     }
-  } catch {
-    // ignore pull errors when offline
   }
 }
 
-export function installAutoSync() {
+export function installAutoSync(businessId?: string) {
   if (typeof window === "undefined") return;
   const kick = () => {
-    if (navigator.onLine) runSync();
+    if (navigator.onLine) runSync(businessId);
   };
   window.addEventListener("online", kick);
   const t = setInterval(kick, 30_000);
