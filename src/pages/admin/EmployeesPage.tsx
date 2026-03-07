@@ -10,6 +10,7 @@ import {
   query,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 import { useBusiness } from "@/hooks/useBusiness";
 import { Button } from "@/components/ui/button";
@@ -236,11 +237,13 @@ export default function EmployeesPage() {
       }
 
       if (employeeId) {
+        const batch = writeBatch(db);
+
         const scheduleSnap = await getDocs(query(
           collection(db, "schedules"),
           where("employee_id", "==", employeeId),
         ));
-        await Promise.all(scheduleSnap.docs.map((docSnap) => deleteDoc(doc(db, "schedules", docSnap.id))));
+        scheduleSnap.docs.forEach((docSnap) => batch.delete(doc(db, "schedules", docSnap.id)));
 
         const scheduleRows = DAYS
           .filter(({ key }) => schedule[key as DayKey]?.active)
@@ -250,17 +253,20 @@ export default function EmployeesPage() {
             start_time: schedule[key as DayKey]!.start,
             end_time: schedule[key as DayKey]!.end,
           }));
-        await Promise.all(scheduleRows.map((row) => addDoc(collection(db, "schedules"), row)));
+        scheduleRows.forEach((row) => batch.set(doc(collection(db, "schedules")), row));
 
         const employeeServicesSnap = await getDocs(query(
           collection(db, "employee_services"),
           where("employee_id", "==", employeeId),
         ));
-        await Promise.all(employeeServicesSnap.docs.map((docSnap) => deleteDoc(doc(db, "employee_services", docSnap.id))));
-        await Promise.all(selectedServiceIds.map((serviceId) => addDoc(collection(db, "employee_services"), {
+        employeeServicesSnap.docs.forEach((docSnap) => batch.delete(doc(db, "employee_services", docSnap.id)));
+
+        selectedServiceIds.forEach((serviceId) => batch.set(doc(collection(db, "employee_services")), {
           employee_id: employeeId as string,
           service_id: serviceId,
-        })));
+        }));
+
+        await batch.commit();
       }
 
       toast.success(editing ? "Zamestnanec aktualizovaný" : "Zamestnanec pridaný");
@@ -288,15 +294,11 @@ export default function EmployeesPage() {
       return;
     }
 
-    const [scheduleSnap, employeeServicesSnap] = await Promise.all([
-      getDocs(query(collection(db, "schedules"), where("employee_id", "==", id))),
-      getDocs(query(collection(db, "employee_services"), where("employee_id", "==", id))),
-    ]);
-    await Promise.all([
-      ...scheduleSnap.docs.map((docSnap) => deleteDoc(doc(db, "schedules", docSnap.id))),
-      ...employeeServicesSnap.docs.map((docSnap) => deleteDoc(doc(db, "employee_services", docSnap.id))),
-    ]);
-    await deleteDoc(doc(db, "employees", id));
+    const batch = writeBatch(db);
+    scheduleSnap.docs.forEach((docSnap) => batch.delete(doc(db, "schedules", docSnap.id)));
+    employeeServicesSnap.docs.forEach((docSnap) => batch.delete(doc(db, "employee_services", docSnap.id)));
+    batch.delete(doc(db, "employees", id));
+    await batch.commit();
 
     toast.success("Zamestnanec odstránený");
     load();

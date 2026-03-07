@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, query, where, getDocs, addDoc, deleteDoc, doc, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, orderBy, writeBatch } from "firebase/firestore";
 import { db } from "@/integrations/firebase/config";
 import { useBusiness } from "@/hooks/useBusiness";
 import { Button } from "@/components/ui/button";
@@ -119,16 +119,22 @@ export function BusinessHoursEditor() {
   const saveAll = async () => {
     setSaving(true);
     try {
-      // Helper: delete all docs from a collection matching business_id
-      const deleteAll = async (collectionName: string) => {
+      const batch = writeBatch(db);
+
+      // Helper: queue deletes for all docs in a collection matching business_id
+      const queueDeletes = async (collectionName: string) => {
         const snap = await getDocs(query(collection(db, collectionName), where("business_id", "==", businessId)));
-        await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, collectionName, d.id))));
+        snap.docs.forEach((d) => batch.delete(doc(db, collectionName, d.id)));
       };
 
-      // Save hours: delete all then insert
-      await deleteAll("business_hours");
+      // Queue deletes
+      await queueDeletes("business_hours");
+      await queueDeletes("business_date_overrides");
+      await queueDeletes("business_quick_links");
+
+      // Queue inserts using auto-generated doc refs
       for (const h of hours) {
-        await addDoc(collection(db, "business_hours"), {
+        batch.set(doc(collection(db, "business_hours")), {
           business_id: businessId,
           day_of_week: h.day_of_week,
           mode: h.mode,
@@ -138,10 +144,8 @@ export function BusinessHoursEditor() {
         });
       }
 
-      // Save overrides
-      await deleteAll("business_date_overrides");
       for (const o of overrides) {
-        await addDoc(collection(db, "business_date_overrides"), {
+        batch.set(doc(collection(db, "business_date_overrides")), {
           business_id: businessId,
           override_date: o.override_date,
           mode: o.mode,
@@ -151,10 +155,8 @@ export function BusinessHoursEditor() {
         });
       }
 
-      // Save links
-      await deleteAll("business_quick_links");
       for (const [i, l] of links.entries()) {
-        await addDoc(collection(db, "business_quick_links"), {
+        batch.set(doc(collection(db, "business_quick_links")), {
           business_id: businessId,
           label: l.label,
           url: l.url,
@@ -162,6 +164,7 @@ export function BusinessHoursEditor() {
         });
       }
 
+      await batch.commit();
       toast.success("Otváracie hodiny uložené");
     } catch (err: any) {
       toast.error(err.message ?? "Chyba pri ukladaní");
