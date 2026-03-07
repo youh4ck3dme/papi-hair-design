@@ -186,7 +186,7 @@ export default function ReceptionPage() {
   // Initial sync on mount
   useEffect(() => {
     if (navigator.onLine) {
-      runSync().then(load);
+      runSync(businessId).then(load);
     }
   }, [load]);
 
