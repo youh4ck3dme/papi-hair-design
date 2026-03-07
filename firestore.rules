@@ -1,56 +1,32 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper to check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Helper to check if user has a specific role in a business
-    function hasRole(businessId, role) {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/memberships/$(request.auth.uid + '_' + businessId)) &&
-        get(/databases/$(database)/documents/memberships/$(request.auth.uid + '_' + businessId)).data.role == role;
-    }
-
     match /businesses/{businessId} {
-      allow read: if true;
-      allow write: if hasRole(businessId, 'owner');
-    }
-
-    match /services/{serviceId} {
-      allow read: if true;
-      allow write: if hasRole(request.resource.data.business_id, 'owner') || 
-                   hasRole(request.resource.data.business_id, 'admin');
-    }
-
-    match /employees/{employeeId} {
-      allow read: if true;
-      allow write: if hasRole(request.resource.data.business_id, 'owner') || 
-                   hasRole(request.resource.data.business_id, 'admin');
-    }
-
-    match /appointments/{appointmentId} {
-      allow read: if isAuthenticated();
-      // Only Cloud Functions should create public bookings, but admins can manage
-      allow write: if isAuthenticated() && (
-        hasRole(request.resource.data.business_id, 'owner') || 
-        hasRole(request.resource.data.business_id, 'admin') ||
-        request.auth.uid == resource.data.profile_id
-      );
+      allow read, write: if isAuthenticated();
     }
 
     match /profiles/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if request.auth.uid == userId;
+      allow read, write: if isAuthenticated();
     }
 
     match /memberships/{membershipId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.profile_id ||
-        hasRole(resource.data.business_id, 'owner')
-      );
-      allow write: if hasRole(request.resource.data.business_id, 'owner');
+      allow read, write: if isAuthenticated();
+    }
+
+    match /services/{serviceId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /employees/{employeeId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /appointments/{appointmentId} {
+      allow read, write: if isAuthenticated();
     }
   }
 }

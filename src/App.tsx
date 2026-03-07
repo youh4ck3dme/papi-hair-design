@@ -36,6 +36,7 @@ const DiagnosticsPage = lazy(() => import("./pages/DiagnosticsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const SalonLoginPage = lazy(() => import("./pages/SalonLoginPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
+const BootstrapPage = lazy(() => import("./pages/BootstrapPage"));
 
 const LazyFallback = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -87,6 +88,7 @@ const App = () => {
                   <Route path="/privacy" element={<PrivacyPage />} />
                   <Route path="/privacy-policy" element={<TermsPage />} />
                   <Route path="/terms" element={<TermsPage />} />
+                  <Route path="/bootstrap" element={<BootstrapPage />} />
                   <Route
                     path="/reception"
                     element={
