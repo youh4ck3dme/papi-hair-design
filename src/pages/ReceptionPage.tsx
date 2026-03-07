@@ -26,7 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/firebase/config";
+import { collection, getDocs, limit, query, where } from "firebase/firestore";
 import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -86,19 +87,35 @@ export default function ReceptionPage() {
       return;
     }
 
-    supabase
-      .from("employees")
-      .select("id, is_active")
-      .eq("business_id", businessId)
-      .eq("profile_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!data?.id || data.is_active === false) {
+    const loadEmployeeMapping = async () => {
+      try {
+        const employeeSnap = await getDocs(query(
+          collection(db, "employees"),
+          where("business_id", "==", businessId),
+          where("profile_id", "==", user.id),
+          limit(1),
+        ));
+
+        if (employeeSnap.empty) {
           setMyEmployeeId(null);
           return;
         }
-        setMyEmployeeId(data.id);
-      });
+
+        const employeeDoc = employeeSnap.docs[0];
+        const employeeData = employeeDoc.data() as { is_active?: boolean };
+        if (employeeData.is_active === false) {
+          setMyEmployeeId(null);
+          return;
+        }
+
+        setMyEmployeeId(employeeDoc.id);
+      } catch (error) {
+        console.error("ReceptionPage: failed to load employee mapping", error);
+        setMyEmployeeId(null);
+      }
+    };
+
+    loadEmployeeMapping();
   }, [businessId, isEmployee, user]);
 
   const load = useCallback(async () => {
@@ -112,30 +129,58 @@ export default function ReceptionPage() {
     load();
   }, [load]);
 
-  // Load employees + services from Supabase (will use cached if offline)
+  // Load employees + services from Firestore (will use cached if offline)
   useEffect(() => {
-    supabase
-      .from("employees")
-      .select("id, display_name")
-      .eq("business_id", businessId)
-      .eq("is_active", true)
-      .then(({ data }) => {
-        if (!data) return;
+    const loadSelectionData = async () => {
+      try {
+        const [employeeSnap, serviceSnap] = await Promise.all([
+          getDocs(query(
+            collection(db, "employees"),
+            where("business_id", "==", businessId),
+            where("is_active", "==", true),
+          )),
+          getDocs(query(
+            collection(db, "services"),
+            where("business_id", "==", businessId),
+            where("is_active", "==", true),
+          )),
+        ]);
+
+        const loadedEmployees = employeeSnap.docs
+          .map((doc) => {
+            const employee = doc.data();
+            return {
+              id: doc.id,
+              display_name: employee.display_name ?? "",
+            };
+          })
+          .sort((a, b) => a.display_name.localeCompare(b.display_name, "sk"));
+
         if (isEmployee && myEmployeeId) {
-          setEmployees(data.filter((e) => e.id === myEmployeeId));
-          setAddForm((f) => ({ ...f, employee_id: myEmployeeId }));
-          return;
+          setEmployees(loadedEmployees.filter((employee) => employee.id === myEmployeeId));
+          setAddForm((form) => ({ ...form, employee_id: myEmployeeId }));
+        } else {
+          setEmployees(loadedEmployees);
         }
-        setEmployees(data);
-      });
-    supabase
-      .from("services")
-      .select("id, name_sk, duration_minutes")
-      .eq("business_id", businessId)
-      .eq("is_active", true)
-      .then(({ data }) => {
-        if (data) setServices(data);
-      });
+
+        const loadedServices = serviceSnap.docs
+          .map((doc) => {
+            const service = doc.data();
+            return {
+              id: doc.id,
+              name_sk: service.name_sk ?? "",
+              duration_minutes: service.duration_minutes ?? 30,
+            };
+          })
+          .sort((a, b) => a.name_sk.localeCompare(b.name_sk, "sk"));
+
+        setServices(loadedServices);
+      } catch (error) {
+        console.error("ReceptionPage: failed to load service/employee options", error);
+      }
+    };
+
+    loadSelectionData();
   }, [businessId, isEmployee, myEmployeeId]);
 
   // Initial sync on mount

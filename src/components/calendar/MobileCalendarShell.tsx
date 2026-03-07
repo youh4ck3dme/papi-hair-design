@@ -10,8 +10,9 @@ import {
 } from "date-fns";
 import { startOfDayInTZ } from "@/lib/timezone";
 import { AnimatePresence, motion } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import { db, functions } from "@/integrations/firebase/config";
+import { collection, query, where, getDocs, getDoc, doc, updateDoc, addDoc, orderBy } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 import { toast } from "sonner";
 import GlassHeader from "./GlassHeader";
 import MonthGrid from "./MonthGrid";
@@ -43,7 +44,7 @@ const BUSINESS_TZ = "Europe/Bratislava";
 
 const EMPLOYEE_COLOR_ORDER = ["#22c55e", "#ec4899", "#3b82f6", "#f97316", "#a855f7", "#14b8a6"];
 
-const DAY_INDEX: Record<Tables<"schedules">["day_of_week"], number> = {
+const DAY_INDEX: Record<string, number> = {
   monday: 1,
   tuesday: 2,
   wednesday: 3,
@@ -53,15 +54,11 @@ const DAY_INDEX: Record<Tables<"schedules">["day_of_week"], number> = {
   sunday: 0,
 };
 
-type ServiceOption = Pick<
-  Tables<"services">,
-  "id" | "name_sk" | "duration_minutes" | "price"
->;
-
-type AppointmentQueryRow = Tables<"appointments"> & {
-  services: { name_sk: string | null } | null;
-  employees: { display_name: string | null } | null;
-  customers: { full_name: string | null } | null;
+type ServiceOption = {
+  id: string;
+  name_sk: string | null;
+  duration_minutes: number;
+  price: number | null;
 };
 
 export default function MobileCalendarShell() {
@@ -73,9 +70,9 @@ export default function MobileCalendarShell() {
   const [appointments, setAppointments] = useState<CalendarAppointment[]>([]);
   const [services, setServices] = useState<ServiceOption[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [businessHours, setBusinessHours] = useState<Tables<"business_hours">[]>([]);
+  const [businessHours, setBusinessHours] = useState<any[]>([]);
   const [schedules, setSchedules] = useState<WorkingSchedule[]>([]);
-  const [scheduleRows, setScheduleRows] = useState<Tables<"schedules">[]>([]);
+  const [scheduleRows, setScheduleRows] = useState<any[]>([]);
   const [dayExceptions, setDayExceptions] = useState<DayException[]>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -92,79 +89,79 @@ export default function MobileCalendarShell() {
   const touchStartY = useRef(0);
 
   const loadStaticData = useCallback(async () => {
-    const [svcRes, empRes, bhRes] = await Promise.all([
-      supabase
-        .from("services")
-        .select("id, name_sk, duration_minutes, price")
-        .eq("business_id", DEMO_BUSINESS_ID)
-        .eq("is_active", true)
-        .order("name_sk"),
-      (supabase as any).rpc("get_bookable_service_providers", {
-        p_business_id: DEMO_BUSINESS_ID,
-        p_service_id: null,
-      }),
-      supabase
-        .from("business_hours")
-        .select("day_of_week, mode, start_time, end_time")
-        .eq("business_id", DEMO_BUSINESS_ID)
-        .order("sort_order"),
-    ]);
+    try {
+      const servicesRef = collection(db, "services");
+      const servicesQuery = query(
+        servicesRef,
+        where("business_id", "==", DEMO_BUSINESS_ID),
+        where("is_active", "==", true),
+        orderBy("name_sk")
+      );
 
-    if (svcRes.error) throw svcRes.error;
-    if (empRes.error) throw empRes.error;
-    if (bhRes.error) throw bhRes.error;
+      const listProvidersFn = httpsCallable<any, any[]>(functions, "listBookableProviders");
 
-    const mappedEmployees: Employee[] = ((empRes.data ?? []) as any[]).map((employee, index) => ({
-      id: employee.id,
-      name: employee.display_name,
-      color: EMPLOYEE_COLOR_ORDER[index % EMPLOYEE_COLOR_ORDER.length],
-      isActive: employee.is_active,
-      orderIndex: index,
-    }));
+      const bhRef = collection(db, "business_hours");
+      const bhQuery = query(
+        bhRef,
+        where("business_id", "==", DEMO_BUSINESS_ID),
+        orderBy("sort_order")
+      );
 
-    const employeeIds = mappedEmployees.map((item) => item.id);
+      const [svcSnap, providerData, bhSnap] = await Promise.all([
+        getDocs(servicesQuery),
+        listProvidersFn({ business_id: DEMO_BUSINESS_ID }),
+        getDocs(bhQuery)
+      ]);
 
-    const [schRes, overrideRes] = await Promise.all([
-      employeeIds.length > 0
-        ? supabase
-            .from("schedules")
-            .select("employee_id, day_of_week, start_time, end_time, created_at, id")
-            .in("employee_id", employeeIds)
-        : Promise.resolve({ data: [], error: null }),
-      supabase
-        .from("business_date_overrides")
-        .select("id, business_id, override_date, mode, start_time, end_time, label, created_at")
-        .eq("business_id", DEMO_BUSINESS_ID),
-    ]);
+      const mappedEmployees: Employee[] = (providerData.data ?? []).map((employee, index) => ({
+        id: employee.id,
+        name: employee.display_name,
+        color: EMPLOYEE_COLOR_ORDER[index % EMPLOYEE_COLOR_ORDER.length],
+        isActive: employee.is_active,
+        orderIndex: index,
+      }));
 
-    if (schRes.error) throw schRes.error;
-    if (overrideRes.error) throw overrideRes.error;
+      const employeeIds = mappedEmployees.map((item) => item.id);
 
-    const scheduleData = (schRes.data ?? []) as Tables<"schedules">[];
-    const overrides = (overrideRes.data ?? []) as Tables<"business_date_overrides">[];
-
-    const mappedSchedules: WorkingSchedule[] = scheduleData.map((schedule) => ({
-      employeeId: schedule.employee_id,
-      weekday: DAY_INDEX[schedule.day_of_week],
-      start: schedule.start_time,
-      end: schedule.end_time,
-      breaks: [],
-    }));
-
-    setServices((svcRes.data ?? []) as ServiceOption[]);
-    setEmployees(mappedEmployees);
-    setBusinessHours((bhRes.data ?? []) as Tables<"business_hours">[]);
-    setSchedules(mappedSchedules);
-    setScheduleRows(scheduleData);
-    setDayExceptions(buildDayExceptionsFromBusinessOverrides(overrides, employeeIds));
-    setSelectedEmployeeIds((prev) => {
-      if (prev.length > 0) {
-        return mappedEmployees
-          .filter((employee) => prev.includes(employee.id))
-          .map((employee) => employee.id);
+      let schData: any[] = [];
+      if (employeeIds.length > 0) {
+        const schRef = collection(db, "schedules");
+        const schQuery = query(schRef, where("employee_id", "in", employeeIds));
+        const schSnap = await getDocs(schQuery);
+        schData = schSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       }
-      return mappedEmployees.map((employee) => employee.id);
-    });
+
+      const overridesRef = collection(db, "business_date_overrides");
+      const overridesQuery = query(overridesRef, where("business_id", "==", DEMO_BUSINESS_ID));
+      const overridesSnap = await getDocs(overridesQuery);
+      const overrides = overridesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const mappedSchedules: WorkingSchedule[] = schData.map((schedule) => ({
+        employeeId: schedule.employee_id,
+        weekday: DAY_INDEX[schedule.day_of_week] ?? 0,
+        start: schedule.start_time,
+        end: schedule.end_time,
+        breaks: [],
+      }));
+
+      setServices(svcSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceOption)));
+      setEmployees(mappedEmployees);
+      setBusinessHours(bhSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setSchedules(mappedSchedules);
+      setScheduleRows(schData);
+      setDayExceptions(buildDayExceptionsFromBusinessOverrides(overrides as any[], employeeIds));
+      setSelectedEmployeeIds((prev) => {
+        if (prev.length > 0) {
+          return mappedEmployees
+            .filter((employee) => prev.includes(employee.id))
+            .map((employee) => employee.id);
+        }
+        return mappedEmployees.map((employee) => employee.id);
+      });
+    } catch (error) {
+      console.error("Error loading static data:", error);
+      throw error;
+    }
   }, []);
 
   const getDateRange = useCallback(() => {
@@ -185,22 +182,20 @@ export default function MobileCalendarShell() {
 
   const loadAppointments = useCallback(async () => {
     const { start, end } = getDateRange();
-    const { data, error } = await supabase
-      .from("appointments")
-      .select(
-        "id, start_at, end_at, status, notes, employee_id, customer_id, service_id, business_id, created_at, updated_at, services(name_sk), employees(display_name), customers(full_name)",
-      )
-      .eq("business_id", DEMO_BUSINESS_ID)
-      .gte("start_at", start.toISOString())
-      .lt("start_at", end.toISOString())
-      .neq("status", "cancelled")
-      .order("start_at");
-
-    if (error) throw error;
-
-    const mapped = ((data ?? []) as AppointmentQueryRow[]).map((row) =>
-      mapAppointmentRowToCalendarAppointment(row),
+    const apptsRef = collection(db, "appointments");
+    const apptsQuery = query(
+      apptsRef,
+      where("business_id", "==", DEMO_BUSINESS_ID),
+      where("start_at", ">=", start.toISOString()),
+      where("start_at", "<", end.toISOString()),
+      orderBy("start_at")
     );
+
+    const snap = await getDocs(apptsQuery);
+    const mapped = snap.docs
+      .map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as any))
+      .filter(row => row.status !== "cancelled")
+      .map(row => mapAppointmentRowToCalendarAppointment(row));
 
     setAppointments(mapped);
   }, [getDateRange]);
@@ -280,47 +275,44 @@ export default function MobileCalendarShell() {
     customer_email: string;
     customer_phone?: string;
   }) => {
-    const { error } = await supabase.functions.invoke("create-public-booking", {
-      body: { business_id: DEMO_BUSINESS_ID, ...data },
-    });
-    if (error) {
-      const message = error.message || "Chyba pri vytváraní rezervácie";
-      toast.error(message);
+    try {
+      const createBookingFn = httpsCallable<any, any>(functions, "createPublicBooking");
+      const result = await createBookingFn({ business_id: DEMO_BUSINESS_ID, ...data });
+
+      if (!result.data.success) {
+        throw new Error(result.data.error || "Chyba pri vytváraní rezervácie");
+      }
+
+      toast.success("Rezervácia vytvorená!");
+      await loadAppointments();
+    } catch (error: any) {
+      toast.error(error.message || "Chyba pri vytváraní rezervácie");
       throw error;
     }
-    toast.success("Rezervácia vytvorená!");
-    await loadAppointments();
   };
 
   const ensureBlockCustomerId = useCallback(async () => {
     if (blockCustomerIdRef.current) return blockCustomerIdRef.current;
 
-    const { data: existing, error: existingError } = await supabase
-      .from("customers")
-      .select("id")
-      .eq("business_id", DEMO_BUSINESS_ID)
-      .eq("email", BLOCK_CUSTOMER_EMAIL)
-      .maybeSingle();
+    const customersRef = collection(db, "customers");
+    const q = query(
+      customersRef,
+      where("business_id", "==", DEMO_BUSINESS_ID),
+      where("email", "==", BLOCK_CUSTOMER_EMAIL)
+    );
+    const snap = await getDocs(q);
 
-    if (existingError) throw existingError;
-    if (existing?.id) {
-      blockCustomerIdRef.current = existing.id;
-      return existing.id;
+    if (!snap.empty) {
+      blockCustomerIdRef.current = snap.docs[0].id;
+      return snap.docs[0].id;
     }
 
-    const { data: created, error } = await supabase
-      .from("customers")
-      .insert({
-        business_id: DEMO_BUSINESS_ID,
-        full_name: BLOCK_SERVICE_NAME,
-        email: BLOCK_CUSTOMER_EMAIL,
-      })
-      .select("id")
-      .single();
-
-    if (error || !created?.id) {
-      throw new Error(error?.message || "Nepodarilo sa vytvoriť interného zákazníka");
-    }
+    const created = await addDoc(customersRef, {
+      business_id: DEMO_BUSINESS_ID,
+      full_name: BLOCK_SERVICE_NAME,
+      email: BLOCK_CUSTOMER_EMAIL,
+      created_at: new Date().toISOString()
+    });
 
     blockCustomerIdRef.current = created.id;
     return created.id;
@@ -329,35 +321,28 @@ export default function MobileCalendarShell() {
   const ensureBlockServiceId = useCallback(async () => {
     if (blockServiceIdRef.current) return blockServiceIdRef.current;
 
-    const { data: existing, error: existingError } = await supabase
-      .from("services")
-      .select("id")
-      .eq("business_id", DEMO_BUSINESS_ID)
-      .eq("name_sk", BLOCK_SERVICE_NAME)
-      .maybeSingle();
+    const servicesRef = collection(db, "services");
+    const q = query(
+      servicesRef,
+      where("business_id", "==", DEMO_BUSINESS_ID),
+      where("name_sk", "==", BLOCK_SERVICE_NAME)
+    );
+    const snap = await getDocs(q);
 
-    if (existingError) throw existingError;
-    if (existing?.id) {
-      blockServiceIdRef.current = existing.id;
-      return existing.id;
+    if (!snap.empty) {
+      blockServiceIdRef.current = snap.docs[0].id;
+      return snap.docs[0].id;
     }
 
-    const { data: created, error } = await supabase
-      .from("services")
-      .insert({
-        business_id: DEMO_BUSINESS_ID,
-        name_sk: BLOCK_SERVICE_NAME,
-        duration_minutes: 30,
-        price: 0,
-        category: "interné",
-        is_active: true,
-      })
-      .select("id")
-      .single();
-
-    if (error || !created?.id) {
-      throw new Error(error?.message || "Nepodarilo sa vytvoriť internú službu");
-    }
+    const created = await addDoc(servicesRef, {
+      business_id: DEMO_BUSINESS_ID,
+      name_sk: BLOCK_SERVICE_NAME,
+      duration_minutes: 30,
+      price: 0,
+      category: "interné",
+      is_active: true,
+      created_at: new Date().toISOString()
+    });
 
     blockServiceIdRef.current = created.id;
     return created.id;
@@ -375,18 +360,23 @@ export default function MobileCalendarShell() {
         ensureBlockServiceId(),
       ]);
 
-      const { error } = await supabase.from("appointments").insert({
+      const employee = employees.find(e => e.id === payload.employee_id);
+
+      await addDoc(collection(db, "appointments"), {
         business_id: DEMO_BUSINESS_ID,
         customer_id: customerId,
+        customer_name: BLOCK_SERVICE_NAME,
         employee_id: payload.employee_id,
+        employee_name: employee?.name || "Zamestnanec",
         service_id: serviceId,
+        service_name: BLOCK_SERVICE_NAME,
         start_at: payload.start_at,
         end_at: payload.end_at,
         status: "confirmed",
         notes: makeBlockedNote(payload.reason),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       });
-
-      if (error) throw error;
 
       toast.success("Blokovaný čas uložený");
       await loadAppointments();
@@ -398,31 +388,31 @@ export default function MobileCalendarShell() {
   };
 
   const handleCancel = async (id: string) => {
-    const { error } = await supabase
-      .from("appointments")
-      .update({ status: "cancelled" })
-      .eq("id", id);
-    if (error) {
+    try {
+      await updateDoc(doc(db, "appointments", id), {
+        status: "cancelled",
+        updated_at: new Date().toISOString()
+      });
+      toast.success("Rezervácia zrušená");
+      setDetailOpen(false);
+      await loadAppointments();
+    } catch (error: any) {
       toast.error(error.message || "Nepodarilo sa zrušiť rezerváciu");
-      return;
     }
-    toast.success("Rezervácia zrušená");
-    setDetailOpen(false);
-    await loadAppointments();
   };
 
   const handleMarkArrived = async (id: string) => {
-    const { error } = await supabase
-      .from("appointments")
-      .update({ status: "completed" })
-      .eq("id", id);
-    if (error) {
+    try {
+      await updateDoc(doc(db, "appointments", id), {
+        status: "completed",
+        updated_at: new Date().toISOString()
+      });
+      toast.success("Označené ako prišiel");
+      setDetailOpen(false);
+      await loadAppointments();
+    } catch (error: any) {
       toast.error(error.message || "Nepodarilo sa označiť rezerváciu");
-      return;
     }
-    toast.success("Označené ako prišiel");
-    setDetailOpen(false);
-    await loadAppointments();
   };
 
   const toggleEmployee = (employeeId: string) => {

@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/functions'],
           'vendor-query': ['@tanstack/react-query'],
           'vendor-motion': ['framer-motion'],
           'vendor-charts': ['recharts'],
@@ -37,7 +37,12 @@ export default defineConfig(({ mode }) => {
       name: 'validate-env-vars',
       buildStart() {
         if (mode === 'development') return; // skip in dev server
-        const required = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'];
+        const required = [
+          'VITE_FIREBASE_API_KEY',
+          'VITE_FIREBASE_AUTH_DOMAIN',
+          'VITE_FIREBASE_PROJECT_ID',
+          'VITE_FIREBASE_APP_ID',
+        ];
         const missing = required.filter(k => !env[k] && !process.env[k]);
         if (missing.length) {
           throw new Error(
@@ -71,11 +76,19 @@ export default defineConfig(({ mode }) => {
         navigateFallbackDenylist: [/^\/~oauth/],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/[a-z0-9]+\.supabase\.co\/rest\/v1\/.*/i,
+            urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
             handler: "NetworkFirst",
             options: {
-              cacheName: "supabase-api-cache",
+              cacheName: "firebase-firestore-cache",
               expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/europe-west1-.*\.cloudfunctions\.net\/.*/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "firebase-functions-cache",
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 30 },
             },
           },
           {

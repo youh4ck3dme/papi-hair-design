@@ -1,24 +1,72 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db, membershipsDocId } from "./lib/firestore.js";
+import * as functions from "firebase-functions/v2";
+import * as admin from "firebase-admin";
+import {
+    type CallableRequest,
+    HttpsError
+} from "firebase-functions/v2/https";
 
-export const saveSmtpConfig = onCall({ region: "europe-west1" }, async (request) => {
-  if (!request.auth) throw new HttpsError("unauthenticated", "Unauthorized");
-  const uid = request.auth.uid;
-  const business_id = request.data?.business_id as string;
-  if (!business_id) throw new HttpsError("invalid-argument", "Missing business_id");
-  const mid = membershipsDocId(uid, business_id);
-  const memSnap = await db.doc(`memberships/${mid}`).get();
-  const role = memSnap.data()?.role;
-  if (role !== "owner" && role !== "admin") throw new HttpsError("permission-denied", "Forbidden – admin only");
-  const bizRef = db.doc(`businesses/${business_id}`);
-  const bizSnap = await bizRef.get();
-  const existing = (bizSnap.data()?.smtp_config as Record<string, unknown>) ?? {};
-  const host = typeof request.data?.host === "string" ? request.data.host.trim().slice(0, 255) : existing.host ?? "";
-  const port = typeof request.data?.port === "number" ? request.data.port : existing.port ?? 465;
-  const user = typeof request.data?.user === "string" ? request.data.user.trim().slice(0, 255) : existing.user ?? "";
-  const from = typeof request.data?.from === "string" ? request.data.from.trim().slice(0, 255) : existing.from ?? "";
-  const pass = typeof request.data?.pass === "string" && request.data.pass.length > 0 ? request.data.pass.slice(0, 500) : (existing.pass ?? "");
-  const sanitized = { host, port, user, from, pass };
-  await bizRef.update({ smtp_config: sanitized, updated_at: new Date().toISOString() });
-  return { success: true };
+interface SaveSmtpConfigData {
+    business_id: string;
+    host: string;
+    port: number | string;
+    user: string;
+    from: string;
+    pass?: string;
+}
+
+export const saveSmtpConfig = functions.https.onCall(async (request: CallableRequest<SaveSmtpConfigData>) => {
+    const { auth, data } = request;
+    const db = admin.firestore();
+
+    if (!auth) {
+        throw new HttpsError("unauthenticated", "Neautorizovaný prístup");
+    }
+
+    const { business_id, host, port, user: smtpUser, from, pass } = data;
+
+    if (!business_id) {
+        throw new HttpsError("invalid-argument", "Missing business_id");
+    }
+
+    // Verify user is admin/owner of this business
+    const membershipSnap = await db.collection("memberships")
+        .where("business_id", "==", business_id)
+        .where("profile_id", "==", auth.uid)
+        .limit(1)
+        .get();
+
+    if (membershipSnap.empty) {
+        throw new HttpsError("permission-denied", "Forbidden – access denied");
+    }
+
+    const membership = membershipSnap.docs[0].data();
+    if (membership.role !== "owner" && membership.role !== "admin") {
+        throw new HttpsError("permission-denied", "Forbidden – admin only");
+    }
+
+    // Validate inputs
+    const sanitized: Record<string, any> = {
+        host: typeof host === "string" ? host.trim().slice(0, 255) : "",
+        port: Number(port) || 465,
+        user: typeof smtpUser === "string" ? smtpUser.trim().slice(0, 255) : "",
+        from: typeof from === "string" ? from.trim().slice(0, 255) : "",
+    };
+
+    // If pass is provided, include it. Otherwise load existing.
+    if (typeof pass === "string" && pass.length > 0) {
+        sanitized.pass = pass.slice(0, 500);
+    } else {
+        // Keep existing password
+        const bizSnap = await db.collection("businesses").doc(business_id).get();
+        const bizData = bizSnap.data();
+        const existing = (bizData?.smtp_config as Record<string, any>) ?? {};
+        sanitized.pass = existing.pass ?? "";
+    }
+
+    await db.collection("businesses").doc(business_id).update({
+        smtp_config: sanitized,
+        updated_at: new Date().toISOString()
+    });
+
+    return { success: true };
 });

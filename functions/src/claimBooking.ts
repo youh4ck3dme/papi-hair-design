@@ -1,32 +1,84 @@
-import crypto from "crypto";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db, membershipsDocId } from "./lib/firestore.js";
-import { z } from "zod";
+import * as functions from "firebase-functions/v2";
+import * as admin from "firebase-admin";
+import {
+    type CallableRequest,
+    HttpsError
+} from "firebase-functions/v2/https";
+import * as crypto from "crypto";
 
-const schema = z.object({ claim_token: z.string().min(1) });
+interface ClaimBookingData {
+    claim_token: string;
+}
 
-export const claimBooking = onCall({ region: "europe-west1" }, async (request) => {
-  if (!request.auth) throw new HttpsError("unauthenticated", "Neautorizovaný prístup");
-  const uid = request.auth.uid;
-  const parsed = schema.safeParse(request.data);
-  if (!parsed.success) throw new HttpsError("invalid-argument", "Chýba claim token");
+export const claimBooking = functions.https.onCall(async (request: CallableRequest<ClaimBookingData>) => {
+    const { auth, data } = request;
+    const db = admin.firestore();
 
-  const tokenHash = crypto.createHash("sha256").update(parsed.data.claim_token).digest("hex");
-  const claimsSnap = await db.collection("booking_claims").where("token_hash", "==", tokenHash).get();
-  const claimDoc = claimsSnap.docs.find((d) => !d.data().used_at);
-  if (!claimDoc) throw new HttpsError("not-found", "Neplatný alebo expirovaný token");
-  const claim = claimDoc.data();
-  if (new Date(claim.expires_at as string) < new Date()) throw new HttpsError("failed-precondition", "Token expiroval");
+    if (!auth) {
+        throw new HttpsError("unauthenticated", "Neautorizovaný prístup");
+    }
 
-  const email = claim.email as string;
-  const businessId = claim.business_id as string;
-  const customersSnap = await db.collection("customers").where("business_id", "==", businessId).where("email", "==", email).get();
-  const batch = db.batch();
-  for (const d of customersSnap.docs) batch.update(d.ref, { profile_id: uid, updated_at: new Date().toISOString() });
-  batch.update(claimDoc.ref, { used_at: new Date().toISOString() });
-  const mid = membershipsDocId(uid, businessId);
-  const memRef = db.doc(`memberships/${mid}`);
-  if (!(await memRef.get()).exists) batch.set(memRef, { profile_id: uid, business_id: businessId, role: "customer", created_at: new Date().toISOString() });
-  await batch.commit();
-  return { success: true, message: "Účet bol úspešne prepojený" };
+    const { claim_token } = data;
+    if (!claim_token) {
+        throw new HttpsError("invalid-argument", "Chýba claim token");
+    }
+
+    const userId = auth.uid;
+
+    // Hash the provided token
+    const tokenHash = crypto.createHash("sha256").update(claim_token).digest("hex");
+
+    // Find the claim
+    const claimsSnap = await db.collection("booking_claims")
+        .where("token_hash", "==", tokenHash)
+        .where("used_at", "==", null)
+        .limit(1)
+        .get();
+
+    if (claimsSnap.empty) {
+        throw new HttpsError("not-found", "Neplatný alebo expirovaný token");
+    }
+
+    const claimDoc = claimsSnap.docs[0];
+    const claim = claimDoc.data();
+
+    // Check expiry
+    if (new Date(claim.expires_at) < new Date()) {
+        throw new HttpsError("failed-precondition", "Token expiroval");
+    }
+
+    // Link customer to user profile
+    const customersSnap = await db.collection("customers")
+        .where("business_id", "==", claim.business_id)
+        .where("email", "==", claim.email)
+        .get();
+
+    const batch = db.batch();
+    customersSnap.forEach(doc => {
+        batch.update(doc.ref, { profile_id: userId });
+    });
+
+    // Mark claim as used
+    batch.update(claimDoc.ref, { used_at: new Date().toISOString() });
+
+    // Create customer membership if not exists
+    const membershipsSnap = await db.collection("memberships")
+        .where("business_id", "==", claim.business_id)
+        .where("profile_id", "==", userId)
+        .limit(1)
+        .get();
+
+    if (membershipsSnap.empty) {
+        const memRef = db.collection("memberships").doc();
+        batch.set(memRef, {
+            business_id: claim.business_id,
+            profile_id: userId,
+            role: "customer",
+            created_at: new Date().toISOString()
+        });
+    }
+
+    await batch.commit();
+
+    return { success: true, message: "Účet bol úspešne prepojený" };
 });

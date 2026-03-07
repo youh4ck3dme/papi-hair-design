@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/firebase/config";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  limit,
+  query,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 import { useBusiness } from "@/hooks/useBusiness";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,44 +34,122 @@ type DayKey = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "satu
 type ScheduleMap = Partial<Record<DayKey, { start: string; end: string; active: boolean }>>;
 
 const DEFAULT_SCHEDULE: ScheduleMap = Object.fromEntries(
-  DAYS.map(({ key }) => [key, { start: "09:00", end: "17:00", active: !["saturday", "sunday"].includes(key) }])
+  DAYS.map(({ key }) => [key, { start: "09:00", end: "17:00", active: !["saturday", "sunday"].includes(key) }]),
 ) as ScheduleMap;
+
+interface EmployeeRow {
+  id: string;
+  display_name: string;
+  email: string | null;
+  phone: string | null;
+  color: string;
+}
+
+interface ScheduleRow {
+  id: string;
+  employee_id: string;
+  day_of_week: DayKey;
+  start_time: string;
+  end_time: string;
+}
+
+interface ServiceRow {
+  id: string;
+  name_sk: string;
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
 
 export default function EmployeesPage() {
   const { businessId } = useBusiness();
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [schedules, setSchedules] = useState<Record<string, any[]>>({});
+  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
+  const [schedules, setSchedules] = useState<Record<string, ScheduleRow[]>>({});
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<any | null>(null);
+  const [editing, setEditing] = useState<EmployeeRow | null>(null);
   const [form, setForm] = useState({ display_name: "", email: "", phone: "", color: "#3B82F6" });
   const [schedule, setSchedule] = useState<ScheduleMap>(DEFAULT_SCHEDULE);
 
-  const [allServices, setAllServices] = useState<any[]>([]);
+  const [allServices, setAllServices] = useState<ServiceRow[]>([]);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    const { data: emps } = await supabase.from("employees").select("*").eq("business_id", businessId).order("display_name");
-    if (!emps) { setLoading(false); return; }
-    setEmployees(emps);
 
-    const ids = emps.map((e) => e.id);
-    if (ids.length) {
-      const { data: scheds } = await supabase.from("schedules").select("*").in("employee_id", ids);
-      const map: Record<string, any[]> = {};
-      (scheds ?? []).forEach((s) => { if (!map[s.employee_id]) map[s.employee_id] = []; map[s.employee_id].push(s); });
-      setSchedules(map);
+    const employeeSnap = await getDocs(query(
+      collection(db, "employees"),
+      where("business_id", "==", businessId),
+    ));
+
+    const loadedEmployees = employeeSnap.docs
+      .map((docSnap) => {
+        const employee = docSnap.data();
+        return {
+          id: docSnap.id,
+          display_name: employee.display_name ?? "",
+          email: employee.email ?? null,
+          phone: employee.phone ?? null,
+          color: employee.color ?? "#3B82F6",
+          is_active: employee.is_active !== false,
+        };
+      })
+      .filter((employee) => employee.is_active)
+      .map(({ is_active, ...employee }) => employee)
+      .sort((a, b) => a.display_name.localeCompare(b.display_name, "sk"));
+
+    setEmployees(loadedEmployees);
+
+    const employeeIds = loadedEmployees.map((employee) => employee.id);
+    const loadedSchedules: ScheduleRow[] = [];
+    for (const idChunk of chunk(employeeIds, 10)) {
+      if (!idChunk.length) continue;
+      const scheduleSnap = await getDocs(query(
+        collection(db, "schedules"),
+        where("employee_id", "in", idChunk),
+      ));
+      scheduleSnap.docs.forEach((docSnap) => {
+        const scheduleData = docSnap.data();
+        loadedSchedules.push({
+          id: docSnap.id,
+          employee_id: scheduleData.employee_id,
+          day_of_week: scheduleData.day_of_week,
+          start_time: scheduleData.start_time,
+          end_time: scheduleData.end_time,
+        });
+      });
     }
 
-    // Load all business services
-    const { data: svcs } = await supabase.from("services")
-      .select("id, name_sk")
-      .eq("business_id", businessId)
-      .eq("is_active", true)
-      .order("name_sk");
-    setAllServices(svcs ?? []);
+    const scheduleMap: Record<string, ScheduleRow[]> = {};
+    loadedSchedules.forEach((scheduleRow) => {
+      if (!scheduleMap[scheduleRow.employee_id]) {
+        scheduleMap[scheduleRow.employee_id] = [];
+      }
+      scheduleMap[scheduleRow.employee_id].push(scheduleRow);
+    });
+    setSchedules(scheduleMap);
+
+    const serviceSnap = await getDocs(query(
+      collection(db, "services"),
+      where("business_id", "==", businessId),
+      where("is_active", "==", true),
+    ));
+    const loadedServices = serviceSnap.docs
+      .map((docSnap) => {
+        const service = docSnap.data();
+        return {
+          id: docSnap.id,
+          name_sk: service.name_sk ?? "",
+        };
+      })
+      .sort((a, b) => a.name_sk.localeCompare(b.name_sk, "sk"));
+    setAllServices(loadedServices);
 
     setLoading(false);
   };
@@ -71,105 +160,150 @@ export default function EmployeesPage() {
     setEditing(null);
     setForm({ display_name: "", email: "", phone: "", color: "#3B82F6" });
     setSchedule(DEFAULT_SCHEDULE);
-    setSelectedServiceIds(allServices.map(s => s.id));
+    setSelectedServiceIds(allServices.map((service) => service.id));
     setOpen(true);
   };
 
-  const openEdit = (emp: any) => {
-    setEditing(emp);
+  const openEdit = (employee: EmployeeRow) => {
+    setEditing(employee);
     setForm({
-      display_name: emp.display_name,
-      email: emp.email ?? "",
-      phone: emp.phone ?? "",
-      color: emp.color ?? "#3B82F6"
+      display_name: employee.display_name,
+      email: employee.email ?? "",
+      phone: employee.phone ?? "",
+      color: employee.color ?? "#3B82F6",
     });
 
-    const sched: ScheduleMap = { ...DEFAULT_SCHEDULE };
-    (schedules[emp.id] ?? []).forEach((s) => {
-      sched[s.day_of_week as DayKey] = { start: s.start_time, end: s.end_time, active: true };
+    const nextSchedule: ScheduleMap = { ...DEFAULT_SCHEDULE };
+    (schedules[employee.id] ?? []).forEach((scheduleRow) => {
+      nextSchedule[scheduleRow.day_of_week] = {
+        start: scheduleRow.start_time,
+        end: scheduleRow.end_time,
+        active: true,
+      };
     });
     DAYS.forEach(({ key }) => {
-      if (!schedules[emp.id]?.find((s) => s.day_of_week === key)) {
-        (sched[key as DayKey] as any).active = false;
+      if (!schedules[employee.id]?.find((scheduleRow) => scheduleRow.day_of_week === key)) {
+        (nextSchedule[key as DayKey] as { active: boolean }).active = false;
       }
     });
-    setSchedule(sched);
+    setSchedule(nextSchedule);
 
-    // Load employee services
-    const loadEmpServices = async () => {
-      const { data } = await supabase.from("employee_services").select("service_id").eq("employee_id", emp.id);
-      setSelectedServiceIds((data ?? []).map(d => d.service_id));
+    const loadEmployeeServices = async () => {
+      const employeeServiceSnap = await getDocs(query(
+        collection(db, "employee_services"),
+        where("employee_id", "==", employee.id),
+      ));
+      setSelectedServiceIds(employeeServiceSnap.docs.map((docSnap) => {
+        const row = docSnap.data() as { service_id?: string };
+        return row.service_id ?? "";
+      }).filter(Boolean));
     };
-    loadEmpServices();
-
+    loadEmployeeServices();
 
     setOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.display_name.trim()) { toast.error("Zadajte meno"); return; }
+    if (!form.display_name.trim()) {
+      toast.error("Zadajte meno");
+      return;
+    }
+
     setSaving(true);
 
-    let empId = editing?.id;
-    if (editing) {
-      await supabase.from("employees").update({
-        display_name: form.display_name,
-        email: form.email || null,
-        phone: form.phone || null,
-        color: form.color
-      }).eq("id", editing.id);
-    } else {
-      const { data } = await supabase.from("employees").insert({
-        business_id: businessId,
-        display_name: form.display_name,
-        email: form.email || null,
-        phone: form.phone || null,
-        color: form.color
-      }).select().single();
-      empId = data?.id;
-    }
-
-
-    if (empId) {
-      // 1. Save schedules
-      await supabase.from("schedules").delete().eq("employee_id", empId);
-      type DayOfWeek = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
-      const rows = DAYS.filter(({ key }) => schedule[key as DayKey]?.active).map(({ key }) => ({
-        employee_id: empId as string,
-        day_of_week: key as DayOfWeek,
-        start_time: schedule[key as DayKey]!.start,
-        end_time: schedule[key as DayKey]!.end,
-      }));
-      if (rows.length) await supabase.from("schedules").insert(rows);
-
-      // 2. Save service assignments
-      await supabase.from("employee_services").delete().eq("employee_id", empId);
-      if (selectedServiceIds.length) {
-        const serviceRows = selectedServiceIds.map(sid => ({
-          employee_id: empId as string,
-          service_id: sid
-        }));
-        await supabase.from("employee_services").insert(serviceRows);
+    try {
+      let employeeId = editing?.id;
+      if (editing) {
+        await updateDoc(doc(db, "employees", editing.id), {
+          display_name: form.display_name,
+          email: form.email || null,
+          phone: form.phone || null,
+          color: form.color,
+          updated_at: new Date().toISOString(),
+        });
+      } else {
+        const createdEmployee = await addDoc(collection(db, "employees"), {
+          business_id: businessId,
+          display_name: form.display_name,
+          email: form.email || null,
+          phone: form.phone || null,
+          color: form.color,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        employeeId = createdEmployee.id;
       }
 
-    }
+      if (employeeId) {
+        const scheduleSnap = await getDocs(query(
+          collection(db, "schedules"),
+          where("employee_id", "==", employeeId),
+        ));
+        await Promise.all(scheduleSnap.docs.map((docSnap) => deleteDoc(doc(db, "schedules", docSnap.id))));
 
-    setSaving(false);
-    toast.success(editing ? "Zamestnanec aktualizovaný" : "Zamestnanec pridaný");
-    setOpen(false);
-    load();
+        const scheduleRows = DAYS
+          .filter(({ key }) => schedule[key as DayKey]?.active)
+          .map(({ key }) => ({
+            employee_id: employeeId as string,
+            day_of_week: key as DayKey,
+            start_time: schedule[key as DayKey]!.start,
+            end_time: schedule[key as DayKey]!.end,
+          }));
+        await Promise.all(scheduleRows.map((row) => addDoc(collection(db, "schedules"), row)));
+
+        const employeeServicesSnap = await getDocs(query(
+          collection(db, "employee_services"),
+          where("employee_id", "==", employeeId),
+        ));
+        await Promise.all(employeeServicesSnap.docs.map((docSnap) => deleteDoc(doc(db, "employee_services", docSnap.id))));
+        await Promise.all(selectedServiceIds.map((serviceId) => addDoc(collection(db, "employee_services"), {
+          employee_id: employeeId as string,
+          service_id: serviceId,
+        })));
+      }
+
+      toast.success(editing ? "Zamestnanec aktualizovaný" : "Zamestnanec pridaný");
+      setOpen(false);
+      load();
+    } catch (error) {
+      console.error("EmployeesPage: failed to save employee", error);
+      toast.error("Chyba pri ukladaní zamestnanca");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Skutočne odstrániť zamestnanca?")) return;
-    const { error } = await supabase.from("employees").delete().eq("id", id);
-    if (error) { toast.error("Nemožno odstrániť — existujú rezervácie"); return; }
+
+    const appointmentSnap = await getDocs(query(
+      collection(db, "appointments"),
+      where("employee_id", "==", id),
+      where("status", "!=", "cancelled"),
+      limit(1),
+    ));
+    if (!appointmentSnap.empty) {
+      toast.error("Nemožno odstrániť — existujú rezervácie");
+      return;
+    }
+
+    const [scheduleSnap, employeeServicesSnap] = await Promise.all([
+      getDocs(query(collection(db, "schedules"), where("employee_id", "==", id))),
+      getDocs(query(collection(db, "employee_services"), where("employee_id", "==", id))),
+    ]);
+    await Promise.all([
+      ...scheduleSnap.docs.map((docSnap) => deleteDoc(doc(db, "schedules", docSnap.id))),
+      ...employeeServicesSnap.docs.map((docSnap) => deleteDoc(doc(db, "employee_services", docSnap.id))),
+    ]);
+    await deleteDoc(doc(db, "employees", id));
+
     toast.success("Zamestnanec odstránený");
     load();
   };
 
   const setScheduleDay = (day: DayKey, field: "start" | "end" | "active", value: string | boolean) => {
-    setSchedule((s) => ({ ...s, [day]: { ...s[day], [field]: value } }));
+    setSchedule((current) => ({ ...current, [day]: { ...current[day], [field]: value } }));
   };
 
   return (
@@ -189,30 +323,30 @@ export default function EmployeesPage() {
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {employees.map((emp) => {
-            const empSchedules = schedules[emp.id] ?? [];
+          {employees.map((employee) => {
+            const employeeSchedules = schedules[employee.id] ?? [];
             return (
-              <div key={emp.id} className="p-4 rounded-xl border border-border bg-card">
+              <div key={employee.id} className="p-4 rounded-xl border border-border bg-card">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-semibold text-foreground">{emp.display_name}</p>
-                    {emp.email && <p className="text-xs text-muted-foreground mt-0.5">{emp.email}</p>}
+                    <p className="font-semibold text-foreground">{employee.display_name}</p>
+                    {employee.email && <p className="text-xs text-muted-foreground mt-0.5">{employee.email}</p>}
                   </div>
                 </div>
-                {empSchedules.length > 0 && (
+                {employeeSchedules.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
-                    {empSchedules.map((s) => (
-                      <span key={s.id} className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
-                        {DAYS.find((d) => d.key === s.day_of_week)?.label.slice(0, 2)} {s.start_time}–{s.end_time}
+                    {employeeSchedules.map((scheduleRow) => (
+                      <span key={scheduleRow.id} className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
+                        {DAYS.find((day) => day.key === scheduleRow.day_of_week)?.label.slice(0, 2)} {scheduleRow.start_time}–{scheduleRow.end_time}
                       </span>
                     ))}
                   </div>
                 )}
                 <div className="flex gap-2 mt-3 pt-3 border-t border-border">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => openEdit(emp)}>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => openEdit(employee)}>
                     <Pencil className="w-3.5 h-3.5 mr-1" />Upraviť
                   </Button>
-                  <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDelete(emp.id)}>
+                  <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDelete(employee.id)}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
@@ -228,16 +362,16 @@ export default function EmployeesPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Meno a priezvisko *</Label>
-              <Input value={form.display_name} onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))} placeholder="Jana Nováková" />
+              <Input value={form.display_name} onChange={(event) => setForm((current) => ({ ...current, display_name: event.target.value }))} placeholder="Jana Nováková" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Email</Label>
-                <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="jana@salon.sk" />
+                <Input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} placeholder="jana@salon.sk" />
               </div>
               <div className="space-y-1.5">
                 <Label>Telefón</Label>
-                <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+421 900 000 000" />
+                <Input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="+421 900 000 000" />
               </div>
             </div>
 
@@ -247,39 +381,38 @@ export default function EmployeesPage() {
                 <Input
                   type="color"
                   value={form.color}
-                  onChange={(e) => setForm(f => ({ ...f, color: e.target.value }))}
+                  onChange={(event) => setForm((current) => ({ ...current, color: event.target.value }))}
                   className="w-12 h-10 p-1 cursor-pointer"
                 />
                 <span className="text-sm text-muted-foreground">{form.color}</span>
               </div>
             </div>
 
-
             <div className="space-y-2">
               <Label>Pracovné hodiny</Label>
               {DAYS.map(({ key, label }) => {
-                const day = schedule[key as DayKey];
+                const daySchedule = schedule[key as DayKey];
                 return (
                   <div key={key} className="flex items-center gap-3">
                     <Checkbox
                       id={`day-${key}`}
-                      checked={day?.active ?? false}
-                      onCheckedChange={(v) => setScheduleDay(key as DayKey, "active", !!v)}
+                      checked={daySchedule?.active ?? false}
+                      onCheckedChange={(value) => setScheduleDay(key as DayKey, "active", !!value)}
                     />
                     <label htmlFor={`day-${key}`} className="text-sm w-20 text-foreground">{label}</label>
-                    {day?.active && (
+                    {daySchedule?.active && (
                       <div className="flex items-center gap-1.5 flex-1">
                         <Input
                           type="time"
-                          value={day.start}
-                          onChange={(e) => setScheduleDay(key as DayKey, "start", e.target.value)}
+                          value={daySchedule.start}
+                          onChange={(event) => setScheduleDay(key as DayKey, "start", event.target.value)}
                           className="h-8 text-xs"
                         />
                         <span className="text-muted-foreground text-xs">–</span>
                         <Input
                           type="time"
-                          value={day.end}
-                          onChange={(e) => setScheduleDay(key as DayKey, "end", e.target.value)}
+                          value={daySchedule.end}
+                          onChange={(event) => setScheduleDay(key as DayKey, "end", event.target.value)}
                           className="h-8 text-xs"
                         />
                       </div>
@@ -292,17 +425,20 @@ export default function EmployeesPage() {
             <div className="space-y-2 border-t border-border pt-4">
               <Label>Priradené služby</Label>
               <div className="grid grid-cols-2 gap-2">
-                {allServices.map((srv) => (
-                  <div key={srv.id} className="flex items-center gap-2">
+                {allServices.map((service) => (
+                  <div key={service.id} className="flex items-center gap-2">
                     <Checkbox
-                      id={`srv-${srv.id}`}
-                      checked={selectedServiceIds.includes(srv.id)}
-                      onCheckedChange={(v) => {
-                        if (v) setSelectedServiceIds(prev => [...prev, srv.id]);
-                        else setSelectedServiceIds(prev => prev.filter(id => id !== srv.id));
+                      id={`srv-${service.id}`}
+                      checked={selectedServiceIds.includes(service.id)}
+                      onCheckedChange={(value) => {
+                        if (value) {
+                          setSelectedServiceIds((current) => [...current, service.id]);
+                          return;
+                        }
+                        setSelectedServiceIds((current) => current.filter((id) => id !== service.id));
                       }}
                     />
-                    <label htmlFor={`srv-${srv.id}`} className="text-sm text-foreground truncate">{srv.name_sk}</label>
+                    <label htmlFor={`srv-${service.id}`} className="text-sm text-foreground truncate">{service.name_sk}</label>
                   </div>
                 ))}
               </div>

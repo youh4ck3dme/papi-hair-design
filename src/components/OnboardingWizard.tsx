@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { useBusiness } from "@/hooks/useBusiness";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,13 +103,10 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
       setLoadingExisting(true);
 
       // Load existing business data
-      const { data: biz } = await supabase
-        .from("businesses")
-        .select("*")
-        .eq("id", businessId)
-        .maybeSingle();
+      const bizSnap = await getDoc(doc(db, "businesses", businessId));
 
-      if (biz) {
+      if (bizSnap.exists()) {
+        const biz = bizSnap.data();
         setBizForm({
           name: biz.name || "",
           address: biz.address || "",
@@ -127,42 +125,48 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
       }
 
       // Load existing services
-      const { data: svcs } = await supabase
-        .from("services")
-        .select("*")
-        .eq("business_id", businessId)
-        .eq("is_active", true);
-      if (svcs && svcs.length > 0) {
-        setServicesList(svcs.map((s) => ({
-          id: s.id,
-          name_sk: s.name_sk,
-          duration_minutes: s.duration_minutes,
-          buffer_minutes: s.buffer_minutes,
-          price: s.price?.toString() ?? "",
-        })));
+      const svcsSnap = await getDocs(query(
+        collection(db, "services"),
+        where("business_id", "==", businessId),
+        where("is_active", "==", true)
+      ));
+      if (!svcsSnap.empty) {
+        setServicesList(svcsSnap.docs.map((d) => {
+          const s = d.data();
+          return {
+            id: d.id,
+            name_sk: s.name_sk,
+            duration_minutes: s.duration_minutes,
+            buffer_minutes: s.buffer_minutes,
+            price: s.price?.toString() ?? "",
+          };
+        }));
       }
 
       // Load existing employees
-      const { data: emps } = await supabase
-        .from("employees")
-        .select("*")
-        .eq("business_id", businessId)
-        .eq("is_active", true);
-      if (emps && emps.length > 0) {
-        setEmployeesList(emps.map((e) => ({
-          id: e.id,
-          display_name: e.display_name,
-          email: e.email ?? "",
-        })));
+      const empsSnap = await getDocs(query(
+        collection(db, "employees"),
+        where("business_id", "==", businessId),
+        where("is_active", "==", true)
+      ));
+      if (!empsSnap.empty) {
+        setEmployeesList(empsSnap.docs.map((d) => {
+          const e = d.data();
+          return {
+            id: d.id,
+            display_name: e.display_name,
+            email: e.email ?? "",
+          };
+        }));
       }
 
       // Check which steps are already completed
-      const { data: answers } = await supabase
-        .from("onboarding_answers")
-        .select("step")
-        .eq("business_id", businessId);
+      const answersSnap = await getDocs(query(
+        collection(db, "onboarding_answers"),
+        where("business_id", "==", businessId)
+      ));
 
-      const completed = (answers ?? []).map((a) => a.step);
+      const completed = answersSnap.docs.map((d) => d.data().step as number);
       // Start at first incomplete step
       const firstIncomplete = [1, 2, 3, 4, 5].find((s) => !completed.includes(s)) ?? 1;
       setStep(firstIncomplete);
@@ -174,10 +178,13 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
   }, [businessId]);
 
   const saveStep = async (stepNum: number, data: any) => {
-    await supabase.from("onboarding_answers").upsert(
-      { business_id: businessId, step: stepNum, data },
-      { onConflict: "business_id,step" }
-    );
+    // Use setDoc with merge to upsert (Firestore doesn't have built-in upsert on compound keys)
+    const stepDocId = `${businessId}_step${stepNum}`;
+    await setDoc(doc(db, "onboarding_answers", stepDocId), {
+      business_id: businessId,
+      step: stepNum,
+      data,
+    }, { merge: true });
   };
 
   const handleNext = async () => {
@@ -185,35 +192,36 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
     try {
       if (step === 1) {
         if (!bizForm.name.trim()) { toast.error("Zadajte názov firmy"); setSaving(false); return; }
-        await supabase.from("businesses").update({
+        await updateDoc(doc(db, "businesses", businessId), {
           name: bizForm.name.trim(),
           address: bizForm.address.trim() || null,
           phone: bizForm.phone.trim() || null,
           email: bizForm.email.trim() || null,
           timezone: bizForm.timezone,
-        }).eq("id", businessId);
+        });
         await saveStep(1, bizForm);
       } else if (step === 2) {
-        await supabase.from("businesses").update({
+        await updateDoc(doc(db, "businesses", businessId), {
           opening_hours: JSON.parse(JSON.stringify(hours)),
-        }).eq("id", businessId);
+        });
         await saveStep(2, JSON.parse(JSON.stringify(hours)));
       } else if (step === 3) {
         const validServices = servicesList.filter((s) => s.name_sk.trim());
         if (validServices.length === 0) { toast.error("Pridajte aspoň jednu službu"); setSaving(false); return; }
 
         // Get existing services for this business
-        const { data: existingServices } = await supabase
-          .from("services").select("id, name_sk").eq("business_id", businessId);
-        const existingMap = new Map((existingServices ?? []).map((s) => [s.id, s]));
+        const existingSnap = await getDocs(query(
+          collection(db, "services"), where("business_id", "==", businessId)
+        ));
+        const existingIds = existingSnap.docs.map((d) => d.id);
 
         // IDs that remain in the wizard form
         const keepIds = new Set(validServices.filter((s) => s.id).map((s) => s.id!));
 
         // Deactivate removed services (don't delete — FK safety)
-        const toDeactivate = (existingServices ?? []).filter((s) => !keepIds.has(s.id)).map((s) => s.id);
-        if (toDeactivate.length > 0) {
-          await supabase.from("services").update({ is_active: false }).in("id", toDeactivate);
+        const toDeactivate = existingIds.filter((id) => !keepIds.has(id));
+        for (const id of toDeactivate) {
+          await updateDoc(doc(db, "services", id), { is_active: false });
         }
 
         // Upsert remaining + new services
@@ -227,9 +235,9 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             is_active: true,
           };
           if (svc.id) {
-            await supabase.from("services").update(row).eq("id", svc.id);
+            await updateDoc(doc(db, "services", svc.id), row);
           } else {
-            await supabase.from("services").insert(row);
+            await addDoc(collection(db, "services"), row);
           }
         }
         await saveStep(3, validServices);
@@ -238,16 +246,18 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         if (validEmps.length === 0) { toast.error("Pridajte aspoň jedného zamestnanca"); setSaving(false); return; }
 
         // Get existing employees
-        const { data: existingEmps } = await supabase
-          .from("employees").select("id, display_name").eq("business_id", businessId);
+        const existingSnap = await getDocs(query(
+          collection(db, "employees"), where("business_id", "==", businessId)
+        ));
+        const existingIds = existingSnap.docs.map((d) => d.id);
 
         // IDs that remain in the wizard form
         const keepIds = new Set(validEmps.filter((e) => e.id).map((e) => e.id!));
 
         // Deactivate removed employees (don't delete — FK safety)
-        const toDeactivate = (existingEmps ?? []).filter((e) => !keepIds.has(e.id)).map((e) => e.id);
-        if (toDeactivate.length > 0) {
-          await supabase.from("employees").update({ is_active: false }).in("id", toDeactivate);
+        const toDeactivate = existingIds.filter((id) => !keepIds.has(id));
+        for (const id of toDeactivate) {
+          await updateDoc(doc(db, "employees", id), { is_active: false });
         }
 
         // Upsert remaining + new employees
@@ -259,19 +269,19 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             is_active: true,
           };
           if (emp.id) {
-            await supabase.from("employees").update(row).eq("id", emp.id);
+            await updateDoc(doc(db, "employees", emp.id), row);
           } else {
-            await supabase.from("employees").insert(row);
+            await addDoc(collection(db, "employees"), row);
           }
         }
         await saveStep(4, validEmps);
       } else if (step === 5) {
-        await supabase.from("businesses").update({
+        await updateDoc(doc(db, "businesses", businessId), {
           lead_time_minutes: Math.max(0, rules.lead_time_minutes),
           max_days_ahead: Math.max(1, rules.max_days_ahead),
           cancellation_hours: Math.max(0, rules.cancellation_hours),
           onboarding_completed: true,
-        }).eq("id", businessId);
+        });
         await saveStep(5, rules);
         toast.success("Nastavenie dokončené! 🎉");
         onComplete();
@@ -309,9 +319,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         <div className="flex items-center gap-1 mb-2">
           {STEPS.map((s, i) => (
             <div key={s.num} className="flex-1 flex flex-col items-center gap-1">
-              <div className={`w-full h-1 rounded-full transition-colors ${
-                step >= s.num ? "bg-primary" : "bg-border"
-              }`} />
+              <div className={`w-full h-1 rounded-full transition-colors ${step >= s.num ? "bg-primary" : "bg-border"
+                }`} />
               <div className="flex items-center gap-1">
                 <s.icon className={`w-3 h-3 ${step >= s.num ? "text-primary" : "text-muted-foreground"}`} />
                 <span className={`text-xs hidden sm:inline ${step >= s.num ? "text-foreground font-medium" : "text-muted-foreground"}`}>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc, orderBy } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { useBusiness } from "@/hooks/useBusiness";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,21 +56,24 @@ export function BusinessHoursEditor() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [hRes, oRes, lRes] = await Promise.all([
-        supabase.from("business_hours").select("*").eq("business_id", businessId).order("sort_order"),
-        supabase.from("business_date_overrides").select("*").eq("business_id", businessId).order("override_date"),
-        supabase.from("business_quick_links").select("*").eq("business_id", businessId).order("sort_order"),
+      const [hSnap, oSnap, lSnap] = await Promise.all([
+        getDocs(query(collection(db, "business_hours"), where("business_id", "==", businessId), orderBy("sort_order"))),
+        getDocs(query(collection(db, "business_date_overrides"), where("business_id", "==", businessId), orderBy("override_date"))),
+        getDocs(query(collection(db, "business_quick_links"), where("business_id", "==", businessId), orderBy("sort_order"))),
       ]);
-      
-      if (hRes.data?.length) {
-        setHours(hRes.data.map((h: any) => ({
-          id: h.id,
-          day_of_week: h.day_of_week,
-          mode: h.mode,
-          start_time: h.start_time?.slice(0, 5) ?? "09:00",
-          end_time: h.end_time?.slice(0, 5) ?? "17:00",
-          sort_order: h.sort_order,
-        })));
+
+      if (!hSnap.empty) {
+        setHours(hSnap.docs.map((d) => {
+          const h = d.data();
+          return {
+            id: d.id,
+            day_of_week: h.day_of_week,
+            mode: h.mode,
+            start_time: h.start_time?.slice(0, 5) ?? "09:00",
+            end_time: h.end_time?.slice(0, 5) ?? "17:00",
+            sort_order: h.sort_order,
+          };
+        }));
       } else {
         // Initialize with defaults
         setHours(DAYS.map((d, i) => ({
@@ -81,21 +85,27 @@ export function BusinessHoursEditor() {
         })));
       }
 
-      setOverrides((oRes.data ?? []).map((o: any) => ({
-        id: o.id,
-        override_date: o.override_date,
-        mode: o.mode,
-        start_time: o.start_time?.slice(0, 5) ?? "09:00",
-        end_time: o.end_time?.slice(0, 5) ?? "17:00",
-        label: o.label ?? "",
-      })));
+      setOverrides(oSnap.docs.map((d) => {
+        const o = d.data();
+        return {
+          id: d.id,
+          override_date: o.override_date,
+          mode: o.mode,
+          start_time: o.start_time?.slice(0, 5) ?? "09:00",
+          end_time: o.end_time?.slice(0, 5) ?? "17:00",
+          label: o.label ?? "",
+        };
+      }));
 
-      setLinks((lRes.data ?? []).map((l: any) => ({
-        id: l.id,
-        label: l.label,
-        url: l.url,
-        sort_order: l.sort_order,
-      })));
+      setLinks(lSnap.docs.map((d) => {
+        const l = d.data();
+        return {
+          id: d.id,
+          label: l.label,
+          url: l.url,
+          sort_order: l.sort_order,
+        };
+      }));
 
       setLoading(false);
     };
@@ -109,45 +119,47 @@ export function BusinessHoursEditor() {
   const saveAll = async () => {
     setSaving(true);
     try {
+      // Helper: delete all docs from a collection matching business_id
+      const deleteAll = async (collectionName: string) => {
+        const snap = await getDocs(query(collection(db, collectionName), where("business_id", "==", businessId)));
+        await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, collectionName, d.id))));
+      };
+
       // Save hours: delete all then insert
-      await supabase.from("business_hours").delete().eq("business_id", businessId);
-      const hourInserts = hours.map((h) => ({
-        business_id: businessId,
-        day_of_week: h.day_of_week as any,
-        mode: h.mode as any,
-        start_time: h.start_time,
-        end_time: h.end_time,
-        sort_order: h.sort_order,
-      }));
-      const { error: hErr } = await supabase.from("business_hours").insert(hourInserts);
-      if (hErr) throw hErr;
+      await deleteAll("business_hours");
+      for (const h of hours) {
+        await addDoc(collection(db, "business_hours"), {
+          business_id: businessId,
+          day_of_week: h.day_of_week,
+          mode: h.mode,
+          start_time: h.start_time,
+          end_time: h.end_time,
+          sort_order: h.sort_order,
+        });
+      }
 
       // Save overrides
-      await supabase.from("business_date_overrides").delete().eq("business_id", businessId);
-      if (overrides.length) {
-        const ovrInserts = overrides.map((o) => ({
+      await deleteAll("business_date_overrides");
+      for (const o of overrides) {
+        await addDoc(collection(db, "business_date_overrides"), {
           business_id: businessId,
           override_date: o.override_date,
-          mode: o.mode as any,
+          mode: o.mode,
           start_time: o.mode !== "closed" ? o.start_time : null,
           end_time: o.mode !== "closed" ? o.end_time : null,
           label: o.label || null,
-        }));
-        const { error: oErr } = await supabase.from("business_date_overrides").insert(ovrInserts);
-        if (oErr) throw oErr;
+        });
       }
 
       // Save links
-      await supabase.from("business_quick_links").delete().eq("business_id", businessId);
-      if (links.length) {
-        const linkInserts = links.map((l, i) => ({
+      await deleteAll("business_quick_links");
+      for (const [i, l] of links.entries()) {
+        await addDoc(collection(db, "business_quick_links"), {
           business_id: businessId,
           label: l.label,
           url: l.url,
           sort_order: i,
-        }));
-        const { error: lErr } = await supabase.from("business_quick_links").insert(linkInserts);
-        if (lErr) throw lErr;
+        });
       }
 
       toast.success("Otváracie hodiny uložené");

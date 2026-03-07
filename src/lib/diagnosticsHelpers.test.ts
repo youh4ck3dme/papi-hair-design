@@ -26,20 +26,17 @@ describe("diagnosticsHelpers", () => {
 
     describe("getSummaryCardClassName", () => {
         it("returns green border when overallOk", () => {
-            expect(getSummaryCardClassName(true, false, false)).toBe(
+            expect(getSummaryCardClassName(true, false)).toBe(
                 "border-green-500/50 bg-green-500/5",
             );
         });
-        it("returns amber border when any Firebase or Supabase error", () => {
-            expect(getSummaryCardClassName(false, true, false)).toBe(
-                "border-amber-500/50 bg-amber-500/5",
-            );
-            expect(getSummaryCardClassName(false, false, true)).toBe(
+        it("returns amber border when Supabase error", () => {
+            expect(getSummaryCardClassName(false, true)).toBe(
                 "border-amber-500/50 bg-amber-500/5",
             );
         });
         it("returns empty string when no ok and no errors", () => {
-            expect(getSummaryCardClassName(false, false, false)).toBe("");
+            expect(getSummaryCardClassName(false, false)).toBe("");
         });
     });
 });

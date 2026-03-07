@@ -242,7 +242,7 @@
     "s4Title": "4. Súbory cookie a audit súhlasu",
     "s4Body": "Používame funkčné cookies (prihlásenie, jazykové nastavenie) a auditovú tabuľku súhlasov s marketingom. Žiadne analytické ani reklamné cookies bez vášho súhlasu.",
     "s5Title": "5. Zdieľanie a spracovatelia",
-    "s5Body": "Supabase Inc. (cloud databáza, USA – štandardné zmluvné doložky). Vercel Inc. (hosting). Žiadne ďalšie tretie strany bez vášho súhlasu.",
+    "s5Body": "Google Firebase (cloud databáza a autentifikácia). Vercel Inc. (hosting). Žiadne ďalšie tretie strany bez vášho súhlasu.",
     "s6Title": "6. Doba uchovávania",
     "s6Body": "Rezervácie: 3 roky od poslednej aktivity. Marketingový súhlas: do odvolania. Logy: 90 dní.",
     "s7Title": "7. Vaše práva (GDPR minimum runtime)",

@@ -1,13 +1,25 @@
-import type { Tables } from "@/integrations/supabase/types";
 import type { CalendarAppointment } from "../AppointmentBlock";
 import type { DayException } from "./types";
 import { getBlockedReason, isBlockedAppointmentNote } from "./blocking";
 
-type AppointmentJoinRow = Tables<"appointments"> & {
+interface AppointmentJoinRow {
+  id: string;
+  start_at: string;
+  end_at: string;
+  status: string;
+  employee_id: string | null;
+  notes: string | null;
   services: { name_sk: string | null } | null;
   employees: { display_name: string | null } | null;
   customers: { full_name: string | null } | null;
-};
+}
+
+interface BusinessDateOverrideRow {
+  override_date: string;
+  mode: "open" | "closed" | "on_request";
+  start_time: string | null;
+  end_time: string | null;
+}
 
 export function mapAppointmentRowToCalendarAppointment(row: AppointmentJoinRow): CalendarAppointment {
   const blocked = isBlockedAppointmentNote(row.notes);
@@ -28,7 +40,7 @@ export function mapAppointmentRowToCalendarAppointment(row: AppointmentJoinRow):
 }
 
 export function buildDayExceptionsFromBusinessOverrides(
-  overrides: Tables<"business_date_overrides">[],
+  overrides: BusinessDateOverrideRow[],
   employeeIds: string[],
 ): DayException[] {
   const exceptions: DayException[] = [];

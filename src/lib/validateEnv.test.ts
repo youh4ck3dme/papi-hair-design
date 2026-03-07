@@ -3,17 +3,17 @@
  * Vitest reads .env automatically via Vite's env loader.
  * Run: npm test
  */
-describe('Environment variables – povinné pre Supabase + salon', () => {
-  it('VITE_SUPABASE_URL je platná Supabase URL', () => {
-    const url = import.meta.env.VITE_SUPABASE_URL;
-    expect(url, 'VITE_SUPABASE_URL chýba v .env').toBeTruthy();
-    expect(url, 'Musí byť https://*.supabase.co').toMatch(/^https:\/\/.+\.supabase\.co$/);
+describe('Environment variables – povinné pre Firebase + salon', () => {
+  it('VITE_FIREBASE_PROJECT_ID je nastavený', () => {
+    const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+    expect(projectId, 'VITE_FIREBASE_PROJECT_ID chýba v .env').toBeTruthy();
+    expect(projectId.length, 'Project ID je príliš krátky – pravdepodobne neplatný').toBeGreaterThan(3);
   });
 
-  it('VITE_SUPABASE_PUBLISHABLE_KEY je nastavený a neprázdny', () => {
-    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    expect(key, 'VITE_SUPABASE_PUBLISHABLE_KEY chýba v .env').toBeTruthy();
-    expect(key.length, 'Kľúč je príliš krátky – pravdepodobne neplatný').toBeGreaterThan(20);
+  it('Firebase core env vars sú nastavené', () => {
+    expect(import.meta.env.VITE_FIREBASE_API_KEY, 'VITE_FIREBASE_API_KEY chýba').toBeTruthy();
+    expect(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, 'VITE_FIREBASE_AUTH_DOMAIN chýba').toContain("firebaseapp.com");
+    expect(import.meta.env.VITE_FIREBASE_APP_ID, 'VITE_FIREBASE_APP_ID chýba').toBeTruthy();
   });
 
   it('salon email env vars sú nastavené', () => {

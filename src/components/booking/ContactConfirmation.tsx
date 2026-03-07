@@ -1,4 +1,4 @@
-import { User, Mail, Phone, PenLine, Check, Loader2 } from "lucide-react";
+import { User, Mail, Phone, PenLine, Check, Loader2, CalendarCheck2, Clock4 } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { StepHeader } from "./BookingUI";
@@ -19,6 +19,32 @@ interface ContactConfirmationProps {
     handleSubmit: () => void;
 }
 
+function InputRow({ icon: Icon, children }: { icon: React.ElementType; children: React.ReactNode }) {
+    return (
+        <div className="flex border rounded-xl overflow-hidden transition-all duration-200 border-border/60 focus-within:border-primary focus-within:shadow-sm focus-within:shadow-primary/10 bg-card">
+            <div className="w-11 flex items-center justify-center bg-muted/60 text-muted-foreground flex-shrink-0">
+                <Icon size={16} />
+            </div>
+            {children}
+        </div>
+    );
+}
+
+function ConsentBox({ checked, onChange, children }: { checked: boolean; onChange: () => void; children: React.ReactNode }) {
+    return (
+        <label className="flex items-start gap-3 cursor-pointer group select-none">
+            <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
+            <div className={`w-5 h-5 mt-0.5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${checked
+                ? "border-primary bg-primary scale-105"
+                : "border-muted-foreground/30 bg-transparent group-hover:border-primary/60"
+                }`}>
+                {checked && <Check size={12} className="text-primary-foreground dark:text-background" strokeWidth={3} />}
+            </div>
+            <div className="text-sm leading-snug text-muted-foreground">{children}</div>
+        </label>
+    );
+}
+
 export function ContactConfirmation({
     formData,
     setFormData,
@@ -36,63 +62,85 @@ export function ContactConfirmation({
     const { t } = useTranslation();
 
     return (
-        <div className="animate-fade-in pb-10 px-4" data-testid="booking-step-details">
+        <div className="animate-fade-in pb-12 px-4" data-testid="booking-step-details">
             <StepHeader num="6" title={t("booking.step6")} />
 
-            <div className="flex flex-col gap-4 mb-6">
+            {/* Booking summary card */}
+            {selectedService && selectedFullDate && (
+                <div className="mb-6 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 p-4 space-y-2">
+                    <div className="flex items-center gap-2.5 text-sm">
+                        <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                            <CalendarCheck2 size={13} className="text-primary" />
+                        </div>
+                        <span className="text-muted-foreground">{t("booking.confirmService")}</span>
+                        <span className="font-semibold text-foreground ml-auto">{selectedService.name_sk}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-sm">
+                        <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                            <Clock4 size={13} className="text-primary" />
+                        </div>
+                        <span className="text-muted-foreground">{format(selectedFullDate, "d. MMMM", { locale: dateLocale })}</span>
+                        <span className="font-bold text-primary ml-auto">{selectedTime}</span>
+                    </div>
+                    {selectedEmployee && (
+                        <div className="flex items-center gap-2.5 text-sm pt-0.5 border-t border-primary/10">
+                            <span className="text-muted-foreground">{t("booking.confirmEmployee")}</span>
+                            <span className="font-semibold text-foreground ml-auto">{selectedEmployee.display_name}</span>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Contact form */}
+            <div className="flex flex-col gap-3 mb-6">
                 {[
                     { icon: User, placeholder: t("booking.firstName"), field: "meno" as const, type: "text" },
                     { icon: User, placeholder: t("booking.lastName"), field: "priezvisko" as const, type: "text" },
                     { icon: Mail, placeholder: t("booking.emailLabel"), field: "email" as const, type: "email" },
                 ].map((input) => (
                     <div key={input.field}>
-                        <div className={`flex border rounded-full overflow-hidden transition-colors border-border focus-within:border-primary`}>
-                            <div className="w-12 flex items-center justify-center bg-muted text-primary">
-                                <input.icon size={18} />
-                            </div>
+                        <InputRow icon={input.icon}>
                             <input
                                 type={input.type}
                                 placeholder={input.placeholder}
-                                className="flex-1 py-3 px-4 outline-none bg-card text-foreground placeholder:text-muted-foreground"
+                                className="flex-1 py-3 px-4 outline-none bg-card text-foreground placeholder:text-muted-foreground/60 text-sm"
                                 value={formData[input.field]}
                                 onChange={(e) => setFormData({ ...formData, [input.field]: e.target.value })}
                             />
-                        </div>
+                        </InputRow>
                         {contactErrors[input.field] && (
-                            <p className="text-destructive text-xs mt-1 ml-4">{contactErrors[input.field]}</p>
+                            <p className="text-destructive text-xs mt-1 ml-3">{contactErrors[input.field]}</p>
                         )}
                     </div>
                 ))}
 
-                {/* Telefón */}
-                <div className="flex border rounded-full overflow-hidden transition-colors border-border focus-within:border-primary">
-                    <div className="w-12 flex items-center justify-center bg-muted text-primary">
-                        <Phone size={18} />
-                    </div>
-                    <div className="flex items-center px-3 border-r border-border bg-card">
-                        <div className="w-4 h-3 rounded-sm overflow-hidden flex flex-col border border-muted-foreground/30">
-                            <div className="h-1/3 bg-white w-full" />
-                            <div className="h-1/3 bg-blue-600 w-full" />
-                            <div className="h-1/3 bg-red-600 w-full" />
+                {/* Phone */}
+                <InputRow icon={Phone}>
+                    <div className="flex items-center px-3 border-r border-border/60 bg-muted/40">
+                        <div className="w-5 h-3.5 rounded-[2px] overflow-hidden flex flex-col border border-muted-foreground/20 flex-shrink-0">
+                            <div className="h-1/3 bg-white" />
+                            <div className="h-1/3 bg-blue-600" />
+                            <div className="h-1/3 bg-red-600" />
                         </div>
-                        <span className="ml-2 text-sm text-muted-foreground">+421</span>
+                        <span className="ml-1.5 text-xs text-muted-foreground font-semibold">+421</span>
                     </div>
                     <input
                         type="tel"
-                        className="flex-1 py-3 px-4 outline-none bg-card text-foreground"
+                        placeholder="9XX XXX XXX"
+                        className="flex-1 py-3 px-4 outline-none bg-card text-foreground text-sm placeholder:text-muted-foreground/60"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     />
-                </div>
+                </InputRow>
 
-                {/* Poznámka */}
-                <div className="flex border rounded-3xl overflow-hidden transition-colors min-h-[100px] border-border focus-within:border-primary">
-                    <div className="w-12 flex items-start justify-center pt-4 bg-muted text-primary">
-                        <PenLine size={18} />
+                {/* Note */}
+                <div className="flex border rounded-xl overflow-hidden transition-all duration-200 border-border/60 focus-within:border-primary focus-within:shadow-sm focus-within:shadow-primary/10 bg-card min-h-[96px]">
+                    <div className="w-11 flex items-start justify-center pt-3.5 bg-muted/60 text-muted-foreground flex-shrink-0">
+                        <PenLine size={16} />
                     </div>
                     <textarea
                         placeholder={t("booking.note")}
-                        className="flex-1 py-3 px-4 outline-none resize-none bg-card text-foreground placeholder:text-muted-foreground"
+                        className="flex-1 py-3 px-4 outline-none resize-none bg-card text-foreground placeholder:text-muted-foreground/60 text-sm"
                         value={formData.note}
                         onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                     />
@@ -100,85 +148,32 @@ export function ContactConfirmation({
             </div>
 
             {/* Consents */}
-            <div className="flex flex-col gap-4 text-sm mb-8 text-muted-foreground">
-                <label className="flex items-start gap-3 cursor-pointer group">
-                    <input
-                        type="checkbox"
-                        checked={formData.all}
-                        onChange={() => handleCheckAll()}
-                        className="sr-only"
-                        aria-label="Označiť všetky možnosti"
-                    />
-                    <div className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${formData.all
-                        ? "border-primary bg-primary"
-                        : "border-muted-foreground/40 bg-transparent group-hover:border-primary"
-                        }`}>
-                        {formData.all && <Check size={14} className="text-primary-foreground dark:text-background" />}
-                    </div>
-                    <span className="font-medium text-foreground">{t("booking.checkAll")}</span>
-                </label>
-
-                <label className="flex items-start gap-3 cursor-pointer group">
-                    <input
-                        type="checkbox"
-                        checked={formData.marketing}
-                        onChange={() => handleConsentChange("marketing")}
-                        className="sr-only"
-                        aria-label="Súhlas s marketingom"
-                    />
-                    <div className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${formData.marketing
-                        ? "border-primary bg-primary"
-                        : "border-muted-foreground/40 bg-transparent group-hover:border-primary"
-                        }`}>
-                        {formData.marketing && <Check size={14} className="text-primary-foreground dark:text-background" />}
-                    </div>
-                    <div className="leading-snug">
-                        {t("booking.consentMarketing")}{" "}
-                        <span className="text-primary cursor-pointer hover:underline">{t("booking.consentMarketingLink")}</span>
-                    </div>
-                </label>
-
-                <label className="flex items-start gap-3 cursor-pointer group">
-                    <input
-                        type="checkbox"
-                        checked={formData.terms}
-                        onChange={() => handleConsentChange("terms")}
-                        className="sr-only"
-                        aria-label="Súhlas s obchodnými podmienkami"
-                    />
-                    <div className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${formData.terms
-                        ? "border-primary bg-primary"
-                        : "border-muted-foreground/40 bg-transparent group-hover:border-primary"
-                        }`}>
-                        {formData.terms && <Check size={14} className="text-primary-foreground dark:text-background" />}
-                    </div>
-                    <div>
-                        {t("booking.consentTerms")}
-                    </div>
-                </label>
-
+            <div className="flex flex-col gap-4 mb-8 border-t border-border/40 pt-5">
+                <ConsentBox checked={formData.all} onChange={handleCheckAll}>
+                    <span className="font-semibold text-foreground">{t("booking.checkAll")}</span>
+                </ConsentBox>
+                <ConsentBox checked={formData.marketing} onChange={() => handleConsentChange("marketing")}>
+                    {t("booking.consentMarketing")}{" "}
+                    <span className="text-primary hover:underline cursor-pointer">{t("booking.consentMarketingLink")}</span>
+                </ConsentBox>
+                <ConsentBox checked={formData.terms} onChange={() => handleConsentChange("terms")}>
+                    {t("booking.consentTerms")}
+                </ConsentBox>
                 <div
-                    className="text-right text-primary text-sm mt-2 cursor-pointer hover:underline"
+                    className="text-right text-primary/80 text-xs mt-1 cursor-pointer hover:underline"
                     onClick={() => globalThis.location.href = "/privacy"}
                 >
                     {t("common.privacyPolicy")}
                 </div>
             </div>
 
-            {/* Summary */}
-            {selectedService && selectedFullDate && (
-                <div className="text-center text-sm font-medium mb-6 text-foreground">
-                    {t("booking.yourSlot")} <strong className="text-primary">{selectedService.name_sk}</strong> {t("booking.at")} <strong className="text-primary">{selectedEmployee?.display_name}</strong>
-                    {" "}{t("booking.on")} <strong className="text-primary">{format(selectedFullDate, "d. MMMM", { locale: dateLocale })}</strong> {t("booking.at")} <strong className="text-primary">{selectedTime}</strong>
-                </div>
-            )}
-
+            {/* Submit */}
             <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="w-full font-bold py-4 rounded-full text-lg transition-all transform active:scale-[0.98] bg-primary text-primary-foreground dark:text-background hover:bg-primary/90 shadow-lg shadow-primary/30 disabled:opacity-50"
                 data-testid="booking-submit"
+                className="w-full font-bold py-4 rounded-full text-base tracking-wide transition-all duration-200 transform active:scale-[0.98] bg-primary text-primary-foreground dark:text-background hover:bg-primary/90 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t("booking.submitBtn")}
             </button>

@@ -1,5 +1,6 @@
 import { getDB, type OfflineAction } from "./db";
-import { supabase } from "@/integrations/supabase/client";
+import { functions } from "@/integrations/firebase/config";
+import { httpsCallable } from "firebase/functions";
 
 function getAppointmentId(action: OfflineAction): string | undefined {
   if ("payload" in action && action.payload && "id" in action.payload) {
@@ -9,13 +10,14 @@ function getAppointmentId(action: OfflineAction): string | undefined {
 }
 
 interface SyncResponse {
-  ok: boolean;
+  success: boolean;
   applied?: number;
   conflicts?: Array<{
     idempotency_key: string;
     reason: string;
     server_suggestion?: { start_at: string; end_at: string };
   }>;
+  appointments?: any[];
   error?: string;
 }
 
@@ -30,18 +32,18 @@ export async function runSync() {
   const allQueue = await db.getAllFromIndex("queue", "status");
   const pending = allQueue.filter((i: { status: string }) => i.status === "pending" || i.status === "failed");
 
+  const syncOfflineDataFn = httpsCallable<any, SyncResponse>(functions, "syncOfflineData");
+
   if (pending.length) {
     for (const item of pending) {
       if (!item.id) continue;
       await db.put("queue", { ...item, status: "processing", last_error: undefined });
       try {
-        const { data: resp, error } = await supabase.functions.invoke<SyncResponse>("sync-push", {
-          body: { actions: [item.action] }
+        const { data: resp } = await syncOfflineDataFn({
+          actions: [item.action]
         });
 
-        if (error) throw error;
-
-        if (resp?.ok) {
+        if (resp?.success) {
           if (resp.conflicts?.length) {
             const conflict = resp.conflicts[0];
             await db.put("queue", {
@@ -64,13 +66,10 @@ export async function runSync() {
   }
 
   try {
-    const { data, error } = await supabase.functions.invoke<{ ok: boolean; appointments?: any[] }>("sync-pull", {
-      body: { days: 2 }
-    });
+    // Also pull latest updates
+    const { data } = await syncOfflineDataFn({ days: 2 });
 
-    if (error) throw error;
-
-    if (data?.ok && data.appointments && Array.isArray(data.appointments)) {
+    if (data?.success && data.appointments && Array.isArray(data.appointments)) {
       const tx = db.transaction("appointments", "readwrite");
       for (const a of data.appointments) {
         await tx.store.put({ ...a, synced: true });

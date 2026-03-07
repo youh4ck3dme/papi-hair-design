@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
+import { functions } from "@/integrations/firebase/config";
+import { httpsCallable } from "firebase/functions";
 import "@/styles/liquid-cookie.css";
 
 interface CookiePrefs {
@@ -47,27 +48,18 @@ async function trackConsentEvent(prefs: Omit<CookiePrefs, "timestamp">, action: 
   ];
 
   try {
-    const { error } = await supabase.functions.invoke("consent-event", {
-      body: {
-        subject_type: "session",
-        subject_id: getConsentSubjectId(),
-        action,
-        categories,
-        source: "web",
-        metadata: {
-          consent_version: 1,
-          origin: window.location.origin,
-        },
+    const consentEventFn = httpsCallable<any, any>(functions, "consentEvent");
+    await consentEventFn({
+      subject_type: "session",
+      subject_id: getConsentSubjectId(),
+      action,
+      categories,
+      source: "web",
+      metadata: {
+        consent_version: 1,
+        origin: window.location.origin,
       },
     });
-    // 404 = not deployed; 401 = anon key not allowed / auth misconfigured – optional, no need to warn
-    const isOptional =
-      (error as { status?: number })?.status === 404 ||
-      (error as { status?: number })?.status === 401 ||
-      String((error as Error)?.message ?? "").includes("404");
-    if (error && !isOptional) {
-      console.warn("Consent event tracking failed", error);
-    }
   } catch (error) {
     console.warn("Consent event tracking failed", error);
   }

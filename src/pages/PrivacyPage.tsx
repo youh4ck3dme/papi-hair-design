@@ -29,7 +29,7 @@ export default function PrivacyPage() {
             </section>
             <section>
               <h2 className="text-lg font-semibold mt-4">5. Zdieľanie a spracovatelia</h2>
-              <p>Údaje môžu byť spracované technickými spracovateľmi (hosting, autentifikácia). Rezervačný systém a prihlásenie využívajú služby Supabase; prihlásenie cez Google/Apple podlieha ich zásadám. Nepredávame údaje tretím stranám na marketing.</p>
+              <p>Údaje môžu byť spracované technickými spracovateľmi (hosting, autentifikácia). Rezervačný systém a prihlásenie využívajú služby Firebase; prihlásenie cez Google/Apple podlieha ich zásadám. Nepredávame údaje tretím stranám na marketing.</p>
             </section>
             <section>
               <h2 className="text-lg font-semibold mt-4">6. Doba uchovávania</h2>

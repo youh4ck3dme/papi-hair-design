@@ -2,6 +2,15 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Booking Flow", () => {
     test("should complete a full booking successfully", async ({ page }) => {
+        page.on("console", (msg) => {
+            if (msg.type() === "error" || msg.type() === "warning") {
+                console.log(`[browser:${msg.type()}] ${msg.text()}`);
+            }
+        });
+        page.on("requestfailed", (request) => {
+            console.log(`[requestfailed] ${request.method()} ${request.url()} :: ${request.failure()?.errorText}`);
+        });
+
         // 1. Navigate to booking page
         await page.goto("/booking");
         await expect(page.getByTestId("booking-page")).toBeVisible({ timeout: 15000 });
@@ -14,15 +23,30 @@ test.describe("Booking Flow", () => {
             await page.waitForTimeout(500);
         }
 
-        // 2. Select category – use Pánske Služby (Men's) → simpler services, shorter duration
+        // 2. Select category with available subcategories (dataset-safe)
         const categoryStep = page.getByTestId("booking-step-category");
-        await categoryStep.getByText("Pánske Služby").click();
+        let categoryReady = false;
+        for (const categoryLabel of ["Pánske Služby", "Dámske Služby"]) {
+            const categoryButton = categoryStep.getByText(categoryLabel);
+            if (!(await categoryButton.isVisible({ timeout: 1000 }).catch(() => false))) continue;
 
-        // 3. Select first subcategory
-        await page.waitForTimeout(800);
-        const firstSubcategory = page.locator('button[class*="uppercase tracking-wider"]').first();
-        await expect(firstSubcategory).toBeVisible({ timeout: 5000 });
-        await firstSubcategory.click();
+            await categoryButton.click();
+            await page.waitForTimeout(800);
+
+            const firstServiceDirect = page.locator('button:has-text("min")').first();
+            if (await firstServiceDirect.isVisible({ timeout: 1500 }).catch(() => false)) {
+                categoryReady = true;
+                break;
+            }
+
+            const firstSubcategory = page.locator('button[class*="uppercase"][class*="tracking-wider"]').first();
+            if (await firstSubcategory.isVisible({ timeout: 1500 }).catch(() => false)) {
+                await firstSubcategory.click();
+                categoryReady = true;
+                break;
+            }
+        }
+        if (!categoryReady) throw new Error("No category with visible services found");
 
         // 4. Select first service
         const firstService = page.locator('button:has-text("min")').first();

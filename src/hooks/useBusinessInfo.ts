@@ -7,5 +7,5 @@ export type {
   NextOpening,
 } from "./useBusinessInfo.types";
 
-export { useBusinessInfoSupabase as useBusinessInfo } from "@/integrations/supabase/useBusinessInfoSupabase";
+export { useBusinessInfoFirebase as useBusinessInfo } from "@/integrations/firebase/useBusinessInfoFirebase";
 

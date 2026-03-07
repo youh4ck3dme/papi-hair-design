@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/integrations/firebase/config";
 import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -26,18 +27,14 @@ export function useOnboarding() {
       try {
         setLoading(true);
 
-        const { data: biz, error: bizErr } = await supabase
-          .from("businesses")
-          .select("onboarding_completed")
-          .eq("id", businessId)
-          .maybeSingle();
+        const bizSnap = await getDoc(doc(db, "businesses", businessId));
 
-        if (bizErr || !biz) {
+        if (!bizSnap.exists()) {
           setNeedsOnboarding(false);
           return;
         }
 
-        setNeedsOnboarding(!biz.onboarding_completed);
+        setNeedsOnboarding(!bizSnap.data().onboarding_completed);
       } catch (err) {
         console.error("Onboarding check failed:", err);
       } finally {

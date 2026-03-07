@@ -10,10 +10,17 @@
       "Bash(npx supabase db dump --data-only --linked)",
       "Bash(psql --version)",
       "Read(//c/Users/42195/.cursor/**)",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Read(//c/Users/42195/**)",
+      "Bash(xargs grep -l \"booking\\\\|rezerv\\\\|salon\\\\|papi\")",
+      "Bash(xargs grep -l \"rezerv\\\\|booking\\\\|papi\\\\|salon\")",
+      "Bash(grep -l \"LanguageToggle\" \"c:/Users/42195/Downloads/loveable-PHDbooking-finale-3-3-26/src/pages/\"*.tsx)",
+      "Bash(xargs grep -l \"sk\\\\|en\\\\|lang\\\\|preklad\\\\|translation\")",
+      "Bash(node check-i18n.js)"
     ],
     "additionalDirectories": [
-      "C:\\Users\\42195\\.cursor"
+      "C:\\Users\\42195\\.cursor",
+      "c:\\Users\\42195\\Downloads\\loveable-PHDbooking-finale-3-3-26"
     ]
   }
 }

@@ -4,7 +4,8 @@ import { format, parse, startOfWeek, getDay, parseISO, format as fmtDate } from 
 import { sk } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "@/styles/big-calendar-overrides.css";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/firebase/config";
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, updateDoc, where } from "firebase/firestore";
 import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/contexts/AuthContext";
 import { BUSINESS_TZ } from "@/lib/timezone";
@@ -39,10 +40,20 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function safeString(value: unknown, fallback: string): string {
-  if (typeof value === 'string' && value.trim().length > 0) {
+  if (typeof value === "string" && value.trim().length > 0) {
     return value.trim();
   }
   return fallback;
+}
+
+interface AppointmentResource {
+  id: string;
+  customer_name: string;
+  customer_phone: string | null;
+  service_name: string;
+  start_at: string;
+  end_at: string;
+  status: string;
 }
 
 interface CalEvent {
@@ -51,7 +62,7 @@ interface CalEvent {
   start: Date;
   end: Date;
   status: string;
-  resource: any;
+  resource: AppointmentResource;
 }
 
 export default function MySchedulePage() {
@@ -71,24 +82,24 @@ export default function MySchedulePage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: empData } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('business_id', businessId)
-        .eq('profile_id', user.id)
-        .maybeSingle();
+      const employeeForUserSnap = await getDocs(query(
+        collection(db, "employees"),
+        where("business_id", "==", businessId),
+        where("profile_id", "==", user.id),
+        limit(1),
+      ));
 
-      if (empData) {
-        setEmployeeId(empData.id);
-      } else {
-        const { data: fallbackData } = await supabase
-          .from('employees')
-          .select('id')
-          .eq('business_id', businessId)
-          .limit(1)
-          .maybeSingle();
-        setEmployeeId(fallbackData?.id ?? "demo-employee-001");
+      if (!employeeForUserSnap.empty) {
+        setEmployeeId(employeeForUserSnap.docs[0].id);
+        return;
       }
+
+      const fallbackSnap = await getDocs(query(
+        collection(db, "employees"),
+        where("business_id", "==", businessId),
+        limit(1),
+      ));
+      setEmployeeId(fallbackSnap.empty ? null : fallbackSnap.docs[0].id);
     })();
   }, [user, businessId]);
 
@@ -96,45 +107,76 @@ export default function MySchedulePage() {
     if (!employeeId) return;
     setLoading(true);
 
-    const { data: appts, error } = await supabase
-      .from('appointments')
-      .select('*, customers(full_name, phone), services(name_sk)')
-      .eq('business_id', businessId)
-      .eq('employee_id', employeeId)
-      .order('start_at');
+    const appointmentsSnap = await getDocs(query(
+      collection(db, "appointments"),
+      where("business_id", "==", businessId),
+      where("employee_id", "==", employeeId),
+      orderBy("start_at"),
+    ));
 
-    if (error) {
-      setLoading(false);
-      return;
-    }
+    const eventsList: CalEvent[] = [];
+    for (const appointmentDoc of appointmentsSnap.docs) {
+      const appointment = appointmentDoc.data() as {
+        customer_name?: string | null;
+        customer_phone?: string | null;
+        customer_id?: string;
+        service_name?: string | null;
+        service_id?: string;
+        start_at?: string;
+        end_at?: string;
+        status?: string;
+      };
 
-    const eventsList: CalEvent[] = (appts ?? []).map(a => {
-      const startUtc = parseISO(a.start_at);
-      const endUtc = parseISO(a.end_at);
+      let customerName = safeString(appointment.customer_name, "Neznámy klient");
+      if (!appointment.customer_name && appointment.customer_id) {
+        const customerSnap = await getDoc(doc(db, "customers", appointment.customer_id));
+        if (customerSnap.exists()) {
+          customerName = safeString(customerSnap.data().full_name, "Neznámy klient");
+        }
+      }
+
+      let serviceName = safeString(appointment.service_name, "Bez názvu služby");
+      if (!appointment.service_name && appointment.service_id) {
+        const serviceSnap = await getDoc(doc(db, "services", appointment.service_id));
+        if (serviceSnap.exists()) {
+          serviceName = safeString(serviceSnap.data().name_sk, "Bez názvu služby");
+        }
+      }
+
+      const startAt = appointment.start_at ?? new Date().toISOString();
+      const endAt = appointment.end_at ?? startAt;
+
+      const startUtc = parseISO(startAt);
+      const endUtc = parseISO(endAt);
       const startParts = new Intl.DateTimeFormat("en-US", { timeZone: BUSINESS_TZ, hour: "numeric", minute: "numeric", hour12: false }).formatToParts(startUtc);
       const endParts = new Intl.DateTimeFormat("en-US", { timeZone: BUSINESS_TZ, hour: "numeric", minute: "numeric", hour12: false }).formatToParts(endUtc);
-      const startHour = Number.parseInt(startParts.find((p) => p.type === "hour")?.value ?? "0", 10);
-      const startMin = Number.parseInt(startParts.find((p) => p.type === "minute")?.value ?? "0", 10);
-      const endHour = Number.parseInt(endParts.find((p) => p.type === "hour")?.value ?? "0", 10);
-      const endMin = Number.parseInt(endParts.find((p) => p.type === "minute")?.value ?? "0", 10);
+      const startHour = Number.parseInt(startParts.find((part) => part.type === "hour")?.value ?? "0", 10);
+      const startMinute = Number.parseInt(startParts.find((part) => part.type === "minute")?.value ?? "0", 10);
+      const endHour = Number.parseInt(endParts.find((part) => part.type === "hour")?.value ?? "0", 10);
+      const endMinute = Number.parseInt(endParts.find((part) => part.type === "minute")?.value ?? "0", 10);
 
       const startLocal = new Date(startUtc);
-      startLocal.setHours(startHour, startMin, 0, 0);
+      startLocal.setHours(startHour, startMinute, 0, 0);
       const endLocal = new Date(endUtc);
-      endLocal.setHours(endHour, endMin, 0, 0);
+      endLocal.setHours(endHour, endMinute, 0, 0);
 
-      const customerName = safeString(a.customers?.full_name, "Neznámy klient");
-      const serviceName = safeString(a.services?.name_sk, "Bez názvu služby");
-
-      return {
-        id: a.id,
+      eventsList.push({
+        id: appointmentDoc.id,
         title: `${customerName} – ${serviceName}`,
         start: startLocal,
         end: endLocal,
-        status: a.status,
-        resource: a,
-      };
-    });
+        status: appointment.status ?? "pending",
+        resource: {
+          id: appointmentDoc.id,
+          customer_name: customerName,
+          customer_phone: appointment.customer_phone ?? null,
+          service_name: serviceName,
+          start_at: startAt,
+          end_at: endAt,
+          status: appointment.status ?? "pending",
+        },
+      });
+    }
 
     setEvents(eventsList);
     setLoading(false);
@@ -154,12 +196,10 @@ export default function MySchedulePage() {
     setUpdatingStatus(true);
 
     try {
-      const { error } = await supabase
-        .from('appointments')
-        .update({ status: 'completed', updated_at: new Date().toISOString() })
-        .eq('id', selectedEvent.id);
-
-      if (error) throw error;
+      await updateDoc(doc(db, "appointments", selectedEvent.id), {
+        status: "completed",
+        updated_at: new Date().toISOString(),
+      });
 
       toast.success("Rezervácia dokončená");
       setDetailModal(false);
@@ -187,9 +227,7 @@ export default function MySchedulePage() {
         {loading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
       </div>
 
-      <div
-        className="bg-card rounded-xl border border-border p-4 calendar-container"
-      >
+      <div className="bg-card rounded-xl border border-border p-4 calendar-container">
         <Calendar
           localizer={localizer}
           events={events}
@@ -200,7 +238,7 @@ export default function MySchedulePage() {
           culture="sk"
           messages={SK_MESSAGES}
           onSelectEvent={handleSelectEvent}
-          eventPropGetter={(e: CalEvent) => ({ className: `status-${e.status}` })}
+          eventPropGetter={(event: CalEvent) => ({ className: `status-${event.status}` })}
           step={30}
           timeslots={2}
           popup
@@ -221,17 +259,17 @@ export default function MySchedulePage() {
               <div className="space-y-2.5">
                 <div className="flex items-center gap-2 text-sm">
                   <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span className="font-medium">{selectedEvent.resource?.customers?.full_name || "Neznámy klient"}</span>
+                  <span className="font-medium">{selectedEvent.resource.customer_name}</span>
                 </div>
-                {selectedEvent.resource?.customers?.phone && (
+                {selectedEvent.resource.customer_phone && (
                   <div className="flex items-center gap-2 text-sm">
                     <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <span>{selectedEvent.resource.customers.phone}</span>
+                    <span>{selectedEvent.resource.customer_phone}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-sm">
                   <LogoIcon size="sm" className="w-4 h-4 flex-shrink-0" />
-                  <span>{selectedEvent.resource?.services?.name_sk || "Bez názvu služby"}</span>
+                  <span>{selectedEvent.resource.service_name}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />

@@ -23,7 +23,9 @@ Po synchronizácii pošli v Lovable chate:
 > **Rezervačný systém:** [booking.papihairdesign.sk](https://booking.papihairdesign.sk)
 > **Cenník:** [papihairdesign.sk/cennik](https://papihairdesign.sk/cennik)
 
-Moderný rezervačný systém pre salóny krásy. React 18 PWA + Supabase backend.
+Moderný rezervačný systém pre salóny krásy. React 18 PWA + Firebase backend.
+
+> Poznámka: Časti README so starými Supabase postupmi sú legacy dokumentácia technického dlhu. Aktívny runtime flow aplikácie je Firebase-only (read aj write).
 
 ---
 

@@ -1,30 +1,16 @@
-import { initializeApp } from "firebase-admin/app";
-import { createPublicBooking } from "./createPublicBooking.js";
-import { claimBooking } from "./claimBooking.js";
-import { syncPush } from "./syncPush.js";
-import { syncPull } from "./syncPull.js";
-import { sendBookingEmail } from "./sendBookingEmail.js";
-import { sendAppointmentNotification } from "./sendAppointmentNotification.js";
-import { webauthnRegisterChallenge, webauthnRegister } from "./webauthnRegister.js";
-import { webauthnAuthenticateChallenge, webauthnAuthenticate } from "./webauthnAuthenticate.js";
-import { saveSmtpConfig } from "./saveSmtpConfig.js";
-import { seedDemoAccounts } from "./seedDemoAccounts.js";
-import { ensureSupabaseRole } from "./ensureSupabaseRole.js";
+import * as admin from "firebase-admin";
 
-initializeApp();
+admin.initializeApp();
 
-export {
-  createPublicBooking,
-  claimBooking,
-  syncPush,
-  syncPull,
-  sendBookingEmail,
-  sendAppointmentNotification,
-  webauthnRegisterChallenge,
-  webauthnRegister,
-  webauthnAuthenticateChallenge,
-  webauthnAuthenticate,
-  saveSmtpConfig,
-  seedDemoAccounts,
-  ensureSupabaseRole,
-};
+// @ts-ignore
+export { claimBooking } from "./claimBooking";
+// @ts-ignore
+export { createPublicBooking } from "./createPublicBooking";
+// @ts-ignore
+export { saveSmtpConfig } from "./saveSmtpConfig";
+// @ts-ignore
+export { consentEvent } from "./consentEvent";
+// @ts-ignore
+export { listBookableProviders } from "./listBookableProviders";
+// @ts-ignore
+export { syncOfflineData } from "./syncOfflineData";

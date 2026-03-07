@@ -22,10 +22,9 @@ export function getSupabaseStatusLabel(
  */
 export function getSummaryCardClassName(
     overallOk: boolean,
-    hasFirebaseError: boolean,
     hasSupabaseError: boolean,
 ): string {
     if (overallOk) return "border-green-500/50 bg-green-500/5";
-    if (hasFirebaseError || hasSupabaseError) return "border-amber-500/50 bg-amber-500/5";
+    if (hasSupabaseError) return "border-amber-500/50 bg-amber-500/5";
     return "";
 }
