@@ -1,5 +1,5 @@
 import { defineConfig, loadEnv } from "vite";
-import { sentryVitePlugin } from "@sentry/vite-plugin";
+
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
@@ -54,20 +54,7 @@ export default defineConfig(({ mode }) => {
         },
       },
       react(),
-      process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
-        ? sentryVitePlugin({
-            org: process.env.SENTRY_ORG,
-            project: process.env.SENTRY_PROJECT,
-            authToken: process.env.SENTRY_AUTH_TOKEN,
-            sourcemaps: {
-              assets: ["dist/**/*.js"],
-            },
-            release: {
-              name: `${process.env.npm_package_version}-${process.env.GIT_SHA || 'dev'}`,
-              finalize: true,
-            },
-          })
-        : null,
+
       VitePWA({
         registerType: "autoUpdate",
         includeAssets: ["favicon.ico", "placeholder.svg", "pwa-icon-192.png", "pwa-icon-512.png"],

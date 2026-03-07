@@ -137,9 +137,7 @@ Voliteľné (CI krok preskočí ak chýbajú):
 
 | Secret | Popis |
 |--------|-------|
-| `SENTRY_AUTH_TOKEN` | Sentry → Settings → Auth Tokens |
-| `SENTRY_ORG` | slug Sentry organizácie |
-| `SENTRY_PROJECT` | slug Sentry projektu |
+
 
 ---
 
@@ -287,7 +285,7 @@ papi-hair-design/
 ├── firebase.json                 # Firebase Hosting + Functions config
 ├── firestore.rules               # Firestore bezpečnostné pravidlá
 ├── firestore.indexes.json        # Firestore indexy
-├── vite.config.ts                # Vite + PWA + Sentry
+├── vite.config.ts                # Vite + PWA
 └── .env.example                  # Šablóna env premenných
 ```
 
