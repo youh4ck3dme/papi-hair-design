@@ -11,6 +11,7 @@ import { signInAnonymously } from "firebase/auth";
 import { auth, db } from "./config";
 import { ServiceRow, EmployeeRow, MembershipRow } from "@/components/booking/types";
 import { type BusinessHourEntry, type DateOverrideEntry } from "@/lib/availability";
+import { chunkValues } from "./queryChunks";
 
 const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
 
@@ -128,19 +129,27 @@ export function useBookingDataFirebase() {
                 // 2. Fetch Employee Schedules
                 const empIds = empSnap.docs.map(d => d.id);
                 if (empIds.length) {
-                    // Firestore 'in' query is limited to 10-30 items, for now we take first 10
-                    const schedSnap = await getDocs(query(
-                        collection(db, "schedules"),
-                        where("employee_id", "in", empIds.slice(0, 10))
-                    ));
                     const map: Record<string, any[]> = {};
-                    schedSnap.forEach(s => {
-                        const d = s.data();
-                        const eid = d.employee_id;
-                        if (!map[eid]) map[eid] = [];
-                        map[eid].push({ day_of_week: d.day_of_week, start_time: d.start_time, end_time: d.end_time });
+                    const scheduleSnapshots = await Promise.all(
+                        chunkValues(empIds, 10).map((employeeIdChunk) =>
+                            getDocs(query(
+                                collection(db, "schedules"),
+                                where("employee_id", "in", employeeIdChunk)
+                            ))
+                        )
+                    );
+
+                    scheduleSnapshots.forEach((schedSnap) => {
+                        schedSnap.forEach((scheduleDoc) => {
+                            const d = scheduleDoc.data();
+                            const eid = d.employee_id;
+                            if (!map[eid]) map[eid] = [];
+                            map[eid].push({ day_of_week: d.day_of_week, start_time: d.start_time, end_time: d.end_time });
+                        });
                     });
                     setSchedules(map);
+                } else {
+                    setSchedules({});
                 }
 
                 // 3. Fetch Employee Services Mapping

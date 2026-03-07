@@ -127,8 +127,9 @@ export function useBookingForm(
                 employee_id: selectedWorkerId,
                 start_at: slotDate.toISOString(),
                 customer_name: `${formData.meno} ${formData.priezvisko}`.trim(),
-                customer_email: formData.email,
-                customer_phone: formData.phone || undefined,
+                customer_email: formData.email.trim(),
+                customer_phone: formData.phone.trim() || undefined,
+                notes: formData.note.trim() || undefined,
                 recaptcha_token: recaptchaToken ?? undefined,
             });
 

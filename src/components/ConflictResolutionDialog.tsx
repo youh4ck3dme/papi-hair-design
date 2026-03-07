@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getDBOrNull, type QueueItem, type OfflineAppointment } from "@/lib/offline/db";
-import { updateAppointmentOffline, enqueueAction } from "@/lib/offline/reception";
+import { getDB, getDBOrNull, type QueueItem, type OfflineAppointment } from "@/lib/offline/db";
+import { updateAppointmentOffline } from "@/lib/offline/reception";
 import {
   Dialog,
   DialogContent,
@@ -57,6 +57,15 @@ export function ConflictResolutionDialog({
   useEffect(() => {
     if (open) loadConflicts();
   }, [open]);
+
+  useEffect(() => {
+    if (!open || conflicts.length !== 0) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => onOpenChange(false), 300);
+    return () => window.clearTimeout(timeoutId);
+  }, [conflicts.length, onOpenChange, open]);
 
   const handleAcceptSuggestion = async (conflict: ConflictItem) => {
     setLoading(true);
@@ -120,10 +129,6 @@ export function ConflictResolutionDialog({
   const formatDate = (iso: string) => {
     return new Date(iso).toLocaleDateString("sk", { day: "numeric", month: "short" });
   };
-
-  if (conflicts.length === 0 && open) {
-    setTimeout(() => onOpenChange(false), 300);
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

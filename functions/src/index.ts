@@ -1,16 +1,20 @@
 import * as admin from "firebase-admin";
+import { claimBooking } from "./claimBooking";
+import { consentEvent } from "./consentEvent";
+import { createPublicBooking } from "./createPublicBooking";
+import { listBookableProviders } from "./listBookableProviders";
+import { saveSmtpConfig } from "./saveSmtpConfig";
+import { syncOfflineData } from "./syncOfflineData";
 
-admin.initializeApp();
+if (!admin.apps.length) {
+    admin.initializeApp();
+}
 
-// @ts-ignore
-export { claimBooking } from "./claimBooking";
-// @ts-ignore
-export { createPublicBooking } from "./createPublicBooking";
-// @ts-ignore
-export { saveSmtpConfig } from "./saveSmtpConfig";
-// @ts-ignore
-export { consentEvent } from "./consentEvent";
-// @ts-ignore
-export { listBookableProviders } from "./listBookableProviders";
-// @ts-ignore
-export { syncOfflineData } from "./syncOfflineData";
+export {
+    claimBooking,
+    consentEvent,
+    createPublicBooking,
+    listBookableProviders,
+    saveSmtpConfig,
+    syncOfflineData
+};

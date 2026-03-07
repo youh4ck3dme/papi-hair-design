@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 
+const ownerEmail = process.env.E2E_OWNER_EMAIL;
+const ownerPassword = process.env.E2E_OWNER_PASSWORD;
+
 test.describe("Admin Calendar", () => {
+    test.skip(!ownerEmail || !ownerPassword, "Admin E2E credentials are not configured.");
+
     test.beforeEach(async ({ page }) => {
         // Log in as owner
         await page.goto("/auth");
@@ -14,8 +19,8 @@ test.describe("Admin Calendar", () => {
         }
 
         // Fill credentials
-        await page.getByTestId("auth-email-input").fill("owner@papihairdesign.sk");
-        await page.locator('input[type="password"]').fill("PapiDemo2025!");
+        await page.getByTestId("auth-email-input").fill(ownerEmail!);
+        await page.locator('input[type="password"]').fill(ownerPassword!);
         await page.getByTestId("auth-login-btn").click();
 
         // Should redirect to /admin/calendar or /admin

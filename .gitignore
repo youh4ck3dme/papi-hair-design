@@ -46,9 +46,14 @@ scripts/vercel-deploy-token.txt
 
 # E2E / Playwright
 e2e-results
+test-results
+playwright-report
 
 # Test coverage
 coverage
+
+# Local artifacts
+/*.zip
 
 # Firebase local
 .firebase

@@ -1,15 +1,19 @@
 import { test, expect } from "@playwright/test";
 
+const debugE2E = process.env.DEBUG_E2E === "true";
+
 test.describe("Booking Flow", () => {
     test("should complete a full booking successfully", async ({ page }) => {
-        page.on("console", (msg) => {
-            if (msg.type() === "error" || msg.type() === "warning") {
-                console.log(`[browser:${msg.type()}] ${msg.text()}`);
-            }
-        });
-        page.on("requestfailed", (request) => {
-            console.log(`[requestfailed] ${request.method()} ${request.url()} :: ${request.failure()?.errorText}`);
-        });
+        if (debugE2E) {
+            page.on("console", (msg) => {
+                if (msg.type() === "error" || msg.type() === "warning") {
+                    console.log(`[browser:${msg.type()}] ${msg.text()}`);
+                }
+            });
+            page.on("requestfailed", (request) => {
+                console.log(`[requestfailed] ${request.method()} ${request.url()} :: ${request.failure()?.errorText}`);
+            });
+        }
 
         // 1. Navigate to booking page
         await page.goto("/booking");

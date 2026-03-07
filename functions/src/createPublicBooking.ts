@@ -14,6 +14,7 @@ interface CreatePublicBookingData {
     customer_name: string;
     customer_email: string;
     customer_phone?: string;
+    notes?: string;
 }
 
 /** Normalize email: lowercase, strip + aliases */
@@ -29,8 +30,16 @@ export const createPublicBooking = functions.https.onCall(async (request: Callab
     const db = admin.firestore();
 
     // 0. Validation
-    const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone } = data;
-    if (!business_id || !service_id || !employee_id || !start_at || !customer_name || !customer_email) {
+    if (!data) {
+        throw new HttpsError("invalid-argument", "Chýbajúce dáta rezervácie");
+    }
+
+    const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone, notes } = data;
+    const trimmedCustomerName = customer_name?.trim();
+    const trimmedCustomerPhone = customer_phone?.trim() || null;
+    const trimmedNotes = notes?.trim() || null;
+
+    if (!business_id || !service_id || !employee_id || !start_at || !trimmedCustomerName || !customer_email?.trim()) {
         throw new HttpsError("invalid-argument", "Chýbajúce povinné polia");
     }
 
@@ -54,6 +63,16 @@ export const createPublicBooking = functions.https.onCall(async (request: Callab
     }
     if (!employee || !employee.is_active || employee.business_id !== business_id) {
         throw new HttpsError("not-found", "Zamestnanec nebol nájdený");
+    }
+
+    const employeeServiceSnap = await db.collection("employee_services")
+        .where("employee_id", "==", employee_id)
+        .where("service_id", "==", service_id)
+        .limit(1)
+        .get();
+
+    if (employeeServiceSnap.empty) {
+        throw new HttpsError("failed-precondition", "Zamestnanec neposkytuje vybranú službu");
     }
 
     // 2. Calculate end time & check conflicts
@@ -83,15 +102,15 @@ export const createPublicBooking = functions.https.onCall(async (request: Callab
     if (!customersSnap.empty) {
         customerId = customersSnap.docs[0].id;
         await db.collection("customers").doc(customerId).update({
-            full_name: customer_name.trim(),
-            phone: customer_phone || null
+            full_name: trimmedCustomerName,
+            phone: trimmedCustomerPhone
         });
     } else {
         const newCust = await db.collection("customers").add({
             business_id,
-            full_name: customer_name.trim(),
+            full_name: trimmedCustomerName,
             email: sanitizedEmail,
-            phone: customer_phone || null,
+            phone: trimmedCustomerPhone,
             created_at: new Date().toISOString()
         });
         customerId = newCust.id;
@@ -101,15 +120,16 @@ export const createPublicBooking = functions.https.onCall(async (request: Callab
     const appointment = await db.collection("appointments").add({
         business_id,
         customer_id: customerId,
-        customer_name: customer_name.trim(),
+        customer_name: trimmedCustomerName,
         customer_email: sanitizedEmail,
-        customer_phone: customer_phone || null,
+        customer_phone: trimmedCustomerPhone,
         employee_id,
         employee_name: employee.display_name || "?",
         employee_color: employee.color || null,
         service_id,
         service_name: service.name_sk || "?",
         service_price: service.price || null,
+        notes: trimmedNotes,
         start_at: startDate.toISOString(),
         end_at: endDate.toISOString(),
         status: "confirmed",
@@ -139,6 +159,6 @@ export const createPublicBooking = functions.https.onCall(async (request: Callab
         appointment_id: appointment.id,
         claim_token: token,
         customer_email: sanitizedEmail,
-        customer_name: customer_name.trim()
+        customer_name: trimmedCustomerName
     };
 });
