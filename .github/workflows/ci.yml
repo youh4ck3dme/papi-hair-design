@@ -22,6 +22,7 @@ jobs:
       VITE_PAPI_EMAIL: papi@papihairdesign.sk
       VITE_MISKA_EMAIL: miska@papihairdesign.sk
       VITE_MATO_EMAIL: mato@papihairdesign.sk
+      VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN: ${{ secrets.VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN }}
 
     steps:
       - name: Checkout

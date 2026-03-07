@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,6 +16,24 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Initialize App Check (optional but recommended for security)
+// reCAPTCHA Enterprise is the modern choice.
+// In local dev/CI, use the Debug Token if provided.
+if (typeof window !== "undefined") {
+    // @ts-ignore: Set global debug token if defined to enable App Check Debug Provider
+    if (import.meta.env.VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN) {
+        // @ts-ignore
+        self.FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN;
+    }
+
+    initializeAppCheck(app, {
+        provider: new ReCaptchaEnterpriseProvider(
+            import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lf-v6AqAAAAAOMvX9X2j6Q9X9X9X9X9X9X9'
+        ),
+        isTokenAutoRefreshEnabled: true,
+    });
+}
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
