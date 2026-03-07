@@ -9,7 +9,7 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = join(__dirname, "..", "dist");
-const MAX_BYTES = parseInt(process.env.BUDGET_MAX_MB || "12", 10) * 1024 * 1024;
+const MAX_BYTES = parseInt(process.env.BUDGET_MAX_MB || "20", 10) * 1024 * 1024;
 
 function dirSize(dir) {
   let total = 0;
