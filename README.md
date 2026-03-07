@@ -125,13 +125,13 @@ Bez týchto secrets CI build vždy failuje:
 | Secret | Popis |
 |--------|-------|
 | `VITE_FIREBASE_API_KEY` | Firebase `apiKey` |
-| `VITE_FIREBASE_AUTH_DOMAIN` | napr. `phd-booking.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | napr. `phd-booking` |
-| `VITE_FIREBASE_STORAGE_BUCKET` | napr. `phd-booking.appspot.com` |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase `messagingSenderId` |
-| `VITE_FIREBASE_APP_ID` | Firebase `appId` |
-| `VITE_FIREBASE_MEASUREMENT_ID` | napr. `G-XXXXXXXX` |
-| `VITE_FIREBASE_FUNCTIONS_URL` | napr. `https://europe-west1-phd-booking.cloudfunctions.net` |
+| `VITE_FIREBASE_AUTH_DOMAIN` | napr. `hairchainger-main-876665-176e8.firebaseapp.com` |
+| `VITE_FIREBASE_PROJECT_ID` | napr. `hairchainger-main-876665-176e8` |
+| `VITE_FIREBASE_STORAGE_BUCKET` | napr. `hairchainger-main-876665-176e8.firebasestorage.app` |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | získate z Firebase Console |
+| `VITE_FIREBASE_APP_ID` | získate z Firebase Console |
+| `VITE_FIREBASE_MEASUREMENT_ID` | napr. `G-WKF7CKN6MN` |
+| `VITE_FIREBASE_FUNCTIONS_URL` | napr. `https://europe-west1-hairchainger-main-876665-176e8.cloudfunctions.net` |
 
 Voliteľné (CI krok preskočí ak chýbajú):
 

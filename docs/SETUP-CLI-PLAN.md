@@ -158,7 +158,7 @@ psql "postgresql://postgres@db.<PROJECT_REF>.supabase.co:5432/postgres" -f docs/
 
 ## 3. Firebase (Hosting, Firestore, Functions)
 
-Projekt je v `.firebaserc` nastavený na `phd-booking`. Ak používaš iný projekt, uprav `.firebaserc`.
+Projekt je v `.firebaserc` nastavený na `hairchainger-main-876665-176e8`. Ak používaš iný projekt, uprav `.firebaserc`.
 
 ### 3.1 Prihlásenie a výber projektu
 
@@ -191,7 +191,7 @@ firebase deploy --only functions
 # alebo všetko:  firebase deploy
 ```
 
-Po deployi nastav vo frontende `VITE_FIREBASE_FUNCTIONS_URL` (základná URL Functions, napr. `https://europe-west1-phd-booking.cloudfunctions.net`).
+Po deployi nastav vo frontende `VITE_FIREBASE_FUNCTIONS_URL` (základná URL Functions, napr. `https://europe-west1-hairchainger-main-876665-176e8.cloudfunctions.net`).
 
 ---
 

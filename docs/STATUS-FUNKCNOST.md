@@ -1,4 +1,4 @@
-# Čo funguje a čo nie (pre phd-booking na Spark)
+# Čo funguje a čo nie (pre hairchainger-main-876665-176e8 na Spark)
 
 Krátky prehľad bez ohľadu na drobnosti – len funkčné vs nefunkčné veci.
 

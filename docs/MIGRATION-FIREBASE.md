@@ -47,7 +47,7 @@ Tento dokument popisuje implementovanú migráciu z Supabase (PostgreSQL + Edge 
   `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID`
 - **Pre verejné rezervácie (BookingPage):**  
   **VITE_FIREBASE_FUNCTIONS_URL** – základná URL HTTP Cloud Functions, napr.  
-  `https://europe-west1-phd-booking.cloudfunctions.net`  
+  `https://europe-west1-hairchainger-main-876665-176e8.cloudfunctions.net`  
   (bez koncového lomítka; createPublicBooking sa volá ako POST na `/createPublicBooking`)
 
 ## Firebase plán (Spark vs Blaze) a deploy
@@ -55,7 +55,7 @@ Tento dokument popisuje implementovanú migráciu z Supabase (PostgreSQL + Edge 
 - **Spark (zadarmo):** môžete nasadiť len **Hosting** a **Firestore** (rules + indexy). Cloud Functions sa na tomto pláne nasadiť nedajú.
 - **Blaze (pay-as-you-go):** potrebný pre **Cloud Functions** (Cloud Build, Artifact Registry). Bez Blaze pri `firebase deploy` dostanete chybu, že projekt musí byť na Blaze pláne.
 - **Upgrade na Blaze:**  
-  [Konzola → Usage and billing](https://console.firebase.google.com/project/phd-booking/usage/details) → upgrade. Blaze má stále bezplatný kvóty (napr. Functions invocations), platí sa nad rámec.
+  [Konzola → Usage and billing](https://console.firebase.google.com/project/hairchainger-main-876665-176e8/usage/details) → upgrade. Blaze má stále bezplatný kvóty (napr. Functions invocations), platí sa nad rámec.
 
 **Príkazy deploy podľa plánu:**
 
@@ -69,7 +69,7 @@ Ak chcete používať rezervácie, webauthn, e-maily a ďalšie Cloud Functions,
 
 ## Set up Functions (inštalácia a prvý deploy)
 
-Podľa [Firebase Console → Functions](https://console.firebase.google.com/project/phd-booking/functions) a getting started:
+Podľa [Firebase Console → Functions](https://console.firebase.google.com/project/hairchainger-main-876665-176e8/functions) a getting started:
 
 1. **Inštalácia Firebase CLI (Node.js potrebný)**  
    ```bash

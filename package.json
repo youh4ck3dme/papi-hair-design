@@ -10,7 +10,7 @@
     "setup": "powershell -ExecutionPolicy Bypass -File ./setup.ps1",
     "dev": "vite --port 5678 --strictPort",
     "kill-dev": "npx kill-port 5678 5679 8080 8081 8082",
-    "sync": "npm run lint && npm run build && git add . && (git commit -m 'fix: final Supabase migration and cleanup' || echo 'No changes to commit') && git push origin main",
+    "sync": "npm run lint && npm run build && git add . && (git commit -m 'fix: final Firebase migration and cleanup' || echo 'No changes to commit') && git push origin main",
     "prebuild": "node scripts/check-env.mjs",
     "build": "vite build",
     "build:dev": "vite build --mode development",

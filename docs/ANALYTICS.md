@@ -14,16 +14,16 @@ Máte **jednu** Google Analytics 4 (GA4) vlastnosť. Je rovnaká či ju otvorít
 
 ## Kde overiť / spravovať Analytics
 
-### 1. Firebase (ak ste pridali web app do projektu phd-booking)
+### 1. Firebase (ak ste pridali web app do projektu hairchainger-main-876665-176e8)
 
 - **URL:** https://console.firebase.google.com/
-- **Krok:** Projekt **phd-booking** → ozubené koleso (**Project settings**) → sekcia **Your apps** → vyberte webovú aplikáciu.
+- **Krok:** Projekt **hairchainger-main-876665-176e8** → ozubené koleso (**Project settings**) → sekcia **Your apps** → vyberte webovú aplikáciu.
 - **Nájdete:** `measurementId: G-RQR6XKDKT4` (a možnosť „Open in Google Analytics“).
 
 ### 2. Google Analytics 4 (priamo)
 
 - **URL:** https://analytics.google.com/
-- **Krok:** **Admin** (ľavý dolný roh) → **Data streams** → vyberte web stream (napr. **phd-booking2026**).
+- **Krok:** **Admin** (ľavý dolný roh) → **Data streams** → vyberte web stream (napr. **hairchainger-main-876665-176e82026**).
 - **Nájdete:** **Measurement ID** = `G-RQR6XKDKT4`.
 
 Oba prístupy ukazujú na **tú istú** GA4 vlastnosť; Firebase len odkazuje na ňu.
@@ -43,6 +43,6 @@ Obe metódy používajú **G-RQR6XKDKT4**, takže máte jednu GA4 vlastnosť, ni
 
 | Čo | URL |
 |----|-----|
-| Firebase Console (projekt) | https://console.firebase.google.com/project/phd-booking/settings/general |
+| Firebase Console (projekt) | https://console.firebase.google.com/project/hairchainger-main-876665-176e8/settings/general |
 | Google Analytics – Admin | https://analytics.google.com/ |
 | Pridať vlastnosť (Search Console) | https://search.google.com/search-console/welcome |

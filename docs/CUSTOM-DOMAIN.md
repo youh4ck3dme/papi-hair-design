@@ -11,16 +11,16 @@ V projekte je nastavená produkčná doména **https://booking.papihairdesign.sk
 
 ### Firebase Hosting
 
-1. [Firebase Console](https://console.firebase.google.com/) → projekt **phd-booking** → **Hosting** → **Vlastné domény**.
+1. [Firebase Console](https://console.firebase.google.com/) → projekt **hairchainger-main-876665-176e8** → **Hosting** → **Vlastné domény**.
 2. **Pridať vlastnú doménu** → zadať `booking.papihairdesign.sk` → dokončiť (Support email už nastavený).
 3. **DNS u poskytovateľa** (Websupport, Cloudflare, atď.) – pridať záznam podľa toho, čo Firebase zobrazí. Typický prípad (overenie / nasmerovanie na Firebase):
 
    | Typ záznamu | Názov (host) | Hodnota (cieľ) |
    |-------------|--------------|----------------|
-   | **CNAME**   | `booking` alebo `booking.papihairdesign.sk` | `phd-booking.web.app` |
+   | **CNAME**   | `booking` alebo `booking.papihairdesign.sk` | `hairchainger-main-876665-176e8.web.app` |
 
    - **Názov:** Podľa poskytovateľa buď len `booking` (subdoména), alebo celé `booking.papihairdesign.sk`.
-   - **Hodnota:** `phd-booking.web.app` (bez `https://`).
+   - **Hodnota:** `hairchainger-main-876665-176e8.web.app` (bez `https://`).
 4. Po uložení DNS počkať na propagáciu (minúty až hodiny). V Firebase Console → Hosting → Vlastné domény skontrolovať stav; po overení Firebase doménu aktivuje a vydá SSL.
 
 ### Vercel

@@ -94,7 +94,7 @@ export default function CalendarPage() {
 
       const apptsSnap = await getDocs(apptsQuery);
 
-      // In Firestore, we don't have automatic foreign key joining like Supabase 'select(*, customers(*))'
+      // In Firestore, we don't have automatic foreign key joining (manual client-side denormalization required)
       // For small sets, we can fetch related data manually or denormalize.
       // For the blueprint, we'll assume we either denormalized or we fetch basic info.
       // But to match the UI perfectly, we might need a helper to fetch customers/services/employees.
