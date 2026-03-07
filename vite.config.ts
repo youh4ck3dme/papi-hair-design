@@ -54,18 +54,20 @@ export default defineConfig(({ mode }) => {
         },
       },
       react(),
-      sentryVitePlugin({
-        org: "YOUR_SENTRY_ORG",
-        project: "YOUR_SENTRY_PROJECT",
-        authToken: process.env.SENTRY_AUTH_TOKEN,
-        sourcemaps: {
-          assets: ["dist/**/*.js"],
-        },
-        release: {
-          name: `${process.env.npm_package_version}-${process.env.GIT_SHA || 'dev'}`,
-          finalize: true,
-        },
-      }),
+      process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
+        ? sentryVitePlugin({
+            org: process.env.SENTRY_ORG,
+            project: process.env.SENTRY_PROJECT,
+            authToken: process.env.SENTRY_AUTH_TOKEN,
+            sourcemaps: {
+              assets: ["dist/**/*.js"],
+            },
+            release: {
+              name: `${process.env.npm_package_version}-${process.env.GIT_SHA || 'dev'}`,
+              finalize: true,
+            },
+          })
+        : null,
       VitePWA({
         registerType: "autoUpdate",
         includeAssets: ["favicon.ico", "placeholder.svg", "pwa-icon-192.png", "pwa-icon-512.png"],
