@@ -21,9 +21,9 @@ const app = initializeApp(firebaseConfig);
 // reCAPTCHA Enterprise is the modern choice.
 // In local dev/CI, use the Debug Token if provided.
 if (typeof window !== "undefined") {
-    // @ts-ignore: Set global debug token if defined to enable App Check Debug Provider
+    // @ts-expect-error: Global debug token is required for App Check Debug Provider
     if (import.meta.env.VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN) {
-        // @ts-ignore
+        // @ts-expect-error: FIREBASE_APPCHECK_DEBUG_TOKEN is a special global for the SDK
         self.FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN;
     }
 
