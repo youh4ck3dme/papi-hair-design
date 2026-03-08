@@ -35,11 +35,11 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.listBookableProviders = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
-const admin = __importStar(require("firebase-admin"));
+const firestore_1 = require("firebase-admin/firestore");
 const https_1 = require("firebase-functions/v2/https");
-exports.listBookableProviders = functions.https.onCall(async (request) => {
+exports.listBookableProviders = functions.https.onCall({ region: "europe-west1" }, async (request) => {
     const { data } = request;
-    const db = admin.firestore();
+    const db = (0, firestore_1.getFirestore)();
     const { business_id, service_id } = data;
     if (!business_id) {
         throw new https_1.HttpsError("invalid-argument", "Missing business_id");

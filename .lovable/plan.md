@@ -272,7 +272,8 @@ Faza 4 - Nadstandard (priebezne)
 
 ## Technicke poznamky
 
-- Vsetky zmeny budu v React + TypeScript + Tailwind CSS + Supabase
+- Vsetky zmeny budu v React + TypeScript + Tailwind CSS + Firebase (Firestore & Functions)
+- **DÔLEŽITÉ**: Projekt bol kompletne migrovaný zo Supabase na Firebase. Nepridávať Supabase kód.
 - Databazove zmeny cez migration tool
 - Edge functions pre backend logiku (notifikacie, CRON, atd.)
 - Recharts pre grafy (uz je v dependencies)

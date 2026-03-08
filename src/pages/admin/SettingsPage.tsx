@@ -156,84 +156,94 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold text-foreground">Nastavenia</h1>
+    <div className="space-y-6 max-w-4xl animate-in fade-in duration-500">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+          Nastavenia
+        </h1>
+        <p className="text-muted-foreground">Správa vašej firmy, profilu a systémových nastavení.</p>
+      </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="general">Všeobecné</TabsTrigger>
-          <TabsTrigger value="booking">Booking</TabsTrigger>
-          <TabsTrigger value="hours">Otváracie hodiny</TabsTrigger>
-          <TabsTrigger value="smtp">SMTP Email</TabsTrigger>
-          <TabsTrigger value="profile">Profil</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto p-1 bg-muted/30 backdrop-blur-md border border-primary/10 rounded-xl mb-6">
+          <TabsTrigger value="general" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Všeobecné</TabsTrigger>
+          <TabsTrigger value="booking" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Booking</TabsTrigger>
+          <TabsTrigger value="hours" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Otváracie hodiny</TabsTrigger>
+          <TabsTrigger value="smtp" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">SMTP Email</TabsTrigger>
+          <TabsTrigger value="profile" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Profil</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="space-y-6 mt-4">
+        <TabsContent value="general" className="space-y-6 mt-0">
           {business && (
-            <Card className="border-border">
-              <CardHeader><CardTitle className="text-base">Nastavenia firmy</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5 col-span-2">
-                    <Label>Názov firmy</Label>
-                    <Input value={business.name ?? ""} onChange={setB("name")} />
+            <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+              <CardHeader className="border-b border-primary/5 bg-muted/20">
+                <CardTitle className="text-lg font-bold">Nastavenia firmy</CardTitle>
+                <CardDescription>Základné informácie o vašom podniku</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2 col-span-1 md:col-span-2">
+                    <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Názov firmy</Label>
+                    <Input className="bg-background/50 border-primary/10 focus:ring-primary/20" value={business.name ?? ""} onChange={setB("name")} />
                   </div>
-                  <div className="space-y-1.5 col-span-2">
-                    <Label>Adresa</Label>
-                    <Input value={business.address ?? ""} onChange={setB("address")} />
+                  <div className="space-y-2 col-span-1 md:col-span-2">
+                    <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Adresa</Label>
+                    <Input className="bg-background/50 border-primary/10 focus:ring-primary/20" value={business.address ?? ""} onChange={setB("address")} />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Telefón</Label>
-                    <Input value={business.phone ?? ""} onChange={setB("phone")} />
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Telefón</Label>
+                    <Input className="bg-background/50 border-primary/10 focus:ring-primary/20" value={business.phone ?? ""} onChange={setB("phone")} />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Email</Label>
-                    <Input value={business.email ?? ""} onChange={setB("email")} />
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Email</Label>
+                    <Input className="bg-background/50 border-primary/10 focus:ring-primary/20" value={business.email ?? ""} onChange={setB("email")} />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Min. čas rezervácie vopred (min)</Label>
-                    <Input type="number" value={business.lead_time_minutes ?? 60} onChange={setB("lead_time_minutes")} />
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Min. čas rezervácie vopred (min)</Label>
+                    <Input className="bg-background/50 border-primary/10 focus:ring-primary/20" type="number" value={business.lead_time_minutes ?? 60} onChange={setB("lead_time_minutes")} />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Max. dní dopredu</Label>
-                    <Input type="number" value={business.max_days_ahead ?? 60} onChange={setB("max_days_ahead")} />
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Max. dní dopredu</Label>
+                    <Input className="bg-background/50 border-primary/10 focus:ring-primary/20" type="number" value={business.max_days_ahead ?? 60} onChange={setB("max_days_ahead")} />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Storno lehota (hod)</Label>
-                    <Input type="number" value={business.cancellation_hours ?? 24} onChange={setB("cancellation_hours")} />
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Storno lehota (hod)</Label>
+                    <Input className="bg-background/50 border-primary/10 focus:ring-primary/20" type="number" value={business.cancellation_hours ?? 24} onChange={setB("cancellation_hours")} />
                   </div>
                 </div>
-                <Button onClick={saveBusiness} disabled={saving} size="sm">
-                  {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                  Uložiť nastavenia
-                </Button>
+                <div className="pt-4 border-t border-primary/5 flex justify-end">
+                  <Button onClick={saveBusiness} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
+                    {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                    Uložiť nastavenia
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        <TabsContent value="booking" className="space-y-6 mt-4">
+        <TabsContent value="booking" className="space-y-6 mt-0">
           {business && (
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="w-4 h-4" />
+            <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+              <CardHeader className="border-b border-primary/5 bg-muted/20">
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <Users className="w-5 h-5 text-primary" />
                   Nastavenia rezervácií
                 </CardTitle>
                 <CardDescription>
                   Spravujte kto môže byť vybraný ako vykonávateľ služby
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/30">
-                  <div className="space-y-0.5 flex-1">
+              <CardContent className="space-y-6 pt-6">
+                <div className="flex items-center justify-between p-6 rounded-2xl border border-primary/10 bg-primary/5 group hover:bg-primary/10 transition-colors">
+                  <div className="space-y-1 flex-1">
                     <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-primary" />
-                      <Label className="text-sm font-medium">
+                      <Shield className="w-5 h-5 text-primary" />
+                      <Label className="text-base font-semibold text-foreground">
                         Povoliť administrátora ako vykonávateľa služby
                       </Label>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground max-w-md">
                       Keď je zapnuté, administrátori a majitelia s priradeným profilom zamestnanca
                       budú dostupní vo výbere pracovníkov pri vytváraní rezervácie služby.
                     </p>
@@ -244,83 +254,136 @@ export default function SettingsPage() {
                     onCheckedChange={(checked) => {
                       setBusiness((b: any) => ({ ...b, allow_admin_as_provider: checked }));
                     }}
+                    className="data-[state=checked]:bg-gold"
                   />
                 </div>
                 {!isOwner && (
-                  <p className="text-xs text-muted-foreground italic">
-                    Toto nastavenie môže meniť iba majiteľ salónu.
-                  </p>
+                  <div className="p-4 rounded-xl bg-muted/50 border border-border text-center">
+                    <p className="text-sm text-muted-foreground italic flex items-center justify-center gap-2">
+                      <Shield className="w-4 h-4 opacity-50" />
+                      Toto nastavenie môže meniť iba majiteľ salónu.
+                    </p>
+                  </div>
                 )}
                 {isOwner && (
-                  <Button onClick={saveBookingSettings} disabled={saving} size="sm">
-                    {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Uložiť nastavenia
-                  </Button>
+                  <div className="pt-4 border-t border-primary/5 flex justify-end">
+                    <Button onClick={saveBookingSettings} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
+                      {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                      Uložiť nastavenia
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        <TabsContent value="hours" className="mt-4">
+        <TabsContent value="hours" className="mt-0">
           <BusinessHoursEditor />
         </TabsContent>
 
-        <TabsContent value="smtp" className="space-y-6 mt-4">
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Mail className="w-4 h-4" />
+        <TabsContent value="smtp" className="space-y-6 mt-0">
+          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+            <CardHeader className="border-b border-primary/5 bg-muted/20">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Mail className="w-5 h-5 text-primary" />
                 SMTP Nastavenia
               </CardTitle>
+              <CardDescription>Konfigurácia pre odosielanie notifikačných emailov</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5 col-span-2">
-                  <Label>SMTP Server (host)</Label>
-                  <Input value={smtpForm.host} onChange={(e) => setSmtpForm((f) => ({ ...f, host: e.target.value }))} placeholder="smtp.example.com" />
+            <CardContent className="space-y-6 pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">SMTP Server (host)</Label>
+                  <Input
+                    className="bg-background/50 border-primary/10 focus:ring-primary/20"
+                    value={smtpForm.host}
+                    onChange={(e) => setSmtpForm((f) => ({ ...f, host: e.target.value }))}
+                    placeholder="smtp.example.com"
+                  />
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Port</Label>
-                  <Input value={smtpForm.port} onChange={(e) => setSmtpForm((f) => ({ ...f, port: e.target.value }))} placeholder="465" />
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Port</Label>
+                  <Input
+                    className="bg-background/50 border-primary/10 focus:ring-primary/20"
+                    value={smtpForm.port}
+                    onChange={(e) => setSmtpForm((f) => ({ ...f, port: e.target.value }))}
+                    placeholder="465"
+                  />
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Používateľ (login)</Label>
-                  <Input value={smtpForm.user} onChange={(e) => setSmtpForm((f) => ({ ...f, user: e.target.value }))} placeholder="user@example.com" />
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Používateľ (login)</Label>
+                  <Input
+                    className="bg-background/50 border-primary/10 focus:ring-primary/20"
+                    value={smtpForm.user}
+                    onChange={(e) => setSmtpForm((f) => ({ ...f, user: e.target.value }))}
+                    placeholder="user@example.com"
+                  />
                 </div>
-                <div className="space-y-1.5 col-span-2">
-                  <Label>Odosielateľ (From)</Label>
-                  <Input value={smtpForm.from} onChange={(e) => setSmtpForm((f) => ({ ...f, from: e.target.value }))} placeholder="booking@example.com" />
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Odosielateľ (From)</Label>
+                  <Input
+                    className="bg-background/50 border-primary/10 focus:ring-primary/20"
+                    value={smtpForm.from}
+                    onChange={(e) => setSmtpForm((f) => ({ ...f, from: e.target.value }))}
+                    placeholder="booking@example.com"
+                  />
                 </div>
-                <div className="space-y-1.5 col-span-2">
-                  <Label>Heslo {smtpHasPassword && <span className="text-xs text-muted-foreground ml-1">(uložené – zadajte nové pre zmenu)</span>}</Label>
-                  <Input type="password" value={smtpForm.pass} onChange={(e) => setSmtpForm((f) => ({ ...f, pass: e.target.value }))} placeholder={smtpHasPassword ? "••••••••" : "Zadajte heslo"} />
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">
+                    Heslo {smtpHasPassword && <span className="text-[10px] text-muted-foreground border border-primary/10 px-1.5 py-0.5 rounded ml-2">ULOŽENÉ</span>}
+                  </Label>
+                  <Input
+                    type="password"
+                    className="bg-background/50 border-primary/10 focus:ring-primary/20"
+                    value={smtpForm.pass}
+                    onChange={(e) => setSmtpForm((f) => ({ ...f, pass: e.target.value }))}
+                    placeholder={smtpHasPassword ? "••••••••" : "Zadajte heslo"}
+                  />
                 </div>
               </div>
-              <Button onClick={saveSmtp} disabled={saving} size="sm">
-                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Uložiť SMTP
-              </Button>
+              <div className="pt-4 border-t border-primary/5 flex justify-end">
+                <Button onClick={saveSmtp} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
+                  {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Uložiť SMTP
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="profile" className="space-y-6 mt-4">
-          <Card className="border-border">
-            <CardHeader><CardTitle className="text-base">Môj profil</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>Celé meno</Label>
-                <Input value={profileForm.full_name} onChange={(e) => setProfileForm((f) => ({ ...f, full_name: e.target.value }))} />
+        <TabsContent value="profile" className="space-y-6 mt-0">
+          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+            <CardHeader className="border-b border-primary/5 bg-muted/20">
+              <CardTitle className="text-lg font-bold">Môj profil</CardTitle>
+              <CardDescription>Osobné informácie správcu</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Celé meno</Label>
+                  <Input
+                    className="bg-background/50 border-primary/10 focus:ring-primary/20"
+                    value={profileForm.full_name}
+                    onChange={(e) => setProfileForm((f) => ({ ...f, full_name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Telefón</Label>
+                  <Input
+                    className="bg-background/50 border-primary/10 focus:ring-primary/20"
+                    value={profileForm.phone}
+                    onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))}
+                    placeholder="+421 900 000 000"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>Telefón</Label>
-                <Input value={profileForm.phone} onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+421 900 000 000" />
+              <div className="pt-4 border-t border-primary/5 flex justify-end">
+                <Button onClick={saveProfile} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
+                  {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Uložiť profil
+                </Button>
               </div>
-              <Button onClick={saveProfile} disabled={saving} size="sm">
-                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Uložiť profil
-              </Button>
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "b1000000-0000-0000-0000-000000000001",
+    "business_id": "a1b2c3d4-0000-0000-0000-000000000001",
+    "name_sk": "Strihanie vlasov",
+    "description_sk": "Profesionálny strih vlasov",
+    "duration_minutes": 45,
+    "buffer_minutes": 10,
+    "price": 25,
+    "is_active": true,
+    "created_at": "2026-02-26T19:53:06.37703+00:00",
+    "updated_at": "2026-02-26T19:53:06.37703+00:00",
+    "category": "damske",
+    "subcategory": null
+  },
+  {
+    "id": "b1000000-0000-0000-0000-000000000002",
+    "business_id": "a1b2c3d4-0000-0000-0000-000000000001",
+    "name_sk": "Farbenie vlasov",
+    "description_sk": "Kompletné farbenie s ošetrením",
+    "duration_minutes": 120,
+    "buffer_minutes": 15,
+    "price": 65,
+    "is_active": true,
+    "created_at": "2026-02-26T19:53:06.37703+00:00",
+    "updated_at": "2026-02-26T19:53:07.433703+00:00",
+    "category": "damske",
+    "subcategory": "FARBENIE"
+  },
+  {
+    "id": "b1000000-0000-0000-0000-000000000003",
+    "business_id": "a1b2c3d4-0000-0000-0000-000000000001",
+    "name_sk": "Mytie a fúkanie",
+    "description_sk": "Umytie a fúkanie vlasov",
+    "duration_minutes": 30,
+    "buffer_minutes": 5,
+    "price": 15,
+    "is_active": true,
+    "created_at": "2026-02-26T19:53:06.37703+00:00",
+    "updated_at": "2026-02-26T19:53:06.37703+00:00",
+    "category": "damske",
+    "subcategory": null
+  },
+  {
+    "id": "b1000000-0000-0000-0000-000000000004",
+    "business_id": "a1b2c3d4-0000-0000-0000-000000000001",
+    "name_sk": "Manikúra",
+    "description_sk": "Klasická manikúra",
+    "duration_minutes": 60,
+    "buffer_minutes": 10,
+    "price": 20,
+    "is_active": true,
+    "created_at": "2026-02-26T19:53:06.37703+00:00",
+    "updated_at": "2026-02-26T19:53:06.37703+00:00",
+    "category": "damske",
+    "subcategory": null
+  }
+]

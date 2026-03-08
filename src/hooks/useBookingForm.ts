@@ -6,7 +6,7 @@ import { contactSchema, ServiceRow, EmployeeRow, BookingResult, MembershipRow } 
 import { createPublicBooking } from "@/integrations/firebase/createPublicBooking";
 import { getRecaptchaToken } from "@/lib/recaptcha";
 
-const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
+const DEMO_BUSINESS_ID = "papi-hair-design-main";
 
 export function useBookingForm(
     services: ServiceRow[],

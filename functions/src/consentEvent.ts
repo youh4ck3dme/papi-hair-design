@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import {
     type CallableRequest,
     HttpsError
@@ -16,9 +17,9 @@ interface ConsentEventData {
     metadata?: Record<string, any>;
 }
 
-export const consentEvent = functions.https.onCall(async (request: CallableRequest<ConsentEventData>) => {
+export const consentEvent = functions.https.onCall({ region: "europe-west1" }, async (request: CallableRequest<ConsentEventData>) => {
     const { data, rawRequest } = request;
-    const db = admin.firestore();
+    const db = getFirestore();
 
     const { action, subject_type, subject_id, categories, source, business_id, metadata } = data;
 

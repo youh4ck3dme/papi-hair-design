@@ -175,88 +175,110 @@ export function BusinessHoursEditor() {
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Weekly hours */}
-      <Card className="border-border">
-        <CardHeader><CardTitle className="text-base">Týždenné otváracie hodiny</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
+      <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+        <CardHeader className="border-b border-primary/5 bg-muted/20">
+          <CardTitle className="text-lg font-bold">Týždenné otváracie hodiny</CardTitle>
+          <p className="text-sm text-muted-foreground">Nastavte si bežný pracovný čas pre každý deň v týždni.</p>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-6">
           {hours.map((h, i) => (
-            <div key={h.day_of_week} className="flex items-center gap-2">
-              <span className="w-24 text-sm font-medium text-foreground">
+            <div key={h.day_of_week} className="flex items-center gap-4 p-3 rounded-xl border border-primary/5 bg-background/40 hover:bg-primary/5 transition-colors group">
+              <span className="w-28 text-sm font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">
                 {DAYS.find((d) => d.key === h.day_of_week)?.label}
               </span>
-              <Select value={h.mode} onValueChange={(v) => updateHour(i, "mode", v)}>
-                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">Otvorené</SelectItem>
-                  <SelectItem value="closed">Zatvorené</SelectItem>
-                  <SelectItem value="on_request">Na požiadanie</SelectItem>
-                </SelectContent>
-              </Select>
-              {h.mode !== "closed" && (
-                <>
-                  <Input type="time" value={h.start_time} onChange={(e) => updateHour(i, "start_time", e.target.value)} className="w-28" />
-                  <span className="text-muted-foreground">–</span>
-                  <Input type="time" value={h.end_time} onChange={(e) => updateHour(i, "end_time", e.target.value)} className="w-28" />
-                </>
-              )}
+              <div className="flex items-center gap-3 flex-1 lg:flex-none">
+                <Select value={h.mode} onValueChange={(v) => updateHour(i, "mode", v)}>
+                  <SelectTrigger className="w-40 bg-background/50 border-primary/10 focus:ring-primary/20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="backdrop-blur-xl bg-background/95 border-primary/10">
+                    <SelectItem value="open">Otvorené</SelectItem>
+                    <SelectItem value="closed">Zatvorené</SelectItem>
+                    <SelectItem value="on_request">Na požiadanie</SelectItem>
+                  </SelectContent>
+                </Select>
+                {h.mode !== "closed" && (
+                  <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-300">
+                    <Input
+                      type="time"
+                      value={h.start_time}
+                      onChange={(e) => updateHour(i, "start_time", e.target.value)}
+                      className="w-32 bg-background/50 border-primary/10 focus:ring-primary/20"
+                    />
+                    <span className="text-muted-foreground font-medium">–</span>
+                    <Input
+                      type="time"
+                      value={h.end_time}
+                      onChange={(e) => updateHour(i, "end_time", e.target.value)}
+                      className="w-32 bg-background/50 border-primary/10 focus:ring-primary/20"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </CardContent>
       </Card>
 
       {/* Date overrides */}
-      <Card className="border-border">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Výnimky (sviatky, dovolenky)</CardTitle>
-          <Button size="sm" variant="outline" onClick={() => setOverrides((o) => [...o, {
+      <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+        <CardHeader className="border-b border-primary/5 bg-muted/20 flex flex-row items-center justify-between py-4">
+          <div className="space-y-0.5">
+            <CardTitle className="text-lg font-bold">Výnimky</CardTitle>
+            <p className="text-sm text-muted-foreground">Sviatky, dovolenky a špeciálne dni.</p>
+          </div>
+          <Button size="sm" variant="outline" className="border-gold text-gold hover:bg-gold hover:text-gold-foreground transition-all" onClick={() => setOverrides((o) => [...o, {
             override_date: new Date().toISOString().slice(0, 10),
             mode: "closed",
             start_time: "09:00",
             end_time: "17:00",
             label: "",
           }])}>
-            <Plus className="w-4 h-4 mr-1" /> Pridať
+            <Plus className="w-4 h-4 mr-2" /> Pridať výnimku
           </Button>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4 pt-6">
           {overrides.length === 0 && (
-            <p className="text-sm text-muted-foreground">Žiadne výnimky</p>
+            <div className="text-center py-8 border-2 border-dashed border-primary/5 rounded-2xl bg-muted/20">
+              <p className="text-sm text-muted-foreground italic">Žiadne aktívne výnimky</p>
+            </div>
           )}
           {overrides.map((o, i) => (
-            <div key={i} className="flex items-center gap-2 flex-wrap">
+            <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-primary/10 bg-background/40 hover:border-gold/30 transition-all animate-in slide-in-from-left-4 duration-300">
               <Input
                 type="date"
                 value={o.override_date}
                 onChange={(e) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, override_date: e.target.value } : x))}
-                className="w-36"
+                className="w-44 bg-background/50 border-primary/10 focus:ring-primary/20"
               />
               <Select
                 value={o.mode}
                 onValueChange={(v) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, mode: v as any } : x))}
               >
-                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger className="w-40 bg-background/50 border-primary/10 focus:ring-primary/20"><SelectValue /></SelectTrigger>
+                <SelectContent className="backdrop-blur-xl bg-background/95 border-primary/10">
                   <SelectItem value="open">Otvorené</SelectItem>
                   <SelectItem value="closed">Zatvorené</SelectItem>
                   <SelectItem value="on_request">Na požiadanie</SelectItem>
                 </SelectContent>
               </Select>
               {o.mode !== "closed" && (
-                <>
-                  <Input type="time" value={o.start_time} onChange={(e) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, start_time: e.target.value } : x))} className="w-28" />
+                <div className="flex items-center gap-2">
+                  <Input type="time" value={o.start_time} onChange={(e) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, start_time: e.target.value } : x))} className="w-32 bg-background/50 border-primary/10 focus:ring-primary/20" />
                   <span className="text-muted-foreground">–</span>
-                  <Input type="time" value={o.end_time} onChange={(e) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, end_time: e.target.value } : x))} className="w-28" />
-                </>
+                  <Input type="time" value={o.end_time} onChange={(e) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, end_time: e.target.value } : x))} className="w-32 bg-background/50 border-primary/10 focus:ring-primary/20" />
+                </div>
               )}
               <Input
                 value={o.label}
                 onChange={(e) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
-                placeholder="Dôvod"
-                className="w-28"
+                placeholder="Dôvod (napr. Sviatok)"
+                className="flex-1 bg-background/50 border-primary/10 focus:ring-primary/20"
               />
-              <Button size="icon" variant="ghost" onClick={() => setOverrides((ov) => ov.filter((_, j) => j !== i))}>
-                <Trash2 className="w-4 h-4 text-destructive" />
+              <Button size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10 rounded-full" onClick={() => setOverrides((ov) => ov.filter((_, j) => j !== i))}>
+                <Trash2 className="w-4 h-4" />
               </Button>
             </div>
           ))}
@@ -264,43 +286,59 @@ export function BusinessHoursEditor() {
       </Card>
 
       {/* Quick links */}
-      <Card className="border-border">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Rýchle odkazy</CardTitle>
-          <Button size="sm" variant="outline" onClick={() => setLinks((l) => [...l, { label: "", url: "", sort_order: l.length }])}>
-            <Plus className="w-4 h-4 mr-1" /> Pridať
+      <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+        <CardHeader className="border-b border-primary/5 bg-muted/20 flex flex-row items-center justify-between py-4">
+          <div className="space-y-0.5">
+            <CardTitle className="text-lg font-bold">Rýchle odkazy</CardTitle>
+            <p className="text-sm text-muted-foreground">Užitočné externé linky pre váš tím.</p>
+          </div>
+          <Button size="sm" variant="outline" className="border-gold text-gold hover:bg-gold hover:text-gold-foreground transition-all" onClick={() => setLinks((l) => [...l, { label: "", url: "", sort_order: l.length }])}>
+            <Plus className="w-4 h-4 mr-2" /> Pridať odkaz
           </Button>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4 pt-6">
           {links.length === 0 && (
-            <p className="text-sm text-muted-foreground">Žiadne odkazy</p>
+            <div className="text-center py-8 border-2 border-dashed border-primary/5 rounded-2xl bg-muted/20">
+              <p className="text-sm text-muted-foreground italic">Žiadne odkazy</p>
+            </div>
           )}
           {links.map((l, i) => (
-            <div key={i} className="flex items-center gap-2">
+            <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-primary/10 bg-background/40 hover:border-gold/30 transition-all animate-in zoom-in-95 duration-300">
               <Input
                 value={l.label}
                 onChange={(e) => setLinks((ls) => ls.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
-                placeholder="Label"
-                className="w-32"
+                placeholder="Názov (napr. Cenník)"
+                className="w-48 bg-background/50 border-primary/10 focus:ring-primary/20"
               />
-              <Input
-                value={l.url}
-                onChange={(e) => setLinks((ls) => ls.map((x, j) => j === i ? { ...x, url: e.target.value } : x))}
-                placeholder="URL"
-                className="flex-1"
-              />
-              <Button size="icon" variant="ghost" onClick={() => setLinks((ls) => ls.filter((_, j) => j !== i))}>
-                <Trash2 className="w-4 h-4 text-destructive" />
+              <div className="flex-1 flex items-center gap-2 group">
+                <Input
+                  value={l.url}
+                  onChange={(e) => setLinks((ls) => ls.map((x, j) => j === i ? { ...x, url: e.target.value } : x))}
+                  placeholder="https://..."
+                  className="flex-1 bg-background/50 border-primary/10 focus:ring-primary/20"
+                />
+                {l.url && (
+                  <Button variant="ghost" size="icon" asChild className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <a href={l.url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="w-4 h-4 text-primary" />
+                    </a>
+                  </Button>
+                )}
+              </div>
+              <Button size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10 rounded-full" onClick={() => setLinks((ls) => ls.filter((_, j) => j !== i))}>
+                <Trash2 className="w-4 h-4" />
               </Button>
             </div>
           ))}
         </CardContent>
       </Card>
 
-      <Button onClick={saveAll} disabled={saving}>
-        {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-        Uložiť všetko
-      </Button>
+      <div className="flex justify-end pt-4">
+        <Button onClick={saveAll} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-12 py-6 text-lg font-bold transition-all hover:scale-105 active:scale-95">
+          {saving ? <Loader2 className="w-5 h-5 mr-3 animate-spin" /> : <Save className="w-5 h-5 mr-3" />}
+          Uložiť všetky nastavenia hodín
+        </Button>
+      </div>
     </div>
   );
 }

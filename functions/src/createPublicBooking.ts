@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import {
     type CallableRequest,
     HttpsError
@@ -93,9 +94,9 @@ async function verifyRecaptchaIfConfigured(recaptchaToken: string | null | undef
     }
 }
 
-export const createPublicBooking = functions.https.onCall(async (request: CallableRequest<CreatePublicBookingData>) => {
+export const createPublicBooking = functions.https.onCall({ region: "europe-west1" }, async (request: CallableRequest<CreatePublicBookingData>) => {
     const { data } = request;
-    const db = admin.firestore();
+    const db = getFirestore();
 
     // 0. Validation
     const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone } = data;

@@ -12,7 +12,7 @@ import { auth, db } from "./config";
 import { ServiceRow, EmployeeRow, MembershipRow } from "@/components/booking/types";
 import { type BusinessHourEntry, type DateOverrideEntry } from "@/lib/availability";
 
-const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
+const FALLBACK_BIZ = "papi-hair-design-main";
 
 export interface BusinessData {
     id: string;
@@ -49,24 +49,24 @@ export function useBookingDataFirebase() {
 
                 // 1. Fetch Basic Info
                 const [bizSnap, svcSnap, empSnap, bhSnap, bdoSnap] = await Promise.all([
-                    getDoc(doc(db, "businesses", DEMO_BUSINESS_ID)),
+                    getDoc(doc(db, "businesses", FALLBACK_BIZ)),
                     getDocs(query(
                         collection(db, "services"),
-                        where("business_id", "==", DEMO_BUSINESS_ID),
+                        where("business_id", "==", FALLBACK_BIZ),
                         where("is_active", "==", true)
                     )),
                     getDocs(query(
                         collection(db, "employees"),
-                        where("business_id", "==", DEMO_BUSINESS_ID),
+                        where("business_id", "==", FALLBACK_BIZ),
                         where("is_active", "==", true)
                     )),
                     getDocs(query(
                         collection(db, "business_hours"),
-                        where("business_id", "==", DEMO_BUSINESS_ID)
+                        where("business_id", "==", FALLBACK_BIZ)
                     )),
                     getDocs(query(
                         collection(db, "business_date_overrides"),
-                        where("business_id", "==", DEMO_BUSINESS_ID),
+                        where("business_id", "==", FALLBACK_BIZ),
                         where("override_date", ">=", new Date().toISOString().slice(0, 10))
                     )),
                 ]);
@@ -74,7 +74,7 @@ export function useBookingDataFirebase() {
                 if (bizSnap.exists()) {
                     const d = bizSnap.data();
                     setBusiness({
-                        id: DEMO_BUSINESS_ID,
+                        id: FALLBACK_BIZ,
                         name: d.name,
                         allow_admin_as_provider: d.allow_admin_as_provider,
                         max_days_ahead: d.max_days_ahead,
@@ -168,7 +168,7 @@ export function useBookingDataFirebase() {
                 try {
                     const memSnap = await getDocs(query(
                         collection(db, "memberships"),
-                        where("business_id", "==", DEMO_BUSINESS_ID)
+                        where("business_id", "==", FALLBACK_BIZ)
                     ));
                     setMemberships(memSnap.docs.map(d => {
                         const data = d.data();

@@ -38,7 +38,7 @@ import {
   mapAppointmentRowToCalendarAppointment,
 } from "./mobile/event-mappers";
 
-const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
+const DEMO_BUSINESS_ID = "papi-hair-design-main";
 const SWIPE_THRESHOLD = 60;
 const BUSINESS_TZ = "Europe/Bratislava";
 

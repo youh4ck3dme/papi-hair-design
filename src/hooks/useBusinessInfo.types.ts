@@ -39,6 +39,7 @@ export interface PublicBusinessInfo {
   };
 
   hours: BusinessHourEntry[];
+  services: { id: string; name_sk: string; price: number | null }[];
   overrides: DateOverride[];
   quick_links: QuickLink[];
 }

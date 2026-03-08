@@ -35,7 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createPublicBooking = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
-const admin = __importStar(require("firebase-admin"));
+const firestore_1 = require("firebase-admin/firestore");
 const https_1 = require("firebase-functions/v2/https");
 const crypto = __importStar(require("crypto"));
 const RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
@@ -99,9 +99,9 @@ async function verifyRecaptchaIfConfigured(recaptchaToken, clientIp) {
         throw new https_1.HttpsError("permission-denied", "reCAPTCHA skóre je príliš nízke");
     }
 }
-exports.createPublicBooking = functions.https.onCall(async (request) => {
+exports.createPublicBooking = functions.https.onCall({ region: "europe-west1" }, async (request) => {
     const { data } = request;
-    const db = admin.firestore();
+    const db = (0, firestore_1.getFirestore)();
     const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone } = data;
     if (!business_id || !service_id || !employee_id || !start_at || !customer_name || !customer_email) {
         throw new https_1.HttpsError("invalid-argument", "Chýbajúce povinné polia");

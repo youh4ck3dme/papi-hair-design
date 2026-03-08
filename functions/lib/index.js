@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.syncOfflineData = exports.listBookableProviders = exports.consentEvent = exports.saveSmtpConfig = exports.createPublicBooking = exports.claimBooking = void 0;
+exports.importMigrationData = exports.syncOfflineData = exports.listBookableProviders = exports.consentEvent = exports.saveSmtpConfig = exports.createPublicBooking = exports.claimBooking = void 0;
 const admin = __importStar(require("firebase-admin"));
 admin.initializeApp();
 var claimBooking_1 = require("./claimBooking");
@@ -48,4 +48,6 @@ var listBookableProviders_1 = require("./listBookableProviders");
 Object.defineProperty(exports, "listBookableProviders", { enumerable: true, get: function () { return listBookableProviders_1.listBookableProviders; } });
 var syncOfflineData_1 = require("./syncOfflineData");
 Object.defineProperty(exports, "syncOfflineData", { enumerable: true, get: function () { return syncOfflineData_1.syncOfflineData; } });
+var importMigrationData_1 = require("./importMigrationData");
+Object.defineProperty(exports, "importMigrationData", { enumerable: true, get: function () { return importMigrationData_1.importMigrationData; } });
 //# sourceMappingURL=index.js.map

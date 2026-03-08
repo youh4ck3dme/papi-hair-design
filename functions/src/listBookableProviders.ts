@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import {
     type CallableRequest,
     HttpsError
@@ -10,9 +11,9 @@ interface ListBookableProvidersData {
     service_id?: string;
 }
 
-export const listBookableProviders = functions.https.onCall(async (request: CallableRequest<ListBookableProvidersData>) => {
+export const listBookableProviders = functions.https.onCall({ region: "europe-west1" }, async (request: CallableRequest<ListBookableProvidersData>) => {
     const { data } = request;
-    const db = admin.firestore();
+    const db = getFirestore();
 
     const { business_id, service_id } = data;
     if (!business_id) {

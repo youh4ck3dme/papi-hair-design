@@ -35,11 +35,11 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.saveSmtpConfig = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
-const admin = __importStar(require("firebase-admin"));
+const firestore_1 = require("firebase-admin/firestore");
 const https_1 = require("firebase-functions/v2/https");
-exports.saveSmtpConfig = functions.https.onCall(async (request) => {
+exports.saveSmtpConfig = functions.https.onCall({ region: "europe-west1" }, async (request) => {
     const { auth, data } = request;
-    const db = admin.firestore();
+    const db = (0, firestore_1.getFirestore)();
     if (!auth) {
         throw new https_1.HttpsError("unauthenticated", "Neautorizovaný prístup");
     }

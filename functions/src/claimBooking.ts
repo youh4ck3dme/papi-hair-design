@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import {
     type CallableRequest,
     HttpsError
@@ -10,9 +11,9 @@ interface ClaimBookingData {
     claim_token: string;
 }
 
-export const claimBooking = functions.https.onCall(async (request: CallableRequest<ClaimBookingData>) => {
+export const claimBooking = functions.https.onCall({ region: "europe-west1" }, async (request: CallableRequest<ClaimBookingData>) => {
     const { auth, data } = request;
-    const db = admin.firestore();
+    const db = getFirestore();
 
     if (!auth) {
         throw new HttpsError("unauthenticated", "Neautorizovaný prístup");

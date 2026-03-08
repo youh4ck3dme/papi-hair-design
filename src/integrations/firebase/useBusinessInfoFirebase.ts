@@ -99,11 +99,12 @@ export function useBusinessInfoFirebase(businessId: string) {
                 }
 
                 // In Firestore, we use parallel queries
-                const [bizSnap, hoursSnap, overridesSnap, linksSnap] = await Promise.all([
+                const [bizSnap, hoursSnap, overridesSnap, linksSnap, servicesSnap] = await Promise.all([
                     getDoc(doc(db, "businesses", businessId)),
                     getDocs(query(collection(db, "business_hours"), where("business_id", "==", businessId))),
                     getDocs(query(collection(db, "business_date_overrides"), where("business_id", "==", businessId))),
                     getDocs(query(collection(db, "business_quick_links"), where("business_id", "==", businessId))),
+                    getDocs(query(collection(db, "services"), where("business_id", "==", businessId), where("is_active", "==", true))),
                 ]);
 
                 if (!bizSnap.exists()) {
@@ -149,6 +150,18 @@ export function useBusinessInfoFirebase(businessId: string) {
                     })
                     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
+                const services = servicesSnap.docs
+                    .map(doc => {
+                        const d = doc.data();
+                        return {
+                            id: doc.id,
+                            name_sk: d.name_sk ?? "",
+                            price: typeof d.price === "number" ? d.price : null,
+                            sort_order: d.sort_order ?? 999,
+                        };
+                    })
+                    .sort((a, b) => a.sort_order - b.sort_order);
+
                 const tz = biz.timezone || "Europe/Bratislava";
                 setInfo({
                     business: {
@@ -167,6 +180,7 @@ export function useBusinessInfoFirebase(businessId: string) {
                         opening_hours: biz.opening_hours ?? {},
                     },
                     hours,
+                    services,
                     overrides,
                     quick_links,
                 });

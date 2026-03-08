@@ -1,0 +1,382 @@
+﻿diff --git a/e2e/playwright.config.ts b/e2e/playwright.config.ts
+index 67d9929..e1eb1ac 100644
+--- a/e2e/playwright.config.ts
++++ b/e2e/playwright.config.ts
+@@ -4,10 +4,10 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5678";
+ 
+ export default defineConfig({
+   testDir: ".",
+-  fullyParallel: true,
++  fullyParallel: false,
+   forbidOnly: !!process.env.CI,
+-  retries: process.env.CI ? 2 : 0,
+-  workers: process.env.CI ? 2 : undefined,
++  retries: process.env.CI ? 2 : 1,
++  workers: 1,
+   reporter: [
+     ["html", { outputFolder: "e2e-results/html-report", open: "never" }],
+     ["list"],
+diff --git a/firebase.json b/firebase.json
+index af9a3a5..9f71645 100644
+--- a/firebase.json
++++ b/firebase.json
+@@ -1,6 +1,6 @@
+ {
+   "firestore": {
+-    "database": "papihairdesign-dtb",
++    "database": "(default)",
+     "location": "eur3",
+     "rules": "firestore.rules",
+     "indexes": "firestore.indexes.json"
+@@ -86,4 +86,4 @@
+     },
+     "singleProjectMode": true
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/functions/src/claimBooking.ts b/functions/src/claimBooking.ts
+index 465d5c7..95c37cd 100644
+--- a/functions/src/claimBooking.ts
++++ b/functions/src/claimBooking.ts
+@@ -1,5 +1,6 @@
+ import * as functions from "firebase-functions/v2";
+ import * as admin from "firebase-admin";
++import { getFirestore } from "firebase-admin/firestore";
+ import {
+     type CallableRequest,
+     HttpsError
+@@ -10,9 +11,9 @@ interface ClaimBookingData {
+     claim_token: string;
+ }
+ 
+-export const claimBooking = functions.https.onCall(async (request: CallableRequest<ClaimBookingData>) => {
++export const claimBooking = functions.https.onCall({ region: "europe-west1" }, async (request: CallableRequest<ClaimBookingData>) => {
+     const { auth, data } = request;
+-    const db = admin.firestore();
++    const db = getFirestore();
+ 
+     if (!auth) {
+         throw new HttpsError("unauthenticated", "Neautorizovaný prístup");
+diff --git a/functions/src/createPublicBooking.ts b/functions/src/createPublicBooking.ts
+index 7daacec..e7641d6 100644
+--- a/functions/src/createPublicBooking.ts
++++ b/functions/src/createPublicBooking.ts
+@@ -1,5 +1,6 @@
+ import * as functions from "firebase-functions/v2";
+ import * as admin from "firebase-admin";
++import { getFirestore } from "firebase-admin/firestore";
+ import {
+     type CallableRequest,
+     HttpsError
+@@ -93,9 +94,9 @@ async function verifyRecaptchaIfConfigured(recaptchaToken: string | null | undef
+     }
+ }
+ 
+-export const createPublicBooking = functions.https.onCall(async (request: CallableRequest<CreatePublicBookingData>) => {
++export const createPublicBooking = functions.https.onCall({ region: "europe-west1" }, async (request: CallableRequest<CreatePublicBookingData>) => {
+     const { data } = request;
+-    const db = admin.firestore();
++    const db = getFirestore();
+ 
+     // 0. Validation
+     const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone } = data;
+diff --git a/functions/src/saveSmtpConfig.ts b/functions/src/saveSmtpConfig.ts
+index 79726c7..a35abe9 100644
+--- a/functions/src/saveSmtpConfig.ts
++++ b/functions/src/saveSmtpConfig.ts
+@@ -1,5 +1,6 @@
+ import * as functions from "firebase-functions/v2";
+ import * as admin from "firebase-admin";
++import { getFirestore } from "firebase-admin/firestore";
+ import {
+     type CallableRequest,
+     HttpsError
+@@ -14,9 +15,9 @@ interface SaveSmtpConfigData {
+     pass?: string;
+ }
+ 
+-export const saveSmtpConfig = functions.https.onCall(async (request: CallableRequest<SaveSmtpConfigData>) => {
++export const saveSmtpConfig = functions.https.onCall({ region: "europe-west1" }, async (request: CallableRequest<SaveSmtpConfigData>) => {
+     const { auth, data } = request;
+-    const db = admin.firestore();
++    const db = getFirestore();
+ 
+     if (!auth) {
+         throw new HttpsError("unauthenticated", "Neautorizovaný prístup");
+diff --git a/functions/src/syncOfflineData.ts b/functions/src/syncOfflineData.ts
+index 3fbbfc9..b17caab 100644
+--- a/functions/src/syncOfflineData.ts
++++ b/functions/src/syncOfflineData.ts
+@@ -1,5 +1,6 @@
+ import * as functions from "firebase-functions/v2";
+ import * as admin from "firebase-admin";
++import { getFirestore } from "firebase-admin/firestore";
+ import {
+     type CallableRequest,
+     HttpsError
+@@ -168,9 +169,9 @@ async function resolveBusinessId(db: FirebaseFirestore.Firestore, uid: string, r
+     return businessId;
+ }
+ 
+-export const syncOfflineData = functions.https.onCall(async (request: CallableRequest<SyncData>) => {
++export const syncOfflineData = functions.https.onCall({ region: "europe-west1" }, async (request: CallableRequest<SyncData>) => {
+     const { auth, data } = request;
+-    const db = admin.firestore();
++    const db = getFirestore();
+ 
+     if (!auth) {
+         throw new HttpsError("unauthenticated", "Neautorizovaný prístup");
+diff --git a/src/components/calendar/MobileCalendarShell.tsx b/src/components/calendar/MobileCalendarShell.tsx
+index 78144d0..755cf2c 100644
+--- a/src/components/calendar/MobileCalendarShell.tsx
++++ b/src/components/calendar/MobileCalendarShell.tsx
+@@ -38,7 +38,7 @@ import {
+   mapAppointmentRowToCalendarAppointment,
+ } from "./mobile/event-mappers";
+ 
+-const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
++const DEMO_BUSINESS_ID = "papi-hair-design-main";
+ const SWIPE_THRESHOLD = 60;
+ const BUSINESS_TZ = "Europe/Bratislava";
+ 
+diff --git a/src/hooks/useBookingForm.ts b/src/hooks/useBookingForm.ts
+index 504c27c..2b9b0fd 100644
+--- a/src/hooks/useBookingForm.ts
++++ b/src/hooks/useBookingForm.ts
+@@ -6,7 +6,7 @@ import { contactSchema, ServiceRow, EmployeeRow, BookingResult, MembershipRow }
+ import { createPublicBooking } from "@/integrations/firebase/createPublicBooking";
+ import { getRecaptchaToken } from "@/lib/recaptcha";
+ 
+-const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
++const DEMO_BUSINESS_ID = "papi-hair-design-main";
+ 
+ export function useBookingForm(
+     services: ServiceRow[],
+diff --git a/src/hooks/useBusiness.ts b/src/hooks/useBusiness.ts
+index 0dfef98..c739b77 100644
+--- a/src/hooks/useBusiness.ts
++++ b/src/hooks/useBusiness.ts
+@@ -1,7 +1,7 @@
+ import { useAuth } from "@/contexts/AuthContext";
+ import { useMemo } from "react";
+ 
+-export const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
++export const DEMO_BUSINESS_ID = "papi-hair-design-main";
+ 
+ export function useBusiness() {
+   const { memberships } = useAuth();
+diff --git a/src/hooks/useOnboarding.ts b/src/hooks/useOnboarding.ts
+index 723f336..d2c88d7 100644
+--- a/src/hooks/useOnboarding.ts
++++ b/src/hooks/useOnboarding.ts
+@@ -17,7 +17,7 @@ export function useOnboarding() {
+ 
+   useEffect(() => {
+     // Demo ID placeholder or no user should not trigger network heavy checks
+-    if (!user || !isOwnerOrAdmin || businessId === "a1b2c3d4-0000-0000-0000-000000000001") {
++    if (!user || !isOwnerOrAdmin || businessId === "papi-hair-design-main") {
+       setNeedsOnboarding(false);
+       setLoading(false);
+       return;
+diff --git a/src/integrations/firebase/config.ts b/src/integrations/firebase/config.ts
+index 7e9f1d9..e5485fd 100644
+--- a/src/integrations/firebase/config.ts
++++ b/src/integrations/firebase/config.ts
+@@ -45,8 +45,8 @@ if (typeof window !== "undefined") {
+ }
+ 
+ export const auth = getAuth(app);
+-export const db = getFirestore(app, "papihairdesign-dtb");
+-const functionsRegion = (import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION as string | undefined)?.trim() || "us-central1";
++export const db = getFirestore(app);
++const functionsRegion = (import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION as string | undefined)?.trim() || "europe-west1";
+ export const functions = getFunctions(app, functionsRegion);
+ 
+ export default app;
+diff --git a/src/integrations/firebase/useBookingDataFirebase.ts b/src/integrations/firebase/useBookingDataFirebase.ts
+index e6c9dd6..aea47c3 100644
+--- a/src/integrations/firebase/useBookingDataFirebase.ts
++++ b/src/integrations/firebase/useBookingDataFirebase.ts
+@@ -12,7 +12,7 @@ import { auth, db } from "./config";
+ import { ServiceRow, EmployeeRow, MembershipRow } from "@/components/booking/types";
+ import { type BusinessHourEntry, type DateOverrideEntry } from "@/lib/availability";
+ 
+-const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
++const FALLBACK_BIZ = "papi-hair-design-main";
+ 
+ export interface BusinessData {
+     id: string;
+@@ -49,24 +49,24 @@ export function useBookingDataFirebase() {
+ 
+                 // 1. Fetch Basic Info
+                 const [bizSnap, svcSnap, empSnap, bhSnap, bdoSnap] = await Promise.all([
+-                    getDoc(doc(db, "businesses", DEMO_BUSINESS_ID)),
++                    getDoc(doc(db, "businesses", FALLBACK_BIZ)),
+                     getDocs(query(
+                         collection(db, "services"),
+-                        where("business_id", "==", DEMO_BUSINESS_ID),
++                        where("business_id", "==", FALLBACK_BIZ),
+                         where("is_active", "==", true)
+                     )),
+                     getDocs(query(
+                         collection(db, "employees"),
+-                        where("business_id", "==", DEMO_BUSINESS_ID),
++                        where("business_id", "==", FALLBACK_BIZ),
+                         where("is_active", "==", true)
+                     )),
+                     getDocs(query(
+                         collection(db, "business_hours"),
+-                        where("business_id", "==", DEMO_BUSINESS_ID)
++                        where("business_id", "==", FALLBACK_BIZ)
+                     )),
+                     getDocs(query(
+                         collection(db, "business_date_overrides"),
+-                        where("business_id", "==", DEMO_BUSINESS_ID),
++                        where("business_id", "==", FALLBACK_BIZ),
+                         where("override_date", ">=", new Date().toISOString().slice(0, 10))
+                     )),
+                 ]);
+@@ -74,7 +74,7 @@ export function useBookingDataFirebase() {
+                 if (bizSnap.exists()) {
+                     const d = bizSnap.data();
+                     setBusiness({
+-                        id: DEMO_BUSINESS_ID,
++                        id: FALLBACK_BIZ,
+                         name: d.name,
+                         allow_admin_as_provider: d.allow_admin_as_provider,
+                         max_days_ahead: d.max_days_ahead,
+@@ -168,7 +168,7 @@ export function useBookingDataFirebase() {
+                 try {
+                     const memSnap = await getDocs(query(
+                         collection(db, "memberships"),
+-                        where("business_id", "==", DEMO_BUSINESS_ID)
++                        where("business_id", "==", FALLBACK_BIZ)
+                     ));
+                     setMemberships(memSnap.docs.map(d => {
+                         const data = d.data();
+diff --git a/src/integrations/firebase/useBusinessInfoFirebase.ts b/src/integrations/firebase/useBusinessInfoFirebase.ts
+index bc481ec..b5cfa32 100644
+--- a/src/integrations/firebase/useBusinessInfoFirebase.ts
++++ b/src/integrations/firebase/useBusinessInfoFirebase.ts
+@@ -99,11 +99,12 @@ export function useBusinessInfoFirebase(businessId: string) {
+                 }
+ 
+                 // In Firestore, we use parallel queries
+-                const [bizSnap, hoursSnap, overridesSnap, linksSnap] = await Promise.all([
++                const [bizSnap, hoursSnap, overridesSnap, linksSnap, servicesSnap] = await Promise.all([
+                     getDoc(doc(db, "businesses", businessId)),
+                     getDocs(query(collection(db, "business_hours"), where("business_id", "==", businessId))),
+                     getDocs(query(collection(db, "business_date_overrides"), where("business_id", "==", businessId))),
+                     getDocs(query(collection(db, "business_quick_links"), where("business_id", "==", businessId))),
++                    getDocs(query(collection(db, "services"), where("business_id", "==", businessId), where("is_active", "==", true))),
+                 ]);
+ 
+                 if (!bizSnap.exists()) {
+@@ -149,6 +150,18 @@ export function useBusinessInfoFirebase(businessId: string) {
+                     })
+                     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+ 
++                const services = servicesSnap.docs
++                    .map(doc => {
++                        const d = doc.data();
++                        return {
++                            id: doc.id,
++                            name_sk: d.name_sk ?? "",
++                            price: typeof d.price === "number" ? d.price : null,
++                            sort_order: d.sort_order ?? 999,
++                        };
++                    })
++                    .sort((a, b) => a.sort_order - b.sort_order);
++
+                 const tz = biz.timezone || "Europe/Bratislava";
+                 setInfo({
+                     business: {
+@@ -167,6 +180,7 @@ export function useBusinessInfoFirebase(businessId: string) {
+                         opening_hours: biz.opening_hours ?? {},
+                     },
+                     hours,
++                    services,
+                     overrides,
+                     quick_links,
+                 });
+diff --git a/src/pages/LiquidPlayground.tsx b/src/pages/LiquidPlayground.tsx
+index 12c7fba..5c2a209 100644
+--- a/src/pages/LiquidPlayground.tsx
++++ b/src/pages/LiquidPlayground.tsx
+@@ -22,7 +22,7 @@ import cardBgQr from "@/assets/luxury-qr.png";
+ import cardBgAccounts from "@/assets/luxury-accounts.png";
+ import cardBgQr3d from "@/assets/luxury-qr-3d.png";
+ 
+-const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
++const DEMO_BUSINESS_ID = "papi-hair-design-main";
+ 
+ const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+ 
+@@ -211,9 +211,11 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
+ 
+   return (
+     <div className="space-y-8 px-2 pb-10">
+-      <div className="space-y-1">
+-        <h2 className="text-3xl font-bold tracking-tight">{t("liquid.pricesTitle")}</h2>
+-        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">{t("liquid.pricesSub")}</p>
++      <div className="space-y-2">
++        <h2 className="text-3xl font-bold tracking-tight">Cenník Kaderníctvo Košice</h2>
++        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">
++          Prehľad cien našich prémiových služieb pre dámy a pánov v PAPI HAIR DESIGN Košice.
++        </p>
+       </div>
+ 
+       <div className="grid gap-8">
+@@ -239,7 +241,10 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
+         ))}
+       </div>
+ 
+-      <div className="pt-6 border-t border-white/5">
++      <div className="pt-8 border-t border-white/10 space-y-4">
++        <p className="text-xs text-white/70 leading-relaxed text-center italic max-w-md mx-auto">
++          "V našom kaderníctve v Košiciach veríme, že kvalita služieb a spokojnosť klientov je dôležitejšia ako najnižšie ceny. Preto používame výhradne prémiové produkty Gold Haircare a venujeme dostatok času každej službe pre dokonalý výsledok. Naše ceny odrážajú profesionálny prístup, skúsenosti našich kaderníkov a kvalitu materiálov."
++        </p>
+         <p className="text-[10px] italic text-center text-muted-foreground tracking-widest uppercase opacity-40">
+           {t("liquid.priceNote")}
+         </p>
+@@ -391,30 +396,6 @@ export default function LiquidPlayground() {
+   const navigate = useNavigate();
+   const { t } = useTranslation();
+   const { info, openStatus, nextOpening } = useBusinessInfo(DEMO_BUSINESS_ID);
+-  const [services, setServices] = useState<ServiceItem[]>([]);
+-
+-  useEffect(() => {
+-    const loadServices = async () => {
+-      const servicesSnap = await getDocs(query(
+-        collection(db, "services"),
+-        where("business_id", "==", DEMO_BUSINESS_ID),
+-        where("is_active", "==", true),
+-        orderBy("name_sk"),
+-      ));
+-
+-      setServices(servicesSnap.docs.map((doc) => {
+-        const service = doc.data();
+-        return {
+-          id: doc.id,
+-          name_sk: service.name_sk ?? "",
+-          price: typeof service.price === "number" ? service.price : null,
+-        };
+-      }));
+-    };
+-
+-    loadServices();
+-  }, []);
+-
+   const cards = [
+     { id: "brand", label: t("liquid.cardLuxury"), sub: t("liquid.cardLuxurySub"), Icon: Sparkles },
+     { id: "hours", label: t("liquid.cardTime"), sub: t("liquid.cardTimeSub"), Icon: Clock },
+@@ -426,7 +407,7 @@ export default function LiquidPlayground() {
+   const contentMap: Record<string, React.ReactNode> = {
+     brand: <BrandContent openStatus={openStatus} navigate={navigate} />,
+     hours: <HoursContent info={info} openStatus={openStatus} nextOpening={nextOpening} />,
+-    prices: <PricesContent services={services} />,
++    prices: <PricesContent services={info?.services ?? []} />,
+     booking: <BookingContent />,
+     contact: <ContactContent />,
+   };

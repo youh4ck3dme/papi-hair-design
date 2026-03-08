@@ -4,10 +4,10 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5678";
 
 export default defineConfig({
   testDir: ".",
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  retries: process.env.CI ? 2 : 1,
+  workers: 1,
   reporter: [
     ["html", { outputFolder: "e2e-results/html-report", open: "never" }],
     ["list"],

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "c1000000-0000-0000-0000-000000000001",
+    "business_id": "a1b2c3d4-0000-0000-0000-000000000001",
+    "profile_id": null,
+    "display_name": "Miška",
+    "email": "jana@papi-hair.sk",
+    "phone": null,
+    "is_active": true,
+    "created_at": "2026-02-26T19:53:06.37703+00:00",
+    "updated_at": "2026-02-26T19:53:07.433703+00:00",
+    "photo_url": null
+  },
+  {
+    "id": "c1000000-0000-0000-0000-000000000002",
+    "business_id": "a1b2c3d4-0000-0000-0000-000000000001",
+    "profile_id": null,
+    "display_name": "Maťo",
+    "email": "maria@papi-hair.sk",
+    "phone": null,
+    "is_active": true,
+    "created_at": "2026-02-26T19:53:06.37703+00:00",
+    "updated_at": "2026-02-26T19:53:07.433703+00:00",
+    "photo_url": null
+  }
+]

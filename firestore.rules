@@ -54,8 +54,8 @@ service cloud.firestore {
         (resource.data.business_id is string && isOwnerOrAdmin(resource.data.business_id))
       );
 
-      // Temporarily allow create for initial bootstrap, then set to false
-      allow create: if isSignedIn();
+      // Memberships must be created server-side (callable/privileged context), never directly from clients.
+      allow create: if false;
       allow update, delete: if false;
     }
 
