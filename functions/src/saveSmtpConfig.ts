@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import {
     type CallableRequest,
     HttpsError
@@ -14,9 +15,9 @@ interface SaveSmtpConfigData {
     pass?: string;
 }
 
-export const saveSmtpConfig = functions.https.onCall(async (request: CallableRequest<SaveSmtpConfigData>) => {
+export const saveSmtpConfig = functions.https.onCall({ region: "europe-west1" }, async (request: CallableRequest<SaveSmtpConfigData>) => {
     const { auth, data } = request;
-    const db = admin.firestore();
+    const db = getFirestore();
 
     if (!auth) {
         throw new HttpsError("unauthenticated", "Neautorizovaný prístup");

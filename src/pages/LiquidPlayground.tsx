@@ -22,7 +22,7 @@ import cardBgQr from "@/assets/luxury-qr.png";
 import cardBgAccounts from "@/assets/luxury-accounts.png";
 import cardBgQr3d from "@/assets/luxury-qr-3d.png";
 
-const DEMO_BUSINESS_ID = "a1b2c3d4-0000-0000-0000-000000000001";
+const DEMO_BUSINESS_ID = "papi-hair-design-main";
 
 const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
@@ -211,9 +211,11 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
 
   return (
     <div className="space-y-8 px-2 pb-10">
-      <div className="space-y-1">
-        <h2 className="text-3xl font-bold tracking-tight">{t("liquid.pricesTitle")}</h2>
-        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">{t("liquid.pricesSub")}</p>
+      <div className="space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Cenník Kaderníctvo Košice</h2>
+        <p className="text-xs text-primary tracking-[0.2em] uppercase font-medium">
+          Prehľad cien našich prémiových služieb pre dámy a pánov v PAPI HAIR DESIGN Košice.
+        </p>
       </div>
 
       <div className="grid gap-8">
@@ -239,7 +241,10 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
         ))}
       </div>
 
-      <div className="pt-6 border-t border-white/5">
+      <div className="pt-8 border-t border-white/10 space-y-4">
+        <p className="text-xs text-white/70 leading-relaxed text-center italic max-w-md mx-auto">
+          "V našom kaderníctve v Košiciach veríme, že kvalita služieb a spokojnosť klientov je dôležitejšia ako najnižšie ceny. Preto používame výhradne prémiové produkty Gold Haircare a venujeme dostatok času každej službe pre dokonalý výsledok. Naše ceny odrážajú profesionálny prístup, skúsenosti našich kaderníkov a kvalitu materiálov."
+        </p>
         <p className="text-[10px] italic text-center text-muted-foreground tracking-widest uppercase opacity-40">
           {t("liquid.priceNote")}
         </p>
@@ -391,30 +396,6 @@ export default function LiquidPlayground() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { info, openStatus, nextOpening } = useBusinessInfo(DEMO_BUSINESS_ID);
-  const [services, setServices] = useState<ServiceItem[]>([]);
-
-  useEffect(() => {
-    const loadServices = async () => {
-      const servicesSnap = await getDocs(query(
-        collection(db, "services"),
-        where("business_id", "==", DEMO_BUSINESS_ID),
-        where("is_active", "==", true),
-        orderBy("name_sk"),
-      ));
-
-      setServices(servicesSnap.docs.map((doc) => {
-        const service = doc.data();
-        return {
-          id: doc.id,
-          name_sk: service.name_sk ?? "",
-          price: typeof service.price === "number" ? service.price : null,
-        };
-      }));
-    };
-
-    loadServices();
-  }, []);
-
   const cards = [
     { id: "brand", label: t("liquid.cardLuxury"), sub: t("liquid.cardLuxurySub"), Icon: Sparkles },
     { id: "hours", label: t("liquid.cardTime"), sub: t("liquid.cardTimeSub"), Icon: Clock },
@@ -426,7 +407,7 @@ export default function LiquidPlayground() {
   const contentMap: Record<string, React.ReactNode> = {
     brand: <BrandContent openStatus={openStatus} navigate={navigate} />,
     hours: <HoursContent info={info} openStatus={openStatus} nextOpening={nextOpening} />,
-    prices: <PricesContent services={services} />,
+    prices: <PricesContent services={info?.services ?? []} />,
     booking: <BookingContent />,
     contact: <ContactContent />,
   };

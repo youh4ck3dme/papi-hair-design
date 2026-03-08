@@ -45,8 +45,8 @@ if (typeof window !== "undefined") {
 }
 
 export const auth = getAuth(app);
-export const db = getFirestore(app, "papihairdesign-dtb");
-const functionsRegion = (import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION as string | undefined)?.trim() || "us-central1";
+export const db = getFirestore(app);
+const functionsRegion = (import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION as string | undefined)?.trim() || "europe-west1";
 export const functions = getFunctions(app, functionsRegion);
 
 export default app;

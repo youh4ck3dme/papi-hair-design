@@ -17,7 +17,7 @@ export function useOnboarding() {
 
   useEffect(() => {
     // Demo ID placeholder or no user should not trigger network heavy checks
-    if (!user || !isOwnerOrAdmin || businessId === "a1b2c3d4-0000-0000-0000-000000000001") {
+    if (!user || !isOwnerOrAdmin || businessId === "papi-hair-design-main") {
       setNeedsOnboarding(false);
       setLoading(false);
       return;
