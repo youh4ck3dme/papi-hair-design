@@ -102,15 +102,31 @@ async function verifyRecaptchaIfConfigured(recaptchaToken, clientIp) {
 exports.createPublicBooking = functions.https.onCall({ region: "europe-west1" }, async (request) => {
     const { data } = request;
     const db = (0, firestore_1.getFirestore)();
-    const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone } = data;
+    const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone, idempotency_key } = data;
     if (!business_id || !service_id || !employee_id || !start_at || !customer_name || !customer_email) {
         throw new https_1.HttpsError("invalid-argument", "Chýbajúce povinné polia");
     }
     await verifyRecaptchaIfConfigured(data.recaptcha_token, extractClientIp(request.rawRequest));
     const sanitizedEmail = normalizeEmail(customer_email);
+    const idemKey = (idempotency_key && idempotency_key.trim()) || crypto.randomUUID();
     const startDate = new Date(start_at);
     if (isNaN(startDate.getTime())) {
         throw new https_1.HttpsError("invalid-argument", "Neplatný dátum");
+    }
+    const existingSnap = await db.collection("appointments")
+        .where("idempotency_key", "==", idemKey)
+        .limit(1)
+        .get();
+    if (!existingSnap.empty) {
+        const existing = existingSnap.docs[0];
+        return {
+            success: true,
+            appointment_id: existing.id,
+            claim_token: null,
+            customer_email: sanitizedEmail,
+            customer_name: customer_name.trim(),
+            reused: true
+        };
     }
     const [serviceSnap, employeeSnap] = await Promise.all([
         db.collection("services").doc(service_id).get(),
@@ -174,6 +190,7 @@ exports.createPublicBooking = functions.https.onCall({ region: "europe-west1" },
         start_at: startDate.toISOString(),
         end_at: endDate.toISOString(),
         status: "confirmed",
+        idempotency_key: idemKey,
         created_at: new Date().toISOString()
     });
     const token = crypto.randomBytes(32).toString("hex");
@@ -192,7 +209,8 @@ exports.createPublicBooking = functions.https.onCall({ region: "europe-west1" },
         appointment_id: appointment.id,
         claim_token: token,
         customer_email: sanitizedEmail,
-        customer_name: customer_name.trim()
+        customer_name: customer_name.trim(),
+        reused: false,
     };
 });
 //# sourceMappingURL=createPublicBooking.js.map

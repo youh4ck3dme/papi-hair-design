@@ -21,6 +21,7 @@ export interface BusinessData {
     max_days_ahead?: number;
     lead_time_minutes?: number;
     opening_hours?: unknown;
+    revision?: number;
 }
 
 export function useBookingDataFirebase() {
@@ -47,124 +48,137 @@ export function useBookingDataFirebase() {
                     }
                 }
 
-                // 1. Fetch Basic Info
-                const [bizSnap, svcSnap, empSnap, bhSnap, bdoSnap] = await Promise.all([
-                    getDoc(doc(db, "businesses", FALLBACK_BIZ)),
-                    getDocs(query(
-                        collection(db, "services"),
-                        where("business_id", "==", FALLBACK_BIZ),
-                        where("is_active", "==", true)
-                    )),
-                    getDocs(query(
-                        collection(db, "employees"),
-                        where("business_id", "==", FALLBACK_BIZ),
-                        where("is_active", "==", true)
-                    )),
-                    getDocs(query(
-                        collection(db, "business_hours"),
-                        where("business_id", "==", FALLBACK_BIZ)
-                    )),
-                    getDocs(query(
-                        collection(db, "business_date_overrides"),
-                        where("business_id", "==", FALLBACK_BIZ),
-                        where("override_date", ">=", new Date().toISOString().slice(0, 10))
-                    )),
-                ]);
+                // 1. Try snapshot first
+                const snapshotDoc = await getDoc(doc(db, "public_snapshots", FALLBACK_BIZ));
 
-                if (bizSnap.exists()) {
-                    const d = bizSnap.data();
+                if (snapshotDoc.exists()) {
+                    const snap = snapshotDoc.data() as any;
                     setBusiness({
                         id: FALLBACK_BIZ,
-                        name: d.name,
-                        allow_admin_as_provider: d.allow_admin_as_provider,
-                        max_days_ahead: d.max_days_ahead,
-                        lead_time_minutes: d.lead_time_minutes,
-                        opening_hours: d.opening_hours
+                        name: snap.business?.name ?? "",
+                        allow_admin_as_provider: snap.business?.allow_admin_as_provider,
+                        max_days_ahead: snap.business?.max_days_ahead,
+                        lead_time_minutes: snap.business?.lead_time_minutes,
+                        opening_hours: snap.business?.opening_hours,
+                        revision: snap.revision,
                     });
-                }
-
-                setServices(
-                    svcSnap.docs
-                        .map(d => ({ id: d.id, ...d.data() } as ServiceRow))
-                        .sort((a, b) => {
-                            const aSort = typeof a.sort_order === "number" ? a.sort_order : Number.MAX_SAFE_INTEGER;
-                            const bSort = typeof b.sort_order === "number" ? b.sort_order : Number.MAX_SAFE_INTEGER;
-                            if (aSort !== bSort) return aSort - bSort;
-                            return (a.name_sk ?? "").localeCompare(b.name_sk ?? "", "sk");
-                        })
-                );
-                setEmployees(
-                    empSnap.docs
-                        .map(d => ({ id: d.id, ...d.data() } as EmployeeRow))
-                        .sort((a, b) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"))
-                );
-
-                setBusinessHourEntries(
-                    bhSnap.docs
-                        .map(d => {
-                            const h = d.data();
-                            return {
+                    setServices(
+                        (snap.services ?? [])
+                            .map((d: any) => ({ id: d.id, ...d } as ServiceRow))
+                            .sort((a: any, b: any) => {
+                                const aSort = typeof a.sort_order === "number" ? a.sort_order : Number.MAX_SAFE_INTEGER;
+                                const bSort = typeof b.sort_order === "number" ? b.sort_order : Number.MAX_SAFE_INTEGER;
+                                if (aSort !== bSort) return aSort - bSort;
+                                return (a.name_sk ?? "").localeCompare(b.name_sk ?? "", "sk");
+                            })
+                    );
+                    setEmployees(
+                        (snap.employees ?? [])
+                            .map((d: any) => ({ id: d.id, ...d } as EmployeeRow))
+                            .sort((a: any, b: any) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"))
+                    );
+                    setBusinessHourEntries(
+                        (snap.business_hours ?? [])
+                            .map((h: any) => ({
                                 day_of_week: h.day_of_week,
                                 mode: h.mode,
                                 start_time: h.start_time,
                                 end_time: h.end_time,
                                 sort_order: h.sort_order ?? Number.MAX_SAFE_INTEGER,
-                            };
-                        })
-                        .sort((a, b) => a.sort_order - b.sort_order)
-                        .map(({ day_of_week, mode, start_time, end_time }) => ({ day_of_week, mode, start_time, end_time }))
-                );
+                            }))
+                            .sort((a: any, b: any) => a.sort_order - b.sort_order)
+                            .map(({ day_of_week, mode, start_time, end_time }: any) => ({ day_of_week, mode, start_time, end_time }))
+                    );
+                    setDateOverrides(
+                        (snap.date_overrides ?? []).map((o: any) => ({
+                            override_date: o.override_date,
+                            mode: o.mode,
+                            start_time: o.start_time ?? null,
+                            end_time: o.end_time ?? null
+                        }))
+                    );
+                    setEmployeeServiceMap(snap.employee_service_map ?? {});
+                } else {
+                    // Fallback to live collections
+                    const [bizSnap, svcSnap, empSnap, bhSnap, bdoSnap] = await Promise.all([
+                        getDoc(doc(db, "businesses", FALLBACK_BIZ)),
+                        getDocs(query(
+                            collection(db, "services"),
+                            where("business_id", "==", FALLBACK_BIZ),
+                            where("is_active", "==", true)
+                        )),
+                        getDocs(query(
+                            collection(db, "employees"),
+                            where("business_id", "==", FALLBACK_BIZ),
+                            where("is_active", "==", true)
+                        )),
+                        getDocs(query(
+                            collection(db, "business_hours"),
+                            where("business_id", "==", FALLBACK_BIZ)
+                        )),
+                        getDocs(query(
+                            collection(db, "business_date_overrides"),
+                            where("business_id", "==", FALLBACK_BIZ),
+                            where("override_date", ">=", new Date().toISOString().slice(0, 10))
+                        )),
+                    ]);
 
-                setDateOverrides(bdoSnap.docs.map(d => {
-                    const o = d.data();
-                    return {
-                        override_date: o.override_date,
-                        mode: o.mode,
-                        start_time: o.start_time ?? null,
-                        end_time: o.end_time ?? null
-                    };
-                }));
+                    if (bizSnap.exists()) {
+                        const d = bizSnap.data();
+                        setBusiness({
+                            id: FALLBACK_BIZ,
+                            name: d.name,
+                            allow_admin_as_provider: d.allow_admin_as_provider,
+                            max_days_ahead: d.max_days_ahead,
+                            lead_time_minutes: d.lead_time_minutes,
+                            opening_hours: d.opening_hours
+                        });
+                    }
 
-                // 2. Fetch Employee Schedules
-                const empIds = empSnap.docs.map(d => d.id);
-                if (empIds.length) {
-                    // Firestore 'in' query is limited to 10-30 items, for now we take first 10
-                    const schedSnap = await getDocs(query(
-                        collection(db, "schedules"),
-                        where("employee_id", "in", empIds.slice(0, 10))
-                    ));
-                    const map: Record<string, any[]> = {};
-                    schedSnap.forEach(s => {
-                        const d = s.data();
-                        const eid = d.employee_id;
-                        if (!map[eid]) map[eid] = [];
-                        map[eid].push({ day_of_week: d.day_of_week, start_time: d.start_time, end_time: d.end_time });
-                    });
-                    setSchedules(map);
+                    setServices(
+                        svcSnap.docs
+                            .map(d => ({ id: d.id, ...d.data() } as ServiceRow))
+                            .sort((a, b) => {
+                                const aSort = typeof a.sort_order === "number" ? a.sort_order : Number.MAX_SAFE_INTEGER;
+                                const bSort = typeof b.sort_order === "number" ? b.sort_order : Number.MAX_SAFE_INTEGER;
+                                if (aSort !== bSort) return aSort - bSort;
+                                return (a.name_sk ?? "").localeCompare(b.name_sk ?? "", "sk");
+                            })
+                    );
+                    setEmployees(
+                        empSnap.docs
+                            .map(d => ({ id: d.id, ...d.data() } as EmployeeRow))
+                            .sort((a, b) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"))
+                    );
+
+                    setBusinessHourEntries(
+                        bhSnap.docs
+                            .map(d => {
+                                const h = d.data();
+                                return {
+                                    day_of_week: h.day_of_week,
+                                    mode: h.mode,
+                                    start_time: h.start_time,
+                                    end_time: h.end_time,
+                                    sort_order: h.sort_order ?? Number.MAX_SAFE_INTEGER,
+                                };
+                            })
+                            .sort((a, b) => a.sort_order - b.sort_order)
+                            .map(({ day_of_week, mode, start_time, end_time }) => ({ day_of_week, mode, start_time, end_time }))
+                    );
+
+                    setDateOverrides(bdoSnap.docs.map(d => {
+                        const o = d.data();
+                        return {
+                            override_date: o.override_date,
+                            mode: o.mode,
+                            start_time: o.start_time ?? null,
+                            end_time: o.end_time ?? null
+                        };
+                    }));
                 }
 
-                // 3. Fetch Employee Services Mapping
-                const esSnap = await getDocs(query(
-                    collection(db, "employee_services"),
-                    // Note: We might need business_id on employee_services for simpler queries
-                    // or fetch all and filter in frontend for small datasets
-                ));
-
-                // For now, let's assume we have many and we need to filter
-                const eMap: Record<string, string[]> = {};
-                esSnap.docs.forEach(doc => {
-                    const d = doc.data();
-                    // We need a way to verify business_id if it's not on the doc
-                    // For the blueprint, we assume it's there or we filter by known employees
-                    if (empIds.includes(d.employee_id)) {
-                        const eid = d.employee_id;
-                        if (!eMap[eid]) eMap[eid] = [];
-                        eMap[eid].push(d.service_id);
-                    }
-                });
-                setEmployeeServiceMap(eMap);
-
-                // 4. Memberships (best-effort: public booking users may not have permission)
+                // 2. Memberships (best-effort)
                 try {
                     const memSnap = await getDocs(query(
                         collection(db, "memberships"),

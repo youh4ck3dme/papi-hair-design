@@ -182,7 +182,11 @@ service cloud.firestore {
     match /consent_events/{eventId} {
       allow read, write: if false;
     }
+
+    match /public_snapshots/{snapshotId} {
+      allow read: if true;
+      allow write: if false;
+    }
   }
 }
-
 
