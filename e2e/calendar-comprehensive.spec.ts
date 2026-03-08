@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Calendar Comprehensive Tests", () => {
-<<<<<<< HEAD
     test.beforeEach(async ({ page }) => {
         // 1. Navigate to auth page
         await page.goto("/auth");
@@ -147,7 +146,6 @@ test.describe("Calendar Comprehensive Tests", () => {
         await page.locator('button[value="day"]').click();
         await expect(page.locator('button[value="day"][data-state="on"]')).toBeVisible();
     });
-=======
 
     test("Public Booking Flow Integrity", async ({ page }) => {
         await page.goto("/booking");
@@ -184,6 +182,4 @@ test.describe("Calendar Comprehensive Tests", () => {
         const monthBtn = page.locator('button:has-text("Mesiac")');
         if (await monthBtn.isVisible()) await monthBtn.click();
     });
-
->>>>>>> codex/pack2-booking-spine
 });
