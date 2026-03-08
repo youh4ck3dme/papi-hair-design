@@ -275,6 +275,27 @@ npm run typecheck         # TypeScript bez buildu
 npm run lint              # ESLint
 ```
 
+### Testovacie príkazy (Firebase & E2E)
+
+Použite tieto príkazy na lokálne testovanie s emulátorom:
+
+**1. Spustenie Firestore emulátora**
+```bash
+firebase emulators:start --only firestore --project demo-test --import=./emulator-data --export-on-exit=./emulator-data
+```
+
+**2. Spustenie testov Cloud Functions**
+```bash
+# Windows (PowerShell/CMD)
+set FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 && cd functions && npm test
+```
+
+**3. Spustenie komplexných E2E testov (Playwright)**
+```bash
+# Predpokladá spustený 'npm run dev' na porte 5678
+$env:PLAYWRIGHT_BASE_URL="http://localhost:5678"; npx playwright test e2e/calendar-comprehensive.spec.ts --reporter=list
+```
+
 Framework: **Vitest** + `@testing-library/react` + `jsdom`
 
 ---
@@ -379,7 +400,9 @@ This project has been comprehensively audited and a repair blueprint created.
 npm run lint                 # Code quality
 npm run typecheck            # TypeScript check
 npm run test:coverage        # Unit tests + coverage
-npm run test:responsive      # E2E tests
+npm run test:responsive      # E2E testy (responzivita)
+npm run test:admin           # E2E testy (admin kalendár)
+$env:PLAYWRIGHT_BASE_URL="http://localhost:5678"; npx playwright test e2e/calendar-comprehensive.spec.ts --reporter=list # Komplexný test
 npm run build               # Production build
 npm run preview             # Test prod build locally
 ```

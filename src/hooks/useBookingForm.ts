@@ -3,10 +3,14 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { contactSchema, ServiceRow, EmployeeRow, BookingResult, MembershipRow } from "@/components/booking/types";
-import { createPublicBooking } from "@/integrations/firebase/createPublicBooking";
-import { getRecaptchaToken } from "@/lib/recaptcha";
+import { createBookingHold } from "@/integrations/firebase/createBookingHold";
+import { confirmBooking } from "@/integrations/firebase/confirmBooking";
 
 const DEMO_BUSINESS_ID = "papi-hair-design-main";
+const makeIdempotencyKey = () =>
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export function useBookingForm(
     services: ServiceRow[],
@@ -120,8 +124,9 @@ export function useBookingForm(
                 setSubmitting(false);
                 return;
             }
-            const recaptchaToken = await getRecaptchaToken("booking");
-            const data = await createPublicBooking({
+            const idempotencyKey = makeIdempotencyKey();
+
+            const hold = await createBookingHold({
                 business_id: DEMO_BUSINESS_ID,
                 service_id: selectedServiceId,
                 employee_id: selectedWorkerId,
@@ -129,14 +134,32 @@ export function useBookingForm(
                 customer_name: `${formData.meno} ${formData.priezvisko}`.trim(),
                 customer_email: formData.email,
                 customer_phone: formData.phone || undefined,
-                recaptcha_token: recaptchaToken ?? undefined,
+                idempotency_key: idempotencyKey,
             });
 
-            if (data.error) {
-                toast.error(data.error);
+            if (!hold.success || !hold.appointment_id) {
+                toast.error(hold.error || t("booking.toastServerError"));
                 setSubmitting(false);
                 return;
             }
+
+            const confirm = await confirmBooking({
+                appointment_id: hold.appointment_id,
+                idempotency_key: idempotencyKey,
+            });
+
+            if (!confirm.success) {
+                toast.error(confirm.error || t("booking.toastServerError"));
+                setSubmitting(false);
+                return;
+            }
+
+            const data: BookingResult = {
+                success: true,
+                appointment_id: hold.appointment_id,
+                customer_email: formData.email,
+                customer_name: `${formData.meno} ${formData.priezvisko}`.trim(),
+            };
 
             setBookingResult(data);
             setBookingDone(true);

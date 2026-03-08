@@ -47,7 +47,6 @@ service cloud.firestore {
     match /profiles/{userId} {
       allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
-
     match /memberships/{membershipId} {
       allow read: if isSignedIn() && (
         resource.data.profile_id == request.auth.uid ||
@@ -185,3 +184,5 @@ service cloud.firestore {
     }
   }
 }
+
+

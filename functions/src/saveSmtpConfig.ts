@@ -48,7 +48,7 @@ export const saveSmtpConfig = functions.https.onCall({ region: "europe-west1" },
     } else {
         const bizSnap = await db.collection("businesses").doc(business_id).get();
         const existing = (bizSnap.data()?.smtp_config as Record<string, any>) ?? {};
-        if (existing.password_secret) {
+        if (existing?.password_secret) {
             sanitized.password_secret = existing.password_secret;
             hasPassword = true;
         }
