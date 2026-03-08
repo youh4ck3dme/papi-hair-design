@@ -8,3 +8,4 @@ export { saveSmtpConfig } from "./saveSmtpConfig";
 export { consentEvent } from "./consentEvent";
 export { listBookableProviders } from "./listBookableProviders";
 export { syncOfflineData } from "./syncOfflineData";
+export { createBookingHold } from "./createBookingHold";
