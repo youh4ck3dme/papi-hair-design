@@ -1,10 +1,11 @@
 import * as functions from "firebase-functions/v2";
-import * as admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import {
     type CallableRequest,
     HttpsError
 } from "firebase-functions/v2/https";
+import { requireAuth, requireMembership } from "./guards";
+import { upsertSecret } from "./secretManager";
 
 interface SaveSmtpConfigData {
     business_id: string;
@@ -19,9 +20,7 @@ export const saveSmtpConfig = functions.https.onCall({ region: "europe-west1" },
     const { auth, data } = request;
     const db = getFirestore();
 
-    if (!auth) {
-        throw new HttpsError("unauthenticated", "Neautorizovaný prístup");
-    }
+    const uid = requireAuth(auth);
 
     const { business_id, host, port, user: smtpUser, from, pass } = data;
 
@@ -30,20 +29,7 @@ export const saveSmtpConfig = functions.https.onCall({ region: "europe-west1" },
     }
 
     // Verify user is admin/owner of this business
-    const membershipSnap = await db.collection("memberships")
-        .where("business_id", "==", business_id)
-        .where("profile_id", "==", auth.uid)
-        .limit(1)
-        .get();
-
-    if (membershipSnap.empty) {
-        throw new HttpsError("permission-denied", "Forbidden – access denied");
-    }
-
-    const membership = membershipSnap.docs[0].data();
-    if (membership.role !== "owner" && membership.role !== "admin") {
-        throw new HttpsError("permission-denied", "Forbidden – admin only");
-    }
+    await requireMembership(uid, business_id, ["owner", "admin"]);
 
     // Validate inputs
     const sanitized: Record<string, any> = {
@@ -53,19 +39,26 @@ export const saveSmtpConfig = functions.https.onCall({ region: "europe-west1" },
         from: typeof from === "string" ? from.trim().slice(0, 255) : "",
     };
 
-    // If pass is provided, include it. Otherwise load existing.
+    // Handle password via Secret Manager, not Firestore
+    let hasPassword = false;
     if (typeof pass === "string" && pass.length > 0) {
-        sanitized.pass = pass.slice(0, 500);
+        const secretName = await upsertSecret(`smtp-password-${business_id}`, pass);
+        sanitized.password_secret = secretName;
+        hasPassword = true;
     } else {
-        // Keep existing password
         const bizSnap = await db.collection("businesses").doc(business_id).get();
-        const bizData = bizSnap.data();
-        const existing = (bizData?.smtp_config as Record<string, any>) ?? {};
-        sanitized.pass = existing.pass ?? "";
+        const existing = (bizSnap.data()?.smtp_config as Record<string, any>) ?? {};
+        if (existing?.password_secret) {
+            sanitized.password_secret = existing.password_secret;
+            hasPassword = true;
+        }
     }
 
     await db.collection("businesses").doc(business_id).update({
-        smtp_config: sanitized,
+        smtp_config: {
+            ...sanitized,
+            has_password: hasPassword
+        },
         updated_at: new Date().toISOString()
     });
 

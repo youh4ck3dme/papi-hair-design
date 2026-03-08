@@ -1,10 +1,10 @@
 import * as functions from "firebase-functions/v2";
-import * as admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import {
     type CallableRequest,
     HttpsError
 } from "firebase-functions/v2/https";
+import { requireAuth, requireMembership } from "./guards";
 
 interface SyncChange {
     table: "appointments";
@@ -140,15 +140,7 @@ function buildAppointmentPatch(raw: Record<string, unknown> | undefined, busines
 
 async function resolveBusinessId(db: FirebaseFirestore.Firestore, uid: string, requestedBusinessId?: string): Promise<string> {
     if (requestedBusinessId) {
-        const membership = await db.collection("memberships")
-            .where("business_id", "==", requestedBusinessId)
-            .where("profile_id", "==", uid)
-            .limit(1)
-            .get();
-
-        if (membership.empty) {
-            throw new HttpsError("permission-denied", "Access denied");
-        }
+        await requireMembership(uid, requestedBusinessId, ["owner", "admin", "employee"]);
         return requestedBusinessId;
     }
 
@@ -173,11 +165,9 @@ export const syncOfflineData = functions.https.onCall({ region: "europe-west1" }
     const { auth, data } = request;
     const db = getFirestore();
 
-    if (!auth) {
-        throw new HttpsError("unauthenticated", "Neautorizovaný prístup");
-    }
+    const uid = requireAuth(auth);
 
-    const businessId = await resolveBusinessId(db, auth.uid, data.business_id);
+    const businessId = await resolveBusinessId(db, uid, data.business_id);
     const incomingChanges = normalizeChanges(data, businessId);
     const lastSyncTimestamp = typeof data.last_sync_timestamp === "string" ? data.last_sync_timestamp : undefined;
     const nowIso = new Date().toISOString();
