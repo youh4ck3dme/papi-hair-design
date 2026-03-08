@@ -15,8 +15,10 @@ beforeAll(() => {
   }
 });
 
-// Skipped until Firestore emulator is wired into test env
-describe.skip("booking hold + confirm", () => {
+const EMULATOR = process.env.FIRESTORE_EMULATOR_HOST;
+const run = EMULATOR ? describe : describe.skip;
+
+run("booking hold + confirm (requires Firestore emulator)", () => {
   beforeEach(async () => {
     const db = getFirestore();
     const snap = await db.collection("appointments").get();
