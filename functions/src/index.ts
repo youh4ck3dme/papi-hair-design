@@ -10,3 +10,4 @@ export { listBookableProviders } from "./listBookableProviders";
 export { syncOfflineData } from "./syncOfflineData";
 export { createBookingHold } from "./createBookingHold";
 export { confirmBooking } from "./confirmBooking";
+export { cleanupExpiredHolds } from "./cleanupExpiredHolds";
