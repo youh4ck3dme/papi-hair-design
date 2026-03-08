@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.syncOfflineData = exports.listBookableProviders = exports.consentEvent = exports.saveSmtpConfig = exports.createPublicBooking = exports.claimBooking = void 0;
+exports.cleanupExpiredHolds = exports.confirmBooking = exports.createBookingHold = exports.syncOfflineData = exports.listBookableProviders = exports.consentEvent = exports.saveSmtpConfig = exports.createPublicBooking = exports.claimBooking = void 0;
 const admin = __importStar(require("firebase-admin"));
 admin.initializeApp();
 var claimBooking_1 = require("./claimBooking");
@@ -48,4 +48,10 @@ var listBookableProviders_1 = require("./listBookableProviders");
 Object.defineProperty(exports, "listBookableProviders", { enumerable: true, get: function () { return listBookableProviders_1.listBookableProviders; } });
 var syncOfflineData_1 = require("./syncOfflineData");
 Object.defineProperty(exports, "syncOfflineData", { enumerable: true, get: function () { return syncOfflineData_1.syncOfflineData; } });
+var createBookingHold_1 = require("./createBookingHold");
+Object.defineProperty(exports, "createBookingHold", { enumerable: true, get: function () { return createBookingHold_1.createBookingHold; } });
+var confirmBooking_1 = require("./confirmBooking");
+Object.defineProperty(exports, "confirmBooking", { enumerable: true, get: function () { return confirmBooking_1.confirmBooking; } });
+var cleanupExpiredHolds_1 = require("./cleanupExpiredHolds");
+Object.defineProperty(exports, "cleanupExpiredHolds", { enumerable: true, get: function () { return cleanupExpiredHolds_1.cleanupExpiredHolds; } });
 //# sourceMappingURL=index.js.map

@@ -228,8 +228,9 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
     return {
         success: true,
         appointment_id: appointment.id,
-        claim_token: token,
+        claim_token: token as string,
         customer_email: sanitizedEmail,
-        customer_name: customer_name.trim()
+        customer_name: customer_name.trim(),
+        reused: false,
     };
 });

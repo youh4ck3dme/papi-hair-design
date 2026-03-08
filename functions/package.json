@@ -6,7 +6,8 @@
         "shell": "npm run build && firebase functions:shell",
         "start": "npm run shell",
         "deploy": "firebase deploy --only functions",
-        "logs": "firebase functions:log"
+        "logs": "firebase functions:log",
+        "test": "npm run build && vitest run --config vitest.config.ts"
     },
     "engines": {
         "node": "22"
@@ -19,8 +20,9 @@
         "nodemailer": "^6.10.0"
     },
     "devDependencies": {
-        "firebase-functions-test": "^3.1.0",
-        "typescript": "^5.0.0"
+        "firebase-functions-test": "^3.4.1",
+        "typescript": "^5.0.0",
+        "vitest": "^4.0.18"
     },
     "private": true
 }
