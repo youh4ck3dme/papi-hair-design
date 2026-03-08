@@ -47,7 +47,7 @@ service cloud.firestore {
     match /profiles/{userId} {
       allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
-\n    match /memberships/{membershipId} {
+    match /memberships/{membershipId} {
       allow read: if isSignedIn() && (
         resource.data.profile_id == request.auth.uid ||
         (resource.data.business_id is string && isOwnerOrAdmin(resource.data.business_id))
