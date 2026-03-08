@@ -1,5 +1,4 @@
 import * as functions from "firebase-functions/v2";
-import * as admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import {
     type CallableRequest,
@@ -15,6 +14,7 @@ interface CreatePublicBookingData {
     customer_name: string;
     customer_email: string;
     customer_phone?: string;
+    idempotency_key?: string;
     recaptcha_token?: string | null;
 }
 
@@ -99,7 +99,7 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
     const db = getFirestore();
 
     // 0. Validation
-    const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone } = data;
+    const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone, idempotency_key } = data;
     if (!business_id || !service_id || !employee_id || !start_at || !customer_name || !customer_email) {
         throw new HttpsError("invalid-argument", "Chýbajúce povinné polia");
     }
@@ -107,9 +107,27 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
     await verifyRecaptchaIfConfigured(data.recaptcha_token, extractClientIp(request.rawRequest));
 
     const sanitizedEmail = normalizeEmail(customer_email);
+    const idemKey = (idempotency_key && idempotency_key.trim()) || crypto.randomUUID();
     const startDate = new Date(start_at);
     if (isNaN(startDate.getTime())) {
         throw new HttpsError("invalid-argument", "Neplatný dátum");
+    }
+
+    // Idempotency: if appointment with same key exists, return it
+    const existingSnap = await db.collection("appointments")
+        .where("idempotency_key", "==", idemKey)
+        .limit(1)
+        .get();
+    if (!existingSnap.empty) {
+        const existing = existingSnap.docs[0];
+        return {
+            success: true,
+            appointment_id: existing.id,
+            claim_token: null,
+            customer_email: sanitizedEmail,
+            customer_name: customer_name.trim(),
+            reused: true
+        };
     }
 
     // 1. Get service & employee
@@ -185,6 +203,7 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
         start_at: startDate.toISOString(),
         end_at: endDate.toISOString(),
         status: "confirmed",
+        idempotency_key: idemKey,
         created_at: new Date().toISOString()
     });
 
