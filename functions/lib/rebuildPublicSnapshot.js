@@ -33,30 +33,12 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.rebuildPublicSnapshot = void 0;
+exports.onEmployeeServiceWrite = exports.onDateOverrideWrite = exports.onBusinessHoursWrite = exports.onEmployeeWrite = exports.onServiceWrite = exports.onBusinessWrite = exports.rebuildPublicSnapshot = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const firestore_1 = require("firebase-admin/firestore");
 const https_1 = require("firebase-functions/v2/https");
-exports.rebuildPublicSnapshot = functions.https.onCall({ region: "europe-west1" }, async (request) => {
-    const { auth, data } = request;
-    const db = (0, firestore_1.getFirestore)();
-    if (!auth?.uid) {
-        throw new https_1.HttpsError("unauthenticated", "Authentication required");
-    }
-    const businessId = data.business_id?.trim();
-    if (!businessId) {
-        throw new https_1.HttpsError("invalid-argument", "business_id is required");
-    }
-    const membershipSnap = await db
-        .collection("memberships")
-        .where("business_id", "==", businessId)
-        .where("profile_id", "==", auth.uid)
-        .limit(1)
-        .get();
-    const role = membershipSnap.empty ? "" : (membershipSnap.docs[0].data().role || "");
-    if (membershipSnap.empty || !(role === "owner" || role === "admin")) {
-        throw new https_1.HttpsError("permission-denied", "Forbidden");
-    }
+const firestore_2 = require("firebase-functions/v2/firestore");
+async function buildAndWriteSnapshot(db, businessId) {
     const [bizDoc, servicesSnap, employeesSnap, hoursSnap, overridesSnap, esSnap] = await Promise.all([
         db.collection("businesses").doc(businessId).get(),
         db
@@ -103,6 +85,51 @@ exports.rebuildPublicSnapshot = functions.https.onCall({ region: "europe-west1" 
         status: "ready",
     };
     await db.collection("public_snapshots").doc(businessId).set(snapshot);
-    return { success: true, revision: snapshot.revision };
+    return snapshot.revision;
+}
+function resolveBusinessId(before, after, paramId) {
+    if (paramId)
+        return paramId;
+    const fromAfter = after?.data()?.business_id;
+    if (fromAfter)
+        return fromAfter;
+    const fromBefore = before?.data()?.business_id;
+    return fromBefore;
+}
+exports.rebuildPublicSnapshot = functions.https.onCall({ region: "europe-west1" }, async (request) => {
+    const { auth, data } = request;
+    const db = (0, firestore_1.getFirestore)();
+    if (!auth?.uid) {
+        throw new https_1.HttpsError("unauthenticated", "Authentication required");
+    }
+    const businessId = data.business_id?.trim();
+    if (!businessId) {
+        throw new https_1.HttpsError("invalid-argument", "business_id is required");
+    }
+    const membershipSnap = await db
+        .collection("memberships")
+        .where("business_id", "==", businessId)
+        .where("profile_id", "==", auth.uid)
+        .limit(1)
+        .get();
+    const role = membershipSnap.empty ? "" : (membershipSnap.docs[0].data().role || "");
+    if (membershipSnap.empty || !(role === "owner" || role === "admin")) {
+        throw new https_1.HttpsError("permission-denied", "Forbidden");
+    }
+    const revision = await buildAndWriteSnapshot(db, businessId);
+    return { success: true, revision };
 });
+async function rebuildFromChange(before, after, businessIdParam) {
+    const db = (0, firestore_1.getFirestore)();
+    const businessId = resolveBusinessId(before, after, businessIdParam);
+    if (!businessId)
+        return;
+    await buildAndWriteSnapshot(db, businessId);
+}
+exports.onBusinessWrite = (0, firestore_2.onDocumentWritten)({ region: "europe-west1", document: "businesses/{businessId}" }, async (event) => rebuildFromChange(event.data?.before, event.data?.after, event.params.businessId));
+exports.onServiceWrite = (0, firestore_2.onDocumentWritten)({ region: "europe-west1", document: "services/{serviceId}" }, async (event) => rebuildFromChange(event.data?.before, event.data?.after));
+exports.onEmployeeWrite = (0, firestore_2.onDocumentWritten)({ region: "europe-west1", document: "employees/{employeeId}" }, async (event) => rebuildFromChange(event.data?.before, event.data?.after));
+exports.onBusinessHoursWrite = (0, firestore_2.onDocumentWritten)({ region: "europe-west1", document: "business_hours/{docId}" }, async (event) => rebuildFromChange(event.data?.before, event.data?.after));
+exports.onDateOverrideWrite = (0, firestore_2.onDocumentWritten)({ region: "europe-west1", document: "business_date_overrides/{docId}" }, async (event) => rebuildFromChange(event.data?.before, event.data?.after));
+exports.onEmployeeServiceWrite = (0, firestore_2.onDocumentWritten)({ region: "europe-west1", document: "employee_services/{docId}" }, async (event) => rebuildFromChange(event.data?.before, event.data?.after));
 //# sourceMappingURL=rebuildPublicSnapshot.js.map

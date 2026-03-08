@@ -1,6 +1,7 @@
 import * as functions from "firebase-functions/v2";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, Firestore } from "firebase-admin/firestore";
 import { HttpsError, CallableRequest } from "firebase-functions/v2/https";
+import { onDocumentWritten } from "firebase-functions/v2/firestore";
 
 interface RebuildSnapshotInput {
   business_id: string;
@@ -16,6 +17,72 @@ interface PublicSnapshot {
   revision: number;
   updated_at: string;
   status: "ready";
+}
+
+async function buildAndWriteSnapshot(db: Firestore, businessId: string) {
+  const [bizDoc, servicesSnap, employeesSnap, hoursSnap, overridesSnap, esSnap] =
+    await Promise.all([
+      db.collection("businesses").doc(businessId).get(),
+      db
+        .collection("services")
+        .where("business_id", "==", businessId)
+        .where("is_active", "==", true)
+        .get(),
+      db
+        .collection("employees")
+        .where("business_id", "==", businessId)
+        .where("is_active", "==", true)
+        .get(),
+      db
+        .collection("business_hours")
+        .where("business_id", "==", businessId)
+        .get(),
+      db
+        .collection("business_date_overrides")
+        .where("business_id", "==", businessId)
+        .get(),
+      db.collection("employee_services").get(),
+    ]);
+
+  if (!bizDoc.exists) {
+    throw new HttpsError("not-found", "Business not found");
+  }
+
+  const employeeServiceMap: Record<string, string[]> = {};
+  esSnap.forEach((d) => {
+    const ed = d.data() as any;
+    if (ed.business_id === businessId && ed.employee_id && ed.service_id) {
+      if (!employeeServiceMap[ed.employee_id]) employeeServiceMap[ed.employee_id] = [];
+      employeeServiceMap[ed.employee_id].push(ed.service_id);
+    }
+  });
+
+  const snapshot: PublicSnapshot = {
+    business: { id: bizDoc.id, ...bizDoc.data() },
+    services: servicesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    employees: employeesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    business_hours: hoursSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    date_overrides: overridesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    employee_service_map: employeeServiceMap,
+    revision: Date.now(),
+    updated_at: new Date().toISOString(),
+    status: "ready",
+  };
+
+  await db.collection("public_snapshots").doc(businessId).set(snapshot);
+  return snapshot.revision;
+}
+
+function resolveBusinessId(
+  before: FirebaseFirestore.DocumentSnapshot | undefined,
+  after: FirebaseFirestore.DocumentSnapshot | undefined,
+  paramId?: string
+) {
+  if (paramId) return paramId;
+  const fromAfter = after?.data()?.business_id as string | undefined;
+  if (fromAfter) return fromAfter;
+  const fromBefore = before?.data()?.business_id as string | undefined;
+  return fromBefore;
 }
 
 export const rebuildPublicSnapshot = functions.https.onCall(
@@ -45,57 +112,48 @@ export const rebuildPublicSnapshot = functions.https.onCall(
       throw new HttpsError("permission-denied", "Forbidden");
     }
 
-    const [bizDoc, servicesSnap, employeesSnap, hoursSnap, overridesSnap, esSnap] =
-      await Promise.all([
-        db.collection("businesses").doc(businessId).get(),
-        db
-          .collection("services")
-          .where("business_id", "==", businessId)
-          .where("is_active", "==", true)
-          .get(),
-        db
-          .collection("employees")
-          .where("business_id", "==", businessId)
-          .where("is_active", "==", true)
-          .get(),
-        db
-          .collection("business_hours")
-          .where("business_id", "==", businessId)
-          .get(),
-        db
-          .collection("business_date_overrides")
-          .where("business_id", "==", businessId)
-          .get(),
-        db.collection("employee_services").get(),
-      ]);
-
-    if (!bizDoc.exists) {
-      throw new HttpsError("not-found", "Business not found");
-    }
-
-    const employeeServiceMap: Record<string, string[]> = {};
-    esSnap.forEach((d) => {
-      const ed = d.data() as any;
-      if (ed.business_id === businessId && ed.employee_id && ed.service_id) {
-        if (!employeeServiceMap[ed.employee_id]) employeeServiceMap[ed.employee_id] = [];
-        employeeServiceMap[ed.employee_id].push(ed.service_id);
-      }
-    });
-
-    const snapshot: PublicSnapshot = {
-      business: { id: bizDoc.id, ...bizDoc.data() },
-      services: servicesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
-      employees: employeesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
-      business_hours: hoursSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
-      date_overrides: overridesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
-      employee_service_map: employeeServiceMap,
-      revision: Date.now(),
-      updated_at: new Date().toISOString(),
-      status: "ready",
-    };
-
-    await db.collection("public_snapshots").doc(businessId).set(snapshot);
-
-    return { success: true, revision: snapshot.revision };
+    const revision = await buildAndWriteSnapshot(db, businessId);
+    return { success: true, revision };
   }
+);
+
+async function rebuildFromChange(
+  before: FirebaseFirestore.DocumentSnapshot | undefined,
+  after: FirebaseFirestore.DocumentSnapshot | undefined,
+  businessIdParam?: string
+) {
+  const db = getFirestore();
+  const businessId = resolveBusinessId(before, after, businessIdParam);
+  if (!businessId) return;
+  await buildAndWriteSnapshot(db, businessId);
+}
+
+export const onBusinessWrite = onDocumentWritten(
+  { region: "europe-west1", document: "businesses/{businessId}" },
+  async (event) => rebuildFromChange(event.data?.before, event.data?.after, event.params.businessId)
+);
+
+export const onServiceWrite = onDocumentWritten(
+  { region: "europe-west1", document: "services/{serviceId}" },
+  async (event) => rebuildFromChange(event.data?.before, event.data?.after)
+);
+
+export const onEmployeeWrite = onDocumentWritten(
+  { region: "europe-west1", document: "employees/{employeeId}" },
+  async (event) => rebuildFromChange(event.data?.before, event.data?.after)
+);
+
+export const onBusinessHoursWrite = onDocumentWritten(
+  { region: "europe-west1", document: "business_hours/{docId}" },
+  async (event) => rebuildFromChange(event.data?.before, event.data?.after)
+);
+
+export const onDateOverrideWrite = onDocumentWritten(
+  { region: "europe-west1", document: "business_date_overrides/{docId}" },
+  async (event) => rebuildFromChange(event.data?.before, event.data?.after)
+);
+
+export const onEmployeeServiceWrite = onDocumentWritten(
+  { region: "europe-west1", document: "employee_services/{docId}" },
+  async (event) => rebuildFromChange(event.data?.before, event.data?.after)
 );
