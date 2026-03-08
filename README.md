@@ -9,8 +9,26 @@ Moderný rezervačný systém pre salóny krásy. React 18 PWA + Firebase backen
 
 ---
 
+## ⚠️ CURRENT STATUS (Diagnostic Report – 8.3.2026)
+
+**Health Score:** 7.2/10 – Production READY s podmienkami  
+**Last Diagnostic:** [AI Comprehensive Scan]  
+**Blockers:** 4 Critical fixes required before launch
+
+### 🔴 Critical Fixes (MUST DO BEFORE LAUNCH)
+1. ❌ **`.env` exposed in git** – Purge history, rotate tokens (2h)
+2. ❌ **Role bypass in ProtectedRoute** – Employee accessing admin (45m)
+3. ❌ **SMTP passwords plaintext** – Migrate to Secret Manager (2h)
+4. ⚠️ **Test credentials hardcoded** – Move to env vars (1h)
+
+**→ See `TODO.md` for complete repair blueprint + timeline**
+
+---
+
 ## Obsah
 
+- [⚠️ Current Status](#-current-status-diagnostic-report--832026) ← **NOVÉ: Diagnostic summary**
+- [🛠️ Repair Blueprint](#-repair-blueprint-see-todomd) ← **NOVÉ: Link to TODO.md**
 - [Architektúra](#architektúra)
 - [Rýchly štart](#rýchly-štart)
 - [Premenné prostredia](#premenné-prostredia)
@@ -22,6 +40,38 @@ Moderný rezervačný systém pre salóny krásy. React 18 PWA + Firebase backen
 - [Testy](#testy)
 - [Deploy](#deploy)
 - [Otváracie hodiny](#otváracie-hodiny)
+- [AI Handoff Notes](#-ai-handoff-notes) ← **NOVÉ: For continuation**
+
+---
+
+## 🛠️ Repair Blueprint (See TODO.md)
+
+Comprehensive diagnostic identified 12 action items:
+
+| Priority | Count | Items | Time |
+|----------|-------|-------|------|
+| 🔴 Critical | 4 | Git cleanup, role fix, secrets, test creds | 5–6h |
+| 🟠 High | 6 | Query limits, rate limiting, monitoring, tests | 7–8h |
+| 🟡 Medium | 2 | JSDoc, Playwright update | 1–2h |
+
+**→ Full details: [`TODO.md`](./TODO.md)**
+
+### Quick Start on Fixes
+
+```bash
+# 1. Git cleanup (CRITICAL)
+git filter-branch --tree-filter 'rm -f .env .env.local' -- --all
+
+# 2. Test with coverage (HIGH)
+npm run test:coverage  # Target: 60% minimum
+
+# 3. Deploy functions (HIGH)
+cd functions && npm run build && firebase deploy --only functions
+
+# 4. Validate all
+npm run lint && npm run typecheck && npm run build
+firebase deploy --only firestore
+```
 
 ---
 
@@ -304,3 +354,54 @@ papi-hair-design/
 ## Licencia
 
 Proprietary – © EB-EU s.r.o. Všetky práva vyhradené.
+
+---
+
+## 🤖 AI Handoff Notes
+
+**For continuation by AI agents:**
+
+This project has been comprehensively audited and a repair blueprint created.
+
+### Key Artifacts
+- **`TODO.md`** – 12 action items, prioritized, with code examples
+- **`docs/CURRENT_PROJECT_STATE.md`** – Project state snapshot
+- **Diagnostic Report** – 7.2/10 score, 4 critical blockers
+
+### Before Continuing
+1. Read `TODO.md` fully (it's the source of truth)
+2. Check "Status:" field in each section
+3. Start with 🔴 CRITICAL items
+4. Run validation checklist before launch
+
+### Testing Commands
+```bash
+npm run lint                 # Code quality
+npm run typecheck            # TypeScript check
+npm run test:coverage        # Unit tests + coverage
+npm run test:responsive      # E2E tests
+npm run build               # Production build
+npm run preview             # Test prod build locally
+```
+
+### Critical Files to Review
+- `firestore.rules` – Security (excellent)
+- `functions/src/*.ts` – Cloud Functions (needs rate limiting)
+- `src/components/ProtectedRoute.tsx` – Role authorization (has bypass)
+- `src/pages/admin/*.tsx` – Admin pages (need query limits)
+- `.env` & `.env.local` – ❌ Remove from git (in TODO.md)
+
+### Deployment Workflow
+1. Fix critical issues in TODO.md
+2. Run validation checklist
+3. `npm run build && firebase deploy` (all services)
+4. Test in Vercel preview deployment
+5. Merge to main for auto-production deploy
+
+---
+
+### Questions?
+- Architecture: See `docs/ARCHITECTURE.md`
+- Setup: See `docs/DEVELOPMENT-SETUP.md`
+- Firebase migration: See `docs/MIGRATION-FIREBASE.md`
+- Troubleshooting: See `docs/` folder (10+ guides)
