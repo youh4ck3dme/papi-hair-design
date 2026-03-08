@@ -37,6 +37,7 @@ exports.syncOfflineData = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const firestore_1 = require("firebase-admin/firestore");
 const https_1 = require("firebase-functions/v2/https");
+const guards_1 = require("./guards");
 const MAX_SYNC_CHANGES = 100;
 const MAX_ID_LENGTH = 128;
 const SAFE_ID = /^[A-Za-z0-9_-]+$/;
@@ -124,14 +125,7 @@ function buildAppointmentPatch(raw, businessId) {
 }
 async function resolveBusinessId(db, uid, requestedBusinessId) {
     if (requestedBusinessId) {
-        const membership = await db.collection("memberships")
-            .where("business_id", "==", requestedBusinessId)
-            .where("profile_id", "==", uid)
-            .limit(1)
-            .get();
-        if (membership.empty) {
-            throw new https_1.HttpsError("permission-denied", "Access denied");
-        }
+        await (0, guards_1.requireMembership)(uid, requestedBusinessId, ["owner", "admin", "employee"]);
         return requestedBusinessId;
     }
     const fallbackMembership = await db.collection("memberships")
@@ -150,10 +144,8 @@ async function resolveBusinessId(db, uid, requestedBusinessId) {
 exports.syncOfflineData = functions.https.onCall({ region: "europe-west1" }, async (request) => {
     const { auth, data } = request;
     const db = (0, firestore_1.getFirestore)();
-    if (!auth) {
-        throw new https_1.HttpsError("unauthenticated", "Neautorizovaný prístup");
-    }
-    const businessId = await resolveBusinessId(db, auth.uid, data.business_id);
+    const uid = (0, guards_1.requireAuth)(auth);
+    const businessId = await resolveBusinessId(db, uid, data.business_id);
     const incomingChanges = normalizeChanges(data, businessId);
     const lastSyncTimestamp = typeof data.last_sync_timestamp === "string" ? data.last_sync_timestamp : undefined;
     const nowIso = new Date().toISOString();

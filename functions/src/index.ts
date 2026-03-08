@@ -12,3 +12,4 @@ export { importMigrationData } from "./importMigrationData";
 export { createBookingHold } from "./createBookingHold";
 export { confirmBooking } from "./confirmBooking";
 export { cleanupExpiredHolds } from "./cleanupExpiredHolds";
+export { rebuildPublicSnapshot } from "./rebuildPublicSnapshot";
