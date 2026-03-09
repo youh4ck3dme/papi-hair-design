@@ -33,6 +33,20 @@
             "queryScope": "COLLECTION",
             "fields": [
                 {
+                    "fieldPath": "business_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "updated_at",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "appointments",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
                     "fieldPath": "employee_id",
                     "order": "ASCENDING"
                 },
@@ -84,6 +98,34 @@
                 },
                 {
                     "fieldPath": "override_date",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "business_quick_links",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "business_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "sort_order",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "business_hours",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "business_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "sort_order",
                     "order": "ASCENDING"
                 }
             ]
