@@ -33,7 +33,7 @@ export function CalendarBodyHeader({ date, onlyDay = false, resourceName }: Prop
         </span>
       )}
       {resourceName && (
-        <span className="block text-xs font-bold text-primary ml-2 border-l pl-2 border-border">
+        <span className="block max-w-[11rem] truncate text-xs font-bold text-primary ml-2 border-l pl-2 border-border">
           {resourceName}
         </span>
       )}
