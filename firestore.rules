@@ -32,6 +32,19 @@ service cloud.firestore {
       );
     }
 
+    function licenseDoc(key) {
+      return /databases/$(database)/documents/licenses/$(key);
+    }
+
+    function licenseIsValid(key) {
+      return key is string &&
+        exists(licenseDoc(key)) &&
+        (
+          !('expires_at' in get(licenseDoc(key)).data) ||
+          get(licenseDoc(key)).data.expires_at > request.time
+        );
+    }
+
     function employeePath(employeeId) {
       return /databases/$(database)/documents/employees/$(employeeId);
     }
@@ -61,7 +74,11 @@ service cloud.firestore {
     match /businesses/{businessId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update, delete: if isOwnerOrAdmin(businessId);
+      allow update, delete: if isOwnerOrAdmin(businessId) &&
+        (
+          !('license_key' in request.resource.data) ||
+          licenseIsValid(request.resource.data.license_key)
+        );
     }
 
     match /services/{serviceId} {
@@ -189,4 +206,3 @@ service cloud.firestore {
     }
   }
 }
-
