@@ -204,5 +204,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+
+    match /ops_health/{healthId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
   }
 }

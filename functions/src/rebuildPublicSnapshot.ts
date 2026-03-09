@@ -70,6 +70,14 @@ async function buildAndWriteSnapshot(db: Firestore, businessId: string) {
   };
 
   await db.collection("public_snapshots").doc(businessId).set(snapshot);
+  await db.collection("ops_health").doc(`snapshot_${businessId}`).set({
+    kind: "public_snapshot",
+    business_id: businessId,
+    status: "ready",
+    revision: snapshot.revision,
+    updated_at: snapshot.updated_at,
+    error: null,
+  });
   return snapshot.revision;
 }
 
@@ -125,7 +133,18 @@ async function rebuildFromChange(
   const db = getFirestore();
   const businessId = resolveBusinessId(before, after, businessIdParam);
   if (!businessId) return;
-  await buildAndWriteSnapshot(db, businessId);
+  try {
+    await buildAndWriteSnapshot(db, businessId);
+  } catch (err: any) {
+    await db.collection("ops_health").doc(`snapshot_${businessId}`).set({
+      kind: "public_snapshot",
+      business_id: businessId,
+      status: "failed",
+      updated_at: new Date().toISOString(),
+      error: err?.message ?? "unknown error",
+    });
+    console.error("Snapshot rebuild failed", businessId, err);
+  }
 }
 
 export const onBusinessWrite = onDocumentWritten(

@@ -21,6 +21,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [snapshotInfo, setSnapshotInfo] = useState<any>(null);
+  const [snapshotHealth, setSnapshotHealth] = useState<any>(null);
   const [licenseKey, setLicenseKey] = useState("");
   const [licenseState, setLicenseState] = useState<"idle" | "checking" | "ok" | "error">("idle");
   const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
@@ -79,6 +80,8 @@ export default function SettingsPage() {
       try {
         const snap = await getDoc(doc(db, "public_snapshots", businessId));
         if (snap.exists()) setSnapshotInfo({ id: snap.id, ...snap.data() });
+        const health = await getDoc(doc(db, "ops_health", `snapshot_${businessId}`));
+        if (health.exists()) setSnapshotHealth({ id: health.id, ...health.data() });
       } catch (err) {
         console.error("Error loading snapshot:", err);
       }
@@ -477,6 +480,13 @@ export default function SettingsPage() {
                   <div className="font-semibold text-foreground">{snapshotInfo?.status ?? "—"}</div>
                 </div>
               </div>
+              {snapshotHealth && (
+                <div className="text-xs text-muted-foreground">
+                  Health: {snapshotHealth.status ?? "unknown"}
+                  {snapshotHealth.error ? ` • ${snapshotHealth.error}` : ""}
+                  {snapshotHealth.updated_at ? ` • ${new Date(snapshotHealth.updated_at).toLocaleString()}` : ""}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Snapshot sa rebuilduje aj automaticky pri zmenách dát (biznis, služby, zamestnanci, hodiny, výnimky).
               </p>
