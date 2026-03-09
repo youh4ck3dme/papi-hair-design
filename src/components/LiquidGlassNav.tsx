@@ -66,7 +66,7 @@ export function LiquidGlassNav({
       className={cn("relative w-full font-sans", className)}
       style={{ "--liquid-nav-duration": `${DEFAULT_TOAST_DURATION_MS}ms` } as CSSProperties}
     >
-      <nav className="space-y-2 rounded-2xl border border-white/15 bg-white/[0.08] p-3 shadow-xl backdrop-blur-xl">
+      <nav className="space-y-2 rounded-2xl bg-black/40 backdrop-blur-xl border border-gray-600/50 p-3 shadow-2xl">
         {items.map((item) => {
           const isActive = activeId === item.id;
           const Icon = item.icon;
@@ -77,10 +77,10 @@ export function LiquidGlassNav({
               type="button"
               onClick={() => handleItemClick(item)}
               className={cn(
-                "group flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 active:scale-[0.99]",
+                "group flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 active:scale-[0.98]",
                 isActive
-                  ? "bg-white/20 text-white shadow-md"
-                  : "text-white/85 hover:scale-[1.015] hover:bg-white/15 hover:text-white hover:shadow-lg"
+                  ? "bg-gray-600/60 text-white shadow-inner border border-gray-500/50"
+                  : "text-white/85 hover:bg-gray-700/50 hover:scale-[1.02] hover:shadow-xl hover:text-white"
               )}
               aria-current={isActive ? "page" : undefined}
             >
@@ -95,20 +95,20 @@ export function LiquidGlassNav({
         <div
           key={toastKey}
           className={cn(
-            "absolute left-0 right-0 top-full z-50 mt-3 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.08] p-3 shadow-xl backdrop-blur-xl",
+            "absolute left-0 right-0 top-full z-50 mt-3 overflow-hidden rounded-2xl bg-black/60 backdrop-blur-xl border border-gray-600/50 p-3 shadow-2xl",
             toastState === "leaving" ? "liquid-nav-toast-leave" : "liquid-nav-toast-enter"
           )}
           role="status"
           aria-live="polite"
         >
           <div className="relative z-10 flex items-center gap-3">
-            <div className="liquid-nav-badge flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20">
+            <div className="liquid-nav-badge flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-600/80">
               <Check className="h-4 w-4 text-white" strokeWidth={3} />
             </div>
             <span className="liquid-nav-text text-sm font-medium text-white">{toastMessage}</span>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10">
-            <div className="liquid-nav-progress h-full bg-white/30" />
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-800">
+            <div className="liquid-nav-progress h-full bg-gray-400" />
           </div>
         </div>
       )}

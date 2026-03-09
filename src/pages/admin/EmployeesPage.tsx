@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "@/integrations/firebase/config";
+import { db, storage } from "@/integrations/firebase/config";
 import {
   addDoc,
   collection,
@@ -12,14 +12,16 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useBusiness } from "@/hooks/useBusiness";
+import { AvatarCropper } from "@/components/admin/AvatarCropper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2, Plus, Pencil, Trash2, Users, Mail, Phone, Calendar, Briefcase, ChevronRight } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Users, Mail, Phone, Calendar, Briefcase, ChevronRight, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -48,6 +50,7 @@ interface EmployeeRow {
   email: string | null;
   phone: string | null;
   color: string;
+  photo_url: string | null;
 }
 
 interface ScheduleRow {
@@ -78,12 +81,14 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<EmployeeRow | null>(null);
-  const [form, setForm] = useState({ display_name: "", email: "", phone: "", color: "#3B82F6" });
+  const [form, setForm] = useState({ display_name: "", email: "", phone: "", color: "#3B82F6", photo_url: null as string | null });
   const [schedule, setSchedule] = useState<ScheduleMap>(DEFAULT_SCHEDULE);
 
   const [allServices, setAllServices] = useState<ServiceRow[]>([]);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const load = async () => {
     if (!businessId) return;
@@ -104,6 +109,7 @@ export default function EmployeesPage() {
             email: employee.email ?? null,
             phone: employee.phone ?? null,
             color: employee.color ?? "#3B82F6",
+            photo_url: employee.photo_url ?? null,
             is_active: employee.is_active !== false,
           };
         })
@@ -168,7 +174,7 @@ export default function EmployeesPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ display_name: "", email: "", phone: "", color: "#3B82F6" });
+    setForm({ display_name: "", email: "", phone: "", color: "#3B82F6", photo_url: null });
     setSchedule(DEFAULT_SCHEDULE);
     setSelectedServiceIds(allServices.map((service) => service.id));
     setOpen(true);
@@ -181,6 +187,7 @@ export default function EmployeesPage() {
       email: employee.email ?? "",
       phone: employee.phone ?? "",
       color: employee.color ?? "#3B82F6",
+      photo_url: employee.photo_url ?? null,
     });
 
     const nextSchedule: ScheduleMap = { ...DEFAULT_SCHEDULE };
@@ -215,6 +222,36 @@ export default function EmployeesPage() {
     setOpen(true);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        setCropImageSrc(reader.result?.toString() || null);
+      });
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    }
+  };
+
+  const handleCropConfirm = async (croppedBlob: Blob) => {
+    setCropImageSrc(null);
+    setUploadingPhoto(true);
+    try {
+      const fileName = `employees/${businessId}/${crypto.randomUUID ? crypto.randomUUID() : Date.now()}.jpg`;
+      const storageRef = ref(storage, fileName);
+      await uploadBytes(storageRef, croppedBlob);
+      const url = await getDownloadURL(storageRef);
+      setForm((p) => ({ ...p, photo_url: url }));
+      toast.success("Fotka pripravená");
+    } catch (err) {
+      console.error(err);
+      toast.error("Chyba pri príprave fotky");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!form.display_name.trim()) {
       toast.error("Zadajte meno");
@@ -231,6 +268,7 @@ export default function EmployeesPage() {
           email: form.email || null,
           phone: form.phone || null,
           color: form.color,
+          photo_url: form.photo_url,
           updated_at: new Date().toISOString(),
         });
       } else {
@@ -240,6 +278,7 @@ export default function EmployeesPage() {
           email: form.email || null,
           phone: form.phone || null,
           color: form.color,
+          photo_url: form.photo_url,
           is_active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -375,10 +414,14 @@ export default function EmployeesPage() {
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div className="flex gap-3 items-center">
                     <div
-                      className="w-12 h-12 rounded-2xl shadow-inner flex items-center justify-center text-white text-lg font-bold"
-                      style={{ backgroundColor: employee.color, boxShadow: `inset 0 0 10px rgba(0,0,0,0.1), 0 4px 12px ${employee.color}40` }}
+                      className="w-12 h-12 rounded-2xl shadow-inner flex items-center justify-center text-white text-lg font-bold bg-cover bg-center overflow-hidden shrink-0"
+                      style={{
+                        backgroundColor: employee.color,
+                        backgroundImage: employee.photo_url ? `url(${employee.photo_url})` : "none",
+                        boxShadow: `inset 0 0 10px rgba(0,0,0,0.1), 0 4px 12px ${employee.color}40`
+                      }}
                     >
-                      {employee.display_name.charAt(0).toUpperCase()}
+                      {!employee.photo_url && employee.display_name.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <h3 className="font-bold text-lg text-foreground truncate group-hover:text-primary transition-colors">
@@ -457,29 +500,53 @@ export default function EmployeesPage() {
 
           <ScrollArea className="flex-1 px-6 py-2">
             <div className="space-y-6 pb-6 mt-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Celé meno *</Label>
-                  <Input
-                    value={form.display_name}
-                    onChange={(e) => setForm((p) => ({ ...p, display_name: e.target.value }))}
-                    placeholder="napr. Jana Nováková"
-                    className="bg-background/50 border-primary/10 focus:border-primary/40 focus:ring-primary/10"
-                  />
+              <div className="flex flex-col sm:flex-row gap-6">
+                <div className="flex flex-col items-center gap-2">
+                  <div
+                    className="relative group cursor-pointer w-24 h-24 rounded-2xl overflow-hidden shadow-lg border-2 border-background flex items-center justify-center text-white text-2xl font-bold bg-cover bg-center shrink-0"
+                    style={{ backgroundColor: form.color, backgroundImage: form.photo_url ? `url(${form.photo_url})` : "none" }}
+                  >
+                    {!form.photo_url && !uploadingPhoto && form.display_name.charAt(0).toUpperCase()}
+                    {uploadingPhoto && <Loader2 className="w-8 h-8 animate-spin text-white" />}
+
+                    {!uploadingPhoto && (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                        <Camera className="w-6 h-6 text-white" />
+                        <span className="text-[10px] uppercase font-bold text-white tracking-widest">Zmeniť</span>
+                      </div>
+                    )}
+
+                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} disabled={uploadingPhoto} />
+                  </div>
+                  <Label className="text-xs font-semibold text-muted-foreground">Profilová fotka</Label>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Farba v systéme</Label>
-                  <div className="flex gap-3 items-center">
-                    <div
-                      className="w-10 h-10 rounded-xl shadow-lg shrink-0 border-2 border-background"
-                      style={{ backgroundColor: form.color }}
-                    />
-                    <Input
-                      type="color"
-                      value={form.color}
-                      onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))}
-                      className="h-10 w-full p-1 cursor-pointer bg-background/50 border-primary/10 rounded-xl"
-                    />
+
+                <div className="flex-1 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">Celé meno *</Label>
+                      <Input
+                        value={form.display_name}
+                        onChange={(e) => setForm((p) => ({ ...p, display_name: e.target.value }))}
+                        placeholder="napr. Jana Nováková"
+                        className="bg-background/50 border-primary/10 focus:border-primary/40 focus:ring-primary/10"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">Farba v systéme</Label>
+                      <div className="flex gap-3 items-center">
+                        <div
+                          className="w-10 h-10 rounded-xl shadow-lg shrink-0 border-2 border-background"
+                          style={{ backgroundColor: form.color }}
+                        />
+                        <Input
+                          type="color"
+                          value={form.color}
+                          onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))}
+                          className="h-10 w-full p-1 cursor-pointer bg-background/50 border-primary/10 rounded-xl"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -612,6 +679,13 @@ export default function EmployeesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {cropImageSrc && (
+        <AvatarCropper
+          imageSrc={cropImageSrc}
+          onConfirm={handleCropConfirm}
+          onCancel={() => setCropImageSrc(null)}
+        />
+      )}
     </div>
   );
 }

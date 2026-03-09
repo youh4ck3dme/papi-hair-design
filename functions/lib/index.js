@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onEmployeeServiceWrite = exports.onDateOverrideWrite = exports.onBusinessHoursWrite = exports.onEmployeeWrite = exports.onServiceWrite = exports.onBusinessWrite = exports.bootstrapAdminAccess = exports.rebuildPublicSnapshot = exports.cleanupExpiredHolds = exports.confirmBooking = exports.createBookingHold = exports.importMigrationData = exports.syncOfflineData = exports.listBookableProviders = exports.consentEvent = exports.saveSmtpConfig = exports.createPublicBooking = exports.claimBooking = void 0;
+exports.onEmployeeServiceWrite = exports.onDateOverrideWrite = exports.onBusinessHoursWrite = exports.onEmployeeWrite = exports.onServiceWrite = exports.onBusinessWrite = exports.bootstrapAdminAccess = exports.rebuildPublicSnapshot = exports.cleanupExpiredHolds = exports.confirmBooking = exports.createBookingHold = exports.normalizeMemberships = exports.importMigrationData = exports.syncOfflineData = exports.listBookableProviders = exports.consentEvent = exports.saveSmtpConfig = exports.createPublicBooking = exports.claimBooking = void 0;
 const admin = __importStar(require("firebase-admin"));
 admin.initializeApp();
 var claimBooking_1 = require("./claimBooking");
@@ -50,6 +50,8 @@ var syncOfflineData_1 = require("./syncOfflineData");
 Object.defineProperty(exports, "syncOfflineData", { enumerable: true, get: function () { return syncOfflineData_1.syncOfflineData; } });
 var importMigrationData_1 = require("./importMigrationData");
 Object.defineProperty(exports, "importMigrationData", { enumerable: true, get: function () { return importMigrationData_1.importMigrationData; } });
+var normalizeMemberships_1 = require("./normalizeMemberships");
+Object.defineProperty(exports, "normalizeMemberships", { enumerable: true, get: function () { return normalizeMemberships_1.normalizeMemberships; } });
 var createBookingHold_1 = require("./createBookingHold");
 Object.defineProperty(exports, "createBookingHold", { enumerable: true, get: function () { return createBookingHold_1.createBookingHold; } });
 var confirmBooking_1 = require("./confirmBooking");
