@@ -4,8 +4,8 @@ Moderný rezervačný systém pre salóny krásy. React 18 PWA + Firebase backen
 
 > **Repo:** https://github.com/youh4ck3dme/papi-hair-design
 > **Vercel:** https://vercel.com/yyys-projects-639e38fd/papi-hair-design
-> **Produkcia:** https://papi-hair-design.vercel.app
-> **Vlastná doména:** `booking.papihairdesign.sk` ⚠️ zatiaľ nepripojená
+> **Produkčná doména (primary):** https://booking.papihairdesign.sk
+> **Fallback URL:** https://hairchainger-main-876665-176e8.web.app
 
 ---
 

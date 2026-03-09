@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 
+const ADMIN_EMAIL = process.env.PLAYWRIGHT_ADMIN_EMAIL ?? "papi@papihairdesign.sk";
+const ADMIN_PASSWORD = process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? "88888888";
+
 test.describe("Admin Calendar", () => {
     test.beforeEach(async ({ page }) => {
         // Log in as owner
@@ -14,8 +17,8 @@ test.describe("Admin Calendar", () => {
         }
 
         // Fill credentials
-        await page.getByTestId("auth-email-input").fill("owner@papihairdesign.sk");
-        await page.locator('input[type="password"]').fill("PapiDemo2025!");
+        await page.getByTestId("auth-email-input").fill(ADMIN_EMAIL);
+        await page.locator('input[type="password"]').fill(ADMIN_PASSWORD);
         await page.getByTestId("auth-login-btn").click();
 
         // Should redirect to /admin/calendar or /admin
@@ -29,25 +32,27 @@ test.describe("Admin Calendar", () => {
     });
 
     test("should render the calendar and switch views", async ({ page }) => {
-        // Default view should be Week (contains days in columns)
-        // Note: The custom BookingCalendar might have specific class names or data-testids
-        // We'll check for headers like Pondelok, Utorok etc.
-        await expect(page.locator('text=Pondelok')).toBeVisible();
-        await expect(page.locator('text=Nedeľa')).toBeVisible();
+        const weekToggle = page.getByRole("radio", { name: /^Týždeň$/ }).first();
+        const dayToggle = page.getByRole("radio", { name: /^Deň$/ }).first();
+        const monthToggle = page.getByRole("radio", { name: /^Mesiac$/ }).first();
+
+        await expect(page.locator('h1:has-text("Kalendár")')).toBeVisible();
+        await expect(weekToggle).toBeVisible();
+        await expect(dayToggle).toBeVisible();
+        await expect(monthToggle).toBeVisible();
+        await expect(page.getByRole("button", { name: /Vybrať čas okolo/i }).first()).toBeVisible();
+
+        // Normalize to Week view first, because state can persist from previous runs.
+        await weekToggle.click();
+        await expect(weekToggle).toBeChecked();
 
         // Switch to Day view
-        const dayBtn = page.locator('button:has-text("Deň")');
-        if (await dayBtn.isVisible()) {
-            await dayBtn.click();
-            // In day view, we should see only one day header
-            // (specific implementation depends on BookingCalendar)
-        }
+        await dayToggle.click();
+        await expect(dayToggle).toBeChecked();
 
         // Switch to Month view
-        const monthBtn = page.locator('button:has-text("Mesiac")');
-        if (await monthBtn.isVisible()) {
-            await monthBtn.click();
-        }
+        await monthToggle.click();
+        await expect(monthToggle).toBeChecked();
     });
 
     test("should open the new booking modal on slot click", async ({ page }) => {

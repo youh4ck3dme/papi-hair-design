@@ -22,7 +22,7 @@ import { useBusinessInfo } from "@/hooks/useBusinessInfo";
 import { generateSlots, type BusinessHours, type EmployeeSchedule, type ExistingAppointment } from "@/lib/availability";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -193,18 +193,23 @@ export default function CalendarPage() {
       const apptsSnap = await getDocs(query(
         collection(db, "appointments"),
         where("employee_id", "==", employeeId),
-        where("status", "!=", "cancelled"),
         where("start_at", ">=", dayStart.toISOString()),
         where("start_at", "<", dayEnd.toISOString())
       ));
 
-      const existing: ExistingAppointment[] = apptsSnap.docs.map(d => {
-        const a = d.data();
-        return {
-          start_at: a.start_at instanceof Timestamp ? a.start_at.toDate().toISOString() : a.start_at,
-          end_at: a.end_at instanceof Timestamp ? a.end_at.toDate().toISOString() : a.end_at,
-        };
-      });
+      const existing: ExistingAppointment[] = apptsSnap.docs
+        .map((d) => d.data())
+        .filter((appointment) => appointment.status !== "cancelled")
+        .map((appointment) => ({
+          start_at:
+            appointment.start_at instanceof Timestamp
+              ? appointment.start_at.toDate().toISOString()
+              : appointment.start_at,
+          end_at:
+            appointment.end_at instanceof Timestamp
+              ? appointment.end_at.toDate().toISOString()
+              : appointment.end_at,
+        }));
 
       const slots = generateSlots({
         date: slotDate,
@@ -231,7 +236,11 @@ export default function CalendarPage() {
   const handleSelectSlot = (slot: SlotInfo) => {
     if (!isOwnerOrAdmin) return;
     setSelectedSlot(slot);
-    setBookForm({ service_id: "", employee_id: "", start_at: "" });
+    setBookForm({
+      service_id: "",
+      employee_id: "",
+      start_at: slot.start.toISOString()
+    });
     setAvailableSlots([]);
     setBookingModal(true);
   };
@@ -346,8 +355,17 @@ export default function CalendarPage() {
       {/* Booking Modal */}
       <Dialog open={bookingModal} onOpenChange={setBookingModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Nová rezervácia</DialogTitle></DialogHeader>
-          {selectedSlot && <p className="text-sm text-muted-foreground">{fmtDate(selectedSlot.start, "EEEE, d. MMMM yyyy", { locale: sk })}</p>}
+          <DialogHeader>
+            <DialogTitle>Nová rezervácia</DialogTitle>
+            <DialogDescription>
+              Vyberte službu, zamestnanca a dostupný čas pre novú rezerváciu.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedSlot && (
+            <p className="text-sm font-medium text-primary">
+              {fmtDate(selectedSlot.start, "EEEE, d. MMMM yyyy HH:mm", { locale: sk })}
+            </p>
+          )}
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Služba</Label>
@@ -395,7 +413,12 @@ export default function CalendarPage() {
       {/* Detail Modal */}
       <Dialog open={detailModal} onOpenChange={setDetailModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Detail rezervácie</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Detail rezervácie</DialogTitle>
+            <DialogDescription>
+              Skontrolujte údaje rezervácie a podľa potreby upravte jej stav.
+            </DialogDescription>
+          </DialogHeader>
           {selectedEvent && (
             <div className="space-y-4">
               <Badge className="text-xs border-0 bg-secondary text-secondary-foreground">

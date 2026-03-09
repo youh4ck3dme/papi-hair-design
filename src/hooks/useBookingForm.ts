@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 import { contactSchema, ServiceRow, EmployeeRow, BookingResult, MembershipRow } from "@/components/booking/types";
 import { createBookingHold } from "@/integrations/firebase/createBookingHold";
 import { confirmBooking } from "@/integrations/firebase/confirmBooking";
@@ -34,6 +35,24 @@ export function useBookingForm(
     const [submitting, setSubmitting] = useState(false);
     const [bookingDone, setBookingDone] = useState(false);
     const [bookingResult, setBookingResult] = useState<BookingResult | null>(null);
+    const { profile } = useAuth();
+
+    // Pre-fill profile data
+    useEffect(() => {
+        if (profile) {
+            const names = (profile.full_name ?? "").split(" ");
+            const firstName = names[0] ?? "";
+            const lastName = names.slice(1).join(" ") ?? "";
+
+            setFormData(prev => ({
+                ...prev,
+                meno: prev.meno || firstName,
+                priezvisko: prev.priezvisko || lastName,
+                email: prev.email || profile.email || "",
+                phone: prev.phone || (profile.phone ? profile.phone.replace("+421", "") : ""),
+            }));
+        }
+    }, [profile]);
 
     // Derived: grouped subcategories
     const subcategories = useMemo(() => {

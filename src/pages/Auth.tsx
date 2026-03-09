@@ -22,6 +22,37 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 
+const ADMIN_EMAIL_ALLOWLIST = new Set([
+  "papi@papihairdesign.sk",
+  "miska@papihairdesign.sk",
+  "mato@papihairdesign.sk",
+]);
+
+const PUBLIC_BOOKING_URL = "https://hairchainger-main-876665-176e8.web.app/booking";
+const PUBLIC_BOOKING_PATH = "/booking";
+const CROSS_DOMAIN_AUTH_HOST = "booking.papihairdesign.sk";
+
+function normalizeEmail(email: string | null | undefined): string {
+  return email?.trim().toLowerCase() ?? "";
+}
+
+function redirectAfterAuth(
+  navigate: ReturnType<typeof useNavigate>,
+  email: string | null | undefined
+): void {
+  if (ADMIN_EMAIL_ALLOWLIST.has(normalizeEmail(email))) {
+    navigate("/admin");
+    return;
+  }
+
+  if (typeof window !== "undefined" && normalizeEmail(window.location.hostname) === CROSS_DOMAIN_AUTH_HOST) {
+    window.location.assign(PUBLIC_BOOKING_URL);
+    return;
+  }
+
+  navigate(PUBLIC_BOOKING_PATH);
+}
+
 // ---------------------------------------------------------------------------
 // Schemas & validation
 // ---------------------------------------------------------------------------
@@ -126,8 +157,8 @@ function useAuthForm() {
       setErrors({});
       setLoading(true);
       try {
-        await signInWithEmailAndPassword(auth, form.email, form.password);
-        navigate("/admin");
+        const credential = await signInWithEmailAndPassword(auth, form.email, form.password);
+        redirectAfterAuth(navigate, credential.user.email ?? form.email);
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : t("auth.toastLoginFail"));
       } finally {
@@ -149,10 +180,10 @@ function useAuthForm() {
       setErrors({});
       setLoading(true);
       try {
-        await createUserWithEmailAndPassword(auth, form.email, form.password);
+        const credential = await createUserWithEmailAndPassword(auth, form.email, form.password);
         const claimed = await tryClaimBooking(claimToken);
         toast.success(claimed ? t("auth.toastRegisterOkBooking") : t("auth.toastRegisterOk"));
-        navigate("/admin");
+        redirectAfterAuth(navigate, credential.user.email ?? form.email);
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : t("auth.toastRegisterFail"));
       } finally {
@@ -166,7 +197,8 @@ function useAuthForm() {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const userEmail = result.user.email;
 
       const token = sessionStorage.getItem("claim_token");
       if (token) {
@@ -175,7 +207,7 @@ function useAuthForm() {
           toast.success(t("auth.toastLoginOkBooking"));
         }
       }
-      navigate("/admin");
+      redirectAfterAuth(navigate, userEmail);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t("auth.toastGoogleFail"));
     } finally {

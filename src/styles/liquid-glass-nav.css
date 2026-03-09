@@ -1,0 +1,85 @@
+@keyframes liquid-nav-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.92);
+  }
+  60% {
+    opacity: 0.9;
+    transform: translateY(-0.2rem) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes liquid-nav-slide-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(1rem) scale(0.96);
+  }
+}
+
+@keyframes liquid-nav-progress {
+  0% {
+    width: 100%;
+  }
+  100% {
+    width: 0;
+  }
+}
+
+@keyframes liquid-nav-badge-in {
+  0% {
+    transform: scale(0) rotate(180deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes liquid-nav-text-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.liquid-nav-toast-enter {
+  animation: liquid-nav-slide-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.liquid-nav-toast-leave {
+  animation: liquid-nav-slide-out 0.28s ease-in forwards;
+}
+
+.liquid-nav-badge {
+  animation: liquid-nav-badge-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 0.08s both;
+}
+
+.liquid-nav-text {
+  animation: liquid-nav-text-in 0.35s ease-out 0.16s both;
+}
+
+.liquid-nav-progress {
+  animation: liquid-nav-progress var(--liquid-nav-duration, 2400ms) linear forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquid-nav-toast-enter,
+  .liquid-nav-toast-leave,
+  .liquid-nav-badge,
+  .liquid-nav-text,
+  .liquid-nav-progress {
+    animation: none !important;
+  }
+}
+

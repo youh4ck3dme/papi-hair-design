@@ -13,6 +13,19 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound } from "lucide-react";
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
+import type { FirebaseError } from "firebase/app";
+
+function friendlyError(err: unknown, fallback: string): string {
+  const e = err as Partial<FirebaseError> | undefined;
+  if (!e?.code) return fallback;
+  if (e.code === "permission-denied" || e.code === "functions/permission-denied") {
+    return "Nemáte oprávnenie meniť tieto nastavenia pre aktuálnu firmu.";
+  }
+  if (e.code === "unauthenticated" || e.code === "functions/unauthenticated") {
+    return "Relácia vypršala. Prihláste sa znova.";
+  }
+  return fallback;
+}
 
 export default function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
@@ -124,7 +137,8 @@ export default function SettingsPage() {
       });
       toast.success("Nastavenia firmy aktualizované");
     } catch (err) {
-      toast.error("Chyba pri ukladaní");
+      console.error("Business save error:", err);
+      toast.error(friendlyError(err, "Chyba pri ukladaní"));
     } finally {
       setSaving(false);
     }
@@ -156,7 +170,7 @@ export default function SettingsPage() {
       setSmtpForm((f) => ({ ...f, pass: "" })); // Clear password from memory
     } catch (err) {
       console.error("SMTP save error:", err);
-      toast.error("Chyba pri ukladaní SMTP");
+      toast.error(friendlyError(err, "Chyba pri ukladaní SMTP"));
     } finally {
       setSaving(false);
     }
@@ -172,7 +186,8 @@ export default function SettingsPage() {
       });
       toast.success("Nastavenia booking uložené");
     } catch (err) {
-      toast.error("Chyba pri ukladaní nastavení booking");
+      console.error("Booking settings save error:", err);
+      toast.error(friendlyError(err, "Chyba pri ukladaní nastavení booking"));
     } finally {
       setSaving(false);
     }
