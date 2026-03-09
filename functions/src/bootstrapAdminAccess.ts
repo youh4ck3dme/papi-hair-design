@@ -50,8 +50,12 @@ export const bootstrapAdminAccess = functions.https.onCall(
 
     const emailAllowedForBootstrap = !!email && BOOTSTRAP_OWNER_EMAILS.has(email);
 
-    if (!existingOwnerSnap.empty && !emailAllowedForBootstrap) {
+    if (!existingOwnerSnap.empty) {
       throw new HttpsError("permission-denied", "Business already has an owner");
+    }
+
+    if (!emailAllowedForBootstrap) {
+      throw new HttpsError("permission-denied", "Email is not allowed for bootstrap");
     }
 
     const businessRef = db.collection("businesses").doc(businessId);

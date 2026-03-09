@@ -10,6 +10,7 @@ import { LogoIcon } from "@/components/LogoIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/contexts/AuthContext";
 import { useBusinessInfo, type OpenStatus, type PublicBusinessInfo, type NextOpening, type BusinessHourEntry } from "@/hooks/useBusinessInfo";
 import { db } from "@/integrations/firebase/config";
 import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
@@ -83,6 +84,8 @@ const contentAnim: any = {
 
 function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null; navigate: ReturnType<typeof useNavigate> }) {
   const { t } = useTranslation();
+  const { user, memberships } = useAuth();
+  const isRegisteredCustomer = !!user && memberships.some((m) => m.role === "customer");
   const modeColors: Record<string, string> = {
     open: "bg-green-500/15 text-green-400 border-green-500/30",
     closed: "bg-red-500/15 text-red-400 border-red-500/30",
@@ -132,14 +135,16 @@ function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null;
         >
           {t("liquid.reserveBtn")}
         </Button>
-        <Button
-          size="lg"
-          variant="outline"
-          className="h-14 border-white/10 hover:border-primary/50 text-white font-medium uppercase tracking-widest rounded-xl backdrop-blur-sm"
-          onClick={() => navigate("/auth")}
-        >
-          {t("liquid.memberBtn")}
-        </Button>
+        {isRegisteredCustomer && (
+          <Button
+            size="lg"
+            variant="outline"
+            className="h-14 border-white/10 hover:border-primary/50 text-white font-medium uppercase tracking-widest rounded-xl backdrop-blur-sm"
+            onClick={() => navigate("/booking")}
+          >
+            {t("liquid.memberBtn")}
+          </Button>
+        )}
       </div>
     </div>
   );

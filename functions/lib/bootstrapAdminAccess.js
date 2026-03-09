@@ -73,8 +73,11 @@ exports.bootstrapAdminAccess = functions.https.onCall({ region: "europe-west1" }
         .limit(1)
         .get();
     const emailAllowedForBootstrap = !!email && BOOTSTRAP_OWNER_EMAILS.has(email);
-    if (!existingOwnerSnap.empty && !emailAllowedForBootstrap) {
+    if (!existingOwnerSnap.empty) {
         throw new https_1.HttpsError("permission-denied", "Business already has an owner");
+    }
+    if (!emailAllowedForBootstrap) {
+        throw new https_1.HttpsError("permission-denied", "Email is not allowed for bootstrap");
     }
     const businessRef = db.collection("businesses").doc(businessId);
     const profileRef = db.collection("profiles").doc(uid);
