@@ -85,6 +85,14 @@ async function buildAndWriteSnapshot(db, businessId) {
         status: "ready",
     };
     await db.collection("public_snapshots").doc(businessId).set(snapshot);
+    await db.collection("ops_health").doc(`snapshot_${businessId}`).set({
+        kind: "public_snapshot",
+        business_id: businessId,
+        status: "ready",
+        revision: snapshot.revision,
+        updated_at: snapshot.updated_at,
+        error: null,
+    });
     return snapshot.revision;
 }
 function resolveBusinessId(before, after, paramId) {
@@ -124,7 +132,19 @@ async function rebuildFromChange(before, after, businessIdParam) {
     const businessId = resolveBusinessId(before, after, businessIdParam);
     if (!businessId)
         return;
-    await buildAndWriteSnapshot(db, businessId);
+    try {
+        await buildAndWriteSnapshot(db, businessId);
+    }
+    catch (err) {
+        await db.collection("ops_health").doc(`snapshot_${businessId}`).set({
+            kind: "public_snapshot",
+            business_id: businessId,
+            status: "failed",
+            updated_at: new Date().toISOString(),
+            error: err?.message ?? "unknown error",
+        });
+        console.error("Snapshot rebuild failed", businessId, err);
+    }
 }
 exports.onBusinessWrite = (0, firestore_2.onDocumentWritten)({ region: "europe-west1", document: "businesses/{businessId}" }, async (event) => rebuildFromChange(event.data?.before, event.data?.after, event.params.businessId));
 exports.onServiceWrite = (0, firestore_2.onDocumentWritten)({ region: "europe-west1", document: "services/{serviceId}" }, async (event) => rebuildFromChange(event.data?.before, event.data?.after));
