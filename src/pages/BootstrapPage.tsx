@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { db, auth } from "@/integrations/firebase/config";
+import { db, auth, functions } from "@/integrations/firebase/config";
 import { doc, setDoc, serverTimestamp, writeBatch, collection, query, where, getDocs } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ShieldCheck, AlertCircle } from "lucide-react";
@@ -21,33 +22,11 @@ export default function BootstrapPage() {
         setStatus(null);
 
         const businessId = "papi-hair-design-main";
-        const uid = auth.currentUser.uid;
-        const email = auth.currentUser.email;
 
         try {
-            // 1. Create Business
-            await setDoc(doc(db, "businesses", businessId), {
-                name: "Papi Hair Design",
-                created_at: serverTimestamp(),
-                updated_at: serverTimestamp(),
-            }, { merge: true });
-
-            // 2. Create Profile
-            await setDoc(doc(db, "profiles", uid), {
-                full_name: "Papi Admin",
-                email: email,
-                updated_at: serverTimestamp(),
-            }, { merge: true });
-
-            // 3. Create Membership (Owner)
-            await setDoc(doc(db, "memberships", uid + "_" + businessId), {
-                business_id: businessId,
-                profile_id: uid,
-                role: "owner",
-                created_at: serverTimestamp(),
-            }, { merge: true });
-
-            setStatus({ type: 'success', msg: "Admin prístup bol úspešne vytvorený! Teraz môžeš prejsť do Dashboardu." });
+            const bootstrapAdminAccess = httpsCallable(functions, "bootstrapAdminAccess");
+            await bootstrapAdminAccess({ business_id: businessId });
+            setStatus({ type: 'success', msg: "Admin prístup a prvý provider boli úspešne vytvorené. Teraz môžeš prejsť do Dashboardu." });
         } catch (err: any) {
             console.error(err);
             setStatus({ type: 'error', msg: "Chyba: " + err.message });

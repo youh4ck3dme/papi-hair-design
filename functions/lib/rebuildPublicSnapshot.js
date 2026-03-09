@@ -34,6 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onEmployeeServiceWrite = exports.onDateOverrideWrite = exports.onBusinessHoursWrite = exports.onEmployeeWrite = exports.onServiceWrite = exports.onBusinessWrite = exports.rebuildPublicSnapshot = void 0;
+exports.buildAndWriteSnapshot = buildAndWriteSnapshot;
 const functions = __importStar(require("firebase-functions/v2"));
 const firestore_1 = require("firebase-admin/firestore");
 const https_1 = require("firebase-functions/v2/https");

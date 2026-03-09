@@ -19,7 +19,7 @@ interface PublicSnapshot {
   status: "ready";
 }
 
-async function buildAndWriteSnapshot(db: Firestore, businessId: string) {
+export async function buildAndWriteSnapshot(db: Firestore, businessId: string) {
   const [bizDoc, servicesSnap, employeesSnap, hoursSnap, overridesSnap, esSnap] =
     await Promise.all([
       db.collection("businesses").doc(businessId).get(),

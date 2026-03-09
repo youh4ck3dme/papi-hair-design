@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onEmployeeServiceWrite = exports.onDateOverrideWrite = exports.onBusinessHoursWrite = exports.onEmployeeWrite = exports.onServiceWrite = exports.onBusinessWrite = exports.rebuildPublicSnapshot = exports.cleanupExpiredHolds = exports.confirmBooking = exports.createBookingHold = exports.importMigrationData = exports.syncOfflineData = exports.listBookableProviders = exports.consentEvent = exports.saveSmtpConfig = exports.createPublicBooking = exports.claimBooking = void 0;
+exports.onEmployeeServiceWrite = exports.onDateOverrideWrite = exports.onBusinessHoursWrite = exports.onEmployeeWrite = exports.onServiceWrite = exports.onBusinessWrite = exports.bootstrapAdminAccess = exports.rebuildPublicSnapshot = exports.cleanupExpiredHolds = exports.confirmBooking = exports.createBookingHold = exports.importMigrationData = exports.syncOfflineData = exports.listBookableProviders = exports.consentEvent = exports.saveSmtpConfig = exports.createPublicBooking = exports.claimBooking = void 0;
 const admin = __importStar(require("firebase-admin"));
 admin.initializeApp();
 var claimBooking_1 = require("./claimBooking");
@@ -58,6 +58,8 @@ var cleanupExpiredHolds_1 = require("./cleanupExpiredHolds");
 Object.defineProperty(exports, "cleanupExpiredHolds", { enumerable: true, get: function () { return cleanupExpiredHolds_1.cleanupExpiredHolds; } });
 var rebuildPublicSnapshot_1 = require("./rebuildPublicSnapshot");
 Object.defineProperty(exports, "rebuildPublicSnapshot", { enumerable: true, get: function () { return rebuildPublicSnapshot_1.rebuildPublicSnapshot; } });
+var bootstrapAdminAccess_1 = require("./bootstrapAdminAccess");
+Object.defineProperty(exports, "bootstrapAdminAccess", { enumerable: true, get: function () { return bootstrapAdminAccess_1.bootstrapAdminAccess; } });
 var rebuildPublicSnapshot_2 = require("./rebuildPublicSnapshot");
 Object.defineProperty(exports, "onBusinessWrite", { enumerable: true, get: function () { return rebuildPublicSnapshot_2.onBusinessWrite; } });
 Object.defineProperty(exports, "onServiceWrite", { enumerable: true, get: function () { return rebuildPublicSnapshot_2.onServiceWrite; } });
