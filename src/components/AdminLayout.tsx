@@ -1,10 +1,9 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
-  SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger,
+  Sidebar, SidebarContent, SidebarProvider, SidebarTrigger, useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -16,6 +15,7 @@ import { LogoIcon } from "@/components/LogoIcon";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LiquidGlassNav, type LiquidGlassNavItem } from "@/components/LiquidGlassNav";
 
 const allNavItems = [
   { title: "Prehľad", url: "/admin", icon: LayoutDashboard, roles: ["owner", "admin", "employee"] },
@@ -33,8 +33,22 @@ export function AdminSidebar() {
   const { profile, signOut } = useAuth();
   const { role } = useBusiness();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const navItems = allNavItems.filter((item) => !role || item.roles.includes(role));
+  const liquidItems: LiquidGlassNavItem[] = navItems.map((item) => ({
+    id: item.url,
+    label: item.title,
+    icon: item.icon,
+  }));
+
+  const activeItemId =
+    navItems.find((item) =>
+      item.url === "/admin"
+        ? location.pathname === "/admin"
+        : location.pathname === item.url || location.pathname.startsWith(`${item.url}/`)
+    )?.url ?? liquidItems[0]?.id;
 
   const handleSignOut = async () => {
     await signOut();
@@ -48,47 +62,30 @@ export function AdminSidebar() {
 
   return (
     <Sidebar className="border-r-0">
-      <div className="flex items-center gap-2 px-4 py-4 border-b border-sidebar-border">
+      <div className="border-b border-sidebar-border px-4 py-4">
+        <div className="flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.06] px-3 py-2.5 backdrop-blur-xl">
         <LogoIcon size="sm" />
         <div className="overflow-hidden">
           <p className="text-sm font-semibold text-sidebar-foreground truncate">PAPI HAIR DESIGN</p>
           <p className="text-xs text-sidebar-foreground/60 capitalize">{role ?? "hosť"}</p>
         </div>
+        </div>
       </div>
 
-      <SidebarContent className="py-2">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/40 text-xs uppercase tracking-wider px-4 py-2">
-            Navigácia
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/admin"}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm font-medium transition-colors ${
-                          isActive
-                            ? "bg-sidebar-accent text-sidebar-primary"
-                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                        }`
-                      }
-                    >
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+      <SidebarContent className="px-3 py-3">
+        <p className="px-1 pb-2 text-xs uppercase tracking-[0.2em] text-sidebar-foreground/45">Navigácia</p>
+        <LiquidGlassNav
+          items={liquidItems}
+          activeId={activeItemId}
+          onSelect={(item) => {
+            navigate(item.id);
+            if (isMobile) setOpenMobile(false);
+          }}
+          showToast={false}
+        />
       </SidebarContent>
 
-      <div className="p-4 border-t border-sidebar-border mt-auto">
+      <div className="mt-auto border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3 mb-3">
           <Avatar className="w-8 h-8">
             <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-xs">{initials}</AvatarFallback>
@@ -134,10 +131,10 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-[100dvh] flex w-full max-w-full" data-testid="admin-layout">
+      <div className="min-h-[100dvh] flex w-full max-w-full bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_45%)]" data-testid="admin-layout">
         <AdminSidebar />
         <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden">
-          <header className="min-h-[44px] h-12 flex items-center border-b border-border px-4 safe-x bg-background sticky top-0 z-10 pt-[env(safe-area-inset-top)]">
+          <header className="min-h-[44px] h-12 flex items-center border-b border-border/70 px-4 safe-x bg-background/80 backdrop-blur-xl sticky top-0 z-10 pt-[env(safe-area-inset-top)]">
             <SidebarTrigger className="mr-3 min-h-touch min-w-touch flex items-center justify-center" />
             <div className="flex-1 min-w-0" />
             <ThemeToggle />

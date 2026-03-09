@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { auth } from "@/integrations/firebase/config";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { toast } from "sonner";
-import { Eye, EyeOff, ChevronLeft } from "lucide-react";
+import { Eye, EyeOff, ChevronLeft, Sun, Moon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -210,10 +210,17 @@ const BG_FS_SRC = `
 `;
 
 // ── NÁPAD 1: LiquidGoldBg — full-screen animated background ──────────────────
-function LiquidGoldBg({ mouseRef }: { mouseRef: React.RefObject<[number, number]> }) {
+function LiquidGoldBg({
+    mouseRef,
+    enabled,
+}: {
+    mouseRef: React.RefObject<[number, number]>;
+    enabled: boolean;
+}) {
     const ref = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
+        if (!enabled) return;
         if (document.documentElement.classList.contains("phd-low-power")) return;
         const canvas = ref.current;
         if (!canvas) return;
@@ -292,7 +299,9 @@ function LiquidGoldBg({ mouseRef }: { mouseRef: React.RefObject<[number, number]
             gl.deleteProgram(prog);
             if (buf) gl.deleteBuffer(buf);
         };
-    }, []);
+    }, [enabled]);
+
+    if (!enabled) return null;
 
     return (
         <canvas
@@ -561,6 +570,21 @@ const STYLES = `
   .phd-logo  { animation: phd-logo-in 1.5s cubic-bezier(.22,1,.36,1) forwards; }
   .phd-slide { animation: phd-slide   .6s  cubic-bezier(.22,1,.36,1) forwards; }
   .phd-pwd-input::placeholder { color: rgba(201,168,76,0.65); }
+  .salon-surface-light {
+    background: radial-gradient(circle at 15% 15%, #ffffff 0%, #f8fafc 46%, #e2e8f0 100%);
+  }
+  .salon-surface-light .phd-pwd-input {
+    color: #0f172a !important;
+  }
+  .salon-surface-light .phd-pwd-input::placeholder {
+    color: rgba(15, 23, 42, 0.45) !important;
+  }
+  .salon-surface-light [class*="text-white"] {
+    color: rgba(15, 23, 42, 0.9) !important;
+  }
+  .salon-surface-light [style*="background: #ffffff0d"] {
+    background: rgba(15, 23, 42, 0.08) !important;
+  }
   @media (prefers-reduced-motion: reduce) {
     .phd-logo, .phd-slide {
       animation: none !important;
@@ -581,10 +605,12 @@ export default function SalonLoginPage() {
     const [password, setPassword] = useState("");
     const [showPwd, setShowPwd] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [surfaceMode, setSurfaceMode] = useState<"dark" | "light">("dark");
     const [venetian, setVenetian] = useState(true);
     const [avatarPx, setAvatarPx] = useState(() =>
         typeof window !== "undefined" ? calcAvatarPx(window.innerWidth) : 138,
     );
+    const isLightSurface = surfaceMode === "light";
 
     // NÁPAD 1: mouse ref for LiquidGoldBg parallax
     const mouseRef = useRef<[number, number]>([0.5, 0.5]);
@@ -649,15 +675,24 @@ export default function SalonLoginPage() {
 
     return (
         <div
-            className="h-[100dvh] flex flex-col items-center overflow-hidden relative safe-y"
-            style={{ background: "#050505" }}
+            className={`h-[100dvh] flex flex-col items-center overflow-hidden relative safe-y ${isLightSurface ? "salon-surface-light" : ""}`}
+            style={{ background: isLightSurface ? "#f8fafc" : "#050505" }}
         >
             <style>{STYLES}</style>
 
             {/* NÁPAD 1: Full-screen Liquid Gold WebGL background */}
-            <LiquidGoldBg mouseRef={mouseRef} />
+            <LiquidGoldBg mouseRef={mouseRef} enabled={!isLightSurface} />
 
             <div className="fixed top-4 right-4 z-[70] flex items-center gap-1">
+                <button
+                    type="button"
+                    onClick={() => setSurfaceMode((prev) => (prev === "dark" ? "light" : "dark"))}
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-white/20 bg-white/10 px-3 text-white/85 backdrop-blur-md transition hover:bg-white/20"
+                    aria-label={isLightSurface ? "Prepnúť na tmavé pozadie" : "Prepnúť na svetlé pozadie"}
+                    title={isLightSurface ? "Tmavé pozadie" : "Svetlé pozadie"}
+                >
+                    {isLightSurface ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                </button>
                 <LanguageToggle />
                 <ThemeToggle />
             </div>
