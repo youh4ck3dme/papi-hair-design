@@ -9,6 +9,7 @@ export { consentEvent } from "./consentEvent";
 export { listBookableProviders } from "./listBookableProviders";
 export { syncOfflineData } from "./syncOfflineData";
 export { importMigrationData } from "./importMigrationData";
+export { normalizeMemberships } from "./normalizeMemberships";
 export { createBookingHold } from "./createBookingHold";
 export { confirmBooking } from "./confirmBooking";
 export { cleanupExpiredHolds } from "./cleanupExpiredHolds";

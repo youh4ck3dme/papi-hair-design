@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { auth, db } from "@/integrations/firebase/config";
+import { auth, db, functions } from "@/integrations/firebase/config";
 import { onAuthStateChanged, signOut as firebaseSignOut, User } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 
 interface Profile {
   id: string;
@@ -52,6 +53,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const normalizeMemberships = useCallback(async () => {
+    try {
+      const fn = httpsCallable<{ business_id?: string }, { success: boolean; normalized: number }>(
+        functions,
+        "normalizeMemberships"
+      );
+      await fn({});
+    } catch (err) {
+      console.warn("AuthContext: normalizeMemberships skipped:", err);
+    }
+  }, []);
+
   const refreshProfile = useCallback(async (uid?: string) => {
     const targetUid = uid || fbUser?.uid;
     if (!targetUid) return;
@@ -95,6 +108,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           email: currentFbUser.email ?? null
         });
         try {
+          await normalizeMemberships();
           await refreshProfile(currentFbUser.uid);
         } catch (err) {
           console.error("AuthContext: Failed to refresh profile on auth change:", err);
@@ -108,7 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [refreshProfile]);
+  }, [normalizeMemberships, refreshProfile]);
 
   const signOut = useCallback(async () => {
     try {
