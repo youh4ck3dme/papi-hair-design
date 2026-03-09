@@ -75,9 +75,9 @@ const cardBgs: Record<string, string> = {
 };
 
 const contentAnim: any = {
-  initial: { opacity: 0, y: 16, filter: "blur(4px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] as const } },
-  exit: { opacity: 0, y: -6, filter: "blur(2px)", transition: { duration: 0.35, ease: "easeIn" as const } },
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] as const } },
+  exit: { opacity: 0, y: -8, transition: { duration: 0.18, ease: "easeIn" as const } },
 };
 
 /* ── Card content components ── */
@@ -313,7 +313,6 @@ function BookingContent() {
 function ContactContent() {
   const { t } = useTranslation();
   const [copied, setCopied] = useState<string | null>(null);
-  const [mapLit, setMapLit] = useState(false);
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -368,27 +367,10 @@ function ContactContent() {
         </button>
       </div>
 
-      <div
-        className="mt-4 rounded-3xl overflow-hidden border border-white/10 shadow-2xl group relative"
-        style={{ height: "200px" }}
-        onMouseEnter={() => setMapLit(true)}
-        onMouseLeave={() => setMapLit(false)}
-      >
-        <div className="absolute inset-0 bg-primary/5 pointer-events-none group-hover:bg-transparent transition-colors z-10" />
-        <iframe
-          title={t("liquid.mapTitle")}
-          src="https://www.openstreetmap.org/export/embed.html?bbox=21.2336%2C48.7168%2C21.2436%2C48.7218&layer=mapnik&marker=48.7193%2C21.2386"
-          width="100%"
-          height="100%"
-          style={{
-            border: 0,
-            filter: mapLit
-              ? "grayscale(0.2) brightness(0.9) contrast(1.1)"
-              : "grayscale(1) brightness(0.4) contrast(1.2) invert(1)",
-            transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-          }}
-          loading="lazy"
-        />
+      <div className="mt-4 p-6 rounded-3xl border border-white/10 shadow-2xl group relative bg-black/40 backdrop-blur-md flex flex-col items-center justify-center text-center transition-all hover:bg-black/60 hover:border-primary/20">
+        <MapPin className="w-8 h-8 text-primary mb-3 opacity-80 group-hover:scale-110 group-hover:opacity-100 transition-all" />
+        <h3 className="text-xl font-bold tracking-widest text-white uppercase">Tr. SNP 61A</h3>
+        <p className="text-sm font-medium text-white/50 tracking-wider mt-1">Spoločenský pavilón, Košice</p>
       </div>
     </div>
   );

@@ -56,20 +56,25 @@ test.describe("Admin Calendar", () => {
     });
 
     test("should open the new booking modal on slot click", async ({ page }) => {
-        // Find an empty slot and click it
-        // The slot selector depends on the BookingCalendar implementation
-        // Usually it's a div or cell in the grid
-        const slot = page.locator('.rbc-day-bg').first(); // Common in react-big-calendar which BookingCalendar uses
-        if (await slot.isVisible()) {
-            await slot.click({ position: { x: 5, y: 5 } });
+        // Move to day mode and click a deterministic slot.
+        await page.getByRole("radio", { name: /^Deň$/ }).first().click();
 
-            // Check if modal opens
-            await expect(page.locator('text=Nová rezervácia')).toBeVisible({ timeout: 5000 });
+        const slot = page.getByRole("button", { name: /okolo/i }).first();
+        await expect(slot).toBeVisible({ timeout: 10000 });
+        const slotLabel = (await slot.getAttribute("aria-label")) ?? "";
+        const slotHourMatch = slotLabel.match(/(\d{1,2}):00/);
+        const expectedHour = slotHourMatch ? slotHourMatch[1].padStart(2, "0") : null;
+        await slot.click({ position: { x: 8, y: 4 } });
 
-            // Close modal
-            await page.locator('button:has-text("Zrušiť")').click();
-            await expect(page.locator('text=Nová rezervácia')).not.toBeVisible();
+        // Modal opens with the clicked time context.
+        await expect(page.locator('div[role="dialog"]').getByRole("heading", { name: "Nová rezervácia" })).toBeVisible({ timeout: 5000 });
+        if (expectedHour) {
+            await expect(page.locator('div[role="dialog"] p.text-sm.font-medium.text-primary').first()).toContainText(`${expectedHour}:00`);
         }
+
+        // Close modal
+        await page.locator('button:has-text("Zrušiť")').click();
+        await expect(page.locator('div[role="dialog"]').getByRole("heading", { name: "Nová rezervácia" })).not.toBeVisible();
     });
 
     test("should show appointment details when clicking an event", async ({ page }) => {

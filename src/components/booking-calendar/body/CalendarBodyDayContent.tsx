@@ -6,7 +6,19 @@ import { BookingCalendarEvent } from "../BookingCalendarEvent";
 import { CalendarBodyHeader } from "./CalendarBodyHeader";
 import { HOURS, PIXELS_PER_HOUR } from "../calendar-types";
 
-export function CalendarBodyDayContent({ date, resourceId }: { date: Date; resourceId?: string }) {
+interface CalendarBodyDayContentProps {
+  date: Date;
+  resourceId?: string;
+  resourceName?: string;
+  showHeader?: boolean;
+}
+
+export function CalendarBodyDayContent({
+  date,
+  resourceId,
+  resourceName,
+  showHeader = true,
+}: CalendarBodyDayContentProps) {
   const { events, onSelectSlot, selectable, businessHours } = useBookingCalendarContext();
   const dayEvents = events.filter((e) => {
     const sameDay = isSameDay(e.start, date);
@@ -57,8 +69,13 @@ export function CalendarBodyDayContent({ date, resourceId }: { date: Date; resou
     if (!selectable || !onSelectSlot) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const y = e.clientY - rect.top;
-    const minutesIntoHour = (y / rect.height) * 60;
-    const totalMinutes = hour * 60 + minutesIntoHour;
+
+    // Keep the chosen time stable even near borders/overlays.
+    // We only snap inside the clicked hour to :00 or :30.
+    const minutesIntoHour = Math.max(0, Math.min(59.999, (y / rect.height) * 60));
+    const snappedMinutes = minutesIntoHour >= 30 ? 30 : 0;
+    const totalMinutes = hour * 60 + snappedMinutes;
+
     const start = addMinutes(
       startOfDay(date),
       Math.floor(totalMinutes / 30) * 30
@@ -80,7 +97,7 @@ export function CalendarBodyDayContent({ date, resourceId }: { date: Date; resou
 
   return (
     <div className="flex flex-col flex-grow min-w-0">
-      <CalendarBodyHeader date={date} />
+      {showHeader && <CalendarBodyHeader date={date} resourceName={resourceName} />}
 
       <div className="flex-1 relative min-h-0">
         {HOURS.map((hour) => {
