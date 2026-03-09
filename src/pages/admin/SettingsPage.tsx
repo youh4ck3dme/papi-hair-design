@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { db, functions } from "@/integrations/firebase/config";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, Save, Mail, Users, Shield } from "lucide-react";
+import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound } from "lucide-react";
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
 
 export default function SettingsPage() {
@@ -19,6 +19,11 @@ export default function SettingsPage() {
   const { businessId, isOwner } = useBusiness();
   const [business, setBusiness] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [snapshotInfo, setSnapshotInfo] = useState<any>(null);
+  const [licenseKey, setLicenseKey] = useState("");
+  const [licenseState, setLicenseState] = useState<"idle" | "checking" | "ok" | "error">("idle");
+  const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
   const [profileForm, setProfileForm] = useState({ full_name: "", phone: "" });
   // Predvolená SMTP pre Papi Hair Design (Websupport) – odosielateľ aj prijemca: booking@papihairdesign.sk
   const DEFAULT_SMTP = {
@@ -49,6 +54,9 @@ export default function SettingsPage() {
         if (snap.exists()) {
           const data = snap.data();
           setBusiness({ id: snap.id, ...data });
+          if (data.license_key) {
+            setLicenseKey(data.license_key);
+          }
           const smtp = data.smtp_config as any ?? {};
           setSmtpForm({
             host: (smtp.host ?? "").trim() || DEFAULT_SMTP.host,
@@ -64,6 +72,18 @@ export default function SettingsPage() {
       }
     };
     loadBusiness();
+  }, [businessId]);
+
+  useEffect(() => {
+    const loadSnapshot = async () => {
+      try {
+        const snap = await getDoc(doc(db, "public_snapshots", businessId));
+        if (snap.exists()) setSnapshotInfo({ id: snap.id, ...snap.data() });
+      } catch (err) {
+        console.error("Error loading snapshot:", err);
+      }
+    };
+    loadSnapshot();
   }, [businessId]);
 
   const saveProfile = async () => {
@@ -155,6 +175,71 @@ export default function SettingsPage() {
     }
   };
 
+  const rebuildSnapshot = async () => {
+    setSnapshotLoading(true);
+    try {
+      const fn = httpsCallable<any, any>(functions, "rebuildPublicSnapshot");
+      const { data } = await fn({ business_id: businessId });
+      if (data?.success) {
+        toast.success("Snapshot rebuild spustený");
+        const snap = await getDoc(doc(db, "public_snapshots", businessId));
+        if (snap.exists()) setSnapshotInfo({ id: snap.id, ...snap.data() });
+      } else {
+        toast.error("Snapshot rebuild zlyhal");
+      }
+    } catch (err) {
+      console.error("Snapshot rebuild error:", err);
+      toast.error("Snapshot rebuild zlyhal");
+    } finally {
+      setSnapshotLoading(false);
+    }
+  };
+
+  const applyLicense = async () => {
+    if (!licenseKey.trim()) {
+      setLicenseMessage("Zadajte licenčný kľúč");
+      setLicenseState("error");
+      return;
+    }
+    setLicenseState("checking");
+    setLicenseMessage(null);
+    try {
+      const licSnap = await getDoc(doc(db, "licenses", licenseKey.trim()));
+      if (!licSnap.exists()) {
+        setLicenseState("error");
+        setLicenseMessage("Neplatný licenčný kľúč");
+        return;
+      }
+      const lic = licSnap.data() as any;
+      const expires = lic.expires_at instanceof Timestamp ? lic.expires_at.toDate() : null;
+      if (expires && expires.getTime() < Date.now()) {
+        setLicenseState("error");
+        setLicenseMessage("Licencia expirovala");
+        return;
+      }
+
+      await updateDoc(doc(db, "businesses", businessId), {
+        license_key: licenseKey.trim(),
+        license_unlimited: !!lic.unlimited,
+        license_max_seats: lic.max_seats ?? 5,
+        license_assigned_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      setLicenseState("ok");
+      setLicenseMessage(
+        lic.unlimited
+          ? "Licencia aktivovaná: neobmedzené"
+          : `Licencia aktivovaná: limit ${lic.max_seats ?? 5}`
+      );
+      toast.success("Licencia aktivovaná");
+    } catch (err) {
+      console.error("License apply error:", err);
+      setLicenseState("error");
+      setLicenseMessage("Chyba pri aktivácii licencie");
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-4xl animate-in fade-in duration-500">
       <div className="flex flex-col gap-1">
@@ -165,11 +250,13 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto p-1 bg-muted/30 backdrop-blur-md border border-primary/10 rounded-xl mb-6">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto p-1 bg-muted/30 backdrop-blur-md border border-primary/10 rounded-xl mb-6">
           <TabsTrigger value="general" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Všeobecné</TabsTrigger>
           <TabsTrigger value="booking" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Booking</TabsTrigger>
           <TabsTrigger value="hours" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Otváracie hodiny</TabsTrigger>
           <TabsTrigger value="smtp" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">SMTP Email</TabsTrigger>
+          <TabsTrigger value="snapshot" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Snapshot</TabsTrigger>
+          <TabsTrigger value="license" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Licencia</TabsTrigger>
           <TabsTrigger value="profile" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Profil</TabsTrigger>
         </TabsList>
 
@@ -346,6 +433,89 @@ export default function SettingsPage() {
                 <Button onClick={saveSmtp} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                   Uložiť SMTP
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="snapshot" className="space-y-6 mt-0">
+          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+            <CardHeader className="border-b border-primary/5 bg-muted/20 flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-lg font-bold flex items-center gap-2">
+                    <RefreshCw className="w-5 h-5 text-primary" />
+                    Public Snapshot
+                  </CardTitle>
+                  <CardDescription>Statický výrez dát pre booking frontend</CardDescription>
+                </div>
+                <Button
+                  onClick={rebuildSnapshot}
+                  disabled={snapshotLoading || !isOwner}
+                  className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-6"
+                >
+                  {snapshotLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                  Rebuild
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-3 text-sm text-muted-foreground">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <div className="text-xs uppercase tracking-widest">Revision</div>
+                  <div className="font-semibold text-foreground">{snapshotInfo?.revision ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-widest">Updated</div>
+                  <div className="font-semibold text-foreground">
+                    {snapshotInfo?.updated_at ? new Date(snapshotInfo.updated_at).toLocaleString() : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-widest">Status</div>
+                  <div className="font-semibold text-foreground">{snapshotInfo?.status ?? "—"}</div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Snapshot sa rebuilduje aj automaticky pri zmenách dát (biznis, služby, zamestnanci, hodiny, výnimky).
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="license" className="space-y-6 mt-0">
+          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+            <CardHeader className="border-b border-primary/5 bg-muted/20">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-primary" />
+                Licenčný kľúč
+              </CardTitle>
+              <CardDescription>Aktivujte “full” režim pre max 5 licencovaných pobočiek (unlimited kľúč = bez limitov)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-6">
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Kľúč</Label>
+                <Input
+                  className="bg-background/50 border-primary/10 focus:ring-primary/20"
+                  value={licenseKey}
+                  onChange={(e) => setLicenseKey(e.target.value)}
+                  placeholder="Zadajte licenčný kľúč"
+                />
+              </div>
+              {licenseMessage && (
+                <div className={`text-sm ${licenseState === "error" ? "text-red-500" : "text-emerald-500"}`}>
+                  {licenseMessage}
+                </div>
+              )}
+              <div className="pt-2 flex justify-end">
+                <Button
+                  onClick={applyLicense}
+                  disabled={licenseState === "checking" || !isOwner}
+                  className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all"
+                >
+                  {licenseState === "checking" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <KeyRound className="w-4 h-4 mr-2" />}
+                  Aktivovať
                 </Button>
               </div>
             </CardContent>
