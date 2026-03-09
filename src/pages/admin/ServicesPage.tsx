@@ -14,6 +14,7 @@ import { z } from "zod";
 import { sortServicesByCanonicalOrder } from "@/lib/priceListOrder";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const serviceSchema = z.object({
   name_sk: z.string().min(2, "Názov musí mať aspoň 2 znaky"),
@@ -21,10 +22,18 @@ const serviceSchema = z.object({
   buffer_minutes: z.coerce.number().min(0),
   price: z.coerce.number().min(0).optional(),
   description_sk: z.string().optional(),
+  category: z.enum(["panske", "damske", "doplnkove", "ostatne"]).optional().default("ostatne"),
 });
 
 type ServiceForm = z.infer<typeof serviceSchema>;
-const emptyForm: ServiceForm = { name_sk: "", duration_minutes: 30, buffer_minutes: 0, price: undefined, description_sk: "" };
+const emptyForm: ServiceForm = {
+  name_sk: "",
+  duration_minutes: 30,
+  buffer_minutes: 0,
+  price: undefined,
+  description_sk: "",
+  category: "ostatne"
+};
 
 interface ServiceRow {
   id: string;
@@ -91,6 +100,7 @@ export default function ServicesPage() {
       buffer_minutes: service.buffer_minutes,
       price: service.price ?? undefined,
       description_sk: service.description_sk ?? "",
+      category: (service.category as any) ?? "ostatne",
     });
     setErrors({});
     setOpen(true);
@@ -116,6 +126,7 @@ export default function ServicesPage() {
       duration_minutes: result.data.duration_minutes,
       buffer_minutes: result.data.buffer_minutes,
       price: result.data.price ?? null,
+      category: result.data.category,
       business_id: businessId,
       updated_at: new Date().toISOString(),
     };
@@ -208,80 +219,94 @@ export default function ServicesPage() {
           <Button variant="outline" onClick={openCreate} className="border-primary/20">Pridať prvú službu</Button>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((service) => (
-            <div
-              key={service.id}
-              className={cn(
-                "group relative p-5 rounded-2xl border border-primary/10 bg-card/40 backdrop-blur-xl transition-all hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/30",
-                !service.is_active && "opacity-60 grayscale-[0.5]"
-              )}
-            >
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-lg text-foreground truncate group-hover:text-primary transition-colors">
-                      {service.name_sk}
-                    </h3>
-                    {!service.is_active && (
-                      <Badge variant="outline" className="text-[10px] py-0 h-4 bg-muted text-muted-foreground border-muted-foreground/20">
-                        Neaktívna
-                      </Badge>
-                    )}
-                  </div>
-                  {service.description_sk && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 min-h-[2.5em]">
-                      {service.description_sk}
-                    </p>
-                  )}
-                </div>
-                <Switch
-                  checked={service.is_active}
-                  onCheckedChange={() => handleToggle(service)}
-                  className="data-[state=checked]:bg-primary"
-                />
-              </div>
+        <div className="space-y-12">
+          {[
+            { id: "panske", label: "Pánske služby" },
+            { id: "damske", label: "Dámske služby" },
+            { id: "doplnkove", label: "Doplnkové služby" },
+            { id: "ostatne", label: "Ostatné" }
+          ].map((cat) => {
+            const filtered = services.filter(s => (s.category || "ostatne") === cat.id);
+            if (filtered.length === 0) return null;
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-5">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-foreground/80">
-                  <Clock className="w-3.5 h-3.5 text-primary/60" />
-                  <span>{service.duration_minutes} min</span>
+            return (
+              <div key={cat.id} className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-xl font-bold text-foreground/80 flex items-center gap-2">
+                    <div className="w-1 h-6 bg-primary rounded-full" />
+                    {cat.label}
+                  </h2>
+                  <div className="h-px flex-1 bg-primary/10" />
                 </div>
-                {service.buffer_minutes > 0 && (
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-amber-500/80">
-                    <Layers className="w-3.5 h-3.5 opacity-70" />
-                    <span>+{service.buffer_minutes} min pauza</span>
-                  </div>
-                )}
-                {service.price != null && (
-                  <div className="flex items-center gap-1.5 ml-auto">
-                    <Badge className="bg-primary/10 text-primary border-primary/20 text-sm font-bold">
-                      {service.price}€
-                    </Badge>
-                  </div>
-                )}
-              </div>
 
-              <div className="flex gap-2 pt-4 border-t border-primary/5">
-                <Button size="sm" variant="ghost" className="flex-1 h-9 rounded-xl hover:bg-primary/10 text-xs gap-1.5" onClick={() => openEdit(service)}>
-                  <Pencil className="w-3.5 h-3.5" /> Upraviť
-                </Button>
-                <Button size="sm" variant="ghost" className="h-9 w-9 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(service.id)}>
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {filtered.map((service) => (
+                    <div
+                      key={service.id}
+                      className={cn(
+                        "group relative p-5 rounded-2xl border border-primary/10 bg-card/40 backdrop-blur-xl transition-all hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/30",
+                        !service.is_active && "opacity-60 grayscale-[0.5]"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-bold text-lg text-foreground truncate group-hover:text-primary transition-colors">
+                              {service.name_sk}
+                            </h3>
+                            {!service.is_active && (
+                              <Badge variant="outline" className="text-[10px] py-0 h-4 bg-muted text-muted-foreground border-muted-foreground/20">
+                                Neaktívna
+                              </Badge>
+                            )}
+                          </div>
+                          {service.description_sk && (
+                            <p className="text-xs text-muted-foreground line-clamp-2 min-h-[2.5em]">
+                              {service.description_sk}
+                            </p>
+                          )}
+                        </div>
+                        <Switch
+                          checked={service.is_active}
+                          onCheckedChange={() => handleToggle(service)}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                      </div>
 
-              {(service.category || service.subcategory) && (
-                <div className="absolute -top-2 -left-2 flex gap-1 transform transition-transform group-hover:-translate-y-1">
-                  {service.category && (
-                    <Badge className="text-[9px] px-1.5 h-5 bg-background shadow-md border-primary/10 text-primary capitalize">
-                      {service.category}
-                    </Badge>
-                  )}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-5">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-foreground/80">
+                          <Clock className="w-3.5 h-3.5 text-primary/60" />
+                          <span>{service.duration_minutes} min</span>
+                        </div>
+                        {service.buffer_minutes > 0 && (
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-amber-500/80">
+                            <Layers className="w-3.5 h-3.5 opacity-70" />
+                            <span>+{service.buffer_minutes} min pauza</span>
+                          </div>
+                        )}
+                        {service.price != null && (
+                          <div className="flex items-center gap-1.5 ml-auto">
+                            <Badge className="bg-primary/10 text-primary border-primary/20 text-sm font-bold">
+                              {service.price}€
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 pt-4 border-t border-primary/5">
+                        <Button size="sm" variant="ghost" className="flex-1 h-9 rounded-xl hover:bg-primary/10 text-xs gap-1.5" onClick={() => openEdit(service)}>
+                          <Pencil className="w-3.5 h-3.5" /> Upraviť
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-9 w-9 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(service.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -321,6 +346,24 @@ export default function ServicesPage() {
                 onChange={(e) => setForm((prev) => ({ ...prev, description_sk: e.target.value }))}
                 placeholder="Stručný popis pre zákazníkov..."
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Kategória</Label>
+              <Select
+                value={form.category}
+                onValueChange={(v) => setForm((prev) => ({ ...prev, category: v as any }))}
+              >
+                <SelectTrigger className="bg-background/50 border-primary/10">
+                  <SelectValue placeholder="Vyberte kategóriu" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="panske">Pánske služby</SelectItem>
+                  <SelectItem value="damske">Dámske služby</SelectItem>
+                  <SelectItem value="doplnkove">Doplnkové služby</SelectItem>
+                  <SelectItem value="ostatne">Ostatné</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-3 gap-4">

@@ -5,6 +5,11 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "app-check": {
+    "debug": {
+      "token": "10DA014C-D556-47B8-AE5A-136618186944"
+    }
+  },
   "functions": [
     {
       "codebase": "default",
@@ -38,7 +43,7 @@
           },
           {
             "key": "X-Frame-Options",
-            "value": "DENY"
+            "value": "SAMEORIGIN"
           },
           {
             "key": "Referrer-Policy",
@@ -65,7 +70,7 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+        "source": "!{/__/**,/**}",
         "destination": "/index.html"
       }
     ]

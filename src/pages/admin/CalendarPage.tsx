@@ -236,7 +236,11 @@ export default function CalendarPage() {
   const handleSelectSlot = (slot: SlotInfo) => {
     if (!isOwnerOrAdmin) return;
     setSelectedSlot(slot);
-    setBookForm({ service_id: "", employee_id: "", start_at: "" });
+    setBookForm({
+      service_id: "",
+      employee_id: "",
+      start_at: slot.start.toISOString()
+    });
     setAvailableSlots([]);
     setBookingModal(true);
   };
@@ -357,7 +361,11 @@ export default function CalendarPage() {
               Vyberte službu, zamestnanca a dostupný čas pre novú rezerváciu.
             </DialogDescription>
           </DialogHeader>
-          {selectedSlot && <p className="text-sm text-muted-foreground">{fmtDate(selectedSlot.start, "EEEE, d. MMMM yyyy", { locale: sk })}</p>}
+          {selectedSlot && (
+            <p className="text-sm font-medium text-primary">
+              {fmtDate(selectedSlot.start, "EEEE, d. MMMM yyyy HH:mm", { locale: sk })}
+            </p>
+          )}
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Služba</Label>
