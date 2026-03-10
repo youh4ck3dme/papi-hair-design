@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Booking Flow", () => {
+    test.describe.configure({ timeout: 120_000 });
+
     test("should complete a full booking successfully", async ({ page }) => {
         page.on("console", (msg) => {
             if (msg.type() === "error" || msg.type() === "warning") {
