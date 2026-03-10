@@ -15,6 +15,7 @@ export { confirmBooking } from "./confirmBooking";
 export { cleanupExpiredHolds } from "./cleanupExpiredHolds";
 export { rebuildPublicSnapshot } from "./rebuildPublicSnapshot";
 export { bootstrapAdminAccess } from "./bootstrapAdminAccess";
+export { onProfileWriteSyncEmployeePhoto } from "./syncEmployeePhotoFromProfile";
 export {
   onBusinessWrite,
   onServiceWrite,

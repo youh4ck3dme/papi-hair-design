@@ -25,7 +25,7 @@ export function EmployeeSelection({
             <div className="flex flex-col gap-3">
                 {filteredEmployees.map((w) => {
                     const isSelected = selectedWorkerId === w.id;
-                    const photoSrc = employeePhotos[w.id] || w.photo_url || "";
+                    const photoSrc = w.photo_url || employeePhotos[w.id] || "";
                     return (
                         <button
                             type="button"
