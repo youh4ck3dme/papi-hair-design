@@ -109,6 +109,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
         try {
           await normalizeMemberships();
+        } catch (err) {
+          console.warn("AuthContext: normalizeMemberships failed, continuing with direct profile refresh:", err);
+        }
+        try {
           await refreshProfile(currentFbUser.uid);
         } catch (err) {
           console.error("AuthContext: Failed to refresh profile on auth change:", err);

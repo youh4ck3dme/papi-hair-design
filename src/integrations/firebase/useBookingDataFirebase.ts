@@ -178,18 +178,27 @@ export function useBookingDataFirebase() {
                     }));
                 }
 
-                // 2. Memberships (best-effort)
+                // 2. Memberships (best-effort, only for staff/admin)
                 try {
-                    const memSnap = await getDocs(query(
-                        collection(db, "memberships"),
-                        where("business_id", "==", FALLBACK_BIZ)
-                    ));
-                    setMemberships(memSnap.docs.map(d => {
-                        const data = d.data();
-                        return { profile_id: data.profile_id, role: data.role };
-                    }) as MembershipRow[]);
-                } catch (membershipError) {
-                    console.warn("useBookingDataFirebase: memberships unavailable for current user", membershipError);
+                    const isAnonymous = auth.currentUser?.isAnonymous;
+                    if (auth.currentUser && !isAnonymous) {
+                        const memSnap = await getDocs(query(
+                            collection(db, "memberships"),
+                            where("business_id", "==", FALLBACK_BIZ)
+                        ));
+                        setMemberships(memSnap.docs.map(d => {
+                            const data = d.data();
+                            return { profile_id: data.profile_id, role: data.role };
+                        }) as MembershipRow[]);
+                    } else {
+                        setMemberships([]);
+                    }
+                } catch (membershipError: any) {
+                    // Only warn if it's NOT a permission error for an anonymous/unauthed user
+                    const isPermissionError = membershipError?.code === "permission-denied";
+                    if (!isPermissionError) {
+                        console.warn("useBookingDataFirebase: memberships unavailable", membershipError);
+                    }
                     setMemberships([]);
                 }
 

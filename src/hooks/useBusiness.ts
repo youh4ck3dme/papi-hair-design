@@ -2,15 +2,30 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMemo } from "react";
 
 export const DEMO_BUSINESS_ID = "papi-hair-design-main";
+const PRIMARY_BUSINESS_ID = (import.meta.env.VITE_PRIMARY_BUSINESS_ID as string | undefined)?.trim() || DEMO_BUSINESS_ID;
+
+const ROLE_ORDER = ["owner", "admin", "employee", "customer"] as const;
+
+function roleRank(role: string) {
+  const idx = ROLE_ORDER.indexOf(role as (typeof ROLE_ORDER)[number]);
+  return idx === -1 ? ROLE_ORDER.length : idx;
+}
 
 export function useBusiness() {
   const { memberships } = useAuth();
 
   const activeMembership = useMemo(() => {
     if (!memberships.length) return null;
-    // prefer owner > admin > employee > customer
-    const order = ["owner", "admin", "employee", "customer"];
-    return memberships.sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role))[0];
+    return [...memberships].sort((a, b) => {
+      const byRole = roleRank(a.role) - roleRank(b.role);
+      if (byRole !== 0) return byRole;
+
+      const preferredA = a.business_id === PRIMARY_BUSINESS_ID ? 0 : 1;
+      const preferredB = b.business_id === PRIMARY_BUSINESS_ID ? 0 : 1;
+      if (preferredA !== preferredB) return preferredA - preferredB;
+
+      return a.business_id.localeCompare(b.business_id);
+    })[0];
   }, [memberships]);
 
   const businessId = activeMembership?.business_id ?? DEMO_BUSINESS_ID;

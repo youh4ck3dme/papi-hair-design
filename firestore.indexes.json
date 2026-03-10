@@ -75,6 +75,70 @@
             ]
         },
         {
+            "collectionGroup": "appointments",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "employee_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "appointments",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "employee_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "start_at",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "services",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "business_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "is_active",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "services",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "business_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "is_active",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "name_sk",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
             "collectionGroup": "memberships",
             "queryScope": "COLLECTION",
             "fields": [

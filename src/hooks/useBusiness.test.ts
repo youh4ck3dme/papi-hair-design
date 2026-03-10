@@ -58,6 +58,26 @@ describe("useBusiness", () => {
     expect(result.current.businessId).toBe("b-o");
   });
 
+  it("prefers primary business when role priority is tied", () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: "u1", email: "a@b.sk", uid: "u1" },
+      session: null,
+      profile: null,
+      memberships: [
+        { id: "m1", business_id: "legacy-biz", profile_id: "u1", role: "owner" },
+        { id: "m2", business_id: "papi-hair-design-main", profile_id: "u1", role: "admin" },
+        { id: "m3", business_id: "papi-hair-design-main", profile_id: "u1", role: "owner" },
+      ],
+      loading: false,
+      signOut: vi.fn(),
+      refreshProfile: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useBusiness());
+    expect(result.current.businessId).toBe("papi-hair-design-main");
+    expect(result.current.role).toBe("owner");
+  });
+
   it("isEmployee true for employee role", () => {
     mockUseAuth.mockReturnValue({
       user: { id: "u1", email: "a@b.sk", uid: "u1" },

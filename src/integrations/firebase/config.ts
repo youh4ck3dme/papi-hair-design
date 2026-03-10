@@ -40,7 +40,7 @@ if (typeof window !== "undefined") {
         } catch (err) {
             console.error("🔐 Firebase App Check: Failed to initialize:", err);
         }
-    } else {
+    } else if (import.meta.env.DEV) {
         console.warn("🔐 Firebase App Check: No site key found. Skipping initialization.");
     }
 }
