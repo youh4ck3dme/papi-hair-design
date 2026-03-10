@@ -7,7 +7,6 @@ import { contactSchema, ServiceRow, EmployeeRow, BookingResult, MembershipRow } 
 import { createBookingHold } from "@/integrations/firebase/createBookingHold";
 import { confirmBooking } from "@/integrations/firebase/confirmBooking";
 
-const DEMO_BUSINESS_ID = "papi-hair-design-main";
 const makeIdempotencyKey = () =>
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
@@ -55,6 +54,7 @@ export function useBookingForm(
     const [bookingDone, setBookingDone] = useState(false);
     const [bookingResult, setBookingResult] = useState<BookingResult | null>(null);
     const { profile } = useAuth();
+    const businessId = typeof business?.id === "string" ? business.id : "";
 
     // Pre-fill profile data
     useEffect(() => {
@@ -165,9 +165,14 @@ export function useBookingForm(
                 return;
             }
             const idempotencyKey = makeIdempotencyKey();
+            if (!businessId) {
+                toast.error(t("booking.toastServerError"));
+                setSubmitting(false);
+                return;
+            }
 
             const hold = await createBookingHold({
-                business_id: DEMO_BUSINESS_ID,
+                business_id: businessId,
                 service_id: selectedServiceId,
                 employee_id: selectedWorkerId,
                 start_at: slotDate.toISOString(),

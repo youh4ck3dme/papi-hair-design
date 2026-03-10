@@ -11,8 +11,7 @@ import { signInAnonymously } from "firebase/auth";
 import { auth, db } from "./config";
 import { ServiceRow, EmployeeRow, MembershipRow } from "@/components/booking/types";
 import { type BusinessHourEntry, type DateOverrideEntry } from "@/lib/availability";
-
-const FALLBACK_BIZ = "papi-hair-design-main";
+import { DEFAULT_BUSINESS_ID, withBusinessIdFallbacks } from "@/lib/businessIds";
 
 export interface BusinessData {
     id: string;
@@ -39,6 +38,9 @@ export function useBookingDataFirebase() {
         const load = async () => {
             setInitialLoading(true);
             try {
+                const businessIdCandidates = withBusinessIdFallbacks(DEFAULT_BUSINESS_ID);
+                let activeBusinessId = businessIdCandidates[0] ?? DEFAULT_BUSINESS_ID;
+
                 // Public booking needs read access even when Firebase rules require authentication.
                 if (!auth.currentUser) {
                     try {
@@ -48,13 +50,21 @@ export function useBookingDataFirebase() {
                     }
                 }
 
-                // 1. Try snapshot first
-                const snapshotDoc = await getDoc(doc(db, "public_snapshots", FALLBACK_BIZ));
+                // 1. Try snapshot first (with fallback business IDs)
+                let snapshotData: any | null = null;
+                for (const candidateBusinessId of businessIdCandidates) {
+                    const snapshotDoc = await getDoc(doc(db, "public_snapshots", candidateBusinessId));
+                    if (snapshotDoc.exists()) {
+                        activeBusinessId = candidateBusinessId;
+                        snapshotData = snapshotDoc.data();
+                        break;
+                    }
+                }
 
-                if (snapshotDoc.exists()) {
-                    const snap = snapshotDoc.data() as any;
+                if (snapshotData) {
+                    const snap = snapshotData as any;
                     setBusiness({
-                        id: FALLBACK_BIZ,
+                        id: activeBusinessId,
                         name: snap.business?.name ?? "",
                         allow_admin_as_provider: snap.business?.allow_admin_as_provider,
                         max_days_ahead: snap.business?.max_days_ahead,
@@ -64,7 +74,7 @@ export function useBookingDataFirebase() {
                     });
                     setServices(
                         (snap.services ?? [])
-                            .map((d: any) => ({ id: d.id, ...d } as ServiceRow))
+                            .map((d: any) => ({ ...d, id: d.id } as ServiceRow))
                             .sort((a: any, b: any) => {
                                 const aSort = typeof a.sort_order === "number" ? a.sort_order : Number.MAX_SAFE_INTEGER;
                                 const bSort = typeof b.sort_order === "number" ? b.sort_order : Number.MAX_SAFE_INTEGER;
@@ -74,7 +84,7 @@ export function useBookingDataFirebase() {
                     );
                     setEmployees(
                         (snap.employees ?? [])
-                            .map((d: any) => ({ id: d.id, ...d } as EmployeeRow))
+                            .map((d: any) => ({ ...d, id: d.id } as EmployeeRow))
                             .sort((a: any, b: any) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"))
                     );
                     setBusinessHourEntries(
@@ -100,25 +110,39 @@ export function useBookingDataFirebase() {
                     setEmployeeServiceMap(snap.employee_service_map ?? {});
                 } else {
                     // Fallback to live collections
+                    let businessSnap = null;
+                    for (const candidateBusinessId of businessIdCandidates) {
+                        const candidateBusinessSnap = await getDoc(doc(db, "businesses", candidateBusinessId));
+                        if (candidateBusinessSnap.exists()) {
+                            activeBusinessId = candidateBusinessId;
+                            businessSnap = candidateBusinessSnap;
+                            break;
+                        }
+                    }
+
+                    if (!businessSnap) {
+                        businessSnap = await getDoc(doc(db, "businesses", activeBusinessId));
+                    }
+
                     const [bizSnap, svcSnap, empSnap, bhSnap, bdoSnap] = await Promise.all([
-                        getDoc(doc(db, "businesses", FALLBACK_BIZ)),
+                        Promise.resolve(businessSnap),
                         getDocs(query(
                             collection(db, "services"),
-                            where("business_id", "==", FALLBACK_BIZ),
+                            where("business_id", "==", activeBusinessId),
                             where("is_active", "==", true)
                         )),
                         getDocs(query(
                             collection(db, "employees"),
-                            where("business_id", "==", FALLBACK_BIZ),
+                            where("business_id", "==", activeBusinessId),
                             where("is_active", "==", true)
                         )),
                         getDocs(query(
                             collection(db, "business_hours"),
-                            where("business_id", "==", FALLBACK_BIZ)
+                            where("business_id", "==", activeBusinessId)
                         )),
                         getDocs(query(
                             collection(db, "business_date_overrides"),
-                            where("business_id", "==", FALLBACK_BIZ),
+                            where("business_id", "==", activeBusinessId),
                             where("override_date", ">=", new Date().toISOString().slice(0, 10))
                         )),
                     ]);
@@ -126,7 +150,7 @@ export function useBookingDataFirebase() {
                     if (bizSnap.exists()) {
                         const d = bizSnap.data();
                         setBusiness({
-                            id: FALLBACK_BIZ,
+                            id: activeBusinessId,
                             name: d.name,
                             allow_admin_as_provider: d.allow_admin_as_provider,
                             max_days_ahead: d.max_days_ahead,
@@ -137,7 +161,7 @@ export function useBookingDataFirebase() {
 
                     setServices(
                         svcSnap.docs
-                            .map(d => ({ id: d.id, ...d.data() } as ServiceRow))
+                            .map(d => ({ ...d.data(), id: d.id } as ServiceRow))
                             .sort((a, b) => {
                                 const aSort = typeof a.sort_order === "number" ? a.sort_order : Number.MAX_SAFE_INTEGER;
                                 const bSort = typeof b.sort_order === "number" ? b.sort_order : Number.MAX_SAFE_INTEGER;
@@ -147,7 +171,7 @@ export function useBookingDataFirebase() {
                     );
                     setEmployees(
                         empSnap.docs
-                            .map(d => ({ id: d.id, ...d.data() } as EmployeeRow))
+                            .map(d => ({ ...d.data(), id: d.id } as EmployeeRow))
                             .sort((a, b) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"))
                     );
 
@@ -184,7 +208,7 @@ export function useBookingDataFirebase() {
                     if (auth.currentUser && !isAnonymous) {
                         const memSnap = await getDocs(query(
                             collection(db, "memberships"),
-                            where("business_id", "==", FALLBACK_BIZ)
+                            where("business_id", "==", activeBusinessId)
                         ));
                         setMemberships(memSnap.docs.map(d => {
                             const data = d.data();

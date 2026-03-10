@@ -1,8 +1,9 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useMemo } from "react";
+import { DEFAULT_BUSINESS_ID } from "@/lib/businessIds";
 
-export const DEMO_BUSINESS_ID = "papi-hair-design-main";
-const PRIMARY_BUSINESS_ID = (import.meta.env.VITE_PRIMARY_BUSINESS_ID as string | undefined)?.trim() || DEMO_BUSINESS_ID;
+export const DEMO_BUSINESS_ID = DEFAULT_BUSINESS_ID;
+const PRIMARY_BUSINESS_ID = DEFAULT_BUSINESS_ID;
 
 const ROLE_ORDER = ["owner", "admin", "employee", "customer"] as const;
 
