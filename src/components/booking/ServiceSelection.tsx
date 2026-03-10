@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Star, Sparkles, User2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { GoldText, StepHeader, RadioIcon } from "./BookingUI";
@@ -27,6 +28,8 @@ export function ServiceSelection({
     onCategoryChange,
 }: ServiceSelectionProps) {
     const { t } = useTranslation();
+    const [expandedCategory, setExpandedCategory] = useState<"damske" | "panske" | null>(null);
+    const isCategoryExpanded = expandedCategory === category;
 
     return (
         <div className="px-4" data-testid="booking-step-category">
@@ -40,12 +43,25 @@ export function ServiceSelection({
             {/* Category Toggle */}
             <div className="relative flex gap-0 rounded-full overflow-hidden border border-border bg-muted/40 p-1">
                 {(["damske", "panske"] as const).map((cat) => {
-                    const isActive = category === cat;
+                    const isActive = category === cat && expandedCategory === cat;
                     const Icon = cat === "damske" ? Sparkles : User2;
                     return (
                         <button
                             key={cat}
-                            onClick={() => { setCategory(cat); onCategoryChange(); }}
+                            onClick={() => {
+                                if (category === cat && expandedCategory === cat) {
+                                    setExpandedCategory(null);
+                                    setSubcategory(null);
+                                    setSelectedServiceId(null);
+                                    onCategoryChange();
+                                    return;
+                                }
+                                setCategory(cat);
+                                setSubcategory(null);
+                                setSelectedServiceId(null);
+                                setExpandedCategory(cat);
+                                onCategoryChange();
+                            }}
                             className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full font-semibold text-sm transition-all duration-300 ${isActive
                                 ? "bg-primary text-primary-foreground dark:text-background shadow-md shadow-primary/25"
                                 : "text-muted-foreground hover:text-foreground"
@@ -59,7 +75,7 @@ export function ServiceSelection({
             </div>
 
             {/* Subcategory chips */}
-            {subcategories.length > 0 && (
+            {isCategoryExpanded && subcategories.length > 0 && (
                 <div className="mt-5 flex flex-wrap gap-2">
                     {subcategories.map((sub) => (
                         <button
@@ -77,7 +93,7 @@ export function ServiceSelection({
             )}
 
             {/* Step 2: Service picker */}
-            {(subcategory || subcategories.length === 0) && filteredServices.length > 0 && (
+            {isCategoryExpanded && (subcategory || subcategories.length === 0) && filteredServices.length > 0 && (
                 <div className="animate-fade-in">
                     <StepHeader num="2" title={t("booking.step2")} />
                     <div className="flex flex-col gap-3">

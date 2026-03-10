@@ -11,6 +11,9 @@ export interface ConfirmBookingResponse {
   error?: string;
   appointment_id?: string;
   status?: string;
+  claim_token?: string | null;
+  customer_email?: string | null;
+  customer_name?: string | null;
 }
 
 export async function confirmBooking(

@@ -112,8 +112,10 @@ export function BookingSuccess({
                         onClick={() => {
                             if (bookingResult.claim_token) {
                                 sessionStorage.setItem("claim_token", bookingResult.claim_token);
-                                globalThis.location.href = `/auth?mode=register&email=${encodeURIComponent(bookingResult.customer_email || "")}&name=${encodeURIComponent(bookingResult.customer_name || "")}`;
+                            } else {
+                                sessionStorage.removeItem("claim_token");
                             }
+                            globalThis.location.href = `/auth?mode=register&email=${encodeURIComponent(bookingResult.customer_email || "")}&name=${encodeURIComponent(bookingResult.customer_name || "")}`;
                         }}
                         className="w-full font-bold py-4 rounded-full text-base bg-primary text-primary-foreground dark:text-background hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 active:scale-[0.98]"
                     >

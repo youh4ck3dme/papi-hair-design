@@ -195,10 +195,9 @@ export function useBookingForm(
             }
 
             const data: BookingResult = {
-                success: true,
-                appointment_id: hold.appointment_id,
-                customer_email: formData.email,
-                customer_name: `${formData.meno} ${formData.priezvisko}`.trim(),
+                claim_token: confirm.claim_token ?? undefined,
+                customer_email: confirm.customer_email ?? formData.email,
+                customer_name: confirm.customer_name ?? `${formData.meno} ${formData.priezvisko}`.trim(),
             };
 
             setBookingResult(data);
