@@ -47,8 +47,7 @@ jobs:
         run: npm run test
 
       - name: Coverage (report only)
-        continue-on-error: true
-        run: npm run test:coverage
+        run: npm run test:coverage || true
 
       - name: Lock-in check (Node version)
         run: npm run lockin:check
@@ -88,7 +87,7 @@ jobs:
         run: npm run budget
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dist
           path: dist/
