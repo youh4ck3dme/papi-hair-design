@@ -123,7 +123,8 @@ test.describe("Booking Flow", () => {
 
         await page.getByPlaceholder("Meno").fill("Test");
         await page.getByPlaceholder("Priezvisko").fill("User");
-        await page.getByPlaceholder("Email").fill(`e2e-${Date.now()}@test.sk`);
+        const bookingEmail = `e2e-${Date.now()}@test.sk`;
+        await page.getByPlaceholder("Email").fill(bookingEmail);
 
         const phoneInput = page.locator('input[type="tel"]');
         if (await phoneInput.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -143,5 +144,10 @@ test.describe("Booking Flow", () => {
         // 10. Verify success
         await expect(page.getByTestId("booking-success")).toBeVisible({ timeout: 20000 });
         await expect(page.getByText(/Rezervácia potvrdená/i)).toBeVisible();
+
+        // 11. Verify register CTA redirects to auth register mode with prefilled email
+        await page.getByRole("button", { name: /Dokonči registráciu/i }).click();
+        await expect(page).toHaveURL(/\/auth\?mode=register/i, { timeout: 10000 });
+        await expect(page.getByTestId("auth-email-input")).toHaveValue(bookingEmail, { timeout: 5000 });
     });
 });
