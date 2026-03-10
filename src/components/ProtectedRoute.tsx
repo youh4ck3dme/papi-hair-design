@@ -1,21 +1,12 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
+import { isAdminAllowlisted } from "@/lib/adminAllowlist";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
   allowedRoles?: Array<"owner" | "admin" | "employee" | "customer">;
-}
-
-const ADMIN_EMAIL_ALLOWLIST = new Set([
-  "papi@papihairdesign.sk",
-  "miska@papihairdesign.sk",
-  "mato@papihairdesign.sk",
-]);
-
-function normalizeEmail(email: string | null | undefined): string {
-  return email?.trim().toLowerCase() ?? "";
 }
 
 function resolveFallbackByRole(userRoles: Set<"owner" | "admin" | "employee" | "customer">): string {
@@ -27,7 +18,7 @@ function resolveFallbackByRole(userRoles: Set<"owner" | "admin" | "employee" | "
 export default function ProtectedRoute({ children, requireAdmin = false, allowedRoles }: ProtectedRouteProps) {
   const { user, memberships, loading } = useAuth();
   const userRoles = new Set(memberships.map((m) => m.role));
-  const isAllowlistedAdmin = ADMIN_EMAIL_ALLOWLIST.has(normalizeEmail(user?.email));
+  const isAllowlistedAdmin = isAdminAllowlisted(user?.email);
 
   if (loading) {
     return (

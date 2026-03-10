@@ -19,28 +19,19 @@ import { Loader2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { isAdminAllowlisted, normalizeEmail } from "@/lib/adminAllowlist";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
-
-const ADMIN_EMAIL_ALLOWLIST = new Set([
-  "papi@papihairdesign.sk",
-  "miska@papihairdesign.sk",
-  "mato@papihairdesign.sk",
-]);
 
 const PUBLIC_BOOKING_URL = "https://hairchainger-main-876665-176e8.web.app/booking";
 const PUBLIC_BOOKING_PATH = "/booking";
 const CROSS_DOMAIN_AUTH_HOST = "booking.papihairdesign.sk";
 
-function normalizeEmail(email: string | null | undefined): string {
-  return email?.trim().toLowerCase() ?? "";
-}
-
 function redirectAfterAuth(
   navigate: ReturnType<typeof useNavigate>,
   email: string | null | undefined
 ): void {
-  if (ADMIN_EMAIL_ALLOWLIST.has(normalizeEmail(email))) {
+  if (isAdminAllowlisted(email)) {
     navigate("/admin");
     return;
   }
