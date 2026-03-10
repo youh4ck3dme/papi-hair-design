@@ -190,7 +190,7 @@ export default function BlockTimeSheet({
           <button
             onClick={handleSubmit}
             disabled={submitting || Boolean(validationError)}
-            className="w-full rounded-xl bg-primary px-3 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            className="premium-action-btn w-full rounded-xl px-3 py-2.5 text-sm disabled:opacity-50"
           >
             {submitting ? (
               <span className="inline-flex items-center gap-2">

@@ -199,7 +199,7 @@ export default function QuickBookingSheet({
           <button
             onClick={handleBook}
             disabled={submitting || (step === "contact" && (!contact.name || !contact.email))}
-            className="w-full py-3.5 rounded-2xl bg-gold text-gold-foreground font-semibold text-base transition-all active:scale-[0.97] disabled:opacity-40 disabled:scale-100 flex items-center justify-center gap-2"
+            className="premium-action-btn w-full py-2.5 rounded-xl text-sm transition-all active:scale-[0.97] disabled:opacity-40 disabled:scale-100 flex items-center justify-center gap-2"
           >
             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
             {step === "pick" ? "Pokračovať" : "Rezervovať"}

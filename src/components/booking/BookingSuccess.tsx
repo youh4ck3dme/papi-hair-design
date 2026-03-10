@@ -117,7 +117,7 @@ export function BookingSuccess({
                             }
                             globalThis.location.href = `/auth?mode=register&email=${encodeURIComponent(bookingResult.customer_email || "")}&name=${encodeURIComponent(bookingResult.customer_name || "")}`;
                         }}
-                        className="w-full font-bold py-4 rounded-full text-base bg-primary text-primary-foreground dark:text-background hover:bg-primary/90 transition-all shadow-lg shadow-primary/25 active:scale-[0.98]"
+                        className="premium-action-btn w-full rounded-xl py-2.5 px-4 text-sm tracking-wide transition-all active:scale-[0.98]"
                     >
                         {t("booking.confirmRegisterBtn")}
                     </button>

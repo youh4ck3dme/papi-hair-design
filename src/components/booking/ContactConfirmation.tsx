@@ -173,7 +173,7 @@ export function ContactConfirmation({
                 onClick={handleSubmit}
                 disabled={submitting}
                 data-testid="booking-submit"
-                className="w-full font-bold py-4 rounded-full text-base tracking-wide transition-all duration-200 transform active:scale-[0.98] bg-primary text-primary-foreground dark:text-background hover:bg-primary/90 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="premium-action-btn w-full rounded-xl py-2.5 px-4 text-sm tracking-wide transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t("booking.submitBtn")}
             </button>

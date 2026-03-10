@@ -161,6 +161,33 @@
 
 
 @layer components {
+  .premium-action-btn {
+    @apply relative overflow-hidden rounded-xl border border-zinc-300/80 dark:border-zinc-600/70 bg-gradient-to-b from-zinc-100 via-zinc-200 to-zinc-300 dark:from-zinc-600 dark:via-zinc-700 dark:to-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 6px 16px rgba(15, 23, 42, 0.16);
+  }
+
+  .premium-action-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 -35%;
+    width: 32%;
+    transform: skewX(-18deg);
+    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    opacity: 0;
+    transition: opacity 0.28s ease, left 0.45s ease;
+    pointer-events: none;
+  }
+
+  .premium-action-btn:hover::after {
+    opacity: 1;
+    left: 112%;
+  }
+
+  .premium-action-btn:hover {
+    filter: brightness(1.03);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 8px 22px rgba(15, 23, 42, 0.22);
+  }
+
   .cal-toolbar-btn {
     @apply inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-2 py-2 text-xs font-medium;
   }
