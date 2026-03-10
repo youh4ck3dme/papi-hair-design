@@ -129,8 +129,8 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright (preview)
+      - name: Run Playwright responsiveness checks (preview)
         run: |
           npm run preview &
           npx wait-on http://127.0.0.1:4173 --timeout 60000
-          PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run test:responsive
+          PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npx playwright test e2e/responsiveness.spec.ts --config=e2e/playwright.config.ts
