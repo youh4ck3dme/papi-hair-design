@@ -115,7 +115,9 @@ export function BookingSuccess({
                             } else {
                                 sessionStorage.removeItem("claim_token");
                             }
-                            globalThis.location.href = `/auth?mode=register&email=${encodeURIComponent(bookingResult.customer_email || "")}&name=${encodeURIComponent(bookingResult.customer_name || "")}`;
+                            globalThis.location.assign(
+                                `/auth?mode=register&email=${encodeURIComponent(bookingResult.customer_email || "")}&name=${encodeURIComponent(bookingResult.customer_name || "")}`
+                            );
                         }}
                         className="premium-action-btn w-full rounded-xl py-2.5 px-4 text-sm tracking-wide transition-all active:scale-[0.98]"
                     >
