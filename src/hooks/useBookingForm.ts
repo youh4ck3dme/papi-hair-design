@@ -13,6 +13,25 @@ const makeIdempotencyKey = () =>
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+function inferCategoryFromName(name: string): "damske" | "panske" {
+    const normalized = name.toLowerCase();
+    const menPattern = /(p[aá]nsk|brad|junior|depil[aá]cia nosa|u[šs]n[eé] svie[cč]k|maska|t[oó]novanie sed[ií]n)/i;
+    return menPattern.test(normalized) ? "panske" : "damske";
+}
+
+function resolveServiceCategory(service: ServiceRow): "damske" | "panske" {
+    if (service.category === "damske" || service.category === "panske") {
+        return service.category;
+    }
+    return inferCategoryFromName(service.name_sk ?? "");
+}
+
+function resolveServiceSubcategory(service: ServiceRow): string | null {
+    return typeof service.subcategory === "string" && service.subcategory.trim().length > 0
+        ? service.subcategory
+        : null;
+}
+
 export function useBookingForm(
     services: ServiceRow[],
     employees: EmployeeRow[],
@@ -57,8 +76,10 @@ export function useBookingForm(
     // Derived: grouped subcategories
     const subcategories = useMemo(() => {
         const cats = services
-            .filter((s): s is typeof s & { subcategory: string } => s.category === category && Boolean(s.subcategory))
-            .map((s) => s.subcategory);
+            .filter((s): s is typeof s & { subcategory: string } =>
+                resolveServiceCategory(s) === category && Boolean(resolveServiceSubcategory(s))
+            )
+            .map((s) => resolveServiceSubcategory(s) as string);
         return [...new Set(cats)].sort((a, b) => a.localeCompare(b));
     }, [services, category]);
 
@@ -66,11 +87,11 @@ export function useBookingForm(
     const filteredServices = useMemo(() => {
         if (!subcategory) {
             if (subcategories.length === 0) {
-                return services.filter((s) => s.category === category);
+                return services.filter((s) => resolveServiceCategory(s) === category);
             }
             return [];
         }
-        return services.filter((s) => s.category === category && s.subcategory === subcategory);
+        return services.filter((s) => resolveServiceCategory(s) === category && resolveServiceSubcategory(s) === subcategory);
     }, [services, category, subcategory, subcategories.length]);
 
     const selectedService = useMemo(() => services.find((s) => s.id === selectedServiceId) ?? null, [services, selectedServiceId]);

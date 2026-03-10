@@ -140,12 +140,10 @@ export function generateSlots(input: SlotGeneratorInput): Date[] {
   const intervals = getEffectiveIntervals(date, businessHourEntries, dateOverrides, openingHours);
   if (!intervals || !intervals.length) return slots;
 
-  // Check employee schedule for this day
+  // Check employee schedule for this day. If schedule is missing, fallback to business intervals.
   const empDay = employeeSchedules.find((s) => s.day_of_week === dayName);
-  if (!empDay) return slots;
-
-  const empStart = setTimeOnDate(date, empDay.start_time);
-  const empEnd = setTimeOnDate(date, empDay.end_time);
+  const empStart = empDay ? setTimeOnDate(date, empDay.start_time) : null;
+  const empEnd = empDay ? setTimeOnDate(date, empDay.end_time) : null;
 
   const now = new Date();
   const earliestAllowed = addMinutes(now, leadTimeMinutes);
@@ -160,9 +158,10 @@ export function generateSlots(input: SlotGeneratorInput): Date[] {
     const businessStart = setTimeOnDate(date, interval.start);
     const businessEnd = setTimeOnDate(date, interval.end);
 
-    // Effective window = intersection of business interval and employee schedule
-    const windowStart = isAfter(empStart, businessStart) ? empStart : businessStart;
-    const windowEnd = isBefore(empEnd, businessEnd) ? empEnd : businessEnd;
+    // Effective window = intersection of business interval and employee schedule.
+    // If employee day schedule is missing, use business interval as fallback.
+    const windowStart = empStart && isAfter(empStart, businessStart) ? empStart : businessStart;
+    const windowEnd = empEnd && isBefore(empEnd, businessEnd) ? empEnd : businessEnd;
 
     if (isAfter(windowStart, windowEnd) || windowStart.getTime() === windowEnd.getTime()) continue;
 

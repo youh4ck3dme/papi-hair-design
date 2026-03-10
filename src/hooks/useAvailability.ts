@@ -32,7 +32,9 @@ export function useAvailability(
 
     const isEmployeeAvailableOnDay = useCallback((empId: string, date: Date) => {
         const dayName = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][date.getDay()];
-        return (schedules[empId] ?? []).some((s) => s.day_of_week === dayName);
+        const employeeSchedules = schedules[empId] ?? [];
+        if (employeeSchedules.length === 0) return true;
+        return employeeSchedules.some((s) => s.day_of_week === dayName);
     }, [schedules]);
 
     const isBusinessOpenOnDay = useCallback((date: Date) => {

@@ -23,17 +23,29 @@ test.describe("Booking Flow", () => {
             await page.waitForTimeout(500);
         }
 
-        // 2. Select category with available subcategories (dataset-safe)
+        // 2. Select category (dataset-safe: try both toggles)
         const categoryStep = page.getByTestId("booking-step-category");
+        await expect(categoryStep).toBeVisible({ timeout: 10000 });
+        const categoryButtons = categoryStep.locator("div.relative.flex").first().locator("button");
+        const firstServiceDirect = categoryStep.locator('button:has-text("min")').first();
+        const categoryCount = await categoryButtons.count();
         let categoryReady = false;
-        for (const categoryLabel of ["Pánske Služby", "Dámske Služby"]) {
-            const categoryButton = categoryStep.getByText(categoryLabel);
-            if (!(await categoryButton.isVisible({ timeout: 1000 }).catch(() => false))) continue;
+
+        // Default category can already render services without extra click.
+        if (await firstServiceDirect.isVisible({ timeout: 1500 }).catch(() => false)) {
+            categoryReady = true;
+        }
+
+        for (let i = 0; i < Math.min(2, categoryCount); i++) {
+            if (categoryReady) break;
+            const categoryButton = categoryButtons.nth(i);
+            if (!(await categoryButton.isVisible({ timeout: 1000 }).catch(() => false))) {
+                continue;
+            }
 
             await categoryButton.click();
             await page.waitForTimeout(800);
 
-            const firstServiceDirect = page.locator('button:has-text("min")').first();
             if (await firstServiceDirect.isVisible({ timeout: 1500 }).catch(() => false)) {
                 categoryReady = true;
                 break;
@@ -46,7 +58,10 @@ test.describe("Booking Flow", () => {
                 break;
             }
         }
-        if (!categoryReady) throw new Error("No category with visible services found");
+        if (!categoryReady) {
+            const servicesCount = await firstServiceDirect.count();
+            throw new Error(`No category with visible services found (service buttons count: ${servicesCount})`);
+        }
 
         // 4. Select first service
         const firstService = page.locator('button:has-text("min")').first();
@@ -56,27 +71,43 @@ test.describe("Booking Flow", () => {
         // 5. Select first available worker
         const workerStep = page.getByTestId("booking-step-employee");
         await expect(workerStep).toBeVisible({ timeout: 5000 });
-        const firstWorker = workerStep.locator('button').first();
-        await firstWorker.click();
-
-        // 6. Select date – wait for data to load then pick first available weekday
-        await page.waitForTimeout(2000);
-
-        // Try days 10, 13, 16, 20 (all weekdays in March 2026)
-        let dayClicked = false;
-        for (const day of [10, 13, 16, 20, 11, 12, 17, 18, 19]) {
-            const btn = page.getByTestId(`date-btn-${day}`);
-            if (await btn.isVisible({ timeout: 1000 }).catch(() => false)) {
-                await btn.scrollIntoViewIfNeeded();
-                await btn.click();
-                dayClicked = true;
+        const workerButtons = workerStep.locator("button");
+        const workerCount = await workerButtons.count();
+        let workerWithAvailabilityFound = false;
+        for (let i = 0; i < workerCount; i++) {
+            await workerButtons.nth(i).click();
+            await page.waitForTimeout(1200);
+            const availableDateCount = await page.locator('[data-testid^="date-btn-"]').count();
+            if (availableDateCount > 0) {
+                workerWithAvailabilityFound = true;
                 break;
             }
         }
-        if (!dayClicked) throw new Error("No available date button found");
+        if (!workerWithAvailabilityFound) {
+            throw new Error("No employee with available dates found");
+        }
+
+        // 6. Select date – pick first enabled date button rendered for this employee
+        await page.waitForTimeout(2000);
+        const dateButtons = page.locator('[data-testid^="date-btn-"]');
+        const dateCount = await dateButtons.count();
+        if (dateCount === 0) throw new Error("No available date button found");
+        let dateWithSlotsFound = false;
+        for (let i = 0; i < Math.min(12, dateCount); i++) {
+            const dateButton = dateButtons.nth(i);
+            await dateButton.scrollIntoViewIfNeeded();
+            await dateButton.click();
+            await page.waitForTimeout(1000);
+            const slotVisible = await page.getByTestId("time-slot").first().isVisible({ timeout: 1500 }).catch(() => false);
+            if (slotVisible) {
+                dateWithSlotsFound = true;
+                break;
+            }
+        }
+        if (!dateWithSlotsFound) throw new Error("No date with available time slots found");
 
         // 7. Select time slot – wait for slots to load
-        await page.waitForTimeout(2500);
+        await page.waitForTimeout(1200);
         await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 
         const timeSlot = page.getByTestId("time-slot").first();

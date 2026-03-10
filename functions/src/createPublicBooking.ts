@@ -151,15 +151,26 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
     const totalMinutes = (service.duration_minutes || 30) + (service.buffer_minutes || 0);
     const endDate = new Date(startDate.getTime() + totalMinutes * 60 * 1000);
 
-    const conflictsSnap = await db.collection("appointments")
+    const conflictCandidatesSnap = await db.collection("appointments")
         .where("employee_id", "==", employee_id)
-        .where("status", "!=", "cancelled")
         .where("start_at", "<", endDate.toISOString())
-        .where("end_at", ">", startDate.toISOString())
-        .limit(1)
+        .limit(50)
         .get();
 
-    if (!conflictsSnap.empty) {
+    const startMs = startDate.getTime();
+    const endMs = endDate.getTime();
+    const hasConflict = conflictCandidatesSnap.docs.some((docSnap) => {
+        const conflict = docSnap.data();
+        if (conflict.status === "cancelled") return false;
+
+        const conflictStart = new Date(conflict.start_at).getTime();
+        const conflictEnd = new Date(conflict.end_at).getTime();
+        if (Number.isNaN(conflictStart) || Number.isNaN(conflictEnd)) return false;
+
+        return conflictStart < endMs && conflictEnd > startMs;
+    });
+
+    if (hasConflict) {
         throw new HttpsError("already-exists", "Tento termín je už obsadený");
     }
 

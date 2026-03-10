@@ -100,24 +100,37 @@ export const createBookingHold = functions.https.onCall(
       (service.duration_minutes || 30) + (service.buffer_minutes || 0);
     const endDate = new Date(startDate.getTime() + totalMinutes * 60 * 1000);
 
-    // Conflict detection: exclude cancelled and expired holds
-    const conflictsSnap = await db
+    // Conflict detection with index-safe query shape.
+    // We query a bounded candidate set and apply overlap/status checks in memory.
+    const conflictCandidatesSnap = await db
       .collection("appointments")
       .where("employee_id", "==", employee_id)
-      .where("status", "!=", "cancelled")
       .where("start_at", "<", endDate.toISOString())
-      .where("end_at", ">", startDate.toISOString())
-      .limit(1)
+      .limit(50)
       .get();
-    if (!conflictsSnap.empty) {
-      const conflict = conflictsSnap.docs[0].data();
-      const isExpiredHold =
+
+    const startMs = startDate.getTime();
+    const endMs = endDate.getTime();
+    const hasActiveConflict = conflictCandidatesSnap.docs.some((docSnap) => {
+      const conflict = docSnap.data();
+      if (conflict.status === "cancelled") return false;
+      if (
         conflict.status === "hold_created" &&
         conflict.hold_expires_at &&
-        new Date(conflict.hold_expires_at).getTime() < now;
-      if (!isExpiredHold) {
-        throw new HttpsError("already-exists", "Slot is not available");
+        new Date(conflict.hold_expires_at).getTime() < now
+      ) {
+        return false;
       }
+
+      const conflictStart = new Date(conflict.start_at).getTime();
+      const conflictEnd = new Date(conflict.end_at).getTime();
+      if (Number.isNaN(conflictStart) || Number.isNaN(conflictEnd)) return false;
+
+      return conflictStart < endMs && conflictEnd > startMs;
+    });
+
+    if (hasActiveConflict) {
+      throw new HttpsError("already-exists", "Slot is not available");
     }
 
     // Find or create customer

@@ -7,7 +7,7 @@ const PAGES: { path: string; criticalSelector?: string; criticalLabel?: string }
   { path: "/", criticalSelector: "text=PAPI", criticalLabel: "heading/brand" },
   { path: "/booking", criticalSelector: "text=Vyberte kategóriu", criticalLabel: "booking step" },
   { path: "/auth", criticalSelector: "text=Prihlásenie", criticalLabel: "auth heading" },
-  { path: "/demo", criticalSelector: "text=Demo", criticalLabel: "demo heading" },
+  { path: "/demo", criticalSelector: "text=Rezervačný systém", criticalLabel: "demo heading" },
 ];
 
 for (const viewport of CERTIFIED_VIEWPORTS) {
@@ -18,7 +18,7 @@ for (const viewport of CERTIFIED_VIEWPORTS) {
 
     for (const { path, criticalSelector, criticalLabel } of PAGES) {
       test(`${path} – no horizontal overflow & page loaded`, async ({ page }) => {
-        const response = await page.goto(path, { waitUntil: "networkidle" });
+        const response = await page.goto(path, { waitUntil: "domcontentloaded" });
         expect(response?.status()).toBe(200);
 
         await page.waitForLoadState("domcontentloaded");
@@ -47,9 +47,7 @@ for (const viewport of CERTIFIED_VIEWPORTS) {
 
       if (criticalSelector && criticalLabel) {
         test(`${path} – critical element visible (${criticalLabel})`, async ({ page }) => {
-          // /auth is lazy-loaded; wait for networkidle so the chunk and heading render
-          const waitUntil = path === "/auth" ? "networkidle" : "domcontentloaded";
-          await page.goto(path, { waitUntil });
+          await page.goto(path, { waitUntil: "domcontentloaded" });
 
           // Wait for any splash to clear
           await page.locator('.loading-spinner, [aria-label="Loading"]').waitFor({ state: 'hidden', timeout: 15000 }).catch(() => { });
