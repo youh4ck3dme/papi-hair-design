@@ -175,7 +175,7 @@ export default function CalendarPage() {
         if (!emp.profile_id) return true;
         const membership = memberships.find((m) => m.profile_id === emp.profile_id);
         if (!membership) return true;
-        return membership.role === "employee" || membership.role === "owner" || membership.role === "admin";
+        return membership.role === "employee";
       });
     }
     return list;

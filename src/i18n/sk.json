@@ -74,6 +74,7 @@
     "timeAm": "Dopoludnia",
     "timePm": "Popoludní",
     "noSlots": "Žiadne dostupné termíny v tento deň",
+    "noServicesInSelection": "Pre túto kategóriu alebo podkategóriu momentálne nemáme dostupné služby.",
     "submitBtn": "REZERVOVAŤ ONLINE",
     "confirmTitle": "Rezervácia potvrdená!",
     "confirmDesc": "Vaša rezervácia bola úspešne vytvorená. Potvrdenie vám príde na email.",

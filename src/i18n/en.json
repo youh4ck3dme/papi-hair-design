@@ -74,6 +74,7 @@
     "timeAm": "Morning",
     "timePm": "Afternoon",
     "noSlots": "No available slots on this day",
+    "noServicesInSelection": "No services are currently available for this category or subcategory.",
     "submitBtn": "BOOK ONLINE",
     "confirmTitle": "Booking Confirmed!",
     "confirmDesc": "Your booking has been successfully created. A confirmation will be sent to your email.",

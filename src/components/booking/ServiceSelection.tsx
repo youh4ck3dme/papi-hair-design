@@ -62,6 +62,8 @@ export function ServiceSelection({
                                 setExpandedCategory(cat);
                                 onCategoryChange();
                             }}
+                            aria-pressed={isActive}
+                            aria-expanded={isActive}
                             className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full font-semibold text-sm transition-all duration-300 ${isActive
                                 ? "bg-primary text-primary-foreground dark:text-background shadow-md shadow-primary/25"
                                 : "text-muted-foreground hover:text-foreground"
@@ -81,6 +83,7 @@ export function ServiceSelection({
                         <button
                             key={sub}
                             onClick={() => { setSubcategory(sub); setSelectedServiceId(null); }}
+                            aria-pressed={subcategory === sub}
                             className={`px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 border ${subcategory === sub
                                 ? "border-primary bg-primary/10 text-primary shadow-sm shadow-primary/20"
                                 : "border-border/60 text-muted-foreground bg-card hover:border-primary/40 hover:text-foreground"
@@ -96,7 +99,7 @@ export function ServiceSelection({
             {isCategoryExpanded && (subcategory || subcategories.length === 0) && filteredServices.length > 0 && (
                 <div className="animate-fade-in">
                     <StepHeader num="2" title={t("booking.step2")} />
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-3" aria-live="polite">
                         {filteredServices.map((srv) => {
                             const isSelected = selectedServiceId === srv.id;
                             return (
@@ -128,6 +131,12 @@ export function ServiceSelection({
                         })}
                     </div>
                 </div>
+            )}
+
+            {isCategoryExpanded && (subcategory || subcategories.length === 0) && filteredServices.length === 0 && (
+                <p className="mt-4 text-sm text-muted-foreground" data-testid="booking-no-services">
+                    {t("booking.noServicesInSelection")}
+                </p>
             )}
         </div>
     );

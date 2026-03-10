@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -411,6 +412,9 @@ export default function ReceptionPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Nová rezervácia</DialogTitle>
+            <DialogDescription>
+              Vyplňte základné údaje rezervácie pre recepciu.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>

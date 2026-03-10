@@ -9,7 +9,7 @@ import { collection, doc, getDoc, getDocs, limit, orderBy, query, updateDoc, whe
 import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/contexts/AuthContext";
 import { BUSINESS_TZ } from "@/lib/timezone";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -250,6 +250,9 @@ export default function MySchedulePage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Detail rezervácie</DialogTitle>
+            <DialogDescription>
+              Údaje o termíne a možnosť označiť službu ako dokončenú.
+            </DialogDescription>
           </DialogHeader>
           {selectedEvent && (
             <div className="space-y-4">

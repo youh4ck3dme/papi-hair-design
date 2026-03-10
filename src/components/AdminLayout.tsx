@@ -36,7 +36,7 @@ export function AdminSidebar() {
   const location = useLocation();
   const { isMobile, setOpenMobile } = useSidebar();
 
-  const navItems = allNavItems.filter((item) => !role || item.roles.includes(role));
+  const navItems = allNavItems.filter((item) => Boolean(role) && item.roles.includes(role));
   const liquidItems: LiquidGlassNavItem[] = navItems.map((item) => ({
     id: item.url,
     label: item.title,
