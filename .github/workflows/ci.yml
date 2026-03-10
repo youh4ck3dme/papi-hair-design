@@ -89,13 +89,6 @@ jobs:
       - name: Budget check (dist size)
         run: npm run budget
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: dist
-          path: dist/
-          retention-days: 7
-
 
 
   e2e:
