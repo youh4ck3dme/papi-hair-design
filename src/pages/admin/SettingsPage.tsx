@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { db, functions } from "@/integrations/firebase/config";
+import { db, functions, storage } from "@/integrations/firebase/config";
 import { doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
 import { Button } from "@/components/ui/button";
@@ -10,8 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { AvatarCropper } from "@/components/admin/AvatarCropper";
 import { toast } from "sonner";
-import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound } from "lucide-react";
+import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound, Camera, Trash2 } from "lucide-react";
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
 import type { FirebaseError } from "firebase/app";
 
@@ -29,16 +32,18 @@ function friendlyError(err: unknown, fallback: string): string {
 
 export default function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
-  const { businessId, isOwner } = useBusiness();
+  const { businessId, isOwner, isOwnerOrAdmin } = useBusiness();
   const [business, setBusiness] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [snapshotInfo, setSnapshotInfo] = useState<any>(null);
   const [snapshotHealth, setSnapshotHealth] = useState<any>(null);
   const [licenseKey, setLicenseKey] = useState("");
   const [licenseState, setLicenseState] = useState<"idle" | "checking" | "ok" | "error">("idle");
   const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
-  const [profileForm, setProfileForm] = useState({ full_name: "", phone: "" });
+  const [profileForm, setProfileForm] = useState({ full_name: "", phone: "", avatar_url: null as string | null });
   // Predvolená SMTP pre Papi Hair Design (Websupport) – odosielateľ aj prijemca: booking@papihairdesign.sk
   const DEFAULT_SMTP = {
     host: "smtp.m1.websupport.sk",
@@ -56,7 +61,13 @@ export default function SettingsPage() {
   const [smtpHasPassword, setSmtpHasPassword] = useState(false);
 
   useEffect(() => {
-    if (profile) setProfileForm({ full_name: profile.full_name ?? "", phone: profile.phone ?? "" });
+    if (profile) {
+      setProfileForm({
+        full_name: profile.full_name ?? "",
+        phone: profile.phone ?? "",
+        avatar_url: profile.avatar_url ?? null,
+      });
+    }
   }, [profile]);
 
   useEffect(() => {
@@ -109,6 +120,7 @@ export default function SettingsPage() {
       await updateDoc(doc(db, "profiles", profile.id), {
         full_name: profileForm.full_name,
         phone: profileForm.phone || null,
+        avatar_url: profileForm.avatar_url || null,
         updated_at: new Date().toISOString()
       });
       await refreshProfile();
@@ -117,6 +129,34 @@ export default function SettingsPage() {
       toast.error("Chyba pri ukladaní");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.addEventListener("load", () => setCropImageSrc(reader.result?.toString() ?? null));
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleAvatarCropConfirm = async (croppedBlob: Blob) => {
+    if (!profile) return;
+    setCropImageSrc(null);
+    setUploadingAvatar(true);
+    try {
+      const fileName = `profiles/${profile.id}/${crypto.randomUUID ? crypto.randomUUID() : Date.now()}.jpg`;
+      const storageRef = ref(storage, fileName);
+      await uploadBytes(storageRef, croppedBlob);
+      const url = await getDownloadURL(storageRef);
+      setProfileForm((prev) => ({ ...prev, avatar_url: url }));
+      toast.success("Fotka pripravená, nezabudnite uložiť profil");
+    } catch (err) {
+      console.error("SettingsPage: avatar upload error", err);
+      toast.error("Chyba pri nahrávaní fotky");
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -258,6 +298,13 @@ export default function SettingsPage() {
     }
   };
 
+  const initials = (profileForm.full_name || profile?.full_name || "?")
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
     <div className="space-y-6 max-w-4xl animate-in fade-in duration-500">
       <div className="flex flex-col gap-1">
@@ -267,14 +314,18 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Správa vašej firmy, profilu a systémových nastavení.</p>
       </div>
 
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto p-1 bg-muted/30 backdrop-blur-md border border-primary/10 rounded-xl mb-6">
-          <TabsTrigger value="general" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Všeobecné</TabsTrigger>
-          <TabsTrigger value="booking" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Booking</TabsTrigger>
-          <TabsTrigger value="hours" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Otváracie hodiny</TabsTrigger>
-          <TabsTrigger value="smtp" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">SMTP Email</TabsTrigger>
-          <TabsTrigger value="snapshot" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Snapshot</TabsTrigger>
-          <TabsTrigger value="license" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Licencia</TabsTrigger>
+      <Tabs defaultValue={isOwnerOrAdmin ? "general" : "profile"} className="w-full">
+        <TabsList className={`grid w-full h-auto p-1 bg-muted/30 backdrop-blur-md border border-primary/10 rounded-xl mb-6 ${isOwnerOrAdmin ? "grid-cols-2 md:grid-cols-7" : "grid-cols-1"}`}>
+          {isOwnerOrAdmin && (
+            <>
+              <TabsTrigger value="general" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Všeobecné</TabsTrigger>
+              <TabsTrigger value="booking" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Booking</TabsTrigger>
+              <TabsTrigger value="hours" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Otváracie hodiny</TabsTrigger>
+              <TabsTrigger value="smtp" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">SMTP Email</TabsTrigger>
+              <TabsTrigger value="snapshot" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Snapshot</TabsTrigger>
+              <TabsTrigger value="license" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Licencia</TabsTrigger>
+            </>
+          )}
           <TabsTrigger value="profile" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Profil</TabsTrigger>
         </TabsList>
 
@@ -554,6 +605,45 @@ export default function SettingsPage() {
               <CardDescription>Osobné informácie správcu</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
+              <div className="flex items-center gap-5 rounded-2xl border border-primary/10 bg-background/40 p-4">
+                <div className="relative group">
+                  <Avatar className="w-20 h-20 border-2 border-primary/20 shadow-lg">
+                    {profileForm.avatar_url && <AvatarImage src={profileForm.avatar_url} alt="Profilová fotka" />}
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">{initials}</AvatarFallback>
+                  </Avatar>
+                  {uploadingAvatar && (
+                    <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
+                      <Loader2 className="w-5 h-5 animate-spin text-white" />
+                    </div>
+                  )}
+                  <label className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gold text-gold-foreground shadow flex items-center justify-center cursor-pointer hover:scale-105 transition-transform">
+                    <Camera className="w-4 h-4" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarFileChange}
+                      disabled={uploadingAvatar}
+                    />
+                  </label>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">Profilová fotka</p>
+                  <p className="text-xs text-muted-foreground">Kliknite na ikonu fotoaparátu, orežte fotku a uložte profil.</p>
+                  {profileForm.avatar_url && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setProfileForm((f) => ({ ...f, avatar_url: null }))}
+                      className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1" />
+                      Odstrániť fotku
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Celé meno</Label>
@@ -583,6 +673,13 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      {cropImageSrc && (
+        <AvatarCropper
+          imageSrc={cropImageSrc}
+          onConfirm={handleAvatarCropConfirm}
+          onCancel={() => setCropImageSrc(null)}
+        />
+      )}
     </div>
   );
 }

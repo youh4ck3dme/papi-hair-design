@@ -127,10 +127,10 @@ function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null;
           {modeLabels[openStatus.mode] ?? t("liquid.statusClosed")}
         </div>
       )}
-      <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full max-w-md">
+      <div className="flex flex-col gap-4 mt-4 w-full max-w-xs mx-auto items-center justify-center">
         <Button
           size="lg"
-          className="h-14 bg-gradient-to-r from-primary via-[#ffd700] to-primary text-black font-bold uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-transform shadow-[0_10px_30px_-10px_rgba(218,165,32,0.5)]"
+          className="h-14 w-full bg-gradient-to-r from-primary via-[#ffd700] to-primary text-black font-bold uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-transform shadow-[0_10px_30px_-10px_rgba(218,165,32,0.5)]"
           onClick={() => navigate("/booking")}
         >
           {t("liquid.reserveBtn")}
@@ -139,7 +139,7 @@ function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null;
           <Button
             size="lg"
             variant="outline"
-            className="h-14 border-white/10 hover:border-primary/50 text-white font-medium uppercase tracking-widest rounded-xl backdrop-blur-sm"
+            className="h-14 w-full border-white/10 hover:border-primary/50 text-white font-medium uppercase tracking-widest rounded-xl backdrop-blur-sm"
             onClick={() => navigate("/booking")}
           >
             {t("liquid.memberBtn")}

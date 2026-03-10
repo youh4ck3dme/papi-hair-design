@@ -6,7 +6,7 @@ import {
   Sidebar, SidebarContent, SidebarProvider, SidebarTrigger, useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   LayoutDashboard, Calendar, BookOpen, Users, Briefcase, UserCheck,
   Settings, LogOut, ChevronRight, Monitor,
@@ -25,7 +25,7 @@ const allNavItems = [
   { title: "Zamestnanci", url: "/admin/employees", icon: Users, roles: ["owner", "admin"] },
   { title: "Služby", url: "/admin/services", icon: Briefcase, roles: ["owner", "admin"] },
   { title: "Zákazníci", url: "/admin/customers", icon: UserCheck, roles: ["owner", "admin"] },
-  { title: "Nastavenia", url: "/admin/settings", icon: Settings, roles: ["owner", "admin"] },
+  { title: "Nastavenia", url: "/admin/settings", icon: Settings, roles: ["owner", "admin", "employee"] },
   { title: "Recepcia", url: "/reception", icon: Monitor, roles: ["owner", "admin", "employee"] },
 ];
 
@@ -88,6 +88,7 @@ export function AdminSidebar() {
       <div className="mt-auto border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3 mb-3">
           <Avatar className="w-8 h-8">
+            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="Profilová fotka" />}
             <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-xs">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 overflow-hidden">

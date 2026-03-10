@@ -8,7 +8,8 @@ import {
   doc,
   orderBy,
   updateDoc,
-  Timestamp
+  Timestamp,
+  limit
 } from "firebase/firestore";
 import { useBusiness } from "@/hooks/useBusiness";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,8 @@ export default function AppointmentsPage() {
       let q = query(
         collection(db, "appointments"),
         where("business_id", "==", businessId),
-        orderBy("start_at", "desc")
+        orderBy("start_at", "desc"),
+        limit(100)
       );
 
       if (statusFilter !== "all" && statuses.includes(statusFilter as AppStatus)) {
@@ -59,7 +61,8 @@ export default function AppointmentsPage() {
           collection(db, "appointments"),
           where("business_id", "==", businessId),
           where("status", "==", statusFilter),
-          orderBy("start_at", "desc")
+          orderBy("start_at", "desc"),
+          limit(100)
         );
       }
 
