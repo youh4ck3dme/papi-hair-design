@@ -1,6 +1,15 @@
 import * as admin from "firebase-admin";
+import * as Sentry from "@sentry/node";
 
 admin.initializeApp();
+
+const sentryDsn = process.env.SENTRY_DSN;
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    tracesSampleRate: 0.1,
+  });
+}
 
 export { claimBooking } from "./claimBooking";
 export { createPublicBooking } from "./createPublicBooking";

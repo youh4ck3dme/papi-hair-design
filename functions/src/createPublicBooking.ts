@@ -95,9 +95,15 @@ async function verifyRecaptchaIfConfigured(recaptchaToken: string | null | undef
     }
 }
 
+import { checkRateLimit } from "./middleware/rateLimit";
+
 export const createPublicBooking = functions.https.onCall({ region: "europe-west1" }, async (request: CallableRequest<CreatePublicBookingData>) => {
     const { data } = request;
     const db = getFirestore();
+
+    // Rate limit by IP
+    const ip = extractClientIp(request.rawRequest) || "unknown";
+    await checkRateLimit(ip);
 
     // 0. Validation
     const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone, idempotency_key } = data;
