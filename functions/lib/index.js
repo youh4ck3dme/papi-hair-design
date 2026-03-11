@@ -33,9 +33,17 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onEmployeeServiceWrite = exports.onDateOverrideWrite = exports.onBusinessHoursWrite = exports.onEmployeeWrite = exports.onServiceWrite = exports.onBusinessWrite = exports.bootstrapAdminAccess = exports.rebuildPublicSnapshot = exports.cleanupExpiredHolds = exports.confirmBooking = exports.createBookingHold = exports.normalizeMemberships = exports.importMigrationData = exports.syncOfflineData = exports.listBookableProviders = exports.consentEvent = exports.saveSmtpConfig = exports.createPublicBooking = exports.claimBooking = void 0;
+exports.onEmployeeServiceWrite = exports.onDateOverrideWrite = exports.onBusinessHoursWrite = exports.onEmployeeWrite = exports.onServiceWrite = exports.onBusinessWrite = exports.onProfileWriteSyncEmployeePhoto = exports.bootstrapAdminAccess = exports.rebuildPublicSnapshot = exports.cleanupExpiredHolds = exports.confirmBooking = exports.createBookingHold = exports.normalizeMemberships = exports.importMigrationData = exports.syncOfflineData = exports.listBookableProviders = exports.consentEvent = exports.saveSmtpConfig = exports.createPublicBooking = exports.claimBooking = void 0;
 const admin = __importStar(require("firebase-admin"));
+const Sentry = __importStar(require("@sentry/node"));
 admin.initializeApp();
+const sentryDsn = process.env.SENTRY_DSN;
+if (sentryDsn) {
+    Sentry.init({
+        dsn: sentryDsn,
+        tracesSampleRate: 0.1,
+    });
+}
 var claimBooking_1 = require("./claimBooking");
 Object.defineProperty(exports, "claimBooking", { enumerable: true, get: function () { return claimBooking_1.claimBooking; } });
 var createPublicBooking_1 = require("./createPublicBooking");
@@ -62,6 +70,8 @@ var rebuildPublicSnapshot_1 = require("./rebuildPublicSnapshot");
 Object.defineProperty(exports, "rebuildPublicSnapshot", { enumerable: true, get: function () { return rebuildPublicSnapshot_1.rebuildPublicSnapshot; } });
 var bootstrapAdminAccess_1 = require("./bootstrapAdminAccess");
 Object.defineProperty(exports, "bootstrapAdminAccess", { enumerable: true, get: function () { return bootstrapAdminAccess_1.bootstrapAdminAccess; } });
+var syncEmployeePhotoFromProfile_1 = require("./syncEmployeePhotoFromProfile");
+Object.defineProperty(exports, "onProfileWriteSyncEmployeePhoto", { enumerable: true, get: function () { return syncEmployeePhotoFromProfile_1.onProfileWriteSyncEmployeePhoto; } });
 var rebuildPublicSnapshot_2 = require("./rebuildPublicSnapshot");
 Object.defineProperty(exports, "onBusinessWrite", { enumerable: true, get: function () { return rebuildPublicSnapshot_2.onBusinessWrite; } });
 Object.defineProperty(exports, "onServiceWrite", { enumerable: true, get: function () { return rebuildPublicSnapshot_2.onServiceWrite; } });

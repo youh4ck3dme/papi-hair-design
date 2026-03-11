@@ -143,7 +143,7 @@ export default function BootstrapPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div className="text-sm text-center text-muted-foreground">
-                        Tento nástroj vytvorí tvoj admin profil a priradí ti rolu <strong>majiteľa</strong> v databáze.
+                        Tento nástroj vytvorí tvoj admin profil a priradí ti rolu <strong>majiteľa alebo admina</strong> podľa stavu firmy.
                     </div>
 
                     {!user ? (

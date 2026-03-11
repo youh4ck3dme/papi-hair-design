@@ -9,6 +9,7 @@ interface BootstrapAdminAccessData {
 }
 
 const DEFAULT_BUSINESS_ID = "papi-hair-design-main";
+type BootstrapRole = "owner" | "admin";
 const BOOTSTRAP_OWNER_EMAILS = new Set([
   "papi@papihairdesign.sk",
   "miska@papihairdesign.sk",
@@ -21,6 +22,22 @@ function buildDisplayName(email: string | null | undefined) {
   return name ? name.charAt(0).toUpperCase() + name.slice(1) : "Papi Hair Design";
 }
 
+export function resolveBootstrapRole(
+  uid: string,
+  ownerProfileIds: string[],
+  emailAllowedForBootstrap: boolean
+): BootstrapRole | null {
+  if (!emailAllowedForBootstrap) {
+    return null;
+  }
+
+  if (ownerProfileIds.length === 0 || ownerProfileIds.includes(uid)) {
+    return "owner";
+  }
+
+  return "admin";
+}
+
 export const bootstrapAdminAccess = functions.https.onCall(
   { region: "europe-west1" },
   async (request: CallableRequest<BootstrapAdminAccessData>) => {
@@ -29,6 +46,8 @@ export const bootstrapAdminAccess = functions.https.onCall(
     const businessId = request.data?.business_id?.trim() || DEFAULT_BUSINESS_ID;
     const db = getFirestore();
 
+    const now = new Date().toISOString();
+    const emailAllowedForBootstrap = !!email && BOOTSTRAP_OWNER_EMAILS.has(email);
     const membershipRef = db.collection("memberships").doc(`${uid}_${businessId}`);
     const membershipSnap = await membershipRef.get();
 
@@ -38,23 +57,22 @@ export const bootstrapAdminAccess = functions.https.onCall(
         await buildAndWriteSnapshot(db, businessId);
         return { success: true, role: existingRole, business_id: businessId, already_bootstrapped: true };
       }
-      throw new HttpsError("permission-denied", "Existing membership is not eligible for admin bootstrap");
+      if (!emailAllowedForBootstrap) {
+        throw new HttpsError("permission-denied", "Existing membership is not eligible for admin bootstrap");
+      }
     }
 
-    const existingOwnerSnap = await db
+    const ownerSnap = await db
       .collection("memberships")
       .where("business_id", "==", businessId)
       .where("role", "==", "owner")
-      .limit(1)
       .get();
 
-    const emailAllowedForBootstrap = !!email && BOOTSTRAP_OWNER_EMAILS.has(email);
-
-    if (!existingOwnerSnap.empty) {
-      throw new HttpsError("permission-denied", "Business already has an owner");
-    }
-
-    if (!emailAllowedForBootstrap) {
+    const ownerProfileIds = ownerSnap.docs
+      .map((ownerDoc) => ownerDoc.data().profile_id)
+      .filter((profileId): profileId is string => typeof profileId === "string" && profileId.length > 0);
+    const targetRole = resolveBootstrapRole(uid, ownerProfileIds, emailAllowedForBootstrap);
+    if (!targetRole) {
       throw new HttpsError("permission-denied", "Email is not allowed for bootstrap");
     }
 
@@ -63,6 +81,7 @@ export const bootstrapAdminAccess = functions.https.onCall(
     const employeesSnap = await db
       .collection("employees")
       .where("business_id", "==", businessId)
+      .where("profile_id", "==", uid)
       .limit(1)
       .get();
 
@@ -80,7 +99,7 @@ export const bootstrapAdminAccess = functions.https.onCall(
       {
         full_name: buildDisplayName(email),
         email: email ?? null,
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       },
       { merge: true }
     );
@@ -89,8 +108,9 @@ export const bootstrapAdminAccess = functions.https.onCall(
       {
         business_id: businessId,
         profile_id: uid,
-        role: "owner",
-        created_at: new Date().toISOString(),
+        role: targetRole,
+        created_at: membershipSnap.exists ? membershipSnap.data()?.created_at ?? now : now,
+        updated_at: now,
       },
       { merge: true }
     );
@@ -103,8 +123,8 @@ export const bootstrapAdminAccess = functions.https.onCall(
         display_name: buildDisplayName(email),
         email: email ?? null,
         is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created_at: now,
+        updated_at: now,
       });
     }
 
@@ -113,7 +133,7 @@ export const bootstrapAdminAccess = functions.https.onCall(
 
     return {
       success: true,
-      role: "owner",
+      role: targetRole,
       business_id: businessId,
       already_bootstrapped: false,
       revision,

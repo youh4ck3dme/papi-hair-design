@@ -34,6 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.bootstrapAdminAccess = void 0;
+exports.resolveBootstrapRole = resolveBootstrapRole;
 const functions = __importStar(require("firebase-functions/v2"));
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-admin/firestore");
@@ -51,11 +52,22 @@ function buildDisplayName(email) {
     const name = email.split("@")[0]?.trim();
     return name ? name.charAt(0).toUpperCase() + name.slice(1) : "Papi Hair Design";
 }
+function resolveBootstrapRole(uid, ownerProfileIds, emailAllowedForBootstrap) {
+    if (!emailAllowedForBootstrap) {
+        return null;
+    }
+    if (ownerProfileIds.length === 0 || ownerProfileIds.includes(uid)) {
+        return "owner";
+    }
+    return "admin";
+}
 exports.bootstrapAdminAccess = functions.https.onCall({ region: "europe-west1" }, async (request) => {
     const uid = (0, guards_1.requireAuth)(request.auth);
     const email = request.auth?.token.email;
     const businessId = request.data?.business_id?.trim() || DEFAULT_BUSINESS_ID;
     const db = (0, firestore_1.getFirestore)();
+    const now = new Date().toISOString();
+    const emailAllowedForBootstrap = !!email && BOOTSTRAP_OWNER_EMAILS.has(email);
     const membershipRef = db.collection("memberships").doc(`${uid}_${businessId}`);
     const membershipSnap = await membershipRef.get();
     if (membershipSnap.exists) {
@@ -64,19 +76,20 @@ exports.bootstrapAdminAccess = functions.https.onCall({ region: "europe-west1" }
             await (0, rebuildPublicSnapshot_1.buildAndWriteSnapshot)(db, businessId);
             return { success: true, role: existingRole, business_id: businessId, already_bootstrapped: true };
         }
-        throw new https_1.HttpsError("permission-denied", "Existing membership is not eligible for admin bootstrap");
+        if (!emailAllowedForBootstrap) {
+            throw new https_1.HttpsError("permission-denied", "Existing membership is not eligible for admin bootstrap");
+        }
     }
-    const existingOwnerSnap = await db
+    const ownerSnap = await db
         .collection("memberships")
         .where("business_id", "==", businessId)
         .where("role", "==", "owner")
-        .limit(1)
         .get();
-    const emailAllowedForBootstrap = !!email && BOOTSTRAP_OWNER_EMAILS.has(email);
-    if (!existingOwnerSnap.empty) {
-        throw new https_1.HttpsError("permission-denied", "Business already has an owner");
-    }
-    if (!emailAllowedForBootstrap) {
+    const ownerProfileIds = ownerSnap.docs
+        .map((ownerDoc) => ownerDoc.data().profile_id)
+        .filter((profileId) => typeof profileId === "string" && profileId.length > 0);
+    const targetRole = resolveBootstrapRole(uid, ownerProfileIds, emailAllowedForBootstrap);
+    if (!targetRole) {
         throw new https_1.HttpsError("permission-denied", "Email is not allowed for bootstrap");
     }
     const businessRef = db.collection("businesses").doc(businessId);
@@ -84,6 +97,7 @@ exports.bootstrapAdminAccess = functions.https.onCall({ region: "europe-west1" }
     const employeesSnap = await db
         .collection("employees")
         .where("business_id", "==", businessId)
+        .where("profile_id", "==", uid)
         .limit(1)
         .get();
     const batch = db.batch();
@@ -94,13 +108,14 @@ exports.bootstrapAdminAccess = functions.https.onCall({ region: "europe-west1" }
     batch.set(profileRef, {
         full_name: buildDisplayName(email),
         email: email ?? null,
-        updated_at: new Date().toISOString(),
+        updated_at: now,
     }, { merge: true });
     batch.set(membershipRef, {
         business_id: businessId,
         profile_id: uid,
-        role: "owner",
-        created_at: new Date().toISOString(),
+        role: targetRole,
+        created_at: membershipSnap.exists ? membershipSnap.data()?.created_at ?? now : now,
+        updated_at: now,
     }, { merge: true });
     if (employeesSnap.empty) {
         const employeeRef = db.collection("employees").doc();
@@ -110,15 +125,15 @@ exports.bootstrapAdminAccess = functions.https.onCall({ region: "europe-west1" }
             display_name: buildDisplayName(email),
             email: email ?? null,
             is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            created_at: now,
+            updated_at: now,
         });
     }
     await batch.commit();
     const revision = await (0, rebuildPublicSnapshot_1.buildAndWriteSnapshot)(db, businessId);
     return {
         success: true,
-        role: "owner",
+        role: targetRole,
         business_id: businessId,
         already_bootstrapped: false,
         revision,

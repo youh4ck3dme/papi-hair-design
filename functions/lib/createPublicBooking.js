@@ -99,9 +99,12 @@ async function verifyRecaptchaIfConfigured(recaptchaToken, clientIp) {
         throw new https_1.HttpsError("permission-denied", "reCAPTCHA skóre je príliš nízke");
     }
 }
+const rateLimit_1 = require("./middleware/rateLimit");
 exports.createPublicBooking = functions.https.onCall({ region: "europe-west1" }, async (request) => {
     const { data } = request;
     const db = (0, firestore_1.getFirestore)();
+    const ip = extractClientIp(request.rawRequest) || "unknown";
+    await (0, rateLimit_1.checkRateLimit)(ip);
     const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone, idempotency_key } = data;
     if (!business_id || !service_id || !employee_id || !start_at || !customer_name || !customer_email) {
         throw new https_1.HttpsError("invalid-argument", "Chýbajúce povinné polia");
