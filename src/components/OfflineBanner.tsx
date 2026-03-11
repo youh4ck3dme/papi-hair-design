@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { installAutoSync, runSync } from "@/lib/offline/sync";
 import { getDB } from "@/lib/offline/db";
+import { useBusiness } from "@/hooks/useBusiness";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Wifi, WifiOff, RefreshCw, AlertTriangle } from "lucide-react";
@@ -10,33 +11,34 @@ interface OfflineBannerProps {
 }
 
 export function OfflineBanner({ onConflictsClick }: OfflineBannerProps = {}) {
+  const { businessId } = useBusiness();
   const [online, setOnline] = useState(true);
   const [pending, setPending] = useState(0);
   const [conflicts, setConflicts] = useState(0);
   const [syncing, setSyncing] = useState(false);
 
-  useEffect(() => {
-    const update = async () => {
-      setOnline(navigator.onLine);
-      try {
-        const db = await getDB();
-        const allQueue = await db.getAllFromIndex("queue", "status");
-        const p = allQueue.filter((i: any) => ["pending", "failed", "processing"].includes(i.status)).length;
-        const c = allQueue.filter((i: any) => i.status === "conflict").length;
-        setPending(p);
-        setConflicts(c);
-      } catch {
-        setPending(0);
-        setConflicts(0);
-      }
-    };
+  const update = useCallback(async () => {
+    setOnline(navigator.onLine);
+    try {
+      const db = await getDB();
+      const allQueue = await db.getAllFromIndex("queue", "status");
+      const p = allQueue.filter((i: any) => ["pending", "failed", "processing"].includes(i.status)).length;
+      const c = allQueue.filter((i: any) => i.status === "conflict").length;
+      setPending(p);
+      setConflicts(c);
+    } catch {
+      setPending(0);
+      setConflicts(0);
+    }
+  }, []);
 
+  useEffect(() => {
     update();
     const handler = () => update();
     window.addEventListener("online", handler);
     window.addEventListener("offline", handler);
 
-    const unsub = installAutoSync();
+    const unsub = installAutoSync(businessId);
     const t = setInterval(update, 2000);
 
     return () => {
@@ -45,12 +47,12 @@ export function OfflineBanner({ onConflictsClick }: OfflineBannerProps = {}) {
       unsub?.();
       clearInterval(t);
     };
-  }, []);
+  }, [businessId, update]);
 
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await runSync();
+      await runSync(businessId);
     } finally {
       setSyncing(false);
     }
