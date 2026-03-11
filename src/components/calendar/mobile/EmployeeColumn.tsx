@@ -14,6 +14,7 @@ interface EmployeeColumnProps {
   endHour: number;
   hourHeight: number;
   timezone: string;
+  fitToScreen?: boolean;
   onSlotClick: (employeeId: string, time: Date, isWorking: boolean) => void;
   onEventClick: (event: CalendarEvent) => void;
 }
@@ -27,13 +28,14 @@ export default function EmployeeColumn({
   endHour,
   hourHeight,
   timezone,
+  fitToScreen = false,
   onSlotClick,
   onEventClick,
 }: EmployeeColumnProps) {
   const hours = Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
 
   return (
-    <div className="min-w-[170px] border-l border-border/40">
+    <div className={fitToScreen ? "min-w-0 flex-1 border-l border-border/40" : "min-w-[170px] border-l border-border/40"}>
       <div className="sticky top-0 z-10 border-b border-border bg-background/95 px-2 py-2 backdrop-blur">
         <p className="truncate text-xs font-semibold" style={{ color: employee.color }}>
           {employee.name}

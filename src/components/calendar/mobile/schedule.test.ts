@@ -24,7 +24,7 @@ describe("computeDaySegments", () => {
       { startMinutes: 540, endMinutes: 720, kind: "working" },
       { startMinutes: 720, endMinutes: 750, kind: "break" },
       { startMinutes: 750, endMinutes: 1020, kind: "working" },
-      { startMinutes: 1020, endMinutes: 1320, kind: "nonWorking" },
+      { startMinutes: 1020, endMinutes: 1200, kind: "nonWorking" },
     ]);
   });
 
@@ -38,6 +38,6 @@ describe("computeDaySegments", () => {
     ];
 
     const result = computeDaySegments(monday, employeeId, schedules, exceptions);
-    expect(result).toEqual([{ startMinutes: 360, endMinutes: 1320, kind: "nonWorking" }]);
+    expect(result).toEqual([{ startMinutes: 360, endMinutes: 1200, kind: "nonWorking" }]);
   });
 });

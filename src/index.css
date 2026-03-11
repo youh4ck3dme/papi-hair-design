@@ -193,17 +193,11 @@
   }
 
   .cal-non-working-overlay {
-    background-color: rgba(148, 163, 184, 0.18);
+    background-color: rgba(148, 163, 184, 0.12);
   }
 
   .cal-break-overlay {
-    background-image: repeating-linear-gradient(
-      135deg,
-      rgba(148, 163, 184, 0.28) 0px,
-      rgba(148, 163, 184, 0.28) 6px,
-      rgba(148, 163, 184, 0.16) 6px,
-      rgba(148, 163, 184, 0.16) 12px
-    );
+    background-color: rgba(148, 163, 184, 0.2);
   }
 
   .cal-event--reservation {

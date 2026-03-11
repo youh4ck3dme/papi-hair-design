@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import type { DayException, TimeSegment, WorkingSchedule } from "./types";
 
 export const DAY_START_MINUTES = 6 * 60;
-export const DAY_END_MINUTES = 22 * 60;
+export const DAY_END_MINUTES = 20 * 60;
 
 const toMinutes = (time: string) => {
   const [h, m] = time.split(":").map(Number);

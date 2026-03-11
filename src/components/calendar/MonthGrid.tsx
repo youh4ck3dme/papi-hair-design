@@ -168,14 +168,6 @@ export default function MonthGrid({
                 </span>
               )}
 
-              {/* Dot indicators */}
-              {count > 0 && inMonth && !isClosed && (
-                <div className="relative z-10 flex gap-1 mt-0.5">
-                  {Array.from({ length: Math.min(count, 3) }).map((_, i) => (
-                    <div key={i} className="w-1.5 h-1.5 rounded-full bg-gold" />
-                  ))}
-                </div>
-              )}
             </button>
           );
         })}

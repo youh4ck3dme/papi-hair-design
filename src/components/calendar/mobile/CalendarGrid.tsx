@@ -1,6 +1,6 @@
 import type { CalendarEvent, DayException, Employee, WorkingSchedule } from "./types";
 import EmployeeColumn from "./EmployeeColumn";
-import { computeDaySegments } from "./schedule";
+import { computeDaySegments, DAY_END_MINUTES, DAY_START_MINUTES } from "./schedule";
 
 interface CalendarGridProps {
   date: Date;
@@ -14,8 +14,8 @@ interface CalendarGridProps {
   onEventClick: (event: CalendarEvent) => void;
 }
 
-const START_HOUR = 6;
-const END_HOUR = 22;
+const START_HOUR = DAY_START_MINUTES / 60;
+const END_HOUR = DAY_END_MINUTES / 60;
 const HOUR_HEIGHT = 58;
 
 export default function CalendarGrid({
@@ -30,10 +30,11 @@ export default function CalendarGrid({
   onEventClick,
 }: CalendarGridProps) {
   const selectedEmployees = employees.filter((employee) => selectedEmployeeIds.includes(employee.id));
+  const fitToScreen = selectedEmployees.length > 0 && selectedEmployees.length <= 3;
 
   return (
     <div className="flex-1 min-h-0 overflow-auto border-t border-border/40">
-      <div className="flex min-w-max">
+      <div className={fitToScreen ? "flex w-full min-w-0" : "flex min-w-max"}>
         <div className="sticky left-0 z-20 w-12 border-r border-border/40 bg-background">
           <div className="h-[36px] border-b border-border/40" />
           {Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i).map((hour) => (
@@ -58,6 +59,7 @@ export default function CalendarGrid({
               endHour={END_HOUR}
               hourHeight={HOUR_HEIGHT}
               timezone={timezone}
+              fitToScreen={fitToScreen}
               onSlotClick={onSlotClick}
               onEventClick={onEventClick}
             />
