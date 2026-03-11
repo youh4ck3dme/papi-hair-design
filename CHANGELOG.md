@@ -1,5 +1,26 @@
 # Changelog
 
+## [2026-03-11] - Grande Finale hardening
+
+### Added
+- Google Analytics `gtag.js` snippet v `<head>` s consent-aware default nastavenim.
+- Operativny status dokument: `docs/GRANDE-FINALE-STATUS-2026-03-11.md`.
+
+### Changed
+- Firestore rules hardening pre employee-service mapping:
+  - `employee_services` write operacie su owner-only.
+  - `service_mode` governance je owner-driven.
+- Booking success UX:
+  - registrovany user uz nedostava CTA "Dokonci registraciu".
+- Accessibility cleanup:
+  - command dialog ma doplneny `DialogTitle` a `DialogDescription`.
+- Dokumentacny source-of-truth alignment:
+  - README a klucove docs odkazuju na aktualny finale status.
+
+### Fixed
+- Firestore indexy nasadene v produkcii pre booking/admin query patterny.
+- Booking a admin calendar E2E flow upraveny a overeny po UX zmenach.
+
 ## [checkpoint/e2e-rls-claim-stable] — 2026-02-19
 
 ### Fixed
