@@ -75,7 +75,7 @@ function chunk<T>(items: T[], size: number): T[][] {
 }
 
 export default function EmployeesPage() {
-  const { businessId } = useBusiness();
+  const { businessId, isOwner } = useBusiness();
   const [employees, setEmployees] = useState<EmployeeRow[]>([]);
   const [schedules, setSchedules] = useState<Record<string, ScheduleRow[]>>({});
   const [loading, setLoading] = useState(true);
@@ -176,7 +176,7 @@ export default function EmployeesPage() {
     setEditing(null);
     setForm({ display_name: "", email: "", phone: "", color: "#3B82F6", photo_url: null });
     setSchedule(DEFAULT_SCHEDULE);
-    setSelectedServiceIds(allServices.map((service) => service.id));
+    setSelectedServiceIds([]);
     setOpen(true);
   };
 
@@ -217,7 +217,11 @@ export default function EmployeesPage() {
         return row.service_id ?? "";
       }).filter(Boolean));
     };
-    loadEmployeeServices();
+    if (isOwner) {
+      loadEmployeeServices();
+    } else {
+      setSelectedServiceIds([]);
+    }
 
     setOpen(true);
   };
@@ -255,6 +259,10 @@ export default function EmployeesPage() {
   const handleSave = async () => {
     if (!form.display_name.trim()) {
       toast.error("Zadajte meno");
+      return;
+    }
+    if (isOwner && selectedServiceIds.length === 0) {
+      toast.error("Majiteľ musí priradiť aspoň jednu službu.");
       return;
     }
 
@@ -305,16 +313,18 @@ export default function EmployeesPage() {
           }));
         scheduleRows.forEach((row) => batch.set(doc(collection(db, "schedules")), row));
 
-        const employeeServicesSnap = await getDocs(query(
-          collection(db, "employee_services"),
-          where("employee_id", "==", employeeId),
-        ));
-        employeeServicesSnap.docs.forEach((docSnap) => batch.delete(doc(db, "employee_services", docSnap.id)));
+        if (isOwner) {
+          const employeeServicesSnap = await getDocs(query(
+            collection(db, "employee_services"),
+            where("employee_id", "==", employeeId),
+          ));
+          employeeServicesSnap.docs.forEach((docSnap) => batch.delete(doc(db, "employee_services", docSnap.id)));
 
-        selectedServiceIds.forEach((serviceId) => batch.set(doc(collection(db, "employee_services")), {
-          employee_id: employeeId as string,
-          service_id: serviceId,
-        }));
+          selectedServiceIds.forEach((serviceId) => batch.set(doc(collection(db, "employee_services")), {
+            employee_id: employeeId as string,
+            service_id: serviceId,
+          }));
+        }
 
         await batch.commit();
       }
@@ -632,38 +642,44 @@ export default function EmployeesPage() {
 
               <Separator className="bg-primary/5" />
 
-              <div className="space-y-4">
-                <Label className="text-sm font-bold flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-primary" /> Priradené služby
-                </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 rounded-2xl bg-muted/30 p-4 border border-primary/5">
-                  {allServices.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic col-span-2 py-4 text-center">
-                      Najprv vytvorte služby v katalógu.
-                    </p>
-                  )}
-                  {allServices.map((service) => (
-                    <div key={service.id} className="flex items-center gap-2 group cursor-pointer" onClick={() => {
-                      const isSelected = selectedServiceIds.includes(service.id);
-                      if (isSelected) {
-                        setSelectedServiceIds(curr => curr.filter(id => id !== service.id));
-                      } else {
-                        setSelectedServiceIds(curr => [...curr, service.id]);
-                      }
-                    }}>
-                      <Checkbox
-                        id={`srv-${service.id}`}
-                        checked={selectedServiceIds.includes(service.id)}
-                        className="data-[state=checked]:bg-primary"
-                        onCheckedChange={() => { }} // handled by div click for better UX
-                      />
-                      <label htmlFor={`srv-${service.id}`} className="text-sm font-medium cursor-pointer truncate group-hover:text-primary transition-colors">
-                        {service.name_sk}
-                      </label>
-                    </div>
-                  ))}
+              {isOwner ? (
+                <div className="space-y-4">
+                  <Label className="text-sm font-bold flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 text-primary" /> Priradené služby
+                  </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 rounded-2xl bg-muted/30 p-4 border border-primary/5">
+                    {allServices.length === 0 && (
+                      <p className="text-xs text-muted-foreground italic col-span-2 py-4 text-center">
+                        Najprv vytvorte služby v katalógu.
+                      </p>
+                    )}
+                    {allServices.map((service) => (
+                      <div key={service.id} className="flex items-center gap-2 group cursor-pointer" onClick={() => {
+                        const isSelected = selectedServiceIds.includes(service.id);
+                        if (isSelected) {
+                          setSelectedServiceIds(curr => curr.filter(id => id !== service.id));
+                        } else {
+                          setSelectedServiceIds(curr => [...curr, service.id]);
+                        }
+                      }}>
+                        <Checkbox
+                          id={`srv-${service.id}`}
+                          checked={selectedServiceIds.includes(service.id)}
+                          className="data-[state=checked]:bg-primary"
+                          onCheckedChange={() => { }} // handled by div click for better UX
+                        />
+                        <label htmlFor={`srv-${service.id}`} className="text-sm font-medium cursor-pointer truncate group-hover:text-primary transition-colors">
+                          {service.name_sk}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="rounded-2xl border border-primary/10 bg-muted/20 p-4 text-sm text-muted-foreground">
+                  Priraďovanie služieb k zamestnancom môže meniť iba majiteľ.
+                </div>
+              )}
             </div>
           </ScrollArea>
 

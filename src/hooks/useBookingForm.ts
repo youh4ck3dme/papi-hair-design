@@ -95,6 +95,10 @@ export function useBookingForm(
     }, [services, category, subcategory, subcategories.length]);
 
     const selectedService = useMemo(() => services.find((s) => s.id === selectedServiceId) ?? null, [services, selectedServiceId]);
+    const hasAnyServiceAssignment = useMemo(
+        () => Object.values(employeeServiceMap).some((assigned) => Array.isArray(assigned) && assigned.length > 0),
+        [employeeServiceMap]
+    );
 
     // Filter employees based on selected service and admin setting
     const filteredEmployees = useMemo(() => {
@@ -102,8 +106,10 @@ export function useBookingForm(
 
         if (selectedServiceId) {
             result = result.filter(emp => {
-                if (!employeeServiceMap[emp.id]) return true;
-                return employeeServiceMap[emp.id].includes(selectedServiceId);
+                if (!hasAnyServiceAssignment) return true; // legacy fallback: no mappings configured yet
+                const assignedServices = employeeServiceMap[emp.id];
+                if (!assignedServices || assignedServices.length === 0) return false;
+                return assignedServices.includes(selectedServiceId);
             });
         }
 
@@ -117,7 +123,7 @@ export function useBookingForm(
         }
 
         return result;
-    }, [employees, selectedServiceId, employeeServiceMap, business, memberships]);
+    }, [employees, selectedServiceId, employeeServiceMap, hasAnyServiceAssignment, business, memberships]);
 
     const selectedEmployee = useMemo(() => employees.find((e) => e.id === selectedWorkerId) ?? null, [employees, selectedWorkerId]);
 
