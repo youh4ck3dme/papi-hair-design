@@ -56,6 +56,7 @@ firebase-debug.log
 
 # Local import reports
 docs/import-reports/
+docs/customerExport_*.xlsx
 
 # Supabase local
 supabase/.temp
