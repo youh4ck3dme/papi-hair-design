@@ -32,6 +32,19 @@ function savePrefs(prefs: Omit<CookiePrefs, "timestamp">) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...prefs, timestamp: new Date().toISOString() }));
 }
 
+function applyGtagConsent(prefs: Omit<CookiePrefs, "timestamp">) {
+  if (typeof window === "undefined") return;
+  const gtag = (window as any).gtag;
+  if (typeof gtag !== "function") return;
+
+  gtag("consent", "update", {
+    analytics_storage: prefs.analytics ? "granted" : "denied",
+    ad_storage: prefs.marketing ? "granted" : "denied",
+    ad_user_data: prefs.marketing ? "granted" : "denied",
+    ad_personalization: prefs.marketing ? "granted" : "denied",
+  });
+}
+
 function getConsentSubjectId() {
   const existing = localStorage.getItem(CONSENT_SUBJECT_KEY);
   if (existing) return existing;
@@ -72,7 +85,12 @@ export default function CookieConsent() {
   const [marketing, setMarketing] = useState(false);
 
   useEffect(() => {
-    if (!loadPrefs()) setVisible(true);
+    const existing = loadPrefs();
+    if (!existing) {
+      setVisible(true);
+      return;
+    }
+    applyGtagConsent(existing);
   }, []);
 
   // ESC closes customize panel
@@ -86,6 +104,7 @@ export default function CookieConsent() {
   const acceptAll = useCallback(() => {
     const prefs = { necessary: true as const, analytics: true, marketing: true };
     savePrefs(prefs);
+    applyGtagConsent(prefs);
     void trackConsentEvent(prefs, "accept");
     setVisible(false);
   }, []);
@@ -93,6 +112,7 @@ export default function CookieConsent() {
   const rejectAll = useCallback(() => {
     const prefs = { necessary: true as const, analytics: false, marketing: false };
     savePrefs(prefs);
+    applyGtagConsent(prefs);
     void trackConsentEvent(prefs, "reject");
     setVisible(false);
   }, []);
@@ -106,6 +126,7 @@ export default function CookieConsent() {
   const saveCustom = useCallback(() => {
     const prefs = { necessary: true as const, analytics, marketing };
     savePrefs(prefs);
+    applyGtagConsent(prefs);
     void trackConsentEvent(prefs, "update");
     setVisible(false);
   }, [analytics, marketing]);
