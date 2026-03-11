@@ -54,5 +54,8 @@ coverage
 .firebase
 firebase-debug.log
 
+# Local import reports
+docs/import-reports/
+
 # Supabase local
 supabase/.temp
