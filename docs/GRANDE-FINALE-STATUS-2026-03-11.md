@@ -46,9 +46,12 @@ Poznamka: Percenta su operacny odhad podla aktualneho kodu a nasadenia, nie mark
 ## Co ostava do release close
 
 1. Finalny release tag + release notes.
-2. Rollback runbook (kratky, overeny prikazmi).
-3. Post-release smoke checklist (manual 10-15 min).
-4. 24h monitorovanie logs/error trendov po release.
+2. Spustit rollback preparedness podla runbooku:
+   - `docs/ROLLBACK-RUNBOOK.md`
+3. Spustit manualny smoke po deployi:
+   - `docs/POST-RELEASE-SMOKE-CHECKLIST.md`
+4. Spustit 24h monitoring po release:
+   - `docs/MONITORING-24H-CHECKLIST.md`
 
 ## Rychly verification bundle
 
@@ -67,4 +70,3 @@ firebase deploy --only hosting --project hairchainger-main-876665-176e8
 
 Niektore starsie dokumenty (`TODO.md`, cast `README.md`, starsie architecture docs) obsahuju historicke body zo starsich faz projektu.
 Pri dalsom pokracovani sa riadte primarne tymto dokumentom a aktualnym kodom v `main`.
-
