@@ -65,10 +65,11 @@ async function buildAndWriteSnapshot(db, businessId) {
     if (!bizDoc.exists) {
         throw new https_1.HttpsError("not-found", "Business not found");
     }
+    const employeeIds = new Set(employeesSnap.docs.map((d) => d.id));
     const employeeServiceMap = {};
     esSnap.forEach((d) => {
         const ed = d.data();
-        if (ed.business_id === businessId && ed.employee_id && ed.service_id) {
+        if (ed.employee_id && employeeIds.has(ed.employee_id) && ed.service_id) {
             if (!employeeServiceMap[ed.employee_id])
                 employeeServiceMap[ed.employee_id] = [];
             employeeServiceMap[ed.employee_id].push(ed.service_id);

@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2, Plus, Pencil, Trash2, Users, Mail, Phone, Calendar, Briefcase, ChevronRight, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +52,7 @@ interface EmployeeRow {
   phone: string | null;
   color: string;
   photo_url: string | null;
+  service_mode: "all" | "restricted";
 }
 
 interface ScheduleRow {
@@ -82,6 +84,7 @@ export default function EmployeesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<EmployeeRow | null>(null);
   const [form, setForm] = useState({ display_name: "", email: "", phone: "", color: "#3B82F6", photo_url: null as string | null });
+  const [serviceMode, setServiceMode] = useState<"all" | "restricted">("all");
   const [schedule, setSchedule] = useState<ScheduleMap>(DEFAULT_SCHEDULE);
 
   const [allServices, setAllServices] = useState<ServiceRow[]>([]);
@@ -110,6 +113,7 @@ export default function EmployeesPage() {
             phone: employee.phone ?? null,
             color: employee.color ?? "#3B82F6",
             photo_url: employee.photo_url ?? null,
+            service_mode: employee.service_mode === "restricted" ? "restricted" : "all",
             is_active: employee.is_active !== false,
           };
         })
@@ -175,6 +179,7 @@ export default function EmployeesPage() {
   const openCreate = () => {
     setEditing(null);
     setForm({ display_name: "", email: "", phone: "", color: "#3B82F6", photo_url: null });
+    setServiceMode("all");
     setSchedule(DEFAULT_SCHEDULE);
     setSelectedServiceIds([]);
     setOpen(true);
@@ -189,6 +194,7 @@ export default function EmployeesPage() {
       color: employee.color ?? "#3B82F6",
       photo_url: employee.photo_url ?? null,
     });
+    setServiceMode(employee.service_mode ?? "all");
 
     const nextSchedule: ScheduleMap = { ...DEFAULT_SCHEDULE };
     (schedules[employee.id] ?? []).forEach((scheduleRow) => {
@@ -261,7 +267,7 @@ export default function EmployeesPage() {
       toast.error("Zadajte meno");
       return;
     }
-    if (isOwner && selectedServiceIds.length === 0) {
+    if (isOwner && serviceMode === "restricted" && selectedServiceIds.length === 0) {
       toast.error("Majiteľ musí priradiť aspoň jednu službu.");
       return;
     }
@@ -277,6 +283,7 @@ export default function EmployeesPage() {
           phone: form.phone || null,
           color: form.color,
           photo_url: form.photo_url,
+          service_mode: serviceMode,
           updated_at: new Date().toISOString(),
         });
       } else {
@@ -287,6 +294,7 @@ export default function EmployeesPage() {
           phone: form.phone || null,
           color: form.color,
           photo_url: form.photo_url,
+          service_mode: serviceMode,
           is_active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -313,7 +321,7 @@ export default function EmployeesPage() {
           }));
         scheduleRows.forEach((row) => batch.set(doc(collection(db, "schedules")), row));
 
-        if (isOwner) {
+        if (isOwner && serviceMode === "restricted") {
           const employeeServicesSnap = await getDocs(query(
             collection(db, "employee_services"),
             where("employee_id", "==", employeeId),
@@ -321,6 +329,7 @@ export default function EmployeesPage() {
           employeeServicesSnap.docs.forEach((docSnap) => batch.delete(doc(db, "employee_services", docSnap.id)));
 
           selectedServiceIds.forEach((serviceId) => batch.set(doc(collection(db, "employee_services")), {
+            business_id: businessId,
             employee_id: employeeId as string,
             service_id: serviceId,
           }));
@@ -647,33 +656,55 @@ export default function EmployeesPage() {
                   <Label className="text-sm font-bold flex items-center gap-2">
                     <Briefcase className="w-4 h-4 text-primary" /> Priradené služby
                   </Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 rounded-2xl bg-muted/30 p-4 border border-primary/5">
-                    {allServices.length === 0 && (
-                      <p className="text-xs text-muted-foreground italic col-span-2 py-4 text-center">
-                        Najprv vytvorte služby v katalógu.
-                      </p>
-                    )}
-                    {allServices.map((service) => (
-                      <div key={service.id} className="flex items-center gap-2 group cursor-pointer" onClick={() => {
-                        const isSelected = selectedServiceIds.includes(service.id);
-                        if (isSelected) {
-                          setSelectedServiceIds(curr => curr.filter(id => id !== service.id));
-                        } else {
-                          setSelectedServiceIds(curr => [...curr, service.id]);
-                        }
-                      }}>
-                        <Checkbox
-                          id={`srv-${service.id}`}
-                          checked={selectedServiceIds.includes(service.id)}
-                          className="data-[state=checked]:bg-primary"
-                          onCheckedChange={() => { }} // handled by div click for better UX
-                        />
-                        <label htmlFor={`srv-${service.id}`} className="text-sm font-medium cursor-pointer truncate group-hover:text-primary transition-colors">
-                          {service.name_sk}
-                        </label>
+                  <div className="rounded-2xl border border-primary/10 bg-muted/20 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-semibold">Iba vybrané služby</p>
+                        <p className="text-xs text-muted-foreground">
+                          Vypnuté = zamestnanec môže vykonávať všetky služby. Zapnuté = len označené.
+                        </p>
                       </div>
-                    ))}
+                      <Switch
+                        checked={serviceMode === "restricted"}
+                        onCheckedChange={(checked) => setServiceMode(checked ? "restricted" : "all")}
+                        className="data-[state=checked]:bg-primary"
+                      />
+                    </div>
                   </div>
+
+                  {serviceMode === "restricted" ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 rounded-2xl bg-muted/30 p-4 border border-primary/5">
+                      {allServices.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic col-span-2 py-4 text-center">
+                          Najprv vytvorte služby v katalógu.
+                        </p>
+                      )}
+                      {allServices.map((service) => (
+                        <div key={service.id} className="flex items-center gap-2 group cursor-pointer" onClick={() => {
+                          const isSelected = selectedServiceIds.includes(service.id);
+                          if (isSelected) {
+                            setSelectedServiceIds(curr => curr.filter(id => id !== service.id));
+                          } else {
+                            setSelectedServiceIds(curr => [...curr, service.id]);
+                          }
+                        }}>
+                          <Checkbox
+                            id={`srv-${service.id}`}
+                            checked={selectedServiceIds.includes(service.id)}
+                            className="data-[state=checked]:bg-primary"
+                            onCheckedChange={() => { }} // handled by div click for better UX
+                          />
+                          <label htmlFor={`srv-${service.id}`} className="text-sm font-medium cursor-pointer truncate group-hover:text-primary transition-colors">
+                            {service.name_sk}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4 text-sm text-muted-foreground">
+                      Voľný režim je aktívny. Zamestnanec je dostupný pre všetky služby.
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="rounded-2xl border border-primary/10 bg-muted/20 p-4 text-sm text-muted-foreground">

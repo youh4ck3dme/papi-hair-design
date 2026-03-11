@@ -30,6 +30,7 @@ export interface EmployeeRow {
     business_id: string;
     photo_url: string | null;
     profile_id: string | null;
+    service_mode?: "all" | "restricted" | null;
 }
 
 export interface MembershipRow {
