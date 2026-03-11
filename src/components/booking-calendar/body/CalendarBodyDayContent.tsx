@@ -108,7 +108,7 @@ export function CalendarBodyDayContent({
               className={cn(
                 "h-32 border-b border-border/50 group transition-colors",
                 selectable && "cursor-pointer booking-calendar-slot",
-                closed && "bg-muted/30 opacity-60 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"
+                closed && "bg-muted/30 opacity-60"
               )}
               style={{ height: PIXELS_PER_HOUR }}
               onClick={(e) =>

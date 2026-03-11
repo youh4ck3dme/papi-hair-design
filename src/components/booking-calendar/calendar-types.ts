@@ -16,7 +16,12 @@ export const CALENDAR_MODES: BookingCalendarMode[] = ["day", "week", "month"];
 /** 128px per hour in day/week grid */
 export const PIXELS_PER_HOUR = 128;
 
-export const HOURS = Array.from({ length: 24 }, (_, i) => i);
+export const CALENDAR_START_HOUR = 6;
+export const CALENDAR_END_HOUR = 20;
+export const HOURS = Array.from(
+  { length: CALENDAR_END_HOUR - CALENDAR_START_HOUR },
+  (_, i) => CALENDAR_START_HOUR + i
+);
 
 /** Map appointment status to semantic color key (theme-aware, zlato/čierna) */
 export const STATUS_TO_COLOR: Record<string, string> = {

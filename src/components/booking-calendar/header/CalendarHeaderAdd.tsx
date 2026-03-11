@@ -2,6 +2,7 @@ import { addMinutes, startOfDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useBookingCalendarContext } from "../calendar-context";
+import { CALENDAR_START_HOUR } from "../calendar-types";
 
 export function CalendarHeaderAdd() {
   const { date, onSelectSlot, selectable } = useBookingCalendarContext();
@@ -9,6 +10,7 @@ export function CalendarHeaderAdd() {
   const handleAdd = () => {
     if (!selectable || !onSelectSlot) return;
     const start = startOfDay(date);
+    start.setHours(CALENDAR_START_HOUR, 0, 0, 0);
     const end = addMinutes(start, 30);
     onSelectSlot({ start, end });
   };

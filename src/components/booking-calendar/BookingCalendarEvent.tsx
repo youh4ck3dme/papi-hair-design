@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { BookingCalendarEvent as EventType } from "./calendar-types";
 import { useBookingCalendarContext } from "./calendar-context";
-import { PIXELS_PER_HOUR } from "./calendar-types";
+import { CALENDAR_END_HOUR, CALENDAR_START_HOUR, PIXELS_PER_HOUR } from "./calendar-types";
 import { getEventColorClasses } from "./event-color-classes";
 
 interface EventPosition {
@@ -36,7 +36,7 @@ function getOverlappingEvents(
 function calculateEventPosition(
   event: EventType,
   allEvents: EventType[]
-): EventPosition {
+): EventPosition | null {
   const overlapping = getOverlappingEvents(event, allEvents);
   const group = [event, ...overlapping].sort(
     (a, b) => a.start.getTime() - b.start.getTime()
@@ -46,19 +46,26 @@ function calculateEventPosition(
   const width = `${100 / total}%`;
   const left = `${(position * 100) / total}%`;
 
-  const startHour = event.start.getHours();
-  const startMinutes = event.start.getMinutes();
-  let endHour = event.end.getHours();
-  let endMinutes = event.end.getMinutes();
+  const visibleStartMinutes = CALENDAR_START_HOUR * 60;
+  const visibleEndMinutes = CALENDAR_END_HOUR * 60;
+
+  const eventStartMinutes = event.start.getHours() * 60 + event.start.getMinutes();
+  let eventEndMinutes = event.end.getHours() * 60 + event.end.getMinutes();
+
   if (!isSameDay(event.start, event.end)) {
-    endHour = 23;
-    endMinutes = 59;
+    eventEndMinutes = 24 * 60;
   }
 
-  const topPx =
-    startHour * PIXELS_PER_HOUR + (startMinutes / 60) * PIXELS_PER_HOUR;
-  const durationMin =
-    endHour * 60 + endMinutes - (startHour * 60 + startMinutes);
+  const startMinutes = Math.max(eventStartMinutes, visibleStartMinutes);
+  const endMinutes = Math.min(eventEndMinutes, visibleEndMinutes);
+
+  // Event is outside visible range (06:00-20:00).
+  if (endMinutes <= startMinutes) {
+    return null;
+  }
+
+  const topPx = ((startMinutes - visibleStartMinutes) / 60) * PIXELS_PER_HOUR;
+  const durationMin = endMinutes - startMinutes;
   const heightPx = (durationMin / 60) * PIXELS_PER_HOUR;
 
   return {
@@ -82,6 +89,7 @@ export function BookingCalendarEvent({
 }: BookingCalendarEventProps) {
   const { events, date, onSelectEvent } = useBookingCalendarContext();
   let style = month ? undefined : calculateEventPosition(event, events);
+  if (!month && !style) return null;
 
   if (event.color.startsWith("#") && style) {
     style = {
