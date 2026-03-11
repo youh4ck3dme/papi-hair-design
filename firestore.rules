@@ -24,6 +24,11 @@ service cloud.firestore {
       );
     }
 
+    function isOwner(businessId) {
+      return hasMembership(businessId) &&
+        membershipRole(businessId) == "owner";
+    }
+
     function isStaff(businessId) {
       return hasMembership(businessId) && (
         membershipRole(businessId) == "owner" ||
@@ -95,10 +100,26 @@ service cloud.firestore {
     match /employees/{employeeId} {
       allow read: if isSignedIn();
       allow create: if request.resource.data.business_id is string &&
-        isOwnerOrAdmin(request.resource.data.business_id);
+        isOwnerOrAdmin(request.resource.data.business_id) &&
+        (
+          isOwner(request.resource.data.business_id) ||
+          !('service_mode' in request.resource.data) ||
+          request.resource.data.service_mode == "all"
+        );
       allow update: if resource.data.business_id is string &&
         request.resource.data.business_id == resource.data.business_id &&
-        isOwnerOrAdmin(resource.data.business_id);
+        isOwnerOrAdmin(resource.data.business_id) &&
+        (
+          isOwner(resource.data.business_id) ||
+          (
+            (!('service_mode' in resource.data) && !('service_mode' in request.resource.data)) ||
+            (
+              ('service_mode' in resource.data) &&
+              ('service_mode' in request.resource.data) &&
+              request.resource.data.service_mode == resource.data.service_mode
+            )
+          )
+        );
       allow delete: if resource.data.business_id is string &&
         isOwnerOrAdmin(resource.data.business_id);
     }
@@ -172,12 +193,12 @@ service cloud.firestore {
     match /employee_services/{rowId} {
       allow read: if isSignedIn();
       allow create: if employeeExists(request.resource.data.employee_id) &&
-        isOwnerOrAdmin(employeeBusinessId(request.resource.data.employee_id));
+        isOwner(employeeBusinessId(request.resource.data.employee_id));
       allow update: if employeeExists(resource.data.employee_id) &&
         request.resource.data.employee_id == resource.data.employee_id &&
-        isOwnerOrAdmin(employeeBusinessId(resource.data.employee_id));
+        isOwner(employeeBusinessId(resource.data.employee_id));
       allow delete: if employeeExists(resource.data.employee_id) &&
-        isOwnerOrAdmin(employeeBusinessId(resource.data.employee_id));
+        isOwner(employeeBusinessId(resource.data.employee_id));
     }
 
     match /onboarding_answers/{answerId} {

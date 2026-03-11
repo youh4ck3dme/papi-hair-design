@@ -277,28 +277,34 @@ export default function EmployeesPage() {
     try {
       let employeeId = editing?.id;
       if (editing) {
-        await updateDoc(doc(db, "employees", editing.id), {
+        const employeeUpdatePayload: Record<string, unknown> = {
           display_name: form.display_name,
           email: form.email || null,
           phone: form.phone || null,
           color: form.color,
           photo_url: form.photo_url,
-          service_mode: serviceMode,
           updated_at: new Date().toISOString(),
-        });
+        };
+        if (isOwner) {
+          employeeUpdatePayload.service_mode = serviceMode;
+        }
+        await updateDoc(doc(db, "employees", editing.id), employeeUpdatePayload);
       } else {
-        const createdEmployee = await addDoc(collection(db, "employees"), {
+        const employeeCreatePayload: Record<string, unknown> = {
           business_id: businessId,
           display_name: form.display_name,
           email: form.email || null,
           phone: form.phone || null,
           color: form.color,
           photo_url: form.photo_url,
-          service_mode: serviceMode,
           is_active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        });
+        };
+        if (isOwner) {
+          employeeCreatePayload.service_mode = serviceMode;
+        }
+        const createdEmployee = await addDoc(collection(db, "employees"), employeeCreatePayload);
         employeeId = createdEmployee.id;
       }
 
@@ -369,8 +375,10 @@ export default function EmployeesPage() {
       const scheduleSnap = await getDocs(query(collection(db, "schedules"), where("employee_id", "==", id)));
       scheduleSnap.docs.forEach((docSnap) => batch.delete(doc(db, "schedules", docSnap.id)));
 
-      const employeeServicesSnap = await getDocs(query(collection(db, "employee_services"), where("employee_id", "==", id)));
-      employeeServicesSnap.docs.forEach((docSnap) => batch.delete(doc(db, "employee_services", docSnap.id)));
+      if (isOwner) {
+        const employeeServicesSnap = await getDocs(query(collection(db, "employee_services"), where("employee_id", "==", id)));
+        employeeServicesSnap.docs.forEach((docSnap) => batch.delete(doc(db, "employee_services", docSnap.id)));
+      }
 
       batch.delete(doc(db, "employees", id));
       await batch.commit();

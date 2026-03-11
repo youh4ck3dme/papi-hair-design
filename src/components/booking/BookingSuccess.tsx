@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { GoldText } from "./BookingUI";
 import { BookingResult, ServiceRow, EmployeeRow } from "./types";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BookingSuccessProps {
     bookingResult: BookingResult;
@@ -22,6 +23,7 @@ export function BookingSuccess({
     dateLocale,
 }: BookingSuccessProps) {
     const { t } = useTranslation();
+    const { user } = useAuth();
 
     return (
         <div className="min-h-screen bg-background" data-testid="booking-success">
@@ -108,21 +110,23 @@ export function BookingSuccess({
 
                 {/* CTAs */}
                 <div className="flex flex-col gap-3 pt-2">
-                    <button
-                        onClick={() => {
-                            if (bookingResult.claim_token) {
-                                sessionStorage.setItem("claim_token", bookingResult.claim_token);
-                            } else {
-                                sessionStorage.removeItem("claim_token");
-                            }
-                            globalThis.location.assign(
-                                `/auth?mode=register&email=${encodeURIComponent(bookingResult.customer_email || "")}&name=${encodeURIComponent(bookingResult.customer_name || "")}`
-                            );
-                        }}
-                        className="premium-action-btn w-full rounded-xl py-2.5 px-4 text-sm tracking-wide transition-all active:scale-[0.98]"
-                    >
-                        {t("booking.confirmRegisterBtn")}
-                    </button>
+                    {!user && (
+                        <button
+                            onClick={() => {
+                                if (bookingResult.claim_token) {
+                                    sessionStorage.setItem("claim_token", bookingResult.claim_token);
+                                } else {
+                                    sessionStorage.removeItem("claim_token");
+                                }
+                                globalThis.location.assign(
+                                    `/auth?mode=register&email=${encodeURIComponent(bookingResult.customer_email || "")}&name=${encodeURIComponent(bookingResult.customer_name || "")}`
+                                );
+                            }}
+                            className="premium-action-btn w-full rounded-xl py-2.5 px-4 text-sm tracking-wide transition-all active:scale-[0.98]"
+                        >
+                            {t("booking.confirmRegisterBtn")}
+                        </button>
+                    )}
                     <button
                         onClick={() => globalThis.location.reload()}
                         className="text-sm text-muted-foreground hover:text-primary transition-colors py-2"

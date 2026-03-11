@@ -145,9 +145,14 @@ test.describe("Booking Flow", () => {
         await expect(page.getByTestId("booking-success")).toBeVisible({ timeout: 20000 });
         await expect(page.getByText(/Rezervácia potvrdená/i)).toBeVisible();
 
-        // 11. Verify register CTA redirects to auth register mode with prefilled email
-        await page.getByRole("button", { name: /Dokonči registráciu/i }).click();
-        await expect(page).toHaveURL(/\/auth\?mode=register/i, { timeout: 10000 });
-        await expect(page.getByTestId("auth-email-input")).toHaveValue(bookingEmail, { timeout: 5000 });
+        // 11. Registration CTA is shown only for non-authenticated users.
+        const registerCta = page.getByRole("button", { name: /Dokonči registráciu/i });
+        if (await registerCta.isVisible().catch(() => false)) {
+            await registerCta.click();
+            await expect(page).toHaveURL(/\/auth\?mode=register/i, { timeout: 10000 });
+            await expect(page.getByTestId("auth-email-input")).toHaveValue(bookingEmail, { timeout: 5000 });
+        } else {
+            await expect(page.getByRole("button", { name: /Nová rezervácia/i })).toBeVisible({ timeout: 5000 });
+        }
     });
 });
