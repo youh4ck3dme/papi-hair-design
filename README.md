@@ -9,26 +9,20 @@ Moderný rezervačný systém pre salóny krásy. React 18 PWA + Firebase backen
 
 ---
 
-## ⚠️ CURRENT STATUS (Diagnostic Report – 8.3.2026)
+## CURRENT STATUS (2026-03-11)
 
-**Health Score:** 7.2/10 – Production READY s podmienkami  
-**Last Diagnostic:** [AI Comprehensive Scan]  
-**Blockers:** 4 Critical fixes required before launch
+Aktualny produkcny stav, hotove bloky a dalsie kroky:
 
-### 🔴 Critical Fixes (MUST DO BEFORE LAUNCH)
-1. ❌ **`.env` exposed in git** – Purge history, rotate tokens (2h)
-2. ❌ **Role bypass in ProtectedRoute** – Employee accessing admin (45m)
-3. ❌ **SMTP passwords plaintext** – Migrate to Secret Manager (2h)
-4. ⚠️ **Test credentials hardcoded** – Move to env vars (1h)
+- [docs/GRANDE-FINALE-STATUS-2026-03-11.md](./docs/GRANDE-FINALE-STATUS-2026-03-11.md)
+- [docs/ANALYTICS.md](./docs/ANALYTICS.md)
 
-**→ See `TODO.md` for complete repair blueprint + timeline**
+`TODO.md` je historicky diagnosticky dokument a nie je uz primarny operativny plan.
 
 ---
 
 ## Obsah
 
-- [⚠️ Current Status](#-current-status-diagnostic-report--832026) ← **NOVÉ: Diagnostic summary**
-- [🛠️ Repair Blueprint](#-repair-blueprint-see-todomd) ← **NOVÉ: Link to TODO.md**
+- [Current Status](#current-status-2026-03-11)
 - [Architektúra](#architektúra)
 - [Rýchly štart](#rýchly-štart)
 - [Premenné prostredia](#premenné-prostredia)
@@ -40,38 +34,14 @@ Moderný rezervačný systém pre salóny krásy. React 18 PWA + Firebase backen
 - [Testy](#testy)
 - [Deploy](#deploy)
 - [Otváracie hodiny](#otváracie-hodiny)
-- [AI Handoff Notes](#-ai-handoff-notes) ← **NOVÉ: For continuation**
+- [AI Handoff Notes](#-ai-handoff-notes)
 
 ---
 
-## 🛠️ Repair Blueprint (See TODO.md)
+## Poznamka k starsim dokumentom
 
-Comprehensive diagnostic identified 12 action items:
-
-| Priority | Count | Items | Time |
-|----------|-------|-------|------|
-| 🔴 Critical | 4 | Git cleanup, role fix, secrets, test creds | 5–6h |
-| 🟠 High | 6 | Query limits, rate limiting, monitoring, tests | 7–8h |
-| 🟡 Medium | 2 | JSDoc, Playwright update | 1–2h |
-
-**→ Full details: [`TODO.md`](./TODO.md)**
-
-### Quick Start on Fixes
-
-```bash
-# 1. Git cleanup (CRITICAL)
-git filter-branch --tree-filter 'rm -f .env .env.local' -- --all
-
-# 2. Test with coverage (HIGH)
-npm run test:coverage  # Target: 60% minimum
-
-# 3. Deploy functions (HIGH)
-cd functions && npm run build && firebase deploy --only functions
-
-# 4. Validate all
-npm run lint && npm run typecheck && npm run build
-firebase deploy --only firestore
-```
+- `TODO.md` a cast starsich continuation dokumentov su archivny vstup z predchadzajucich auditov.
+- Aktualna operativa je v `docs/GRANDE-FINALE-STATUS-2026-03-11.md`.
 
 ---
 

@@ -1,5 +1,8 @@
 # Čo funguje a čo nie (pre hairchainger-main-876665-176e8 na Spark)
 
+> STATUS: historicky dokument (cast obsahu je uz neaktualna).
+> Aktualny operativny stav: `docs/GRANDE-FINALE-STATUS-2026-03-11.md`.
+
 Krátky prehľad bez ohľadu na drobnosti – len funkčné vs nefunkčné veci.
 
 ---

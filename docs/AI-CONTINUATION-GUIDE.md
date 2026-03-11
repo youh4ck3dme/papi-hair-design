@@ -1,5 +1,8 @@
 # PHD Booking System – AI Continuation Guide
 
+> STATUS: Historicky handoff dokument.
+> Aktualny operativny stav je v `docs/GRANDE-FINALE-STATUS-2026-03-11.md`.
+
 **Date:** 8.3.2026  
 **Diagnostic Status:** Complete ✅  
 **Last Worker:** Human (Diagnostic Agent)  

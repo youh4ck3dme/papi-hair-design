@@ -1,5 +1,8 @@
 # Prieskum a Diagnostika Projektu (Current State)
 
+> STATUS: historicky auditny dokument.
+> Aktualny operativny stav: `docs/GRANDE-FINALE-STATUS-2026-03-11.md`.
+
 Dátum: 4. Marec 2026
 Meno projektu: **nimble-agenda** (pôvodne loveable-PHDbooking)
 

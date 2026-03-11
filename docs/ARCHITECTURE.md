@@ -1,5 +1,8 @@
 # Technická architektúra – PAPI HAIR DESIGN Booking System
 
+> STATUS: Tento dokument obsahuje historicke casti zo starsich faz.
+> Pre aktualny operativny stav pouzi `docs/GRANDE-FINALE-STATUS-2026-03-11.md`.
+
 ## Obsah
 
 - [Technologický stack](#technologický-stack)
