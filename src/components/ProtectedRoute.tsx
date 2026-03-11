@@ -19,6 +19,9 @@ export default function ProtectedRoute({ children, requireAdmin = false, allowed
   const { user, memberships, loading } = useAuth();
   const userRoles = new Set(memberships.map((m) => m.role));
   const isAllowlistedAdmin = isAdminAllowlisted(user?.email);
+  const hasAdminRole = userRoles.has("owner") || userRoles.has("admin");
+  const requestsAdminPrivileges =
+    requireAdmin || !!allowedRoles?.some((role) => role === "owner" || role === "admin");
 
   if (loading) {
     return (
@@ -30,15 +33,18 @@ export default function ProtectedRoute({ children, requireAdmin = false, allowed
 
   if (!user) return <Navigate to="/auth" replace />;
 
+  // Allowlisted emails can enter admin only after bootstrap creates a real membership.
+  // This prevents UI access with missing write permissions.
+  if (isAllowlistedAdmin && requestsAdminPrivileges && !hasAdminRole) {
+    return <Navigate to="/bootstrap" replace />;
+  }
+
   if (requireAdmin) {
-    const hasAdmin = userRoles.has("owner") || userRoles.has("admin") || isAllowlistedAdmin;
-    if (!hasAdmin) return <Navigate to={resolveFallbackByRole(userRoles)} replace />;
+    if (!hasAdminRole) return <Navigate to={resolveFallbackByRole(userRoles)} replace />;
   }
 
   if (allowedRoles?.length) {
-    const hasAllowedRole =
-      allowedRoles.some((role) => userRoles.has(role)) ||
-      (isAllowlistedAdmin && (allowedRoles.includes("owner") || allowedRoles.includes("admin")));
+    const hasAllowedRole = allowedRoles.some((role) => userRoles.has(role));
 
     if (!hasAllowedRole) {
       return <Navigate to={resolveFallbackByRole(userRoles)} replace />;

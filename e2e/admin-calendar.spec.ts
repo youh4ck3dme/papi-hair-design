@@ -21,8 +21,18 @@ test.describe("Admin Calendar", () => {
         await page.locator('input[type="password"]').fill(ADMIN_PASSWORD);
         await page.getByTestId("auth-login-btn").click();
 
-        // Should redirect to /admin/calendar or /admin
-        await expect(page).toHaveURL(/\/admin/, { timeout: 15000 });
+        // Should redirect either to admin or to bootstrap when membership is missing.
+        await expect(page).toHaveURL(/\/(admin|bootstrap)/, { timeout: 15000 });
+
+        // New auth guard redirects allowlisted users without membership to /bootstrap.
+        // Bootstrap once, then continue to admin calendar.
+        if (page.url().includes("/bootstrap")) {
+            const activateBtn = page.getByRole("button", { name: "Aktivovať Admin prístup" });
+            await expect(activateBtn).toBeVisible({ timeout: 10000 });
+            await activateBtn.click();
+            await expect(page.getByText(/úspešne vytvorené|already_bootstrapped/i)).toBeVisible({ timeout: 15000 });
+            await page.goto("/admin/calendar");
+        }
 
         // Ensure we are on the calendar page (might be the default admin subpage)
         if (!page.url().includes("/admin/calendar")) {

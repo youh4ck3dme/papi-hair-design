@@ -27,6 +27,7 @@ function renderWithRoutes(element: ReactNode, initialPath: string) {
         <Route path="/booking" element={<div>BOOKING_PAGE</div>} />
         <Route path="/admin" element={<div>ADMIN_HOME</div>} />
         <Route path="/admin/my" element={<div>MY_SCHEDULE</div>} />
+        <Route path="/bootstrap" element={<div>BOOTSTRAP_PAGE</div>} />
         <Route path="/protected" element={element} />
       </Routes>
     </MemoryRouter>
@@ -141,7 +142,7 @@ describe("ProtectedRoute", () => {
     expect(screen.queryByText("SECRET")).not.toBeInTheDocument();
   });
 
-  it("allows configured admin email to access admin route even before memberships are loaded", () => {
+  it("redirects allowlisted admin email to /bootstrap when membership is missing", () => {
     setAuthState({
       user: { id: "u6", email: "papi@papihairdesign.sk" },
       memberships: [],
@@ -155,6 +156,7 @@ describe("ProtectedRoute", () => {
       "/protected"
     );
 
-    expect(screen.getByText("SECRET")).toBeInTheDocument();
+    expect(screen.getByText("BOOTSTRAP_PAGE")).toBeInTheDocument();
+    expect(screen.queryByText("SECRET")).not.toBeInTheDocument();
   });
 });
