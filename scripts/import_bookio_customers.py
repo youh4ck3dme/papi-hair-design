@@ -312,17 +312,18 @@ def import_customers(
             "bookio_tags": row.tags,
             "bookio_note": row.note,
             "import_source": "bookio",
-            "updated_at": now,
         }
 
         if target is None:
-            payload["created_at"] = now
+            create_payload = dict(payload)
+            create_payload["updated_at"] = now
+            create_payload["created_at"] = now
             created += 1
             sample_changes.append({"action": "create", "row": row.source_row, "identity": identity_key})
             if apply_changes:
                 try:
                     doc_ref = customers_ref.document()
-                    doc_ref.set(payload)
+                    doc_ref.set(create_payload)
                     snap = doc_ref.get()
                     if row.email:
                         by_email[row.email] = snap
@@ -335,12 +336,11 @@ def import_customers(
             continue
 
         existing_data = target.to_dict() or {}
-        merged = dict(existing_data)
-        merged.update(payload)
-        if not merged.get("created_at"):
-            merged["created_at"] = now
-
-        if merged == existing_data:
+        comparable_existing = {
+            key: existing_data.get(key)
+            for key in payload.keys()
+        }
+        if comparable_existing == payload:
             unchanged += 1
             continue
 
@@ -348,7 +348,9 @@ def import_customers(
         sample_changes.append({"action": "update", "row": row.source_row, "id": target.id, "identity": identity_key})
         if apply_changes:
             try:
-                target.reference.set(merged, merge=False)
+                update_payload = dict(payload)
+                update_payload["updated_at"] = now
+                target.reference.set(update_payload, merge=True)
             except Exception:
                 failed += 1
                 updated -= 1
