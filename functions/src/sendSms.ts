@@ -1,6 +1,5 @@
 import * as functions from "firebase-functions/v2";
 import { HttpsError, type CallableRequest } from "firebase-functions/v2/https";
-import { Twilio } from "twilio";
 
 interface SendSmsInput {
   to: string;
@@ -36,6 +35,7 @@ export const sendSms = functions.https.onCall(
       throw new HttpsError("invalid-argument", "Chýba príjemca alebo text správy.");
     }
 
+    const { Twilio } = await import("twilio");
     const client = new Twilio(twilioSid!, twilioToken!);
     try {
       const result = await client.messages.create({

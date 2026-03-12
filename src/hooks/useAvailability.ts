@@ -30,6 +30,21 @@ export function useAvailability(
         return new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), selectedDate);
     }, [selectedDate, calendarMonth]);
 
+    const buildSlots = useCallback((date: Date, existingAppointments: ExistingAppointment[]) => {
+        return generateSharedSlots({
+            date,
+            serviceDuration: selectedService?.duration_minutes ?? 0,
+            serviceBuffer: selectedService?.buffer_minutes ?? 0,
+            openingHours: (business?.opening_hours ?? {}) as BusinessHours,
+            businessHourEntries: businessHourEntries.length ? businessHourEntries : undefined,
+            dateOverrides: dateOverrides.length ? dateOverrides : undefined,
+            employeeIds: eligibleEmployees.map((employee) => employee.id),
+            employeeSchedulesById: schedules,
+            existingAppointments,
+            leadTimeMinutes: business?.lead_time_minutes ?? 60,
+        });
+    }, [selectedService, business, businessHourEntries, dateOverrides, eligibleEmployees, schedules]);
+
     const isBusinessOpenOnDay = useCallback((date: Date) => {
         const intervals = getEffectiveIntervals(
             date,
@@ -75,28 +90,18 @@ export function useAvailability(
                         hold_expires_at: appointment.hold_expires_at ?? null,
                     })) as ExistingAppointment[];
 
-                const slots = generateSharedSlots({
-                    date: selectedFullDate,
-                    serviceDuration: selectedService.duration_minutes,
-                    serviceBuffer: selectedService.buffer_minutes ?? 0,
-                    openingHours: (business.opening_hours ?? {}) as BusinessHours,
-                    businessHourEntries: businessHourEntries.length ? businessHourEntries : undefined,
-                    dateOverrides: dateOverrides.length ? dateOverrides : undefined,
-                    employeeIds,
-                    employeeSchedulesById: schedules,
-                    existingAppointments: existing,
-                    leadTimeMinutes: business.lead_time_minutes ?? 60,
-                });
-
-                setAvailableSlots(slots);
+                setAvailableSlots(buildSlots(selectedFullDate, existing));
             } catch (err) {
                 console.error("useAvailability: Error loading slots", err);
+                // Public booking must not rely on direct reads of protected appointments.
+                // Server-side hold confirmation remains the source of truth for conflicts.
+                setAvailableSlots(buildSlots(selectedFullDate, []));
             } finally {
                 setLoadingSlots(false);
             }
         };
         loadSlots();
-    }, [selectedFullDate, selectedService, business, schedules, businessHourEntries, dateOverrides, eligibleEmployees]);
+    }, [selectedFullDate, selectedService, business, schedules, businessHourEntries, dateOverrides, eligibleEmployees, buildSlots]);
 
     const timeGroups = useMemo(() => {
         const dopoludnia: string[] = [];

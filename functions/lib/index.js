@@ -35,10 +35,10 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onEmployeeServiceWrite = exports.onDateOverrideWrite = exports.onBusinessHoursWrite = exports.onEmployeeWrite = exports.onServiceWrite = exports.onBusinessWrite = exports.onProfileWriteSyncEmployeePhoto = exports.bootstrapAdminAccess = exports.rebuildPublicSnapshot = exports.sendSms = exports.cleanupExpiredHolds = exports.lookupBookingHistory = exports.adminUpdateBookingStatus = exports.confirmBooking = exports.createBookingHold = exports.normalizeMemberships = exports.importMigrationData = exports.syncOfflineData = exports.listBookableProviders = exports.consentEvent = exports.saveSmtpConfig = exports.createPublicBooking = exports.claimBooking = void 0;
 const admin = __importStar(require("firebase-admin"));
-const Sentry = __importStar(require("@sentry/node"));
 admin.initializeApp();
 const sentryDsn = process.env.SENTRY_DSN;
 if (sentryDsn) {
+    const Sentry = require("@sentry/node");
     Sentry.init({
         dsn: sentryDsn,
         tracesSampleRate: 0.1,

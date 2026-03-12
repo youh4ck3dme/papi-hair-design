@@ -38,7 +38,6 @@ const functions = __importStar(require("firebase-functions/v2"));
 const firestore_1 = require("firebase-admin/firestore");
 const https_1 = require("firebase-functions/v2/https");
 const guards_1 = require("./guards");
-const secretManager_1 = require("./secretManager");
 exports.saveSmtpConfig = functions.https.onCall({ region: "europe-west1" }, async (request) => {
     const { auth, data } = request;
     const db = (0, firestore_1.getFirestore)();
@@ -56,7 +55,8 @@ exports.saveSmtpConfig = functions.https.onCall({ region: "europe-west1" }, asyn
     };
     let hasPassword = false;
     if (typeof pass === "string" && pass.length > 0) {
-        const secretName = await (0, secretManager_1.upsertSecret)(`smtp-password-${business_id}`, pass);
+        const { upsertSecret } = await Promise.resolve().then(() => __importStar(require("./secretManager")));
+        const secretName = await upsertSecret(`smtp-password-${business_id}`, pass);
         sanitized.password_secret = secretName;
         hasPassword = true;
     }

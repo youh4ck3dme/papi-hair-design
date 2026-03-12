@@ -5,7 +5,6 @@ import {
     HttpsError
 } from "firebase-functions/v2/https";
 import { requireAuth, requireMembership } from "./guards";
-import { upsertSecret } from "./secretManager";
 
 interface SaveSmtpConfigData {
     business_id: string;
@@ -42,6 +41,7 @@ export const saveSmtpConfig = functions.https.onCall({ region: "europe-west1" },
     // Handle password via Secret Manager, not Firestore
     let hasPassword = false;
     if (typeof pass === "string" && pass.length > 0) {
+        const { upsertSecret } = await import("./secretManager");
         const secretName = await upsertSecret(`smtp-password-${business_id}`, pass);
         sanitized.password_secret = secretName;
         hasPassword = true;

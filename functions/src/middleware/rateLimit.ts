@@ -1,7 +1,6 @@
 import { HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 
-const db = getFirestore();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const MAX_REQUESTS = 5;
 
@@ -13,6 +12,7 @@ const MAX_REQUESTS = 5;
  * @throws HttpsError - If rate limit is exceeded
  */
 export async function checkRateLimit(identifier: string): Promise<void> {
+    const db = getFirestore();
     const key = `ratelimit_${identifier}`;
     const ref = db.collection("_ratelimits").doc(key);
     const now = Date.now();

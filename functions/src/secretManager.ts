@@ -1,6 +1,12 @@
 import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
 
-const client = new SecretManagerServiceClient();
+let client: InstanceType<typeof SecretManagerServiceClient> | null = null;
+
+function getClient(): InstanceType<typeof SecretManagerServiceClient> {
+  // Lazy init keeps Firebase function discovery fast during deploy.
+  client ??= new SecretManagerServiceClient();
+  return client;
+}
 
 function getProjectId(): string {
   return (
@@ -24,7 +30,7 @@ export async function upsertSecret(
   const name = `${parent}/secrets/${secretId}`;
 
   try {
-    await client.createSecret({
+    await getClient().createSecret({
       parent,
       secretId,
       secret: { replication: { automatic: {} } },
@@ -36,7 +42,7 @@ export async function upsertSecret(
     }
   }
 
-  await client.addSecretVersion({
+  await getClient().addSecretVersion({
     parent: name,
     payload: { data: Buffer.from(payload, "utf8") },
   });
@@ -45,7 +51,7 @@ export async function upsertSecret(
 }
 
 export async function readSecret(secretName: string): Promise<string> {
-  const [version] = await client.accessSecretVersion({
+  const [version] = await getClient().accessSecretVersion({
     name: `${secretName}/versions/latest`,
   });
   const data = version.payload?.data;
