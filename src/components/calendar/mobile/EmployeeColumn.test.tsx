@@ -48,7 +48,7 @@ describe("EmployeeColumn", () => {
       />, 
     );
 
-    const blockedSlot = screen.getByTitle("Čas je blokovaný");
+    const blockedSlot = screen.getAllByTitle("Čas je blokovaný")[0];
     fireEvent.click(blockedSlot);
 
     expect(onSlotClick).toHaveBeenCalled();

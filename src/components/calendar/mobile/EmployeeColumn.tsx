@@ -32,12 +32,15 @@ export default function EmployeeColumn({
   onSlotClick,
   onEventClick,
 }: EmployeeColumnProps) {
-  const hours = Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
+  const SLOT_INTERVAL_MINUTES = 30;
+  const slotCount = ((endHour - startHour) * 60) / SLOT_INTERVAL_MINUTES;
+  const slots = Array.from({ length: slotCount }, (_, index) => startHour * 60 + index * SLOT_INTERVAL_MINUTES);
+  const slotHeight = (hourHeight * SLOT_INTERVAL_MINUTES) / 60;
 
   return (
     <div className={fitToScreen ? "min-w-0 flex-1 border-l border-border/40" : "min-w-[170px] border-l border-border/40"}>
-      <div className="sticky top-0 z-10 border-b border-border bg-background/95 px-2 py-2 backdrop-blur">
-        <p className="truncate text-xs font-semibold" style={{ color: employee.color }}>
+      <div className="sticky top-0 z-10 border-b border-border bg-background/95 px-2 py-2.5 backdrop-blur">
+        <p className="truncate text-sm font-semibold" style={{ color: employee.color }}>
           {employee.name}
         </p>
       </div>
@@ -45,9 +48,9 @@ export default function EmployeeColumn({
       <div className="relative" style={{ height: (endHour - startHour) * hourHeight }}>
         <NonWorkingOverlay hourHeight={hourHeight} startHour={startHour} segments={segments} />
 
-        {hours.map((hour) => {
+        {slots.map((slotMinutes) => {
           const slotTime = new Date(date);
-          slotTime.setHours(hour, 0, 0, 0);
+          slotTime.setHours(Math.floor(slotMinutes / 60), slotMinutes % 60, 0, 0);
           const minute = getMinutesInTZ(slotTime, timezone);
           const slotWorking = segments.some((segment) => segment.kind === "working" && minute >= segment.startMinutes && minute < segment.endMinutes);
           const slotBlocked = isSlotBlockedByEvents(slotTime, events);
@@ -55,11 +58,12 @@ export default function EmployeeColumn({
 
           return (
             <button
-              key={`${employee.id}-${format(slotTime, "HH")}`}
+              key={`${employee.id}-${format(slotTime, "HH:mm")}`}
               onClick={() => onSlotClick(employee.id, slotTime, slotBookable)}
-              className="absolute left-0 right-0 border-b border-border/30"
-              style={{ top: (hour - startHour) * hourHeight, height: hourHeight }}
+              className="absolute left-0 right-0 border-b border-border/30 active:bg-primary/10"
+              style={{ top: ((slotMinutes - startHour * 60) / 60) * hourHeight, height: slotHeight }}
               title={slotBookable ? "Vytvoriť rezerváciu" : slotBlocked ? "Čas je blokovaný" : "Zamestnanec v tomto čase nepracuje"}
+              aria-label={`${employee.name} ${format(slotTime, "HH:mm")}`}
             />
           );
         })}
