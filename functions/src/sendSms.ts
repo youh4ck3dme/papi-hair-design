@@ -1,19 +1,24 @@
 import * as functions from "firebase-functions/v2";
 import { HttpsError, type CallableRequest } from "firebase-functions/v2/https";
+import { defineSecret } from "firebase-functions/params";
 
 interface SendSmsInput {
   to: string;
   message: string;
 }
 
-const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-const twilioToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioFrom = process.env.TWILIO_FROM_NUMBER;
+const twilioSidSecret = defineSecret("TWILIO_ACCOUNT_SID");
+const twilioTokenSecret = defineSecret("TWILIO_AUTH_TOKEN");
+const twilioFromSecret = defineSecret("TWILIO_FROM_NUMBER");
 
 function assertEnv() {
+  const twilioSid = twilioSidSecret.value();
+  const twilioToken = twilioTokenSecret.value();
+  const twilioFrom = twilioFromSecret.value();
   if (!twilioSid || !twilioToken || !twilioFrom) {
     throw new HttpsError("failed-precondition", "SMS brána nie je nastavená.");
   }
+  return { twilioSid, twilioToken, twilioFrom };
 }
 
 function assertRole(request: CallableRequest<SendSmsInput>) {
@@ -24,10 +29,13 @@ function assertRole(request: CallableRequest<SendSmsInput>) {
 }
 
 export const sendSms = functions.https.onCall(
-  { region: "europe-west1" },
+  {
+    region: "europe-west1",
+    secrets: [twilioSidSecret, twilioTokenSecret, twilioFromSecret],
+  },
   async (request: CallableRequest<SendSmsInput>) => {
     assertRole(request);
-    assertEnv();
+    const { twilioSid, twilioToken, twilioFrom } = assertEnv();
 
     const to = request.data?.to?.trim();
     const message = request.data?.message?.trim();
@@ -36,11 +44,11 @@ export const sendSms = functions.https.onCall(
     }
 
     const { Twilio } = await import("twilio");
-    const client = new Twilio(twilioSid!, twilioToken!);
+    const client = new Twilio(twilioSid, twilioToken);
     try {
       const result = await client.messages.create({
         to,
-        from: twilioFrom!,
+        from: twilioFrom,
         body: message,
       });
       return { success: true, sid: result.sid };

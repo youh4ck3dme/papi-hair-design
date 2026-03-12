@@ -14,10 +14,9 @@ import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { AvatarCropper } from "@/components/admin/AvatarCropper";
 import { toast } from "sonner";
-import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound, Camera, Trash2, Send } from "lucide-react";
+import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound, Camera, Trash2 } from "lucide-react";
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
 import type { FirebaseError } from "firebase/app";
-import { sendSms } from "@/integrations/firebase/sendSms";
 
 function friendlyError(err: unknown, fallback: string): string {
   const e = err as Partial<FirebaseError> | undefined;
@@ -60,9 +59,6 @@ export default function SettingsPage() {
     pass: "",
   });
   const [smtpHasPassword, setSmtpHasPassword] = useState(false);
-  const [smsForm, setSmsForm] = useState({ to: "", message: "" });
-  const [smsSending, setSmsSending] = useState(false);
-  const [smsResult, setSmsResult] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -319,14 +315,13 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue={isOwnerOrAdmin ? "general" : "profile"} className="w-full">
-        <TabsList className={`grid w-full h-auto p-1 bg-muted/30 backdrop-blur-md border border-primary/10 rounded-xl mb-6 ${isOwnerOrAdmin ? "grid-cols-2 md:grid-cols-8" : "grid-cols-1"}`}>
+        <TabsList className={`grid w-full h-auto p-1 bg-muted/30 backdrop-blur-md border border-primary/10 rounded-xl mb-6 ${isOwnerOrAdmin ? "grid-cols-2 md:grid-cols-7" : "grid-cols-1"}`}>
           {isOwnerOrAdmin && (
             <>
               <TabsTrigger value="general" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Všeobecné</TabsTrigger>
               <TabsTrigger value="booking" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Booking</TabsTrigger>
               <TabsTrigger value="hours" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Otváracie hodiny</TabsTrigger>
               <TabsTrigger value="smtp" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">SMTP Email</TabsTrigger>
-              <TabsTrigger value="sms" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">SMS brána</TabsTrigger>
               <TabsTrigger value="snapshot" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Snapshot</TabsTrigger>
               <TabsTrigger value="license" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Licencia</TabsTrigger>
             </>
@@ -507,65 +502,6 @@ export default function SettingsPage() {
                 <Button onClick={saveSmtp} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                   Uložiť SMTP
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="sms" className="space-y-6 mt-0">
-          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
-            <CardHeader className="border-b border-primary/5 bg-muted/20">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <Send className="w-5 h-5 text-primary" />
-                SMS brána (Twilio)
-              </CardTitle>
-              <CardDescription>Odoslanie testovacej SMS z dashboardu (len owner/admin)</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Príjemca</Label>
-                  <Input
-                    placeholder="+421900000000"
-                    value={smsForm.to}
-                    onChange={(e) => setSmsForm((f) => ({ ...f, to: e.target.value }))}
-                    className="bg-background/50 border-primary/10 focus:ring-primary/20"
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Správa</Label>
-                  <Input
-                    placeholder="Text SMS (max ~160 znakov)"
-                    value={smsForm.message}
-                    onChange={(e) => setSmsForm((f) => ({ ...f, message: e.target.value }))}
-                    className="bg-background/50 border-primary/10 focus:ring-primary/20"
-                  />
-                </div>
-              </div>
-              {smsResult && (
-                <div className="text-sm text-emerald-600 font-semibold">
-                  {smsResult}
-                </div>
-              )}
-              <div className="pt-2 flex justify-end">
-                <Button
-                  onClick={async () => {
-                    setSmsResult(null);
-                    setSmsSending(true);
-                    const res = await sendSms(smsForm);
-                    if (res.success) {
-                      setSmsResult(`SMS odoslaná (SID: ${res.sid})`);
-                    } else {
-                      setSmsResult(res.error ?? "Odoslanie SMS zlyhalo");
-                    }
-                    setSmsSending(false);
-                  }}
-                  disabled={smsSending || !smsForm.to || !smsForm.message}
-                  className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all"
-                >
-                  {smsSending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-                  Odoslať SMS
                 </Button>
               </div>
             </CardContent>

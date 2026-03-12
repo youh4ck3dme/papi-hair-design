@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/integrations/firebase/config";
+import { auth, db } from "@/integrations/firebase/config";
 import { startOfDay, startOfMonth, getDaysInMonth, getDay, format, addDays } from "date-fns";
 import { generateSharedSlots, getEffectiveIntervals, type BusinessHours, type EmployeeSchedule, type ExistingAppointment, type BusinessHourEntry, type DateOverrideEntry } from "@/lib/availability";
 import { ServiceRow, EmployeeRow } from "@/components/booking/types";
+import { getPublicAvailabilityConflicts } from "@/integrations/firebase/getPublicAvailabilityConflicts";
 
 export function useAvailability(
     business: any,
@@ -67,18 +68,29 @@ export function useAvailability(
             const employeeIds = eligibleEmployees.map((employee) => employee.id);
 
             try {
-                const appointmentDocs = [];
+                const shouldUseCallable = !auth.currentUser || auth.currentUser.isAnonymous;
+                const appointmentDocs: any[] = [];
 
-                for (let index = 0; index < employeeIds.length; index += 10) {
-                    const apptsQuery = query(
-                        collection(db, "appointments"),
-                        where("employee_id", "in", employeeIds.slice(index, index + 10)),
-                        where("start_at", ">=", dayStart.toISOString()),
-                        where("start_at", "<", dayEnd.toISOString())
-                    );
+                if (shouldUseCallable) {
+                    const conflicts = await getPublicAvailabilityConflicts({
+                        business_id: business.id,
+                        employee_ids: employeeIds,
+                        day_start: dayStart.toISOString(),
+                        day_end: dayEnd.toISOString(),
+                    });
+                    appointmentDocs.push(...conflicts);
+                } else {
+                    for (let index = 0; index < employeeIds.length; index += 10) {
+                        const apptsQuery = query(
+                            collection(db, "appointments"),
+                            where("employee_id", "in", employeeIds.slice(index, index + 10)),
+                            where("start_at", ">=", dayStart.toISOString()),
+                            where("start_at", "<", dayEnd.toISOString())
+                        );
 
-                    const apptsSnap = await getDocs(apptsQuery);
-                    appointmentDocs.push(...apptsSnap.docs.map((docSnap) => docSnap.data()));
+                        const apptsSnap = await getDocs(apptsQuery);
+                        appointmentDocs.push(...apptsSnap.docs.map((docSnap) => docSnap.data()));
+                    }
                 }
 
                 const existing = appointmentDocs
@@ -93,8 +105,6 @@ export function useAvailability(
                 setAvailableSlots(buildSlots(selectedFullDate, existing));
             } catch (err) {
                 console.error("useAvailability: Error loading slots", err);
-                // Public booking must not rely on direct reads of protected appointments.
-                // Server-side hold confirmation remains the source of truth for conflicts.
                 setAvailableSlots(buildSlots(selectedFullDate, []));
             } finally {
                 setLoadingSlots(false);
