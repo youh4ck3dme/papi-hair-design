@@ -72,14 +72,14 @@ test.describe("Admin Calendar", () => {
         const slot = page.getByRole("button", { name: /okolo/i }).first();
         await expect(slot).toBeVisible({ timeout: 10000 });
         const slotLabel = (await slot.getAttribute("aria-label")) ?? "";
-        const slotHourMatch = slotLabel.match(/(\d{1,2}):00/);
-        const expectedHour = slotHourMatch ? slotHourMatch[1].padStart(2, "0") : null;
+        const slotTimeMatch = slotLabel.match(/(\d{1,2}:\d{2})/);
+        const expectedTime = slotTimeMatch ? slotTimeMatch[1].padStart(5, "0") : null;
         await slot.click({ position: { x: 8, y: 4 } });
 
         // Modal opens with the clicked time context.
         await expect(page.locator('div[role="dialog"]').getByRole("heading", { name: "Nová rezervácia" })).toBeVisible({ timeout: 5000 });
-        if (expectedHour) {
-            await expect(page.locator('div[role="dialog"] p.text-sm.font-medium.text-primary').first()).toContainText(`${expectedHour}:00`);
+        if (expectedTime) {
+            await expect(page.locator('div[role="dialog"] p.text-sm.font-medium.text-primary').first()).toContainText(expectedTime);
         }
 
         // Close modal
