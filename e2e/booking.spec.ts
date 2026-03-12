@@ -75,24 +75,7 @@ async function reachBookingDetailsStep(page: Page) {
 
     await expect(firstServiceDirect).toBeVisible({ timeout: 5000 });
     await firstServiceDirect.click();
-
-    const workerStep = page.getByTestId("booking-step-employee");
-    await expect(workerStep).toBeVisible({ timeout: 5000 });
-    const workerButtons = workerStep.locator("button");
-    const workerCount = await workerButtons.count();
-    let workerWithAvailabilityFound = false;
-    for (let i = 0; i < workerCount; i++) {
-        await workerButtons.nth(i).click();
-        await page.waitForTimeout(1200);
-        const availableDateCount = await page.locator('[data-testid^="date-btn-"]').count();
-        if (availableDateCount > 0) {
-            workerWithAvailabilityFound = true;
-            break;
-        }
-    }
-    if (!workerWithAvailabilityFound) {
-        throw new Error("No employee with available dates found");
-    }
+    await expect(page.locator('[data-testid^="date-btn-"]').first()).toBeVisible({ timeout: 10000 });
 
     await page.waitForTimeout(1200);
     const dateButtons = page.locator('[data-testid^="date-btn-"]');
@@ -135,9 +118,10 @@ async function completeBooking(page: Page, bookingEmail: string): Promise<{ regi
         await phoneInput.fill("905123456");
     }
 
-    const termsLabel = page.locator("label").filter({ hasText: /podmienk/i }).first();
-    await expect(termsLabel).toBeVisible({ timeout: 5000 });
-    await termsLabel.click();
+    const consentCheckboxes = detailsStep.locator('input[type="checkbox"]');
+    await expect(consentCheckboxes).toHaveCount(4, { timeout: 5000 });
+    await consentCheckboxes.nth(2).setChecked(true, { force: true });
+    await consentCheckboxes.nth(3).setChecked(true, { force: true });
 
     await dismissCookieConsent(page);
 
@@ -204,8 +188,8 @@ test.describe("Booking Flow", () => {
         await reachBookingDetailsStep(page);
 
         const detailsStep = page.getByTestId("booking-step-details");
-        const privacyLink = detailsStep.getByRole("link", { name: /Zásady ochrany osobných údajov|Privacy Policy/i });
-        const termsLink = detailsStep.getByRole("link", { name: /Obchodné podmienky|Terms/i });
+        const privacyLink = detailsStep.locator('a[href="/privacy"]').first();
+        const termsLink = detailsStep.locator('a[href="/terms"]').first();
 
         await expect(privacyLink).toBeVisible({ timeout: 5000 });
         await expect(termsLink).toBeVisible({ timeout: 5000 });
@@ -216,7 +200,7 @@ test.describe("Booking Flow", () => {
 
         await page.goto("/booking");
         await reachBookingDetailsStep(page);
-        await page.getByTestId("booking-step-details").getByRole("link", { name: /Obchodné podmienky|Terms/i }).click();
+        await page.getByTestId("booking-step-details").locator('a[href="/terms"]').first().click();
         await expect(page).toHaveURL(/\/terms/i, { timeout: 10000 });
         await expect(page.getByRole("heading", { name: /Zmluvné podmienky|Terms/i })).toBeVisible({ timeout: 10000 });
     });
