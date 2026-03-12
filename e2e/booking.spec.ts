@@ -30,7 +30,7 @@ async function createAuthTestUser(email: string, password: string) {
     throw new Error(`Unable to create auth test user: ${message || response.statusText}`);
 }
 
-async function completeBooking(page: Page, bookingEmail: string): Promise<{ registerCtaVisible: boolean }> {
+async function reachBookingDetailsStep(page: Page) {
     await page.goto("/booking");
     await expect(page.getByTestId("booking-page")).toBeVisible({ timeout: 15000 });
     await dismissCookieConsent(page);
@@ -70,8 +70,7 @@ async function completeBooking(page: Page, bookingEmail: string): Promise<{ regi
     }
 
     if (!categoryReady) {
-        const servicesCount = await firstServiceDirect.count();
-        throw new Error(`No category with visible services found (service buttons count: ${servicesCount})`);
+        throw new Error("No category with visible services found");
     }
 
     await expect(firstServiceDirect).toBeVisible({ timeout: 5000 });
@@ -95,35 +94,37 @@ async function completeBooking(page: Page, bookingEmail: string): Promise<{ regi
         throw new Error("No employee with available dates found");
     }
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1200);
     const dateButtons = page.locator('[data-testid^="date-btn-"]');
     const dateCount = await dateButtons.count();
-    if (dateCount === 0) throw new Error("No available date button found");
+    if (dateCount === 0) {
+        throw new Error("No available date button found");
+    }
 
     let dateWithSlotsFound = false;
-    for (let i = 0; i < Math.min(12, dateCount); i++) {
+    for (let i = 0; i < Math.min(10, dateCount); i++) {
         const dateButton = dateButtons.nth(i);
         await dateButton.scrollIntoViewIfNeeded();
         await dateButton.click();
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(900);
         const slotVisible = await page.getByTestId("time-slot").first().isVisible({ timeout: 1500 }).catch(() => false);
         if (slotVisible) {
             dateWithSlotsFound = true;
             break;
         }
     }
-    if (!dateWithSlotsFound) throw new Error("No date with available time slots found");
+    if (!dateWithSlotsFound) {
+        throw new Error("No date with available time slots found");
+    }
 
-    await page.waitForTimeout(1200);
+    await page.getByTestId("time-slot").first().click();
+    await expect(page.getByTestId("booking-step-details")).toBeVisible({ timeout: 5000 });
+}
+
+async function completeBooking(page: Page, bookingEmail: string): Promise<{ registerCtaVisible: boolean }> {
+    await reachBookingDetailsStep(page);
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-
-    const timeSlot = page.getByTestId("time-slot").first();
-    await expect(timeSlot).toBeVisible({ timeout: 15000 });
-    await timeSlot.scrollIntoViewIfNeeded();
-    await timeSlot.click();
-
     const detailsStep = page.getByTestId("booking-step-details");
-    await expect(detailsStep).toBeVisible({ timeout: 5000 });
 
     await page.getByPlaceholder("Meno").fill("Test");
     await page.getByPlaceholder("Priezvisko").fill("User");
@@ -197,5 +198,26 @@ test.describe("Booking Flow", () => {
         const { registerCtaVisible } = await completeBooking(page, authEmail);
         expect(registerCtaVisible).toBe(false);
         await expect(page.getByRole("button", { name: /Nová rezervácia/i })).toBeVisible({ timeout: 5000 });
+    });
+
+    test("should show consent links and navigate to privacy and terms pages", async ({ page }) => {
+        await reachBookingDetailsStep(page);
+
+        const detailsStep = page.getByTestId("booking-step-details");
+        const privacyLink = detailsStep.getByRole("link", { name: /Zásady ochrany osobných údajov|Privacy Policy/i });
+        const termsLink = detailsStep.getByRole("link", { name: /Obchodné podmienky|Terms/i });
+
+        await expect(privacyLink).toBeVisible({ timeout: 5000 });
+        await expect(termsLink).toBeVisible({ timeout: 5000 });
+
+        await privacyLink.click();
+        await expect(page).toHaveURL(/\/privacy/i, { timeout: 10000 });
+        await expect(page.getByRole("heading", { name: /Zásady ochrany osobných údajov/i })).toBeVisible({ timeout: 10000 });
+
+        await page.goto("/booking");
+        await reachBookingDetailsStep(page);
+        await page.getByTestId("booking-step-details").getByRole("link", { name: /Obchodné podmienky|Terms/i }).click();
+        await expect(page).toHaveURL(/\/terms/i, { timeout: 10000 });
+        await expect(page.getByRole("heading", { name: /Zmluvné podmienky|Terms/i })).toBeVisible({ timeout: 10000 });
     });
 });
