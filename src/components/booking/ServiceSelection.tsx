@@ -41,7 +41,7 @@ export function ServiceSelection({
             } />
 
             {/* Category Toggle */}
-            <div className="booking-category-neon relative flex gap-0 rounded-full overflow-hidden border border-border bg-muted/40 p-1">
+            <div className="relative flex gap-0 rounded-full overflow-hidden border border-border bg-muted/40 p-1">
                 {(["damske", "panske"] as const).map((cat) => {
                     const isActive = category === cat && expandedCategory === cat;
                     const Icon = cat === "damske" ? Sparkles : User2;
