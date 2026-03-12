@@ -55,6 +55,7 @@
     "step1": "Vyberte kategóriu",
     "step2": "Vyberte službu",
     "step3": "Vyberte pracovníka",
+    "employeeRole": "Pracovník",
     "step4": "Vyberte dátum",
     "step5": "Vyberte čas",
     "step6": "Vyplňte Vaše údaje",
@@ -90,7 +91,9 @@
     "toastTermsRequired": "Musíte súhlasiť s obchodnými podmienkami",
     "toastSlotTaken": "Vybraný čas už nie je dostupný",
     "toastSuccess": "Rezervácia úspešne vytvorená!",
-    "toastServerError": "Chyba pri komunikácii so serverom"
+    "toastServerError": "Chyba pri komunikácii so serverom",
+    "statusOpen": "Otvorené",
+    "statusClosed": "Zatvorené"
   },
   "liquid": {
     "cardLuxury": "SALÓN",

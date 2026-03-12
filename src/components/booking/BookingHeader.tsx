@@ -14,13 +14,11 @@ export function BookingHeader({ isDark, setTheme }: BookingHeaderProps) {
             <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
             <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/30">
-                        <img
-                            src="/favicon.png"
-                            alt="PAPI HAIR DESIGN"
-                            className="w-[15px] h-[15px] rounded-full object-cover"
-                        />
-                    </div>
+                    <img
+                        src="/favicon.png"
+                        alt="PAPI HAIR DESIGN"
+                        className="w-6 h-6 object-contain shrink-0"
+                    />
                     <div className="flex flex-col leading-none">
                         <span className="text-[15px] font-bold tracking-widest uppercase font-serif">
                             PAPI <GoldText>HAIR</GoldText> DESIGN

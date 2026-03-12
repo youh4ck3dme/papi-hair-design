@@ -55,6 +55,7 @@
     "step1": "Select category",
     "step2": "Select service",
     "step3": "Select staff",
+    "employeeRole": "Stylist",
     "step4": "Select date",
     "step5": "Select time",
     "step6": "Enter your details",
@@ -90,7 +91,9 @@
     "toastTermsRequired": "You must agree to the terms and conditions",
     "toastSlotTaken": "The selected time is no longer available",
     "toastSuccess": "Booking successfully created!",
-    "toastServerError": "Server communication error"
+    "toastServerError": "Server communication error",
+    "statusOpen": "Open",
+    "statusClosed": "Closed"
   },
   "liquid": {
     "cardLuxury": "LUXURY",

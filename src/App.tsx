@@ -45,6 +45,25 @@ const LazyFallback = () => (
 );
 
 const queryClient = new QueryClient();
+const CANONICAL_HOST = "booking.papihairdesign.sk";
+
+function useCanonicalHostRedirect() {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const { hostname, pathname, search, hash, protocol } = window.location;
+
+    if (import.meta.env.DEV) return;
+    if (protocol !== "https:") return;
+    if (hostname === CANONICAL_HOST) return;
+
+    const isFirebaseHost =
+      hostname.endsWith(".web.app") || hostname.endsWith(".firebaseapp.com");
+    if (!isFirebaseHost) return;
+
+    const targetUrl = `https://${CANONICAL_HOST}${pathname}${search}${hash}`;
+    window.location.replace(targetUrl);
+  }, []);
+}
 
 /** Speed Insights script is only served at /_vercel/... on Vercel; elsewhere it 404s. Render only on Vercel. */
 function useSpeedInsightsEnabled() {
@@ -62,6 +81,7 @@ function useSpeedInsightsEnabled() {
 }
 
 const App = () => {
+  useCanonicalHostRedirect();
   const speedInsightsEnabled = useSpeedInsightsEnabled();
   const salonLoginEnabled =
     import.meta.env.DEV || import.meta.env.VITE_ENABLE_SALON_LOGIN === "true";

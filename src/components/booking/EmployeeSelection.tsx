@@ -19,13 +19,21 @@ export function EmployeeSelection({
 }: EmployeeSelectionProps) {
     const { t } = useTranslation();
 
+    const resolvePhotoSrc = (employee: EmployeeRow): string => {
+        if (employee.photo_url) return employee.photo_url;
+        const keyById = employeePhotos[employee.id];
+        if (keyById) return keyById;
+        const normalizedName = employee.display_name.trim().toLowerCase();
+        return employeePhotos[normalizedName] ?? "";
+    };
+
     return (
         <div className="animate-fade-in px-4" data-testid="booking-step-employee">
             <StepHeader num="3" title={t("booking.step3")} />
             <div className="flex flex-col gap-3">
                 {filteredEmployees.map((w) => {
                     const isSelected = selectedWorkerId === w.id;
-                    const photoSrc = w.photo_url || employeePhotos[w.id] || "";
+                    const photoSrc = resolvePhotoSrc(w);
                     return (
                         <button
                             type="button"
@@ -62,7 +70,7 @@ export function EmployeeSelection({
                                     <p className={`font-bold text-base tracking-wide transition-colors ${isSelected ? "text-primary" : "text-foreground"}`}>
                                         {w.display_name}
                                     </p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">{t("booking.employee")}</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">{t("booking.employeeRole")}</p>
                                 </div>
                                 {/* Selection pill */}
                                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0 ${isSelected ? "border-primary scale-110" : "border-muted-foreground/30 group-hover:border-primary/50"}`}>

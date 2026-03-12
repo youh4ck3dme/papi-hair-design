@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Star, Sparkles, User2 } from "lucide-react";
+import { Sparkles, User2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { GoldText, StepHeader, RadioIcon } from "./BookingUI";
 import { ServiceRow } from "./types";
@@ -13,6 +13,7 @@ interface ServiceSelectionProps {
     filteredServices: ServiceRow[];
     selectedServiceId: string | null;
     setSelectedServiceId: (id: string | null) => void;
+    isBusinessOpenNow: boolean;
     onCategoryChange: () => void;
 }
 
@@ -25,6 +26,7 @@ export function ServiceSelection({
     filteredServices,
     selectedServiceId,
     setSelectedServiceId,
+    isBusinessOpenNow,
     onCategoryChange,
 }: ServiceSelectionProps) {
     const { t } = useTranslation();
@@ -35,8 +37,14 @@ export function ServiceSelection({
         <div className="px-4" data-testid="booking-step-category">
             {/* Step 1 */}
             <StepHeader num="1" title={t("booking.step1")} extra={
-                <div className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold border border-primary/40 text-primary bg-primary/5">
-                    <Star size={11} className="fill-primary" /> 4.9
+                <div
+                    className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold border ${isBusinessOpenNow
+                        ? "border-emerald-500/40 text-emerald-600 bg-emerald-500/10"
+                        : "border-rose-500/40 text-rose-600 bg-rose-500/10"
+                        }`}
+                >
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-current" />
+                    {isBusinessOpenNow ? t("booking.statusOpen") : t("booking.statusClosed")}
                 </div>
             } />
 

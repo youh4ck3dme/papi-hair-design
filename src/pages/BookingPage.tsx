@@ -4,8 +4,6 @@ import { useTheme } from "next-themes";
 import { Loader2 } from "lucide-react";
 import { enGB, sk } from "date-fns/locale";
 
-import miskaImg from "@/assets/employee-miska.jpeg";
-import matoImg from "@/assets/employee-mato.jpg";
 
 import { BookingHeader } from "@/components/booking/BookingHeader";
 import { ServiceSelection } from "@/components/booking/ServiceSelection";
@@ -13,15 +11,17 @@ import { EmployeeSelection } from "@/components/booking/EmployeeSelection";
 import { DateTimeSelection } from "@/components/booking/DateTimeSelection";
 import { ContactConfirmation } from "@/components/booking/ContactConfirmation";
 import { BookingSuccess } from "@/components/booking/BookingSuccess";
+import { getEffectiveIntervals, type BusinessHours } from "@/lib/availability";
 
 import { useBookingData } from "@/hooks/useBookingData";
 import { useAvailability } from "@/hooks/useAvailability";
 import { useBookingForm } from "@/hooks/useBookingForm";
 
-// Map employee IDs to local photos
+// Fallback employee photos by display name
 const EMPLOYEE_PHOTOS: Record<string, string> = {
-  "c1000000-0000-0000-0000-000000000001": miskaImg,
-  "c1000000-0000-0000-0000-000000000002": matoImg,
+  "miska": "https://papihairdesign.sk/images/miska.webp",
+  "mato": "https://papihairdesign.sk/images/mato.webp",
+  "papi": "https://papihairdesign.sk/images/papi.webp",
 };
 
 export default function BookingPage() {
@@ -90,6 +90,31 @@ export default function BookingPage() {
     timeGroups
   } = useAvailability(business, businessHourEntries, dateOverrides, schedules, selectedService, selectedEmployee);
 
+  const isBusinessOpenNow = useMemo(() => {
+    if (!business) return false;
+
+    const now = new Date();
+    const intervals = getEffectiveIntervals(
+      now,
+      businessHourEntries,
+      dateOverrides,
+      business.opening_hours as BusinessHours | undefined
+    );
+
+    if (!intervals?.length) return false;
+
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    return intervals.some(({ start, end }) => {
+      const [startHour, startMinute] = start.split(":").map((v) => Number(v));
+      const [endHour, endMinute] = end.split(":").map((v) => Number(v));
+      if ([startHour, startMinute, endHour, endMinute].some((v) => Number.isNaN(v))) return false;
+
+      const intervalStart = startHour * 60 + startMinute;
+      const intervalEnd = endHour * 60 + endMinute;
+      return nowMinutes >= intervalStart && nowMinutes < intervalEnd;
+    });
+  }, [business, businessHourEntries, dateOverrides]);
+
   if (initialLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -124,6 +149,7 @@ export default function BookingPage() {
         filteredServices={filteredServices}
         selectedServiceId={selectedServiceId}
         setSelectedServiceId={setSelectedServiceId}
+        isBusinessOpenNow={isBusinessOpenNow}
         onCategoryChange={() => {
           setSelectedWorkerId(null);
           setSelectedDate(null);
