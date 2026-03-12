@@ -1,6 +1,7 @@
 import { User, Mail, Phone, PenLine, Check, Loader2, CalendarCheck2, Clock4 } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { StepHeader } from "./BookingUI";
 import { ServiceRow, EmployeeRow } from "./types";
 
@@ -159,11 +160,14 @@ export function ContactConfirmation({
                 <ConsentBox checked={formData.terms} onChange={() => handleConsentChange("terms")}>
                     {t("booking.consentTerms")}
                 </ConsentBox>
-                <div
-                    className="text-right text-primary/80 text-xs mt-1 cursor-pointer hover:underline"
-                    onClick={() => globalThis.location.href = "/privacy"}
-                >
-                    {t("common.privacyPolicy")}
+                <div className="mt-1 flex items-center justify-end gap-2 text-xs">
+                    <Link to="/privacy" className="text-primary/85 hover:underline">
+                        {t("common.privacyPolicy")}
+                    </Link>
+                    <span className="text-muted-foreground/50">•</span>
+                    <Link to="/terms" className="text-primary/85 hover:underline">
+                        {t("common.termsAndConditions")}
+                    </Link>
                 </div>
             </div>
 
