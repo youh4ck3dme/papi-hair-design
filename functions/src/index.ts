@@ -4,11 +4,16 @@ admin.initializeApp();
 
 const sentryDsn = process.env.SENTRY_DSN;
 if (sentryDsn) {
-  const Sentry = require("@sentry/node") as typeof import("@sentry/node");
-  Sentry.init({
-    dsn: sentryDsn,
-    tracesSampleRate: 0.1,
-  });
+  void import("@sentry/node")
+    .then((Sentry) => {
+      Sentry.init({
+        dsn: sentryDsn,
+        tracesSampleRate: 0.1,
+      });
+    })
+    .catch((error) => {
+      console.warn("Sentry init failed", error);
+    });
 }
 
 export { claimBooking } from "./claimBooking";

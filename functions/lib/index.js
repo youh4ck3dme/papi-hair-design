@@ -38,10 +38,14 @@ const admin = __importStar(require("firebase-admin"));
 admin.initializeApp();
 const sentryDsn = process.env.SENTRY_DSN;
 if (sentryDsn) {
-    const Sentry = require("@sentry/node");
-    Sentry.init({
-        dsn: sentryDsn,
-        tracesSampleRate: 0.1,
+    void Promise.resolve().then(() => __importStar(require("@sentry/node"))).then((Sentry) => {
+        Sentry.init({
+            dsn: sentryDsn,
+            tracesSampleRate: 0.1,
+        });
+    })
+        .catch((error) => {
+        console.warn("Sentry init failed", error);
     });
 }
 var claimBooking_1 = require("./claimBooking");
