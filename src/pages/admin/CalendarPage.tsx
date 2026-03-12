@@ -28,7 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink } from "lucide-react";
+import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
 import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
 import {
@@ -38,6 +38,7 @@ import {
   canAdminConfirmBooking,
   canAdminMarkNoShow,
 } from "@/lib/adminBookingStatus";
+import { buildAdminCalendarCsv, buildAdminCalendarPrintHtml } from "@/lib/adminCalendarExport";
 
 interface CalEvent {
   id: string; title: string; start: Date; end: Date; status: string; resource: any;
@@ -329,6 +330,52 @@ export default function CalendarPage() {
     };
   });
 
+  const selectedDayEvents = events
+    .filter((event) => fmtDate(event.start, "yyyy-MM-dd") === fmtDate(date, "yyyy-MM-dd"))
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+  const exportRows = selectedDayEvents.map((event) => ({
+    reference: event.id,
+    customerName: event.resource?.customer_name ?? event.title,
+    customerEmail: event.resource?.customer_email ?? null,
+    customerPhone: event.resource?.customer_phone ?? null,
+    serviceName: event.resource?.service_name ?? null,
+    employeeName: event.resource?.employee_name ?? null,
+    start: event.start,
+    end: event.end,
+    status: ADMIN_BOOKING_STATUS_LABELS[event.status as keyof typeof ADMIN_BOOKING_STATUS_LABELS] ?? event.status,
+    note: typeof event.resource?.note === "string" ? event.resource.note : null,
+  }));
+
+  const handleExportCsv = () => {
+    const csv = buildAdminCalendarCsv(exportRows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `kalendar-${fmtDate(date, "yyyy-MM-dd")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintDay = () => {
+    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1200,height=900");
+    if (!printWindow) {
+      toast.error("Nepodarilo sa otvoriť tlačové okno");
+      return;
+    }
+
+    const html = buildAdminCalendarPrintHtml(
+      fmtDate(date, "EEEE, d. MMMM yyyy", { locale: sk }),
+      exportRows
+    );
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
 
   const handleBook = async () => {
     if (!bookForm.service_id || !bookForm.employee_id || !bookForm.start_at) { toast.error("Vyplňte všetky polia"); return; }
@@ -425,7 +472,17 @@ export default function CalendarPage() {
     <div className="space-y-4 h-full">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Kalendár</h1>
-        {loading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={handleExportCsv} disabled={exportRows.length === 0}>
+            <Download className="mr-2 h-4 w-4" />
+            CSV
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={handlePrintDay} disabled={exportRows.length === 0}>
+            <Printer className="mr-2 h-4 w-4" />
+            PDF / Tlač
+          </Button>
+          {loading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
+        </div>
       </div>
 
       <div className="bg-card rounded-xl border border-border p-4 flex flex-col min-h-0" style={{ height: "calc(100vh - 200px)", minHeight: 500 }}>
