@@ -24,8 +24,9 @@ export default function CalendarEventCard({ event, employee, hourHeight, startHo
   return (
     <button
       onClick={() => onClick(event)}
-      className={`absolute left-1 right-1 rounded-lg border px-2 py-1.5 text-left ${blocked ? "cal-event--blocked" : "cal-event--reservation"}`}
+      className={`absolute left-1 right-1 rounded-lg border px-2 py-1.5 text-left touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 ${blocked ? "cal-event--blocked" : "cal-event--reservation"}`}
       style={{ top, height, borderColor: accent }}
+      aria-label={`${event.serviceName || event.title} ${formatTimeInTZ(start, timezone)} - ${formatTimeInTZ(end, timezone)}`}
     >
       <p className="truncate text-xs font-semibold leading-tight" style={{ color: accent }}>
         {blocked && <Lock className="mr-1 inline h-3 w-3" />}
