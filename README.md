@@ -15,6 +15,7 @@ Aktualny produkcny stav, hotove bloky a dalsie kroky:
 
 - [docs/GRANDE-FINALE-STATUS-2026-03-11.md](./docs/GRANDE-FINALE-STATUS-2026-03-11.md)
 - [docs/ANALYTICS.md](./docs/ANALYTICS.md)
+- [OWNERMANUAL.md](./OWNERMANUAL.md)
 
 `TODO.md` je historicky diagnosticky dokument a nie je uz primarny operativny plan.
 
