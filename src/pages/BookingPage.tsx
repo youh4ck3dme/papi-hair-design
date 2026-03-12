@@ -7,7 +7,6 @@ import { enGB, sk } from "date-fns/locale";
 
 import { BookingHeader } from "@/components/booking/BookingHeader";
 import { ServiceSelection } from "@/components/booking/ServiceSelection";
-import { EmployeeSelection } from "@/components/booking/EmployeeSelection";
 import { DateTimeSelection } from "@/components/booking/DateTimeSelection";
 import { ContactConfirmation } from "@/components/booking/ContactConfirmation";
 import { BookingSuccess } from "@/components/booking/BookingSuccess";
@@ -16,13 +15,6 @@ import { getEffectiveIntervals, type BusinessHours } from "@/lib/availability";
 import { useBookingData } from "@/hooks/useBookingData";
 import { useAvailability } from "@/hooks/useAvailability";
 import { useBookingForm } from "@/hooks/useBookingForm";
-
-// Fallback employee photos by display name
-const EMPLOYEE_PHOTOS: Record<string, string> = {
-  "miska": "https://papihairdesign.sk/images/miska.webp",
-  "mato": "https://papihairdesign.sk/images/mato.webp",
-  "papi": "https://papihairdesign.sk/images/papi.webp",
-};
 
 export default function BookingPage() {
   const { i18n } = useTranslation();
@@ -52,8 +44,6 @@ export default function BookingPage() {
     setSubcategory,
     selectedServiceId,
     setSelectedServiceId,
-    selectedWorkerId,
-    setSelectedWorkerId,
     formData,
     setFormData,
     contactErrors,
@@ -64,7 +54,6 @@ export default function BookingPage() {
     filteredServices,
     selectedService,
     filteredEmployees,
-    selectedEmployee,
     handleCheckAll,
     handleConsentChange,
     handleSubmit
@@ -80,15 +69,13 @@ export default function BookingPage() {
     setCalendarMonth,
     availableSlots,
     loadingSlots,
-    monthStart,
     daysInMonth,
     firstDayOffset,
     today,
     maxDays,
-    isEmployeeAvailableOnDay,
     isBusinessOpenOnDay,
     timeGroups
-  } = useAvailability(business, businessHourEntries, dateOverrides, schedules, selectedService, selectedEmployee);
+  } = useAvailability(business, businessHourEntries, dateOverrides, schedules, selectedService, filteredEmployees);
 
   const isBusinessOpenNow = useMemo(() => {
     if (!business) return false;
@@ -128,7 +115,6 @@ export default function BookingPage() {
       <BookingSuccess
         bookingResult={bookingResult}
         selectedService={selectedService}
-        selectedEmployee={selectedEmployee}
         selectedFullDate={selectedFullDate}
         selectedTime={selectedTime}
         dateLocale={dateLocale}
@@ -151,26 +137,12 @@ export default function BookingPage() {
         setSelectedServiceId={setSelectedServiceId}
         isBusinessOpenNow={isBusinessOpenNow}
         onCategoryChange={() => {
-          setSelectedWorkerId(null);
           setSelectedDate(null);
           setSelectedTime(null);
         }}
       />
 
       {selectedServiceId && (
-        <EmployeeSelection
-          filteredEmployees={filteredEmployees}
-          selectedWorkerId={selectedWorkerId}
-          setSelectedWorkerId={setSelectedWorkerId}
-          employeePhotos={EMPLOYEE_PHOTOS}
-          onEmployeeSelect={() => {
-            setSelectedDate(null);
-            setSelectedTime(null);
-          }}
-        />
-      )}
-
-      {selectedWorkerId && (
         <DateTimeSelection
           calendarMonth={calendarMonth}
           setCalendarMonth={setCalendarMonth}
@@ -179,13 +151,11 @@ export default function BookingPage() {
           daysInMonth={daysInMonth}
           today={today}
           maxDays={maxDays}
-          selectedWorkerId={selectedWorkerId}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
           selectedFullDate={selectedFullDate}
           setSelectedTime={setSelectedTime}
           isBusinessOpenOnDay={isBusinessOpenOnDay}
-          isEmployeeAvailableOnDay={isEmployeeAvailableOnDay}
           loadingSlots={loadingSlots}
           availableSlots={availableSlots}
           selectedTime={selectedTime}
@@ -201,7 +171,6 @@ export default function BookingPage() {
           handleCheckAll={handleCheckAll}
           handleConsentChange={handleConsentChange}
           selectedService={selectedService}
-          selectedEmployee={selectedEmployee}
           selectedFullDate={selectedFullDate}
           selectedTime={selectedTime}
           dateLocale={dateLocale}

@@ -5,11 +5,13 @@ import {
   HttpsError,
 } from "firebase-functions/v2/https";
 import * as crypto from "crypto";
+import { assignEmployeeForSlot } from "./autoAssignEmployee";
+import { normalizeEmail, normalizePhone } from "./publicBookingAccess";
 
 interface CreateBookingHoldInput {
   business_id: string;
   service_id: string;
-  employee_id: string;
+  employee_id?: string;
   start_at: string;
   customer_name: string;
   customer_email: string;
@@ -18,13 +20,6 @@ interface CreateBookingHoldInput {
 }
 
 const HOLD_TTL_MS = 15 * 60 * 1000; // 15 minutes
-
-function normalizeEmail(email: string): string {
-  const [localRaw, domain] = email.toLowerCase().trim().split("@");
-  if (!domain) return email.toLowerCase().trim();
-  const local = localRaw.split("+")[0];
-  return `${local}@${domain}`;
-}
 
 function createIdempotencyKey(input?: string): string {
   if (input && typeof input === "string" && input.trim().length > 0) {
@@ -42,7 +37,6 @@ export const createBookingHold = functions.https.onCall(
     const {
       business_id,
       service_id,
-      employee_id,
       start_at,
       customer_name,
       customer_email,
@@ -53,7 +47,6 @@ export const createBookingHold = functions.https.onCall(
     if (
       !business_id ||
       !service_id ||
-      !employee_id ||
       !start_at ||
       !customer_name ||
       !customer_email
@@ -70,6 +63,7 @@ export const createBookingHold = functions.https.onCall(
     const holdExpiresAt = new Date(now + HOLD_TTL_MS);
     const idemKey = createIdempotencyKey(idempotency_key);
     const customerEmail = normalizeEmail(customer_email);
+    const customerPhone = normalizePhone(customer_phone);
 
     // Idempotency: return existing hold for the same key
     const existingSnap = await db
@@ -82,29 +76,33 @@ export const createBookingHold = functions.https.onCall(
       return { success: true, appointment_id: doc.id, reused: true };
     }
 
-    // Load service and employee
-    const [serviceSnap, employeeSnap] = await Promise.all([
-      db.collection("services").doc(service_id).get(),
-      db.collection("employees").doc(employee_id).get(),
-    ]);
+    // Load service and auto-assign eligible employee
+    const serviceSnap = await db.collection("services").doc(service_id).get();
     const service = serviceSnap.data();
-    const employee = employeeSnap.data();
     if (!service || service.business_id !== business_id) {
       throw new HttpsError("not-found", "Service not found");
-    }
-    if (!employee || employee.business_id !== business_id) {
-      throw new HttpsError("not-found", "Employee not found");
     }
 
     const totalMinutes =
       (service.duration_minutes || 30) + (service.buffer_minutes || 0);
     const endDate = new Date(startDate.getTime() + totalMinutes * 60 * 1000);
 
+    const assignedEmployee = await assignEmployeeForSlot({
+      businessId: business_id,
+      serviceId: service_id,
+      startAtIso: startDate.toISOString(),
+      endAtIso: endDate.toISOString(),
+    });
+
+    if (!assignedEmployee) {
+      throw new HttpsError("already-exists", "Slot is not available");
+    }
+
     // Conflict detection with index-safe query shape.
     // We query a bounded candidate set and apply overlap/status checks in memory.
     const conflictCandidatesSnap = await db
       .collection("appointments")
-      .where("employee_id", "==", employee_id)
+      .where("employee_id", "==", assignedEmployee.id)
       .where("start_at", "<", endDate.toISOString())
       .limit(50)
       .get();
@@ -145,7 +143,7 @@ export const createBookingHold = functions.https.onCall(
       customerId = customersSnap.docs[0].id;
       await db.collection("customers").doc(customerId).update({
         full_name: customer_name.trim(),
-        phone: customer_phone || null,
+        phone: customerPhone,
         updated_at: new Date().toISOString(),
       });
     } else {
@@ -153,7 +151,7 @@ export const createBookingHold = functions.https.onCall(
         business_id,
         full_name: customer_name.trim(),
         email: customerEmail,
-        phone: customer_phone || null,
+        phone: customerPhone,
         created_at: new Date().toISOString(),
       });
       customerId = newCust.id;
@@ -164,10 +162,10 @@ export const createBookingHold = functions.https.onCall(
       customer_id: customerId,
       customer_name: customer_name.trim(),
       customer_email: customerEmail,
-      customer_phone: customer_phone || null,
-      employee_id,
-      employee_name: employee.display_name || "?",
-      employee_color: employee.color || null,
+      customer_phone: customerPhone,
+      employee_id: assignedEmployee.id,
+      employee_name: assignedEmployee.display_name || "?",
+      employee_color: assignedEmployee.color || null,
       service_id,
       service_name: service.name_sk || "?",
       service_price: service.price || null,

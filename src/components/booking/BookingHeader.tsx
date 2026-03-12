@@ -9,9 +9,15 @@ interface BookingHeaderProps {
 
 export function BookingHeader({ isDark, setTheme }: BookingHeaderProps) {
     return (
-        <header className="sticky top-0 z-50 safe-x flex flex-col bg-background/95 border-b border-border/60 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+        <header
+            className="sticky top-0 z-50 safe-x flex flex-col border-b border-border/60 bg-background/95 backdrop-blur-md pt-[env(safe-area-inset-top)]"
+            style={{ background: "linear-gradient(180deg, hsl(var(--baby-blue)) 0%, rgba(255,255,255,0.95) 65%)" }}
+        >
             {/* Gold accent strip */}
-            <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
+            <div
+                className="h-0.5 w-full opacity-80"
+                style={{ background: "linear-gradient(90deg, transparent, hsl(var(--baby-blue)) 55%, transparent)" }}
+            />
             <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-2.5">
                     <img

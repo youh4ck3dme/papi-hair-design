@@ -39,7 +39,9 @@ export interface MembershipRow {
 }
 
 export interface BookingResult {
-    claim_token?: string;
-    customer_email?: string;
-    customer_name?: string;
+  claim_token?: string;
+  customer_email?: string;
+  customer_name?: string;
+  history_access_token?: string | null;
+  history_reference?: string | null;
 }

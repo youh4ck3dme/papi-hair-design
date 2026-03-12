@@ -1,9 +1,9 @@
 import { User, Mail, Phone, PenLine, Check, Loader2, CalendarCheck2, Clock4 } from "lucide-react";
 import { format } from "date-fns";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { StepHeader } from "./BookingUI";
-import { ServiceRow, EmployeeRow } from "./types";
+import { ServiceRow } from "./types";
 
 interface ContactConfirmationProps {
     formData: any;
@@ -12,7 +12,6 @@ interface ContactConfirmationProps {
     handleCheckAll: () => void;
     handleConsentChange: (field: "marketing" | "terms") => void;
     selectedService: ServiceRow | null;
-    selectedEmployee: EmployeeRow | null;
     selectedFullDate: Date | null;
     selectedTime: string | null;
     dateLocale: any;
@@ -53,7 +52,6 @@ export function ContactConfirmation({
     handleCheckAll,
     handleConsentChange,
     selectedService,
-    selectedEmployee,
     selectedFullDate,
     selectedTime,
     dateLocale,
@@ -64,11 +62,18 @@ export function ContactConfirmation({
 
     return (
         <div className="animate-fade-in pb-12 px-4" data-testid="booking-step-details">
-            <StepHeader num="6" title={t("booking.step6")} />
+            <StepHeader num="5" title={t("booking.step5")} />
 
             {/* Booking summary card */}
             {selectedService && selectedFullDate && (
                 <div className="mb-6 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 p-4 space-y-2">
+                    <div className="flex items-center gap-2.5 text-sm">
+                        <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                            <CalendarCheck2 size={13} className="text-primary" />
+                        </div>
+                        <span className="text-muted-foreground">{t("booking.confirmBrand")}</span>
+                        <span className="font-semibold text-foreground ml-auto">PAPI HAIR DESIGN</span>
+                    </div>
                     <div className="flex items-center gap-2.5 text-sm">
                         <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
                             <CalendarCheck2 size={13} className="text-primary" />
@@ -83,12 +88,6 @@ export function ContactConfirmation({
                         <span className="text-muted-foreground">{format(selectedFullDate, "d. MMMM", { locale: dateLocale })}</span>
                         <span className="font-bold text-primary ml-auto">{selectedTime}</span>
                     </div>
-                    {selectedEmployee && (
-                        <div className="flex items-center gap-2.5 text-sm pt-0.5 border-t border-primary/10">
-                            <span className="text-muted-foreground">{t("booking.confirmEmployee")}</span>
-                            <span className="font-semibold text-foreground ml-auto">{selectedEmployee.display_name}</span>
-                        </div>
-                    )}
                 </div>
             )}
 
@@ -156,6 +155,15 @@ export function ContactConfirmation({
                 <ConsentBox checked={formData.marketing} onChange={() => handleConsentChange("marketing")}>
                     {t("booking.consentMarketing")}{" "}
                     <span className="text-primary hover:underline cursor-pointer">{t("booking.consentMarketingLink")}</span>
+                </ConsentBox>
+                <ConsentBox checked={formData.gdpr} onChange={() => handleConsentChange("gdpr")}>
+                    <Trans
+                        i18nKey="booking.consentGdpr"
+                        components={[
+                            <Link key="privacy" to="/privacy" className="text-primary hover:underline" />,
+                            <Link key="terms" to="/terms" className="text-primary hover:underline" />,
+                        ]}
+                    />
                 </ConsentBox>
                 <ConsentBox checked={formData.terms} onChange={() => handleConsentChange("terms")}>
                     {t("booking.consentTerms")}

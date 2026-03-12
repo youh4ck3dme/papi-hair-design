@@ -39,16 +39,12 @@ const firestore_1 = require("firebase-admin/firestore");
 const https_1 = require("firebase-functions/v2/https");
 const crypto = __importStar(require("crypto"));
 const emailQueue_1 = require("./emailQueue");
+const autoAssignEmployee_1 = require("./autoAssignEmployee");
+const publicBookingAccess_1 = require("./publicBookingAccess");
+const guards_1 = require("./guards");
 const RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
 const RECAPTCHA_MIN_SCORE = 0.5;
 const RECAPTCHA_EXPECTED_ACTION = "booking";
-function normalizeEmail(email) {
-    const [localRaw, domain] = email.toLowerCase().trim().split("@");
-    if (!domain)
-        return email.toLowerCase().trim();
-    const local = localRaw.split("+")[0];
-    return `${local}@${domain}`;
-}
 function extractClientIp(rawRequest) {
     const forwarded = rawRequest.headers["x-forwarded-for"];
     if (typeof forwarded === "string" && forwarded.trim().length > 0) {
@@ -105,13 +101,25 @@ exports.createPublicBooking = functions.https.onCall({ region: "europe-west1" },
     const { data } = request;
     const db = (0, firestore_1.getFirestore)();
     const ip = extractClientIp(request.rawRequest) || "unknown";
-    await (0, rateLimit_1.checkRateLimit)(ip);
-    const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone, idempotency_key } = data;
-    if (!business_id || !service_id || !employee_id || !start_at || !customer_name || !customer_email) {
+    const adminMode = request.data?.admin_mode === true;
+    if (!adminMode) {
+        await (0, rateLimit_1.checkRateLimit)(ip);
+    }
+    const { business_id, service_id, start_at, customer_name, customer_email, customer_phone, note, payment_method, idempotency_key } = data;
+    if (!business_id || !service_id || !start_at || !customer_name || !customer_email) {
         throw new https_1.HttpsError("invalid-argument", "Chýbajúce povinné polia");
     }
-    await verifyRecaptchaIfConfigured(data.recaptcha_token, extractClientIp(request.rawRequest));
-    const sanitizedEmail = normalizeEmail(customer_email);
+    if (adminMode) {
+        const uid = (0, guards_1.requireAuth)(request.auth);
+        await (0, guards_1.requireMembership)(uid, business_id, ["owner", "admin"]);
+    }
+    else {
+        await verifyRecaptchaIfConfigured(data.recaptcha_token, extractClientIp(request.rawRequest));
+    }
+    const sanitizedEmail = (0, publicBookingAccess_1.normalizeEmail)(customer_email);
+    const sanitizedPhone = (0, publicBookingAccess_1.normalizePhone)(customer_phone);
+    const sanitizedNote = typeof note === "string" && note.trim().length > 0 ? note.trim() : null;
+    const sanitizedPaymentMethod = typeof payment_method === "string" && payment_method.trim().length > 0 ? payment_method.trim() : null;
     const idemKey = (idempotency_key && idempotency_key.trim()) || crypto.randomUUID();
     const startDate = new Date(start_at);
     if (isNaN(startDate.getTime())) {
@@ -123,31 +131,36 @@ exports.createPublicBooking = functions.https.onCall({ region: "europe-west1" },
         .get();
     if (!existingSnap.empty) {
         const existing = existingSnap.docs[0];
-        return {
+        const reusedResponse = {
             success: true,
             appointment_id: existing.id,
             claim_token: null,
+            history_access_token: null,
+            history_reference: existing.id,
             customer_email: sanitizedEmail,
             customer_name: customer_name.trim(),
             reused: true
         };
+        return reusedResponse;
     }
-    const [serviceSnap, employeeSnap] = await Promise.all([
-        db.collection("services").doc(service_id).get(),
-        db.collection("employees").doc(employee_id).get()
-    ]);
+    const serviceSnap = await db.collection("services").doc(service_id).get();
     const service = serviceSnap.data();
-    const employee = employeeSnap.data();
     if (!service || !service.is_active || service.business_id !== business_id) {
         throw new https_1.HttpsError("not-found", "Služba nebola nájdená");
     }
-    if (!employee || !employee.is_active || employee.business_id !== business_id) {
-        throw new https_1.HttpsError("not-found", "Zamestnanec nebol nájdený");
-    }
     const totalMinutes = (service.duration_minutes || 30) + (service.buffer_minutes || 0);
     const endDate = new Date(startDate.getTime() + totalMinutes * 60 * 1000);
+    const assignedEmployee = await (0, autoAssignEmployee_1.assignEmployeeForSlot)({
+        businessId: business_id,
+        serviceId: service_id,
+        startAtIso: startDate.toISOString(),
+        endAtIso: endDate.toISOString(),
+    });
+    if (!assignedEmployee) {
+        throw new https_1.HttpsError("already-exists", "Tento termín je už obsadený");
+    }
     const conflictCandidatesSnap = await db.collection("appointments")
-        .where("employee_id", "==", employee_id)
+        .where("employee_id", "==", assignedEmployee.id)
         .where("start_at", "<", endDate.toISOString())
         .limit(50)
         .get();
@@ -176,7 +189,7 @@ exports.createPublicBooking = functions.https.onCall({ region: "europe-west1" },
         customerId = customersSnap.docs[0].id;
         await db.collection("customers").doc(customerId).update({
             full_name: customer_name.trim(),
-            phone: customer_phone || null
+            phone: sanitizedPhone
         });
     }
     else {
@@ -184,7 +197,7 @@ exports.createPublicBooking = functions.https.onCall({ region: "europe-west1" },
             business_id,
             full_name: customer_name.trim(),
             email: sanitizedEmail,
-            phone: customer_phone || null,
+            phone: sanitizedPhone,
             created_at: new Date().toISOString()
         });
         customerId = newCust.id;
@@ -194,40 +207,60 @@ exports.createPublicBooking = functions.https.onCall({ region: "europe-west1" },
         customer_id: customerId,
         customer_name: customer_name.trim(),
         customer_email: sanitizedEmail,
-        customer_phone: customer_phone || null,
-        employee_id,
-        employee_name: employee.display_name || "?",
-        employee_color: employee.color || null,
+        customer_phone: sanitizedPhone,
+        employee_id: assignedEmployee.id,
+        employee_name: assignedEmployee.display_name || "?",
+        employee_color: assignedEmployee.color || null,
         service_id,
         service_name: service.name_sk || "?",
         service_price: service.price || null,
+        note: sanitizedNote,
+        payment_method: sanitizedPaymentMethod,
         start_at: startDate.toISOString(),
         end_at: endDate.toISOString(),
         status: "confirmed",
         idempotency_key: idemKey,
         created_at: new Date().toISOString()
     });
-    const token = crypto.randomBytes(32).toString("hex");
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
-    await db.collection("booking_claims").add({
-        business_id,
-        appointment_id: appointment.id,
-        email: sanitizedEmail,
-        token_hash: tokenHash,
-        expires_at: expiresAt.toISOString(),
-        created_at: new Date().toISOString()
-    });
-    try {
-        await (0, emailQueue_1.queueCustomerBookingEmail)({
-            businessId: business_id,
-            appointmentId: appointment.id,
-            customerEmail: sanitizedEmail,
-            customerName: customer_name.trim(),
-            serviceName: typeof service.name_sk === "string" ? service.name_sk : null,
-            employeeName: typeof employee.display_name === "string" ? employee.display_name : null,
-            startAtIso: startDate.toISOString(),
+    let token = null;
+    let historyToken = null;
+    if (!adminMode) {
+        const claimToken = (0, publicBookingAccess_1.createOpaqueToken)();
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+        const historyAccess = (0, publicBookingAccess_1.createOpaqueToken)();
+        await db.collection("booking_claims").add({
+            business_id,
+            appointment_id: appointment.id,
+            email: sanitizedEmail,
+            token_hash: claimToken.tokenHash,
+            expires_at: expiresAt.toISOString(),
+            created_at: new Date().toISOString()
         });
+        await db.collection("booking_history_access").add({
+            business_id,
+            appointment_id: appointment.id,
+            customer_id: customerId,
+            customer_email: sanitizedEmail,
+            customer_phone: sanitizedPhone,
+            token_hash: historyAccess.tokenHash,
+            expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+            created_at: new Date().toISOString(),
+        });
+        token = claimToken.token;
+        historyToken = historyAccess.token;
+    }
+    try {
+        if (!adminMode) {
+            await (0, emailQueue_1.queueCustomerBookingEmail)({
+                businessId: business_id,
+                appointmentId: appointment.id,
+                customerEmail: sanitizedEmail,
+                customerName: customer_name.trim(),
+                serviceName: typeof service.name_sk === "string" ? service.name_sk : null,
+                startAtIso: startDate.toISOString(),
+                historyAccessUrl: historyToken ? (0, publicBookingAccess_1.buildHistoryAccessUrl)(appointment.id, historyToken) : null,
+            });
+        }
     }
     catch (err) {
         functions.logger.warn("createPublicBooking: queue customer email failed", {
@@ -236,13 +269,36 @@ exports.createPublicBooking = functions.https.onCall({ region: "europe-west1" },
             error: err instanceof Error ? err.message : String(err),
         });
     }
-    return {
+    if (!adminMode) {
+        try {
+            await (0, emailQueue_1.queueAdminBookingNotificationEmail)({
+                businessId: business_id,
+                appointmentId: appointment.id,
+                customerName: customer_name.trim(),
+                customerEmail: sanitizedEmail,
+                customerPhone: sanitizedPhone,
+                serviceName: typeof service.name_sk === "string" ? service.name_sk : null,
+                startAtIso: startDate.toISOString(),
+            });
+        }
+        catch (err) {
+            functions.logger.warn("createPublicBooking: queue admin email failed", {
+                appointment_id: appointment.id,
+                business_id,
+                error: err instanceof Error ? err.message : String(err),
+            });
+        }
+    }
+    const createdResponse = {
         success: true,
         appointment_id: appointment.id,
         claim_token: token,
+        history_access_token: historyToken,
+        history_reference: adminMode ? null : appointment.id,
         customer_email: sanitizedEmail,
         customer_name: customer_name.trim(),
         reused: false,
     };
+    return createdResponse;
 });
 //# sourceMappingURL=createPublicBooking.js.map

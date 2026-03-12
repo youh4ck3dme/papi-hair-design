@@ -55,6 +55,24 @@
                     "order": "ASCENDING"
                 },
                 {
+                    "fieldPath": "customer_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "start_at",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "appointments",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "business_id",
+                    "order": "ASCENDING"
+                },
+                {
                     "fieldPath": "updated_at",
                     "order": "ASCENDING"
                 }
@@ -227,5 +245,18 @@
             ]
         }
     ],
-    "fieldOverrides": []
+    "fieldOverrides": [
+        {
+            "collectionGroup": "booking_claims",
+            "fieldPath": "expires_at",
+            "ttl": true,
+            "indexes": []
+        },
+        {
+            "collectionGroup": "booking_history_access",
+            "fieldPath": "expires_at",
+            "ttl": true,
+            "indexes": []
+        }
+    ]
 }

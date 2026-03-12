@@ -11,13 +11,11 @@ interface DateTimeSelectionProps {
     daysInMonth: number;
     today: Date;
     maxDays: number;
-    selectedWorkerId: string | null;
     selectedDate: number | null;
     setSelectedDate: (day: number | null) => void;
     selectedFullDate: Date | null;
     setSelectedTime: (time: string | null) => void;
     isBusinessOpenOnDay: (date: Date) => boolean;
-    isEmployeeAvailableOnDay: (empId: string, date: Date) => boolean;
     loadingSlots: boolean;
     availableSlots: Date[];
     selectedTime: string | null;
@@ -32,13 +30,11 @@ export function DateTimeSelection({
     daysInMonth,
     today,
     maxDays,
-    selectedWorkerId,
     selectedDate,
     setSelectedDate,
     selectedFullDate,
     setSelectedTime,
     isBusinessOpenOnDay,
-    isEmployeeAvailableOnDay,
     loadingSlots,
     availableSlots,
     selectedTime,
@@ -51,7 +47,11 @@ export function DateTimeSelection({
 
     return (
         <div className="animate-fade-in px-4">
-            <StepHeader num="4" title={t("booking.step4")} />
+            <StepHeader num="3" title={t("booking.step3")} />
+            <div className="mb-4 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/12 via-primary/6 to-transparent p-4">
+                <p className="text-sm font-semibold text-foreground">{t("booking.assignmentTitle")}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t("booking.assignmentSubtitle")}</p>
+            </div>
             <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
                 {/* Month nav bar */}
                 <div className="flex justify-between items-center px-4 pt-4 pb-3 border-b border-border/40">
@@ -91,8 +91,7 @@ export function DateTimeSelection({
                             const isPast = isBefore(dayDate, today);
                             const isTooFar = isAfter(dayDate, addDays(today, maxDays));
                             const isClosed = !isBusinessOpenOnDay(dayDate);
-                            const empAvailable = selectedWorkerId ? isEmployeeAvailableOnDay(selectedWorkerId, dayDate) : false;
-                            const disabled = isPast || isTooFar || isClosed || !empAvailable;
+                            const disabled = isPast || isTooFar || isClosed;
                             const isSelected = selectedDate === day && isSameDay(dayDate, selectedFullDate ?? new Date(0));
                             const isToday = isSameDay(dayDate, today);
 
@@ -122,7 +121,7 @@ export function DateTimeSelection({
             {/* Time slots */}
             {Boolean(selectedDate) && (
                 <div className="animate-fade-in mt-6">
-                    <StepHeader num="5" title={t("booking.step5")} />
+                    <StepHeader num="4" title={t("booking.step4")} />
                     {loadingSlots ? (
                         <div className="flex justify-center py-10">
                             <Loader2 className="w-6 h-6 animate-spin text-primary" />

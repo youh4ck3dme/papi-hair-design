@@ -128,7 +128,7 @@ VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXX
-VITE_FIREBASE_FUNCTIONS_URL=https://europe-west1-your-project-id.cloudfunctions.net
+VITE_FIREBASE_FUNCTIONS_REGION=europe-west1
 ```
 
 Hodnoty nájdeš v:
@@ -151,7 +151,7 @@ Bez týchto secrets CI build vždy failuje:
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | získate z Firebase Console |
 | `VITE_FIREBASE_APP_ID` | získate z Firebase Console |
 | `VITE_FIREBASE_MEASUREMENT_ID` | napr. `G-WKF7CKN6MN` |
-| `VITE_FIREBASE_FUNCTIONS_URL` | napr. `https://europe-west1-hairchainger-main-876665-176e8.cloudfunctions.net` |
+| `VITE_FIREBASE_FUNCTIONS_REGION` | napr. `europe-west1` |
 
 Voliteľné (CI krok preskočí ak chýbajú):
 
@@ -176,7 +176,11 @@ Nastav rovnaké Firebase hodnoty ako GitHub Secrets plus:
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | rovnaká hodnota |
 | `VITE_FIREBASE_APP_ID` | rovnaká hodnota |
 | `VITE_FIREBASE_MEASUREMENT_ID` | rovnaká hodnota |
-| `VITE_FIREBASE_FUNCTIONS_URL` | rovnaká hodnota |
+| `VITE_FIREBASE_FUNCTIONS_REGION` | napr. `europe-west1` |
+| `TWILIO_ACCOUNT_SID` | SID projektu na SMS |
+| `TWILIO_AUTH_TOKEN` | Auth token z Twilio Console |
+| `TWILIO_FROM_NUMBER` | Odosielateľ, napr. `+421900000000` |
+| `ADMIN_NOTIFICATION_EMAIL` | E-mail pre admin notifikácie nových rezervácií |
 
 ---
 

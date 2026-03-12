@@ -4,43 +4,41 @@
 
 @layer base {
   :root {
-    --background: 40 10% 98%;
-    --foreground: 20 15% 5%;
+    --background: 205 45% 98%;
+    --foreground: 215 34% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 20 15% 5%;
+    --card-foreground: 215 34% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 20 15% 5%;
+    --popover-foreground: 215 34% 12%;
 
-    /* Premium Champagne Gold */
-    --primary: 43 70% 55%;
-    --primary-foreground: 20 15% 5%;
+    --primary: 199 88% 72%;
+    --primary-foreground: 215 34% 12%;
 
-    --secondary: 40 5% 95%;
-    --secondary-foreground: 20 20% 15%;
+    --secondary: 204 42% 95%;
+    --secondary-foreground: 215 30% 18%;
 
-    --muted: 40 5% 92%;
-    --muted-foreground: 20 12% 38%;
+    --muted: 204 35% 93%;
+    --muted-foreground: 214 17% 42%;
 
-    --accent: 43 40% 90%;
-    --accent-foreground: 43 70% 25%;
+    --accent: 199 75% 94%;
+    --accent-foreground: 206 62% 28%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 60 9.1% 97.8%;
 
-    --border: 43 20% 90%;
-    --input: 43 20% 90%;
-    --ring: 43 70% 55%;
+    --border: 204 30% 88%;
+    --input: 204 30% 88%;
+    --ring: 199 88% 72%;
 
     --radius: 1rem;
 
-    --gold: 43 70% 55%;
-    --gold-foreground: 20 15% 5%;
+    --gold: 199 88% 72%;
+    --gold-foreground: 215 34% 12%;
 
-    /* Booking calendar statuses - more elegant tones */
-    --calendar-pending: 43 70% 55%;
-    --calendar-pending-fg: 0 0% 100%;
+    --calendar-pending: 199 88% 72%;
+    --calendar-pending-fg: 215 34% 12%;
     --calendar-confirmed: 142 30% 35%;
     --calendar-confirmed-fg: 0 0% 100%;
     --calendar-cancelled: 0 60% 50%;
@@ -48,52 +46,53 @@
     --calendar-completed: 215 15% 40%;
     --calendar-completed-fg: 0 0% 100%;
 
-    --sidebar-background: 20 15% 5%;
-    --sidebar-foreground: 40 10% 90%;
-    --sidebar-primary: 43 70% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 25 15% 12%;
-    --sidebar-accent-foreground: 43 70% 90%;
-    --sidebar-border: 25 15% 12%;
-    --sidebar-ring: 43 70% 55%;
+    --sidebar-background: 213 44% 12%;
+    --sidebar-foreground: 204 55% 92%;
+    --sidebar-primary: 199 88% 72%;
+    --sidebar-primary-foreground: 215 34% 12%;
+    --sidebar-accent: 212 35% 18%;
+    --sidebar-accent-foreground: 199 75% 88%;
+    --sidebar-border: 212 35% 18%;
+    --sidebar-ring: 199 88% 72%;
+    --baby-blue: 201 81% 92%;
+    --baby-blue-foreground: 205 32% 24%;
+    --baby-blue-muted: 205 74% 95%;
   }
 
   .dark {
-    /* Obsidian Black Depth */
-    --background: 0 0% 2%;
-    --foreground: 40 10% 95%;
+    --background: 218 34% 8%;
+    --foreground: 203 38% 95%;
 
-    --card: 0 0% 4%;
-    --card-foreground: 40 10% 95%;
+    --card: 217 33% 10%;
+    --card-foreground: 203 38% 95%;
 
-    --popover: 0 0% 4%;
-    --popover-foreground: 40 10% 95%;
+    --popover: 217 33% 10%;
+    --popover-foreground: 203 38% 95%;
 
-    /* Polished Gold accent */
-    --primary: 43 80% 68%;
-    --primary-foreground: 0 0% 0%;
+    --primary: 198 88% 74%;
+    --primary-foreground: 217 33% 10%;
 
-    --secondary: 0 0% 8%;
-    --secondary-foreground: 40 10% 85%;
+    --secondary: 217 28% 14%;
+    --secondary-foreground: 203 38% 90%;
 
-    --muted: 0 0% 6%;
-    --muted-foreground: 40 8% 65%;
+    --muted: 217 24% 13%;
+    --muted-foreground: 205 16% 68%;
 
-    --accent: 43 30% 15%;
-    --accent-foreground: 43 70% 75%;
+    --accent: 205 33% 18%;
+    --accent-foreground: 199 88% 78%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 60 9.1% 97.8%;
 
-    --border: 0 0% 12%;
-    --input: 0 0% 12%;
-    --ring: 43 80% 68%;
+    --border: 216 24% 19%;
+    --input: 216 24% 19%;
+    --ring: 198 88% 74%;
 
-    --gold: 43 80% 68%;
-    --gold-foreground: 0 0% 5%;
+    --gold: 198 88% 74%;
+    --gold-foreground: 217 33% 10%;
 
-    --calendar-pending: 43 80% 68%;
-    --calendar-pending-fg: 0 0% 0%;
+    --calendar-pending: 198 88% 74%;
+    --calendar-pending-fg: 217 33% 10%;
     --calendar-confirmed: 142 30% 45%;
     --calendar-confirmed-fg: 0 0% 100%;
     --calendar-cancelled: 0 60% 45%;
@@ -101,14 +100,16 @@
     --calendar-completed: 215 15% 50%;
     --calendar-completed-fg: 0 0% 100%;
 
-    --sidebar-background: 0 0% 2%;
-    --sidebar-foreground: 40 10% 90%;
-    --sidebar-primary: 43 80% 68%;
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 0 0% 6%;
-    --sidebar-accent-foreground: 43 70% 90%;
-    --sidebar-border: 0 0% 8%;
-    --sidebar-ring: 43 80% 68%;
+    --sidebar-background: 218 34% 8%;
+    --sidebar-foreground: 203 38% 92%;
+    --sidebar-primary: 198 88% 74%;
+    --sidebar-primary-foreground: 217 33% 10%;
+    --sidebar-accent: 216 26% 14%;
+    --sidebar-accent-foreground: 199 88% 80%;
+    --sidebar-border: 216 26% 14%;
+    --sidebar-ring: 198 88% 74%;
+    --baby-blue: 195 70% 62%;
+    --baby-blue-muted: 198 44% 38%;
   }
 }
 
@@ -162,8 +163,10 @@
 
 @layer components {
   .premium-action-btn {
-    @apply relative overflow-hidden rounded-xl border border-zinc-300/80 dark:border-zinc-600/70 bg-gradient-to-b from-zinc-100 via-zinc-200 to-zinc-300 dark:from-zinc-600 dark:via-zinc-700 dark:to-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 6px 16px rgba(15, 23, 42, 0.16);
+    @apply relative overflow-hidden rounded-xl border font-semibold text-slate-950 dark:text-slate-950;
+    background: linear-gradient(180deg, hsl(var(--baby-blue)) 0%, hsl(var(--baby-blue-muted)) 65%, rgba(255, 255, 255, 0.9) 100%);
+    border-color: hsla(var(--baby-blue-foreground), 0.4);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78), 0 10px 24px rgba(76, 140, 184, 0.22);
   }
 
   .premium-action-btn::after {
@@ -185,7 +188,7 @@
 
   .premium-action-btn:hover {
     filter: brightness(1.03);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 8px 22px rgba(15, 23, 42, 0.22);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82), 0 12px 28px rgba(76, 140, 184, 0.28);
   }
 
   .cal-toolbar-btn {

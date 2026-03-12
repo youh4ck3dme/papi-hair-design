@@ -42,8 +42,7 @@ export default defineConfig(({ mode }) => {
             'VITE_FIREBASE_STORAGE_BUCKET',
             'VITE_FIREBASE_MESSAGING_SENDER_ID',
             'VITE_FIREBASE_APP_ID',
-            'VITE_FIREBASE_MEASUREMENT_ID',
-            'VITE_FIREBASE_FUNCTIONS_URL'
+            'VITE_FIREBASE_MEASUREMENT_ID'
           ];
           const missing = required.filter(k => !env[k] && !process.env[k]);
           if (missing.length) {

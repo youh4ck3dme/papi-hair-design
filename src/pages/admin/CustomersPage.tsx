@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { db } from "@/integrations/firebase/config";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
 import { useBusiness } from "@/hooks/useBusiness";
 import { Input } from "@/components/ui/input";
 import { Loader2, Search, UserCheck, ArrowUpDown, MoreHorizontal, Mail, Phone, Calendar } from "lucide-react";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface CustomerRow {
   id: string;
@@ -39,12 +40,37 @@ type SortConfig = {
   direction: "asc" | "desc";
 };
 
+interface CustomerHistoryRow {
+  id: string;
+  service_name: string | null;
+  employee_name: string | null;
+  status: string | null;
+  start_at: string | null;
+}
+
+const STATUS_BADGE_CLASSNAME: Record<string, string> = {
+  pending: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  confirmed: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+  cancelled: "bg-rose-500/10 text-rose-700 border-rose-500/20",
+  completed: "bg-slate-500/10 text-slate-700 border-slate-500/20",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: "Čaká",
+  confirmed: "Potvrdená",
+  cancelled: "Zrušená",
+  completed: "Dokončená",
+};
+
 export default function CustomersPage() {
   const { businessId } = useBusiness();
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: "full_name", direction: "asc" });
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerRow | null>(null);
+  const [customerHistory, setCustomerHistory] = useState<CustomerHistoryRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -110,6 +136,45 @@ export default function CustomersPage() {
       key,
       direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
     }));
+  };
+
+  const openCustomerHistory = async (customer: CustomerRow) => {
+    if (!businessId) return;
+
+    setSelectedCustomer(customer);
+    setCustomerHistory([]);
+    setHistoryLoading(true);
+
+    try {
+      const historySnap = await getDocs(query(
+        collection(db, "appointments"),
+        where("business_id", "==", businessId),
+        where("customer_id", "==", customer.id),
+        orderBy("start_at", "desc"),
+        limit(20),
+      ));
+
+      setCustomerHistory(historySnap.docs.map((docSnap) => {
+        const appointment = docSnap.data() as {
+          service_name?: string | null;
+          employee_name?: string | null;
+          status?: string | null;
+          start_at?: string | null;
+        };
+
+        return {
+          id: docSnap.id,
+          service_name: appointment.service_name ?? null,
+          employee_name: appointment.employee_name ?? null,
+          status: appointment.status ?? null,
+          start_at: appointment.start_at ?? null,
+        };
+      }));
+    } catch (error) {
+      console.error("CustomersPage: error loading customer history", error);
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   const filteredAndSorted = customers
@@ -253,9 +318,9 @@ export default function CustomersPage() {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 bg-card/95 backdrop-blur-lg border-primary/10">
+                          <DropdownMenuContent align="end" className="w-48 bg-card/95 backdrop-blur-lg border-primary/10">
                           <DropdownMenuLabel>Akcie</DropdownMenuLabel>
-                          <DropdownMenuItem className="cursor-pointer gap-2">
+                          <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => void openCustomerHistory(customer)}>
                             <Calendar className="w-4 h-4 opacity-70" /> História rezervácií
                           </DropdownMenuItem>
                           <DropdownMenuSeparator className="bg-primary/5" />
@@ -272,6 +337,84 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
+        <DialogContent className="max-w-lg border-primary/15 bg-card/95 backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl">História zákazníka</DialogTitle>
+            <DialogDescription>
+              {selectedCustomer?.full_name ?? "Zákazník"} · {selectedCustomer?.email ?? "bez e-mailu"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {selectedCustomer && (
+              <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{selectedCustomer.full_name}</p>
+                    <div className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">
+                      {selectedCustomer.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3.5 w-3.5 text-primary/60" />
+                          <span className="truncate">{selectedCustomer.email}</span>
+                        </div>
+                      )}
+                      {selectedCustomer.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3.5 w-3.5 text-primary/60" />
+                          <span>{selectedCustomer.phone}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="w-fit bg-primary/10 text-primary border-primary/15">
+                    {selectedCustomer.visits} rezervácií
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            {historyLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-primary/60" />
+              </div>
+            ) : customerHistory.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-primary/15 p-8 text-center text-sm text-muted-foreground">
+                Pre tohto zákazníka zatiaľ neevidujeme žiadnu históriu rezervácií.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {customerHistory.map((appointment) => {
+                  const status = appointment.status ?? "pending";
+                  return (
+                    <div key={appointment.id} className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground">
+                            {appointment.service_name ?? "Služba"}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {appointment.employee_name ?? "Pridelený tím"}
+                          </p>
+                          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-muted-foreground/80">
+                            {appointment.start_at
+                              ? format(new Date(appointment.start_at), "d. M. yyyy · HH:mm", { locale: sk })
+                              : "Bez dátumu"}
+                          </p>
+                        </div>
+                        <Badge className={`border ${STATUS_BADGE_CLASSNAME[status] ?? STATUS_BADGE_CLASSNAME.pending}`}>
+                          {STATUS_LABELS[status] ?? STATUS_LABELS.pending}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

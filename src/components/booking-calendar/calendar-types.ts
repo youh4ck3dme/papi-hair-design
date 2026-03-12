@@ -29,6 +29,7 @@ export const STATUS_TO_COLOR: Record<string, string> = {
   confirmed: "confirmed",
   cancelled: "cancelled",
   completed: "completed",
+  no_show: "cancelled",
 };
 
 export function statusToColor(status: string): string {

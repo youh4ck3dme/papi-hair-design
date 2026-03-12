@@ -44,10 +44,9 @@ export function useBookingForm(
     const [category, setCategory] = useState<"damske" | "panske">("damske");
     const [subcategory, setSubcategory] = useState<string | null>(null);
     const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
-    const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         meno: "", priezvisko: "", email: "", phone: "", note: "",
-        marketing: false, terms: false, all: false,
+        marketing: false, terms: false, gdpr: false, all: false,
     });
     const [contactErrors, setContactErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
@@ -122,25 +121,28 @@ export function useBookingForm(
         return result;
     }, [employees, selectedServiceId, employeeServiceMap, business, memberships]);
 
-    const selectedEmployee = useMemo(() => employees.find((e) => e.id === selectedWorkerId) ?? null, [employees, selectedWorkerId]);
-
     // Handlers
     const handleCheckAll = useCallback(() => {
         setFormData(prev => {
             const newValue = !prev.all;
-            return { ...prev, all: newValue, marketing: newValue, terms: newValue };
+            return { ...prev, all: newValue, marketing: newValue, terms: newValue, gdpr: newValue };
         });
     }, []);
 
-    const handleConsentChange = useCallback((field: "marketing" | "terms") => {
+    const handleConsentChange = useCallback((field: "marketing" | "terms" | "gdpr") => {
         setFormData(prev => {
             const newData = { ...prev, [field]: !prev[field] };
-            newData.all = newData.marketing && newData.terms;
+            newData.all = newData.marketing && newData.terms && newData.gdpr;
             return newData;
         });
     }, []);
 
     const handleSubmit = async (selectedTime: string | null, availableSlots: Date[]) => {
+        if (!formData.gdpr) {
+            toast.error(t("booking.toastGdprRequired"));
+            return;
+        }
+
         const result = contactSchema.safeParse(formData);
         if (!result.success) {
             const errs: Record<string, string> = {};
@@ -163,7 +165,7 @@ export function useBookingForm(
         }
 
         try {
-            if (!selectedServiceId || !selectedWorkerId) {
+            if (!selectedServiceId) {
                 setSubmitting(false);
                 return;
             }
@@ -177,7 +179,6 @@ export function useBookingForm(
             const hold = await createBookingHold({
                 business_id: businessId,
                 service_id: selectedServiceId,
-                employee_id: selectedWorkerId,
                 start_at: slotDate.toISOString(),
                 customer_name: `${formData.meno} ${formData.priezvisko}`.trim(),
                 customer_email: formData.email,
@@ -204,6 +205,8 @@ export function useBookingForm(
 
             const data: BookingResult = {
                 claim_token: confirm.claim_token ?? undefined,
+                history_access_token: confirm.history_access_token ?? null,
+                history_reference: confirm.history_reference ?? hold.appointment_id,
                 customer_email: confirm.customer_email ?? formData.email,
                 customer_name: confirm.customer_name ?? `${formData.meno} ${formData.priezvisko}`.trim(),
             };
@@ -224,8 +227,6 @@ export function useBookingForm(
         setSubcategory,
         selectedServiceId,
         setSelectedServiceId,
-        selectedWorkerId,
-        setSelectedWorkerId,
         formData,
         setFormData,
         contactErrors,
@@ -236,7 +237,6 @@ export function useBookingForm(
         filteredServices,
         selectedService,
         filteredEmployees,
-        selectedEmployee,
         handleCheckAll,
         handleConsentChange,
         handleSubmit

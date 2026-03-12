@@ -125,7 +125,7 @@ service cloud.firestore {
     }
 
     match /appointments/{appointmentId} {
-      allow read: if isSignedIn();
+      allow read: if resource.data.business_id is string && isStaff(resource.data.business_id);
       allow create: if request.resource.data.business_id is string &&
         isStaff(request.resource.data.business_id);
       allow update: if resource.data.business_id is string &&
@@ -136,7 +136,7 @@ service cloud.firestore {
     }
 
     match /customers/{customerId} {
-      allow read: if isSignedIn();
+      allow read: if resource.data.business_id is string && isStaff(resource.data.business_id);
       allow create: if request.resource.data.business_id is string &&
         isStaff(request.resource.data.business_id);
       allow update: if resource.data.business_id is string &&
@@ -214,6 +214,10 @@ service cloud.firestore {
 
     // Sensitive collections are server-only.
     match /booking_claims/{claimId} {
+      allow read, write: if false;
+    }
+
+    match /booking_history_access/{accessId} {
       allow read, write: if false;
     }
 

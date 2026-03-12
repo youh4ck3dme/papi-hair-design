@@ -34,6 +34,7 @@ const MySchedulePage = lazy(() => import("./pages/admin/MySchedulePage"));
 const ReceptionPage = lazy(() => import("./pages/ReceptionPage"));
 const DiagnosticsPage = lazy(() => import("./pages/DiagnosticsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const BookingHistoryPage = lazy(() => import("./pages/BookingHistoryPage"));
 const SalonLoginPage = lazy(() => import("./pages/SalonLoginPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const BootstrapPage = lazy(() => import("./pages/BootstrapPage"));
@@ -111,8 +112,9 @@ const App = () => {
                   <Route path="/offline" element={<OfflinePage />} />
                   <Route path="/install" element={<InstallPage />} />
                   <Route path="/diagnostics" element={<DiagnosticsPage />} />
+                  <Route path="/dashboard/history" element={<BookingHistoryPage />} />
                   <Route path="/privacy" element={<PrivacyPage />} />
-                  <Route path="/privacy-policy" element={<TermsPage />} />
+                  <Route path="/privacy-policy" element={<PrivacyPage />} />
                   <Route path="/terms" element={<TermsPage />} />
                   <Route
                     path="/bootstrap"

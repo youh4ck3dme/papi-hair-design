@@ -1,14 +1,13 @@
-import { Check, CalendarCheck2, Clock4, User2, Scissors } from "lucide-react";
+import { Check, CalendarCheck2, Clock4, Scissors } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { GoldText } from "./BookingUI";
-import { BookingResult, ServiceRow, EmployeeRow } from "./types";
-import { useAuth } from "@/contexts/AuthContext";
+import { BookingResult, ServiceRow } from "./types";
+import { buildGoogleCalendarUrl, buildIcsContent } from "@/lib/calendarExport";
 
 interface BookingSuccessProps {
     bookingResult: BookingResult;
     selectedService: ServiceRow | null;
-    selectedEmployee: EmployeeRow | null;
     selectedFullDate: Date | null;
     selectedTime: string | null;
     dateLocale: any;
@@ -17,13 +16,60 @@ interface BookingSuccessProps {
 export function BookingSuccess({
     bookingResult,
     selectedService,
-    selectedEmployee,
     selectedFullDate,
     selectedTime,
     dateLocale,
 }: BookingSuccessProps) {
     const { t } = useTranslation();
-    const { user } = useAuth();
+    const historyHref = bookingResult.history_access_token && bookingResult.history_reference
+        ? `/dashboard/history?access=${encodeURIComponent(bookingResult.history_access_token)}&ref=${encodeURIComponent(bookingResult.history_reference)}`
+        : "/dashboard/history";
+    const appointmentStart = selectedFullDate && selectedTime
+        ? new Date(
+            selectedFullDate.getFullYear(),
+            selectedFullDate.getMonth(),
+            selectedFullDate.getDate(),
+            Number(selectedTime.split(":")[0] ?? 0),
+            Number(selectedTime.split(":")[1] ?? 0),
+        )
+        : null;
+    const appointmentEnd = appointmentStart && selectedService
+        ? new Date(appointmentStart.getTime() + (selectedService.duration_minutes + (selectedService.buffer_minutes ?? 0)) * 60 * 1000)
+        : null;
+
+    const handleDownloadIcs = () => {
+        if (!appointmentStart || !appointmentEnd) return;
+
+        const ics = buildIcsContent({
+            title: `FYZIO&FIT - ${selectedService?.name_sk ?? t("booking.confirmTitle")}`,
+            description: t("booking.calendarDescription", {
+                service: selectedService?.name_sk ?? t("booking.confirmTitle"),
+            }),
+            location: t("index.address"),
+            start: appointmentStart,
+            end: appointmentEnd,
+        });
+
+        const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "fyzio-fit-booking.ics";
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const googleCalendarHref = appointmentStart && appointmentEnd
+        ? buildGoogleCalendarUrl({
+            title: `FYZIO&FIT - ${selectedService?.name_sk ?? t("booking.confirmTitle")}`,
+            description: t("booking.calendarDescription", {
+                service: selectedService?.name_sk ?? t("booking.confirmTitle"),
+            }),
+            location: t("index.address"),
+            start: appointmentStart,
+            end: appointmentEnd,
+        })
+        : null;
 
     return (
         <div className="min-h-screen bg-background" data-testid="booking-success">
@@ -66,6 +112,15 @@ export function BookingSuccess({
 
                 {/* Summary card */}
                 <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/8 via-primary/4 to-transparent p-4 text-left space-y-3">
+                    <div className="flex items-center gap-3 text-sm">
+                        <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                            <CalendarCheck2 size={13} className="text-primary" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground">{t("booking.confirmBrand")}</p>
+                            <p className="font-semibold text-foreground">PAPI HAIR DESIGN</p>
+                        </div>
+                    </div>
                     {selectedService && (
                         <div className="flex items-center gap-3 text-sm">
                             <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
@@ -74,17 +129,6 @@ export function BookingSuccess({
                             <div>
                                 <p className="text-xs text-muted-foreground">{t("booking.confirmService")}</p>
                                 <p className="font-semibold text-foreground">{selectedService.name_sk}</p>
-                            </div>
-                        </div>
-                    )}
-                    {selectedEmployee && (
-                        <div className="flex items-center gap-3 text-sm">
-                            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-                                <User2 size={13} className="text-primary" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground">{t("booking.confirmEmployee")}</p>
-                                <p className="font-semibold text-foreground">{selectedEmployee.display_name}</p>
                             </div>
                         </div>
                     )}
@@ -114,23 +158,31 @@ export function BookingSuccess({
 
                 {/* CTAs */}
                 <div className="flex flex-col gap-3 pt-2">
-                    {!user && (
-                        <button
-                            onClick={() => {
-                                if (bookingResult.claim_token) {
-                                    sessionStorage.setItem("claim_token", bookingResult.claim_token);
-                                } else {
-                                    sessionStorage.removeItem("claim_token");
-                                }
-                                globalThis.location.assign(
-                                    `/auth?mode=register&email=${encodeURIComponent(bookingResult.customer_email || "")}&name=${encodeURIComponent(bookingResult.customer_name || "")}`
-                                );
-                            }}
-                            className="premium-action-btn w-full rounded-xl py-2.5 px-4 text-sm tracking-wide transition-all active:scale-[0.98]"
-                        >
-                            {t("booking.confirmRegisterBtn")}
-                        </button>
+                    {googleCalendarHref && (
+                        <div className="grid gap-2 sm:grid-cols-2">
+                            <a
+                                href={googleCalendarHref}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center justify-center rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/10"
+                            >
+                                {t("booking.addToGoogleCalendar")}
+                            </a>
+                            <button
+                                type="button"
+                                onClick={handleDownloadIcs}
+                                className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary"
+                            >
+                                {t("booking.downloadIcs")}
+                            </button>
+                        </div>
                     )}
+                    <a
+                        href={historyHref}
+                        className="premium-action-btn flex w-full items-center justify-center rounded-xl py-2.5 px-4 text-sm tracking-wide transition-all active:scale-[0.98]"
+                    >
+                        {t("booking.historyCta")}
+                    </a>
                     <button
                         onClick={() => globalThis.location.reload()}
                         className="text-sm text-muted-foreground hover:text-primary transition-colors py-2"
