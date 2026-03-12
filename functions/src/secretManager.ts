@@ -43,3 +43,14 @@ export async function upsertSecret(
 
   return name;
 }
+
+export async function readSecret(secretName: string): Promise<string> {
+  const [version] = await client.accessSecretVersion({
+    name: `${secretName}/versions/latest`,
+  });
+  const data = version.payload?.data;
+  if (!data) {
+    throw new Error(`Secret has no payload: ${secretName}`);
+  }
+  return Buffer.from(data).toString("utf8");
+}

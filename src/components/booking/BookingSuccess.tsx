@@ -32,7 +32,11 @@ export function BookingSuccess({
                 <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
                 <div className="flex items-center gap-2.5 px-5 py-3.5">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/30">
-                        <Scissors size={15} className="text-primary rotate-[-45deg]" />
+                        <img
+                            src="/favicon.png"
+                            alt="PAPI HAIR DESIGN"
+                            className="w-[15px] h-[15px] rounded-full object-cover"
+                        />
                     </div>
                     <span className="text-[15px] font-bold tracking-widest uppercase font-serif">
                         PAPI <GoldText>HAIR</GoldText> DESIGN

@@ -5,6 +5,7 @@ import {
   HttpsError,
 } from "firebase-functions/v2/https";
 import * as crypto from "crypto";
+import { queueCustomerBookingEmail } from "./emailQueue";
 
 interface ConfirmBookingInput {
   appointment_id: string;
@@ -91,6 +92,24 @@ export const confirmBooking = functions.https.onCall(
         created_at: new Date().toISOString(),
       });
       claim_token = token;
+
+      try {
+        await queueCustomerBookingEmail({
+          businessId,
+          appointmentId: appointment_id,
+          customerEmail: customerEmail,
+          customerName,
+          serviceName: typeof appt.service_name === "string" ? appt.service_name : null,
+          employeeName: typeof appt.employee_name === "string" ? appt.employee_name : null,
+          startAtIso: typeof appt.start_at === "string" ? appt.start_at : new Date().toISOString(),
+        });
+      } catch (err) {
+        functions.logger.warn("confirmBooking: queue customer email failed", {
+          appointment_id,
+          business_id: businessId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
 
     return {

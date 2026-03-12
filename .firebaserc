@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "hairchainger-main-876665-176e8"
+  },
+  "targets": {},
+  "etags": {
+    "hairchainger-main-876665-176e8": {
+      "extensionInstances": {
+        "firestore-send-email": "d99ffafc939a08b81c4734f6b5c0941ad5611897251793868950238e90c78bdb"
+      }
+    }
   }
 }

@@ -6,6 +6,7 @@ import {
     HttpsError
 } from "firebase-functions/v2/https";
 import * as crypto from "crypto";
+import { queueCustomerBookingEmail } from "./emailQueue";
 
 interface CreatePublicBookingData {
     business_id: string;
@@ -239,9 +240,24 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
         created_at: new Date().toISOString()
     });
 
-    // 6. Trigger email/notifications (In a real app, use Pub/Sub or similar)
-    // For the blueprint, we can call them here or use a helper.
-    // We'll assume the email function will be implemented separately.
+    // 6. Queue customer confirmation email document for firestore-send-email extension
+    try {
+        await queueCustomerBookingEmail({
+            businessId: business_id,
+            appointmentId: appointment.id,
+            customerEmail: sanitizedEmail,
+            customerName: customer_name.trim(),
+            serviceName: typeof service.name_sk === "string" ? service.name_sk : null,
+            employeeName: typeof employee.display_name === "string" ? employee.display_name : null,
+            startAtIso: startDate.toISOString(),
+        });
+    } catch (err) {
+        functions.logger.warn("createPublicBooking: queue customer email failed", {
+            appointment_id: appointment.id,
+            business_id,
+            error: err instanceof Error ? err.message : String(err),
+        });
+    }
 
     return {
         success: true,
