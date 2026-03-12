@@ -46,6 +46,19 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+const isIgnorableCallableError = (err: unknown): boolean => {
+  if (!err || typeof err !== "object") return false;
+  const code = "code" in err ? String((err as { code?: unknown }).code ?? "") : "";
+  return (
+    code === "internal" ||
+    code === "functions/internal" ||
+    code === "cancelled" ||
+    code === "functions/cancelled" ||
+    code === "unavailable" ||
+    code === "functions/unavailable"
+  );
+};
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [fbUser, setFbUser] = useState<User | null>(null);
@@ -61,6 +74,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       );
       await fn({});
     } catch (err) {
+      if (isIgnorableCallableError(err)) {
+        if (import.meta.env.DEV) {
+          console.info("AuthContext: normalizeMemberships transient error skipped:", err);
+        }
+        return;
+      }
       console.warn("AuthContext: normalizeMemberships skipped:", err);
     }
   }, []);
