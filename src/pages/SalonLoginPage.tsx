@@ -43,11 +43,12 @@ type ProfileId = (typeof PROFILES)[number]["id"];
 type Phase = "intro" | "picker" | "login";
 
 // ── Responsive avatar size ───────────────────────────────────────────────────
-function calcAvatarPx(w: number): number {
-    if (w < 375) return 88;
-    if (w < 640) return 108;
-    if (w < 1024) return 138;
-    return 178;
+function calcAvatarPx(w: number, h: number): number {
+    const base = Math.min(w, h);
+    if (w < 375) return Math.min(220, Math.max(136, Math.round(base * 0.42)));
+    if (w < 640) return Math.min(260, Math.max(156, Math.round(base * 0.45)));
+    if (w < 1024) return Math.min(320, Math.max(196, Math.round(base * 0.42)));
+    return Math.min(420, Math.max(240, Math.round(base * 0.48)));
 }
 
 // ── Avatar ───────────────────────────────────────────────────────────────────
@@ -89,127 +90,17 @@ function Avatar({
     );
 }
 
-// ── WebGL shaders: thin electric divider (intro phase) ───────────────────────
-const VS_SRC = `
-  attribute vec2 a_pos;
-  void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
-`;
-const FS_SRC = `
-  precision mediump float;
-  uniform float u_time;
-  uniform vec2  u_res;
+type StarPoint = {
+    x: number;
+    y: number;
+    radius: number;
+    alpha: number;
+    phase: number;
+    twinkleSpeed: number;
+    warm: boolean;
+};
 
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
-  float noise(vec2 p) {
-    vec2 i = floor(p), f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(hash(i),               hash(i + vec2(1.0, 0.0)), f.x),
-      mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0, 1.0)), f.x),
-      f.y
-    );
-  }
-  float fbm(vec2 p) {
-    float v = 0.0, a = 0.5;
-    for (int i = 0; i < 6; i++) {
-      v += a * noise(p);
-      p  = p * 2.1 + vec2(1.7, 9.2);
-      a *= 0.5;
-    }
-    return v;
-  }
-  void main() {
-    vec2 uv = gl_FragCoord.xy / u_res;
-    float aspect = u_res.x / u_res.y;
-    float t = u_time * 0.9;
-    vec2 p = (uv * 2.0 - 1.0) * vec2(aspect, 1.0);
-
-    float n1 = fbm(p * 2.2 + vec2( t * 0.55,  0.10));
-    float n2 = fbm(p * 3.8 + vec2(-t * 0.38,  t * 0.28));
-    float n3 = fbm(p * 7.5 + vec2( t * 0.92, -t * 0.22));
-
-    float cy = uv.y - 0.5;
-    float b1 = 1.0 / (1.0 + 55.0  * (cy + n1 * 0.75)        * (cy + n1 * 0.75));
-    float b2 = 1.0 / (1.0 + 95.0  * (cy + n2 * 0.55 + 0.08) * (cy + n2 * 0.55 + 0.08));
-    float b3 = 1.0 / (1.0 + 170.0 * (cy + n3 * 0.28 - 0.04) * (cy + n3 * 0.28 - 0.04));
-    float bolts = b1 * 0.85 + b2 * 0.65 + b3 * 1.05;
-
-    float sp1 = pow(noise(p * 26.0 + vec2(t * 3.1, 0.0)),    9.0) * 0.55;
-    float sp2 = pow(noise(p * 19.0 - vec2(0.0, t * 2.6)),   11.0) * 0.35;
-    float intensity = bolts + sp1 + sp2;
-
-    vec3 c = vec3(0.04, 0.028, 0.008);
-    c = mix(c, vec3(0.788, 0.659, 0.298), smoothstep(0.00, 0.35, intensity));
-    c = mix(c, vec3(1.00,  0.900, 0.640), smoothstep(0.25, 0.60, intensity));
-    c = mix(c, vec3(1.00,  0.970, 0.880), smoothstep(0.50, 0.80, intensity));
-    c = mix(c, vec3(1.00,  1.000, 1.000), smoothstep(0.75, 1.00, intensity));
-
-    float vx = smoothstep(0.0, 0.06, uv.x) * smoothstep(1.0, 0.94, uv.x);
-    c *= (0.45 + 0.55 * vx);
-    gl_FragColor = vec4(c, smoothstep(0.04, 0.22, intensity) * vx);
-  }
-`;
-
-// ── NÁPAD 1: WebGL shaders — full-screen Liquid Gold background ──────────────
-const BG_FS_SRC = `
-  precision mediump float;
-  uniform float u_time;
-  uniform vec2  u_res;
-  uniform vec2  u_mouse;
-
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
-  float noise(vec2 p) {
-    vec2 i = floor(p), f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
-      mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
-      f.y
-    );
-  }
-  float fbm(vec2 p) {
-    float v = 0.0, a = 0.5;
-    for (int i = 0; i < 5; i++) {
-      v += a * noise(p);
-      p  = p * 2.1 + vec2(1.7, 9.2);
-      a *= 0.52;
-    }
-    return v;
-  }
-  void main() {
-    vec2 uv  = gl_FragCoord.xy / u_res;
-    float t  = u_time * 0.14;
-    vec2 mp  = (u_mouse - 0.5) * 0.05;
-    vec2 p   = uv + mp;
-
-    float f1 = fbm(p * 1.6 + vec2(t * 0.85, t * 0.55));
-    float f2 = fbm(p * 2.9 - vec2(t * 0.52, t * 0.92));
-    float f3 = fbm(p * 0.85 + vec2(-t * 0.28, t * 0.18));
-    float flow = f1 * 0.44 + f2 * 0.36 + f3 * 0.20;
-
-    vec3 c0 = vec3(0.030, 0.014, 0.003);
-    vec3 c1 = vec3(0.220, 0.110, 0.020);
-    vec3 c2 = vec3(0.788, 0.659, 0.298);
-    vec3 c3 = vec3(0.969, 0.878, 0.439);
-
-    vec3 col = c0;
-    col = mix(col, c1, smoothstep(0.28, 0.50, flow));
-    col = mix(col, c2, smoothstep(0.48, 0.68, flow));
-    col = mix(col, c3, smoothstep(0.66, 0.82, flow));
-
-    vec2 vd  = uv - 0.5;
-    float vig = 1.0 - dot(vd * 1.5, vd * 1.5);
-    col *= max(0.22, vig);
-
-    gl_FragColor = vec4(col, 1.0);
-  }
-`;
-
-// ── NÁPAD 1: LiquidGoldBg — full-screen animated background ──────────────────
+// ── Lightweight Starry Sky background (mobile-friendly, older devices) ──────
 function LiquidGoldBg({
     mouseRef,
     enabled,
@@ -221,83 +112,102 @@ function LiquidGoldBg({
 
     useEffect(() => {
         if (!enabled) return;
-        if (document.documentElement.classList.contains("phd-low-power")) return;
         const canvas = ref.current;
         if (!canvas) return;
+        const ctx = canvas.getContext("2d", { alpha: false });
+        if (!ctx) return;
 
-        const gl = (
-            canvas.getContext("webgl") ??
-            (canvas.getContext("experimental-webgl") as WebGLRenderingContext | null)
-        ) as WebGLRenderingContext | null;
-        if (!gl) return;
+        const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+        const lowPowerClass = document.documentElement.classList.contains("phd-low-power");
+        const cores = navigator.hardwareConcurrency ?? 4;
+        const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4;
+        const isLowEnd = lowPowerClass || cores <= 2 || memory <= 2;
 
-        const sync = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            gl.viewport(0, 0, canvas.width, canvas.height);
-        };
-        sync();
-        window.addEventListener("resize", sync, { passive: true });
-
-        const mkShader = (type: number, src: string) => {
-            const s = gl.createShader(type);
-            if (!s) return null;
-            gl.shaderSource(s, src);
-            gl.compileShader(s);
-            return s;
-        };
-        const vs = mkShader(gl.VERTEX_SHADER, VS_SRC);
-        const fs = mkShader(gl.FRAGMENT_SHADER, BG_FS_SRC);
-        if (!vs || !fs) { window.removeEventListener("resize", sync); return; }
-
-        const prog = gl.createProgram();
-        if (!prog) { window.removeEventListener("resize", sync); return; }
-        gl.attachShader(prog, vs);
-        gl.attachShader(prog, fs);
-        gl.linkProgram(prog);
-        gl.useProgram(prog);
-
-        const buf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-        gl.bufferData(
-            gl.ARRAY_BUFFER,
-            new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
-            gl.STATIC_DRAW,
-        );
-        const posLoc = gl.getAttribLocation(prog, "a_pos");
-        gl.enableVertexAttribArray(posLoc);
-        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-        const tLoc = gl.getUniformLocation(prog, "u_time");
-        const rLoc = gl.getUniformLocation(prog, "u_res");
-        const mouseLoc = gl.getUniformLocation(prog, "u_mouse");
-
-        gl.clearColor(0.03, 0.014, 0.003, 1);
-
-        const isMobile = window.innerWidth < 768;
-        const minInterval = isMobile ? 1000 / 30 : 1000 / 60;
-        let last = 0;
+        let cssW = 0;
+        let cssH = 0;
+        let stars: StarPoint[] = [];
         let raf = 0;
-        const t0 = performance.now();
+        let lastPaint = 0;
+        const targetFps = isLowEnd ? 18 : 28;
+        const minFrameMs = 1000 / targetFps;
+
+        const rebuildStars = () => {
+            const area = cssW * cssH;
+            const density = isLowEnd ? 26000 : 19000;
+            const maxStars = isLowEnd ? 120 : 190;
+            const count = Math.max(60, Math.min(maxStars, Math.floor(area / density)));
+            stars = Array.from({ length: count }, () => ({
+                x: Math.random() * cssW,
+                y: Math.random() * cssH,
+                radius: Math.random() * 1.4 + 0.35,
+                alpha: Math.random() * 0.55 + 0.25,
+                phase: Math.random() * Math.PI * 2,
+                twinkleSpeed: Math.random() * 1.1 + 0.35,
+                warm: Math.random() < 0.2,
+            }));
+        };
+
+        const resize = () => {
+            cssW = Math.max(1, window.innerWidth);
+            cssH = Math.max(1, window.innerHeight);
+            const dprCap = isLowEnd ? 1 : 1.5;
+            const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
+            canvas.width = Math.floor(cssW * dpr);
+            canvas.height = Math.floor(cssH * dpr);
+            canvas.style.width = `${cssW}px`;
+            canvas.style.height = `${cssH}px`;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            rebuildStars();
+        };
+
+        const draw = (nowMs: number) => {
+            ctx.fillStyle = "#04060f";
+            ctx.fillRect(0, 0, cssW, cssH);
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, cssH);
+            gradient.addColorStop(0, "rgba(14,19,38,0.65)");
+            gradient.addColorStop(1, "rgba(2,4,10,0.82)");
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, cssW, cssH);
+
+            const mx = mouseRef.current?.[0] ?? 0.5;
+            const my = mouseRef.current?.[1] ?? 0.5;
+            const shiftX = (mx - 0.5) * (isLowEnd ? 4 : 8);
+            const shiftY = (0.5 - my) * (isLowEnd ? 3 : 6);
+            const t = nowMs / 1000;
+
+            for (const s of stars) {
+                const twinkle = prefersReducedMotion ? 1 : 0.65 + Math.sin(t * s.twinkleSpeed + s.phase) * 0.35;
+                const alpha = Math.max(0.1, s.alpha * twinkle);
+                const x = (s.x + shiftX + cssW) % cssW;
+                const y = (s.y + shiftY + cssH) % cssH;
+                ctx.beginPath();
+                ctx.fillStyle = s.warm
+                    ? `rgba(230, 200, 130, ${alpha.toFixed(3)})`
+                    : `rgba(220, 235, 255, ${alpha.toFixed(3)})`;
+                ctx.arc(x, y, s.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        };
 
         const frame = (now: number) => {
             raf = requestAnimationFrame(frame);
-            if (now - last < minInterval) return;
-            last = now;
-            gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.uniform1f(tLoc, (now - t0) / 1000);
-            gl.uniform2f(rLoc, canvas.width, canvas.height);
-            const m = mouseRef.current;
-            gl.uniform2f(mouseLoc, m ? m[0] : 0.5, m ? m[1] : 0.5);
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            if (prefersReducedMotion) return;
+            if (now - lastPaint < minFrameMs) return;
+            lastPaint = now;
+            draw(now);
         };
-        raf = requestAnimationFrame(frame);
+
+        resize();
+        draw(performance.now());
+        window.addEventListener("resize", resize, { passive: true });
+        if (!prefersReducedMotion) {
+            raf = requestAnimationFrame(frame);
+        }
 
         return () => {
             cancelAnimationFrame(raf);
-            window.removeEventListener("resize", sync);
-            gl.deleteProgram(prog);
-            if (buf) gl.deleteBuffer(buf);
+            window.removeEventListener("resize", resize);
         };
     }, [enabled]);
 
@@ -316,86 +226,6 @@ function LiquidGoldBg({
             }}
         />
     );
-}
-
-// ── WebGL Electric Canvas (intro divider) ────────────────────────────────────
-function ElectricCanvas() {
-    const ref = useRef<HTMLCanvasElement>(null);
-
-    useEffect(() => {
-        if (document.documentElement.classList.contains("phd-low-power")) return;
-        const canvas = ref.current;
-        if (!canvas) return;
-
-        const gl = (
-            canvas.getContext("webgl") ??
-            (canvas.getContext("experimental-webgl") as WebGLRenderingContext | null)
-        ) as WebGLRenderingContext | null;
-        if (!gl) return;
-
-        const sync = () => {
-            const w = canvas.offsetWidth;
-            const h = canvas.offsetHeight;
-            if (!w || !h) return;
-            canvas.width = w;
-            canvas.height = h;
-            gl.viewport(0, 0, w, h);
-        };
-        sync();
-        const ro = new ResizeObserver(sync);
-        ro.observe(canvas);
-
-        const mkShader = (type: number, src: string) => {
-            const s = gl.createShader(type);
-            if (!s) return null;
-            gl.shaderSource(s, src);
-            gl.compileShader(s);
-            return s;
-        };
-        const vs = mkShader(gl.VERTEX_SHADER, VS_SRC);
-        const fs = mkShader(gl.FRAGMENT_SHADER, FS_SRC);
-        if (!vs || !fs) { ro.disconnect(); return; }
-
-        const prog = gl.createProgram();
-        if (!prog) { ro.disconnect(); return; }
-        gl.attachShader(prog, vs);
-        gl.attachShader(prog, fs);
-        gl.linkProgram(prog);
-        gl.useProgram(prog);
-
-        const buf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-        const posLoc = gl.getAttribLocation(prog, "a_pos");
-        gl.enableVertexAttribArray(posLoc);
-        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-        const tLoc = gl.getUniformLocation(prog, "u_time");
-        const rLoc = gl.getUniformLocation(prog, "u_res");
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        gl.clearColor(0, 0, 0, 0);
-
-        let raf = 0;
-        const t0 = performance.now();
-        const frame = () => {
-            gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.uniform1f(tLoc, (performance.now() - t0) / 1000);
-            gl.uniform2f(rLoc, canvas.width, canvas.height);
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            raf = requestAnimationFrame(frame);
-        };
-        frame();
-
-        return () => {
-            cancelAnimationFrame(raf);
-            ro.disconnect();
-            gl.deleteProgram(prog);
-            if (buf) gl.deleteBuffer(buf);
-        };
-    }, []);
-
-    return <canvas ref={ref} aria-hidden="true" className="block w-full h-12 sm:h-16 lg:h-20" />;
 }
 
 // ── NÁPAD 2: Venetian Overlay — barber blinds opening effect ─────────────────
@@ -430,16 +260,30 @@ function VenetianOverlay({ active, strips = 14 }: { active: boolean; strips?: nu
 function PickerCard({
     p,
     avatarPx,
+    sectionMode = false,
+    stacked = false,
+    compact = false,
     onPick,
 }: {
     p: (typeof PROFILES)[number];
     avatarPx: number;
+    sectionMode?: boolean;
+    stacked?: boolean;
+    compact?: boolean;
     onPick: (id: ProfileId) => void;
 }) {
     const [tilt, setTilt] = useState({ x: 0, y: 0 });
     const [hovered, setHovered] = useState(false);
+    const [canTilt, setCanTilt] = useState(false);
+
+    useEffect(() => {
+        const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+        const coarse = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+        setCanTilt(!reduce && !coarse);
+    }, []);
 
     const onMove = (e: React.MouseEvent<HTMLButtonElement>) => {
+        if (!canTilt) return;
         const rect = e.currentTarget.getBoundingClientRect();
         const cx = (e.clientX - rect.left) / rect.width - 0.5;
         const cy = (e.clientY - rect.top) / rect.height - 0.5;
@@ -456,8 +300,26 @@ function PickerCard({
             onMouseLeave={() => { setTilt({ x: 0, y: 0 }); setHovered(false); }}
             className="group flex flex-col items-center gap-2 sm:gap-2.5 focus:outline-none relative overflow-hidden"
             style={{
-                borderRadius: "1.6rem",
-                padding: "12px 12px 16px",
+                width: compact
+                    ? "clamp(108px, 29.2vw, 260px)"
+                    : sectionMode || stacked
+                    ? "min(92vw, 620px)"
+                    : "auto",
+                height: sectionMode
+                    ? "min(84vh, 860px)"
+                    : compact
+                    ? "min(36vh, 310px)"
+                    : stacked
+                    ? "min(34vh, 360px)"
+                    : undefined,
+                borderRadius: sectionMode || stacked ? "2rem" : "1.6rem",
+                padding: sectionMode
+                    ? "22px 20px 28px"
+                    : compact
+                    ? "12px 10px 14px"
+                    : stacked
+                    ? "18px 18px 22px"
+                    : "12px 12px 16px",
                 background: hovered
                     ? `rgba(255,255,255,0.07)`
                     : "rgba(255,255,255,0.04)",
@@ -467,7 +329,7 @@ function PickerCard({
                 boxShadow: hovered
                     ? `0 20px 56px rgba(0,0,0,0.6), 0 0 40px ${p.color}28, inset 0 1px 0 ${p.color}28`
                     : `0 8px 28px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.07)`,
-                transform: `perspective(650px) rotateY(${tilt.x}deg) rotateX(${tilt.y}deg) scale(${hovered ? 1.06 : 1}) translateY(${hovered ? -5 : 0}px)`,
+                transform: `perspective(650px) rotateY(${canTilt ? tilt.x : 0}deg) rotateX(${canTilt ? tilt.y : 0}deg) scale(${hovered ? 1.04 : 1}) translateY(${hovered ? -5 : 0}px)`,
                 transition: hovered
                     ? "border .15s, box-shadow .15s, background .15s, transform .05s"
                     : "border .4s, box-shadow .4s, background .4s, transform .55s cubic-bezier(.22,1,.36,1)",
@@ -516,7 +378,7 @@ function PickerCard({
 
             {/* Name */}
             <span
-                className="text-xs sm:text-sm lg:text-base font-bold tracking-wider transition-colors duration-200"
+                className={`${sectionMode ? "text-base sm:text-xl lg:text-2xl" : compact ? "text-[11px] sm:text-sm lg:text-base" : stacked ? "text-sm sm:text-lg lg:text-xl" : "text-xs sm:text-sm lg:text-base"} font-bold tracking-wider transition-colors duration-200`}
                 style={{ color: hovered ? "#ffffff" : "rgba(255,255,255,0.92)" }}
             >
                 {p.label}
@@ -524,7 +386,7 @@ function PickerCard({
 
             {/* Role label — new */}
             <span
-                className="text-[9px] sm:text-[10px] font-medium tracking-[0.14em] uppercase transition-colors duration-300"
+                className={`${sectionMode ? "text-[11px] sm:text-xs" : compact ? "text-[9px] sm:text-[10px]" : stacked ? "text-[10px] sm:text-xs" : "text-[9px] sm:text-[10px]"} font-medium tracking-[0.14em] uppercase transition-colors duration-300`}
                 style={{ color: hovered ? p.color : "rgba(255,255,255,0.55)" }}
             >
                 {p.role}
@@ -608,7 +470,7 @@ export default function SalonLoginPage() {
     const [surfaceMode, setSurfaceMode] = useState<"dark" | "light">("dark");
     const [venetian, setVenetian] = useState(true);
     const [avatarPx, setAvatarPx] = useState(() =>
-        typeof window !== "undefined" ? calcAvatarPx(window.innerWidth) : 138,
+        typeof window !== "undefined" ? calcAvatarPx(window.innerWidth, window.innerHeight) : 180,
     );
     const isLightSurface = surfaceMode === "light";
 
@@ -645,7 +507,7 @@ export default function SalonLoginPage() {
 
     // Responsive avatar sizing
     useEffect(() => {
-        const onResize = () => setAvatarPx(calcAvatarPx(window.innerWidth));
+        const onResize = () => setAvatarPx(calcAvatarPx(window.innerWidth, window.innerHeight));
         window.addEventListener("resize", onResize, { passive: true });
         return () => window.removeEventListener("resize", onResize);
     }, []);
@@ -675,12 +537,12 @@ export default function SalonLoginPage() {
 
     return (
         <div
-            className={`h-[100dvh] flex flex-col items-center overflow-hidden relative safe-y ${isLightSurface ? "salon-surface-light" : ""}`}
+            className={`h-screen min-h-screen max-h-screen flex flex-col items-center overflow-hidden relative safe-y ${isLightSurface ? "salon-surface-light" : ""}`}
             style={{ background: isLightSurface ? "#f8fafc" : "#050505" }}
         >
             <style>{STYLES}</style>
 
-            {/* NÁPAD 1: Full-screen Liquid Gold WebGL background */}
+            {/* Lightweight starry sky background */}
             <LiquidGoldBg mouseRef={mouseRef} enabled={!isLightSurface} />
 
             <div className="fixed top-4 right-4 z-[70] flex items-center gap-1">
@@ -703,15 +565,16 @@ export default function SalonLoginPage() {
             {/* ═══════════════════════════════════════════════════════════════
                 ROW A — Logo zone
                 ═══════════════════════════════════════════════════════════════ */}
-            <div className="shrink-0 flex flex-col items-center select-none z-10 w-full pt-3 xs:pt-4 sm:pt-5">
+            <div className="shrink-0 flex flex-col items-center select-none z-10 w-full pt-[15px] lg:pt-0 lg:-mt-[40px]">
                 <img
                     src="https://papihairdesign.sk/images/logo-header.webp"
                     alt="Papi Hair Design"
                     draggable={false}
                     className={[
-                        "phd-logo w-auto object-contain object-bottom",
-                        "h-32 xs:h-36 sm:h-44 md:h-52 lg:h-64 xl:h-72",
-                        "-mb-6 xs:-mb-7 sm:-mb-9 md:-mb-10 lg:-mb-14 xl:-mb-16",
+                        "phd-logo h-auto object-contain object-bottom",
+                        "w-[75vw] xs:w-[74vw] sm:w-[66vw] md:w-[58vw] lg:w-[52vw] xl:w-[46vw] 2xl:w-[40vw]",
+                        "max-w-[1200px] min-w-[280px]",
+                        "-mb-8 xs:-mb-10 sm:-mb-12 md:-mb-14 lg:-mb-16 xl:-mb-20",
                     ].join(" ")}
                 />
                 <span className="relative z-10 text-[10px] xs:text-xs tracking-widest uppercase text-white/30">
@@ -722,25 +585,17 @@ export default function SalonLoginPage() {
             {/* ═══════════════════════════════════════════════════════════════
                 ROW B — Phase content
                 ═══════════════════════════════════════════════════════════════ */}
-            <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto px-5 pb-7 z-10">
+            <div
+                className={`flex-1 min-h-0 w-full flex flex-col items-center z-10 ${
+                    phase === "picker"
+                        ? "justify-start overflow-y-auto px-0 pb-4"
+                        : "justify-center overflow-y-auto px-5 pb-7"
+                }`}
+            >
 
                 {/* ──────────── INTRO ──────────── */}
                 {phase === "intro" && (
                     <div className="w-full flex flex-col items-center">
-
-                        {animStep >= 1 && (
-                            <div
-                                className="w-full"
-                                style={{
-                                    opacity: 0,
-                                    animation: "phd-up .9s cubic-bezier(.22,1,.36,1) forwards",
-                                    filter: "drop-shadow(0 0 16px #C9A84C55)",
-                                }}
-                            >
-                                <ElectricCanvas />
-                            </div>
-                        )}
-
                         {animStep >= 2 && (
                             <div
                                 className="flex flex-col items-center gap-3 mt-5 sm:mt-7 w-full"
@@ -775,27 +630,32 @@ export default function SalonLoginPage() {
 
                 {/* ──────────── PICKER ──────────── */}
                 {phase === "picker" && (
-                    <div className="flex flex-col items-center gap-4 sm:gap-6 phd-slide w-full">
+                    <div className="phd-slide w-full flex flex-col">
+                        <div className="w-full max-w-[560px] mx-auto px-4 sm:px-6 pt-0 -mt-1 sm:-mt-2">
+                            <p
+                                className="text-[11px] sm:text-xs text-center italic leading-relaxed"
+                                style={{
+                                    color: "rgba(201,168,76,0.62)",
+                                    textShadow: "0 0 18px rgba(201,168,76,0.22)",
+                                }}
+                            >
+                                {t("salonLogin.quote")}
+                            </p>
+                            <p className="mt-2 text-center text-[10px] sm:text-xs uppercase tracking-[0.16em] text-white/45">
+                                Potiahnite nižšie a vyberte člena tímu
+                            </p>
+                        </div>
 
-                        <p
-                            className="text-[11px] sm:text-xs text-center italic max-w-[260px] sm:max-w-xs leading-relaxed px-2"
-                            style={{
-                                color: "rgba(201,168,76,0.62)",
-                                textShadow: "0 0 18px rgba(201,168,76,0.22)",
-                            }}
-                        >
-                            {t("salonLogin.quote")}
-                        </p>
-
-                        {/* NÁPAD 3: Holographic 3D tilt member cards */}
-                        <div className="flex flex-row gap-4 xs:gap-5 sm:gap-9 lg:gap-12 mt-1">
+                        <div className="w-full max-w-[1120px] mx-auto mt-2 px-2 sm:px-4 pb-4 flex flex-row flex-nowrap items-start justify-center gap-2 sm:gap-3 md:gap-4 overflow-hidden">
                             {PROFILES.map((p) => (
-                                <PickerCard
-                                    key={p.id}
-                                    p={p}
-                                    avatarPx={avatarPx}
-                                    onPick={pick}
-                                />
+                                <section key={p.id} className="flex items-start justify-center">
+                                    <PickerCard
+                                        p={p}
+                                        avatarPx={Math.min(Math.max(Math.round(avatarPx * 0.44), 86), 170)}
+                                        compact
+                                        onPick={pick}
+                                    />
+                                </section>
                             ))}
                         </div>
                     </div>

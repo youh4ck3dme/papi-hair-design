@@ -1,5 +1,5 @@
 import { LanguageToggle } from "@/components/LanguageToggle";
-import { Moon, Sun, Scissors } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { GoldText } from "./BookingUI";
 
 interface BookingHeaderProps {
@@ -15,7 +15,11 @@ export function BookingHeader({ isDark, setTheme }: BookingHeaderProps) {
             <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/30">
-                        <Scissors size={15} className="text-primary rotate-[-45deg]" />
+                        <img
+                            src="/favicon.png"
+                            alt="PAPI HAIR DESIGN"
+                            className="w-[15px] h-[15px] rounded-full object-cover"
+                        />
                     </div>
                     <div className="flex flex-col leading-none">
                         <span className="text-[15px] font-bold tracking-widest uppercase font-serif">

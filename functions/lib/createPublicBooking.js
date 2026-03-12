@@ -38,6 +38,7 @@ const functions = __importStar(require("firebase-functions/v2"));
 const firestore_1 = require("firebase-admin/firestore");
 const https_1 = require("firebase-functions/v2/https");
 const crypto = __importStar(require("crypto"));
+const emailQueue_1 = require("./emailQueue");
 const RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
 const RECAPTCHA_MIN_SCORE = 0.5;
 const RECAPTCHA_EXPECTED_ACTION = "booking";
@@ -217,6 +218,24 @@ exports.createPublicBooking = functions.https.onCall({ region: "europe-west1" },
         expires_at: expiresAt.toISOString(),
         created_at: new Date().toISOString()
     });
+    try {
+        await (0, emailQueue_1.queueCustomerBookingEmail)({
+            businessId: business_id,
+            appointmentId: appointment.id,
+            customerEmail: sanitizedEmail,
+            customerName: customer_name.trim(),
+            serviceName: typeof service.name_sk === "string" ? service.name_sk : null,
+            employeeName: typeof employee.display_name === "string" ? employee.display_name : null,
+            startAtIso: startDate.toISOString(),
+        });
+    }
+    catch (err) {
+        functions.logger.warn("createPublicBooking: queue customer email failed", {
+            appointment_id: appointment.id,
+            business_id,
+            error: err instanceof Error ? err.message : String(err),
+        });
+    }
     return {
         success: true,
         appointment_id: appointment.id,
