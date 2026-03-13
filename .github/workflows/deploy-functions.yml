@@ -10,6 +10,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  npm_config_script_shell: /bin/bash
 
 jobs:
   deploy:
@@ -33,6 +34,9 @@ jobs:
 
       - name: Build functions
         run: cd functions && npm run build
+
+      - name: Run functions tests
+        run: cd functions && npm test
 
       - name: Deploy to Firebase
         run: |

@@ -1,6 +1,11 @@
 import { test, expect, Page } from "@playwright/test";
 
-const FIREBASE_API_KEY = process.env.VITE_FIREBASE_API_KEY ?? "AIzaSyB9XP28a-BT-rP-tCyYZJSz64gxjr82iEo";
+const ENABLE_BOOKING_E2E = process.env.PLAYWRIGHT_ENABLE_BOOKING_E2E === "1";
+const FIREBASE_API_KEY = process.env.PLAYWRIGHT_FIREBASE_API_KEY?.trim();
+
+if (ENABLE_BOOKING_E2E && !FIREBASE_API_KEY) {
+    throw new Error("PLAYWRIGHT_FIREBASE_API_KEY is required when PLAYWRIGHT_ENABLE_BOOKING_E2E=1.");
+}
 
 async function dismissCookieConsent(page: Page) {
     const cookieAccept = page.locator('button:has-text("Prijať všetko")');
@@ -138,6 +143,10 @@ async function completeBooking(page: Page, bookingEmail: string): Promise<{ regi
 
 test.describe("Booking Flow", () => {
     test.describe.configure({ timeout: 120_000 });
+    test.skip(
+        !ENABLE_BOOKING_E2E,
+        "Set PLAYWRIGHT_ENABLE_BOOKING_E2E=1 and point the app at an isolated Firebase test project before running booking mutations."
+    );
 
     test("should complete a full booking successfully", async ({ page }) => {
         page.on("console", (msg) => {

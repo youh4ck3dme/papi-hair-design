@@ -1,9 +1,19 @@
 import { test, expect } from "@playwright/test";
 
-const ADMIN_EMAIL = process.env.PLAYWRIGHT_ADMIN_EMAIL ?? "papi@papihairdesign.sk";
-const ADMIN_PASSWORD = process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? "88888888";
+const ENABLE_ADMIN_E2E = process.env.PLAYWRIGHT_ENABLE_ADMIN_E2E === "1";
+const ADMIN_EMAIL = process.env.PLAYWRIGHT_ADMIN_EMAIL?.trim();
+const ADMIN_PASSWORD = process.env.PLAYWRIGHT_ADMIN_PASSWORD?.trim();
+
+if (ENABLE_ADMIN_E2E && (!ADMIN_EMAIL || !ADMIN_PASSWORD)) {
+    throw new Error("PLAYWRIGHT_ADMIN_EMAIL and PLAYWRIGHT_ADMIN_PASSWORD are required when PLAYWRIGHT_ENABLE_ADMIN_E2E=1.");
+}
 
 test.describe("Admin Calendar", () => {
+    test.skip(
+        !ENABLE_ADMIN_E2E,
+        "Set PLAYWRIGHT_ENABLE_ADMIN_E2E=1 with isolated admin credentials before running admin calendar mutations."
+    );
+
     test.beforeEach(async ({ page }) => {
         // Log in as owner
         await page.goto("/auth");

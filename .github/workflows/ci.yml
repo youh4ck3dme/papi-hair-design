@@ -8,6 +8,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  npm_config_script_shell: /bin/bash
 
 jobs:
   lint-and-test:
@@ -40,6 +41,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install functions dependencies
+        run: cd functions && npm ci
+
       - name: Lint
         run: npm run lint
 
@@ -48,6 +52,9 @@ jobs:
 
       - name: Run tests
         run: npm run test
+
+      - name: Run functions tests
+        run: cd functions && npm test
 
       - name: Coverage (report only)
         run: npm run test:coverage || true
