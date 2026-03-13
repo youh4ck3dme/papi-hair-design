@@ -19,18 +19,28 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Search, Check, X, Clock, User, Calendar, ExternalLink, CalendarDays, ReceiptEuro, UserPlus, Scissors, ChevronRight } from "lucide-react";
+import { Loader2, Search, Check, X, Clock, User, Calendar, ExternalLink, CalendarDays, ReceiptEuro, UserPlus, Scissors, ChevronRight, Copy, Mail, Phone } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
+import {
+  ADMIN_BOOKING_STATUS_BADGES,
+  ADMIN_BOOKING_STATUS_LABELS,
+  canAdminCancelBooking,
+  canAdminCompleteBooking,
+  canAdminConfirmBooking,
+  canAdminMarkNoShow,
+} from "@/lib/adminBookingStatus";
 
 const STATUS_MAP: Record<string, { label: string; className: string; icon: any }> = {
-  pending: { label: "Čaká", className: "bg-amber-500/10 text-amber-600 border-amber-500/20", icon: Clock },
-  confirmed: { label: "Potvrdená", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20", icon: Check },
-  cancelled: { label: "Zrušená", className: "bg-rose-500/10 text-rose-600 border-rose-500/20", icon: X },
-  completed: { label: "Dokončená", className: "bg-slate-500/10 text-slate-600 border-slate-500/20", icon: CalendarDays },
+  pending: { label: ADMIN_BOOKING_STATUS_LABELS.pending, className: ADMIN_BOOKING_STATUS_BADGES.pending, icon: Clock },
+  confirmed: { label: ADMIN_BOOKING_STATUS_LABELS.confirmed, className: ADMIN_BOOKING_STATUS_BADGES.confirmed, icon: Check },
+  cancelled: { label: ADMIN_BOOKING_STATUS_LABELS.cancelled, className: ADMIN_BOOKING_STATUS_BADGES.cancelled, icon: X },
+  completed: { label: ADMIN_BOOKING_STATUS_LABELS.completed, className: ADMIN_BOOKING_STATUS_BADGES.completed, icon: CalendarDays },
+  no_show: { label: ADMIN_BOOKING_STATUS_LABELS.no_show, className: ADMIN_BOOKING_STATUS_BADGES.no_show, icon: X },
 };
 
 export default function AppointmentsPage() {
@@ -41,13 +51,14 @@ export default function AppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState<any | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [copyLabel, setCopyLabel] = useState("Skopírovať");
 
   const load = async () => {
     if (!businessId) return;
     setLoading(true);
     try {
-      const statuses = ["pending", "confirmed", "cancelled", "completed"] as const;
-      type AppStatus = typeof statuses[number];
+  const statuses = ["pending", "confirmed", "cancelled", "completed", "no_show"] as const;
+  type AppStatus = typeof statuses[number];
 
       let q = query(
         collection(db, "appointments"),
@@ -77,12 +88,13 @@ export default function AppointmentsPage() {
 
   useEffect(() => { load(); }, [businessId, statusFilter]);
 
-  const updateStatus = async (id: string, status: "pending" | "confirmed" | "cancelled" | "completed") => {
+  const updateStatus = async (id: string, status: "pending" | "confirmed" | "cancelled" | "completed" | "no_show") => {
     setUpdating(true);
     try {
-      await updateDoc(doc(db, "appointments", id), {
+      await adminUpdateBookingStatus({
+        business_id: businessId,
+        appointment_id: id,
         status,
-        updated_at: new Date().toISOString()
       });
       toast.success("Status aktualizovaný");
       setSelected(null);
@@ -131,6 +143,7 @@ export default function AppointmentsPage() {
               <SelectItem value="pending">Čakajúce</SelectItem>
               <SelectItem value="confirmed">Potvrdené</SelectItem>
               <SelectItem value="completed">Dokončené</SelectItem>
+              <SelectItem value="no_show">No-show</SelectItem>
               <SelectItem value="cancelled">Zrušené</SelectItem>
             </SelectContent>
           </Select>
@@ -176,6 +189,20 @@ export default function AppointmentsPage() {
                       <Clock className="w-3 h-3" />
                       <span>{format(startDate, "HH:mm")}</span>
                     </div>
+                    {(a.customer_email || a.customer_phone) && (
+                      <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                        {a.customer_email && (
+                          <span className="flex items-center gap-1">
+                            <Mail className="w-3 h-3" /> {a.customer_email}
+                          </span>
+                        )}
+                        {a.customer_phone && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3 h-3" /> {a.customer_phone}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -253,6 +280,44 @@ export default function AppointmentsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
+                  <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Referencia</Label>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold truncate" title={selected.id}>{selected.id}</p>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(selected.id);
+                          setCopyLabel("Skopírované");
+                          setTimeout(() => setCopyLabel("Skopírovať"), 1500);
+                        } catch {
+                          setCopyLabel("Kópia zlyhala");
+                          setTimeout(() => setCopyLabel("Skopírovať"), 1500);
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+                    >
+                      <Copy className="w-3.5 h-3.5" /> {copyLabel}
+                    </button>
+                    <a
+                      href={`/dashboard/history?ref=${encodeURIComponent(selected.id)}`}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> História
+                    </a>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Kontakt</Label>
+                  <div className="flex flex-col gap-1 text-sm text-foreground">
+                    {selected.customer_email && <span className="flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-primary" /> {selected.customer_email}</span>}
+                    {selected.customer_phone && <span className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-primary" /> {selected.customer_phone}</span>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
                   <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Služba</Label>
                   <p className="text-sm font-semibold">{selected.service_name}</p>
                   {selected.service_price && <p className="text-xs text-emerald-600 font-bold">{selected.service_price} €</p>}
@@ -283,17 +348,22 @@ export default function AppointmentsPage() {
               {isOwnerOrAdmin && (
                 <DialogFooter className="flex-col sm:flex-row gap-2 pt-2 border-t border-primary/5">
                   <div className="grid grid-cols-2 gap-2 w-full">
-                    {selected.status === "pending" && (
+                    {canAdminConfirmBooking(selected.status) && (
                       <Button className="font-bold rounded-xl shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-700" onClick={() => updateStatus(selected.id, "confirmed")} disabled={updating}>
                         <Check className="w-4 h-4 mr-2" /> Potvrdiť
                       </Button>
                     )}
-                    {(selected.status === "confirmed" || selected.status === "pending") && (
+                    {canAdminCompleteBooking(selected.status) && (
                       <Button variant="secondary" className="font-bold rounded-xl" onClick={() => updateStatus(selected.id, "completed")} disabled={updating}>
                         Služba hotová
                       </Button>
                     )}
-                    {selected.status !== "cancelled" && selected.status !== "completed" && (
+                    {canAdminMarkNoShow(selected.status) && (
+                      <Button variant="destructive" className="font-bold rounded-xl" onClick={() => updateStatus(selected.id, "no_show")} disabled={updating}>
+                        <X className="w-4 h-4 mr-2" /> No-show
+                      </Button>
+                    )}
+                    {canAdminCancelBooking(selected.status) && (
                       <Button variant="ghost" className="font-bold rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50/50" onClick={() => updateStatus(selected.id, "cancelled")} disabled={updating}>
                         <X className="w-4 h-4 mr-2" /> Zrušiť
                       </Button>

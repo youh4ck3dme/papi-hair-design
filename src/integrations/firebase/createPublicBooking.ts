@@ -7,12 +7,15 @@ import { httpsCallable } from "firebase/functions";
 export interface CreatePublicBookingBody {
     business_id: string;
     service_id: string;
-    employee_id: string;
+    employee_id?: string;
     start_at: string;
     customer_name: string;
     customer_email: string;
     customer_phone?: string;
+    note?: string | null;
+    payment_method?: string | null;
     recaptcha_token?: string | null;
+    admin_mode?: boolean;
 }
 
 export interface CreatePublicBookingResponse {
@@ -20,6 +23,8 @@ export interface CreatePublicBookingResponse {
     error?: string;
     appointment_id?: string;
     claim_token?: string;
+    history_access_token?: string | null;
+    history_reference?: string | null;
     customer_email?: string;
     customer_name?: string;
 }

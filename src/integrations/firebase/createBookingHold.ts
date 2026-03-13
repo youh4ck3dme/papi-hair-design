@@ -4,7 +4,7 @@ import { httpsCallable } from "firebase/functions";
 export interface CreateBookingHoldBody {
   business_id: string;
   service_id: string;
-  employee_id: string;
+  employee_id?: string;
   start_at: string;
   customer_name: string;
   customer_email: string;

@@ -23,7 +23,7 @@ import { isAdminAllowlisted, normalizeEmail } from "@/lib/adminAllowlist";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 
-const PUBLIC_BOOKING_URL = "https://hairchainger-main-876665-176e8.web.app/booking";
+const PUBLIC_BOOKING_URL = "https://booking.papihairdesign.sk/booking";
 const PUBLIC_BOOKING_PATH = "/booking";
 const CROSS_DOMAIN_AUTH_HOST = "booking.papihairdesign.sk";
 
@@ -446,7 +446,7 @@ export default function AuthPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground mt-4 space-y-1">
+        <p className="mt-4 space-y-1 text-center text-sm text-muted-foreground">
           <a href="/demo" className="text-primary hover:underline block">
             {t("auth.demoLink")}
           </a>

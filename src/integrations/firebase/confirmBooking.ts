@@ -12,6 +12,8 @@ export interface ConfirmBookingResponse {
   appointment_id?: string;
   status?: string;
   claim_token?: string | null;
+  history_access_token?: string | null;
+  history_reference?: string | null;
   customer_email?: string | null;
   customer_name?: string | null;
 }

@@ -26,17 +26,29 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { Loader2, User, Clock, Phone, X, Check } from "lucide-react";
+import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: "Čaká na potvrdenie", confirmed: "Potvrdená",
-  cancelled: "Zrušená", completed: "Dokončená",
-};
+import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
+import {
+  ADMIN_BOOKING_STATUS_LABELS,
+  canAdminCancelBooking,
+  canAdminCompleteBooking,
+  canAdminConfirmBooking,
+  canAdminMarkNoShow,
+} from "@/lib/adminBookingStatus";
+import { buildAdminCalendarCsv, buildAdminCalendarPrintHtml } from "@/lib/adminCalendarExport";
 
 interface CalEvent {
   id: string; title: string; start: Date; end: Date; status: string; resource: any;
+}
+
+interface CustomerHistoryItem {
+  id: string;
+  start_at: string;
+  status: string;
+  service_name: string | null;
 }
 
 export default function CalendarPage() {
@@ -65,6 +77,10 @@ export default function CalendarPage() {
   const [detailModal, setDetailModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [copyLabel, setCopyLabel] = useState("Skopírovať");
+  const [noteText, setNoteText] = useState("");
+  const [customerHistory, setCustomerHistory] = useState<CustomerHistoryItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -255,8 +271,52 @@ export default function CalendarPage() {
       status: res?.status ?? "pending",
       resource: event.resource,
     });
+    setNoteText(typeof (event.resource as any)?.note === "string" ? (event.resource as any).note : "");
     setDetailModal(true);
   };
+
+  useEffect(() => {
+    const loadCustomerHistory = async () => {
+      if (!detailModal || !selectedEvent?.resource?.customer_id) {
+        setCustomerHistory([]);
+        setLoadingHistory(false);
+        return;
+      }
+
+      setLoadingHistory(true);
+      try {
+        const historySnap = await getDocs(query(
+          collection(db, "appointments"),
+          where("business_id", "==", businessId),
+          where("customer_id", "==", selectedEvent.resource.customer_id),
+          orderBy("start_at", "desc"),
+          limit(6)
+        ));
+
+        setCustomerHistory(historySnap.docs.map((docSnap) => {
+          const item = docSnap.data() as {
+            start_at?: string;
+            status?: string;
+            service_name?: string | null;
+          };
+
+          return {
+            id: docSnap.id,
+            start_at: item.start_at ?? "",
+            status: item.status ?? "pending",
+            service_name: item.service_name ?? null,
+          };
+        }));
+      } catch (error) {
+        console.error("CalendarPage: error loading customer history", error);
+        setCustomerHistory([]);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+
+    void loadCustomerHistory();
+  }, [businessId, detailModal, selectedEvent]);
 
   const bookingCalendarEvents: BookingCalendarEvent[] = events.map((e) => {
     const employeeColor = (e.resource as any)?.employee_color;
@@ -269,6 +329,52 @@ export default function CalendarPage() {
       resource: e.resource,
     };
   });
+
+  const selectedDayEvents = events
+    .filter((event) => fmtDate(event.start, "yyyy-MM-dd") === fmtDate(date, "yyyy-MM-dd"))
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+  const exportRows = selectedDayEvents.map((event) => ({
+    reference: event.id,
+    customerName: event.resource?.customer_name ?? event.title,
+    customerEmail: event.resource?.customer_email ?? null,
+    customerPhone: event.resource?.customer_phone ?? null,
+    serviceName: event.resource?.service_name ?? null,
+    employeeName: event.resource?.employee_name ?? null,
+    start: event.start,
+    end: event.end,
+    status: ADMIN_BOOKING_STATUS_LABELS[event.status as keyof typeof ADMIN_BOOKING_STATUS_LABELS] ?? event.status,
+    note: typeof event.resource?.note === "string" ? event.resource.note : null,
+  }));
+
+  const handleExportCsv = () => {
+    const csv = buildAdminCalendarCsv(exportRows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `kalendar-${fmtDate(date, "yyyy-MM-dd")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintDay = () => {
+    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1200,height=900");
+    if (!printWindow) {
+      toast.error("Nepodarilo sa otvoriť tlačové okno");
+      return;
+    }
+
+    const html = buildAdminCalendarPrintHtml(
+      fmtDate(date, "EEEE, d. MMMM yyyy", { locale: sk }),
+      exportRows
+    );
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
 
 
   const handleBook = async () => {
@@ -310,20 +416,52 @@ export default function CalendarPage() {
     }
   };
 
-  const handleStatusChange = async (newStatus: "pending" | "confirmed" | "cancelled" | "completed") => {
+  const handleStatusChange = async (newStatus: "pending" | "confirmed" | "cancelled" | "completed" | "no_show") => {
+    if (!selectedEvent) return;
+    setUpdatingStatus(true);
+    try {
+      const result = await adminUpdateBookingStatus({
+        business_id: businessId,
+        appointment_id: selectedEvent.id,
+        status: newStatus,
+      });
+      setSelectedEvent((current) => current ? {
+        ...current,
+        status: result.status,
+        resource: {
+          ...current.resource,
+          status: result.status,
+        },
+      } : current);
+      toast.success("Status aktualizovaný");
+      await loadEvents();
+    } catch (err) {
+      console.error("handleStatusChange error:", err);
+      toast.error("Chyba pri aktualizácii");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleSaveNote = async () => {
     if (!selectedEvent) return;
     setUpdatingStatus(true);
     try {
       await updateDoc(doc(db, "appointments", selectedEvent.id), {
-        status: newStatus,
-        updated_at: new Date().toISOString()
+        note: noteText || null,
+        updated_at: new Date().toISOString(),
       });
-      toast.success("Status aktualizovaný");
-      setDetailModal(false);
-      loadEvents();
+      setSelectedEvent((current) => current ? {
+        ...current,
+        resource: {
+          ...current.resource,
+          note: noteText || null,
+        },
+      } : current);
+      toast.success("Poznámka uložená");
     } catch (err) {
-      console.error("handleStatusChange error:", err);
-      toast.error("Chyba pri aktualizácii");
+      console.error("handleSaveNote error:", err);
+      toast.error("Chyba pri ukladaní poznámky");
     } finally {
       setUpdatingStatus(false);
     }
@@ -334,7 +472,17 @@ export default function CalendarPage() {
     <div className="space-y-4 h-full">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Kalendár</h1>
-        {loading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={handleExportCsv} disabled={exportRows.length === 0}>
+            <Download className="mr-2 h-4 w-4" />
+            CSV
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={handlePrintDay} disabled={exportRows.length === 0}>
+            <Printer className="mr-2 h-4 w-4" />
+            PDF / Tlač
+          </Button>
+          {loading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
+        </div>
       </div>
 
       <div className="bg-card rounded-xl border border-border p-4 flex flex-col min-h-0" style={{ height: "calc(100vh - 200px)", minHeight: 500 }}>
@@ -410,33 +558,66 @@ export default function CalendarPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Detail Modal */}
-      <Dialog open={detailModal} onOpenChange={setDetailModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Detail rezervácie</DialogTitle>
-            <DialogDescription>
+      <Sheet open={detailModal} onOpenChange={setDetailModal}>
+        <SheetContent side="right" className="w-full overflow-y-auto border-l border-primary/10 bg-background/98 px-5 py-5 sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle>Detail rezervácie</SheetTitle>
+            <SheetDescription>
               Skontrolujte údaje rezervácie a podľa potreby upravte jej stav.
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
           {selectedEvent && (
-            <div className="space-y-4">
+            <div className="space-y-5 pt-5">
+              <div className="rounded-2xl border border-primary/10 bg-card/50 p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">Klient</p>
+                    <p className="mt-1 text-lg font-semibold text-foreground">
+                      {selectedEvent.resource?.customer_name ?? selectedEvent.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedEvent.resource?.service_name ?? "Služba"}
+                    </p>
+                  </div>
+                  <Badge className="border-0 bg-secondary text-secondary-foreground">
+                    {ADMIN_BOOKING_STATUS_LABELS[selectedEvent.status as keyof typeof ADMIN_BOOKING_STATUS_LABELS] ?? selectedEvent.status}
+                  </Badge>
+                </div>
+              </div>
+              <div className="grid gap-3 rounded-2xl border border-border/80 bg-card/50 p-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Meno</p>
+                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <User className="h-4 w-4 text-primary" />
+                    <span>{selectedEvent.resource?.customer_name ?? selectedEvent.title}</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">E-mail</p>
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <Mail className="h-4 w-4 text-primary" />
+                    <span className="break-all">{selectedEvent.resource?.customer_email ?? "—"}</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Telefón</p>
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <Phone className="h-4 w-4 text-primary" />
+                    <span>{selectedEvent.resource?.customer_phone ?? "—"}</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Termín</p>
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span>{fmtDate(selectedEvent.start, "d. M. yyyy HH:mm")} – {fmtDate(selectedEvent.end, "HH:mm")}</span>
+                  </div>
+                </div>
+              </div>
               <Badge className="text-xs border-0 bg-secondary text-secondary-foreground">
-                {STATUS_LABELS[selectedEvent.status]}
+                {ADMIN_BOOKING_STATUS_LABELS[selectedEvent.status as keyof typeof ADMIN_BOOKING_STATUS_LABELS] ?? selectedEvent.status}
               </Badge>
               <div className="space-y-2.5">
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span className="font-medium">
-                    {selectedEvent.resource?.customer_name ?? selectedEvent.title}
-                  </span>
-                </div>
-                {selectedEvent.resource?.customer_phone && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <span>{selectedEvent.resource.customer_phone}</span>
-                  </div>
-                )}
                 <div className="flex items-center gap-2 text-sm">
                   <LogoIcon size="sm" className="w-4 h-4 flex-shrink-0" />
                   <span>
@@ -449,28 +630,115 @@ export default function CalendarPage() {
                   <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <span>{fmtDate(selectedEvent.start, "d. M. yyyy HH:mm")} – {fmtDate(selectedEvent.end, "HH:mm")}</span>
                 </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="font-semibold uppercase tracking-[0.2em]">Ref:</span>
+                  <span className="font-mono text-sm text-foreground" title={selectedEvent.id}>{selectedEvent.id}</span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(selectedEvent.id);
+                        setCopyLabel("Skopírované");
+                        setTimeout(() => setCopyLabel("Skopírovať"), 1500);
+                      } catch {
+                        setCopyLabel("Kópia zlyhala");
+                        setTimeout(() => setCopyLabel("Skopírovať"), 1500);
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+                  >
+                    <Copy className="w-3.5 h-3.5" /> {copyLabel}
+                  </button>
+                  <a
+                    href={`/dashboard/history?ref=${encodeURIComponent(selectedEvent.id)}`}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> História
+                  </a>
+                </div>
               </div>
-              {isOwnerOrAdmin && selectedEvent.status !== "cancelled" && selectedEvent.status !== "completed" && (
-                <div className="flex gap-2 pt-2 border-t border-border">
-                  {selectedEvent.status === "pending" && (
+              <div className="rounded-2xl border border-border/80 bg-card/50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">História klienta</p>
+                    <p className="mt-1 text-2xl font-semibold text-foreground">
+                      {loadingHistory ? "…" : customerHistory.length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Rezervácie priradené k tomuto klientovi</p>
+                  </div>
+                  <a
+                    href={`/dashboard/history?ref=${encodeURIComponent(selectedEvent.id)}`}
+                    className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary transition-colors hover:border-primary/40 hover:bg-primary/10"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    História
+                  </a>
+                </div>
+                {customerHistory.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {customerHistory.slice(0, 4).map((historyItem) => (
+                      <div key={historyItem.id} className="flex items-center justify-between gap-3 rounded-xl bg-muted/35 px-3 py-2 text-sm">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground">{historyItem.service_name ?? "Služba"}</p>
+                          <p className="text-xs text-muted-foreground">{historyItem.start_at ? fmtDate(new Date(historyItem.start_at), "d. M. yyyy HH:mm") : "—"}</p>
+                        </div>
+                        <Badge variant="secondary" className="shrink-0 text-[10px] uppercase">
+                          {ADMIN_BOOKING_STATUS_LABELS[historyItem.status as keyof typeof ADMIN_BOOKING_STATUS_LABELS] ?? historyItem.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-3 pt-2 border-t border-border">
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Poznámka</Label>
+                  <textarea
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    rows={3}
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    placeholder="Krátka interná poznámka k rezervácii"
+                  />
+                  <div className="flex justify-end">
+                    <Button size="sm" variant="outline" disabled={updatingStatus} onClick={handleSaveNote}>
+                      {updatingStatus && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Uložiť poznámku
+                    </Button>
+                  </div>
+                </div>
+                {isOwnerOrAdmin && (
+                <div className="grid gap-2 pt-1 sm:grid-cols-2">
+                  {canAdminConfirmBooking(selectedEvent.status) && (
                     <Button size="sm" className="flex-1" onClick={() => handleStatusChange("confirmed")} disabled={updatingStatus}>
                       <Check className="w-3.5 h-3.5 mr-1" /> Potvrdiť
                     </Button>
                   )}
-                  {selectedEvent.status === "confirmed" && (
-                    <Button size="sm" variant="secondary" className="flex-1" onClick={() => handleStatusChange("completed")} disabled={updatingStatus}>
-                      <Check className="w-3.5 h-3.5 mr-1" /> Dokončiť
+                  {canAdminCompleteBooking(selectedEvent.status) && (
+                    <>
+                      <Button size="sm" variant="secondary" className="flex-1" onClick={() => handleStatusChange("completed")} disabled={updatingStatus}>
+                        <Check className="w-3.5 h-3.5 mr-1" /> Dokončiť
+                      </Button>
+                    </>
+                  )}
+                  {canAdminMarkNoShow(selectedEvent.status) && (
+                    <>
+                      <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleStatusChange("no_show")} disabled={updatingStatus}>
+                        <X className="w-3.5 h-3.5 mr-1" /> No-show
+                      </Button>
+                    </>
+                  )}
+                  {canAdminCancelBooking(selectedEvent.status) && (
+                    <Button size="sm" variant="outline" className="flex-1 text-rose-700 hover:text-rose-700" onClick={() => handleStatusChange("cancelled")} disabled={updatingStatus}>
+                      <X className="w-3.5 h-3.5 mr-1" /> Zrušiť
                     </Button>
                   )}
-                  <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleStatusChange("cancelled")} disabled={updatingStatus}>
-                    <X className="w-3.5 h-3.5 mr-1" /> Zrušiť
-                  </Button>
                 </div>
-              )}
+                )}
+              </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

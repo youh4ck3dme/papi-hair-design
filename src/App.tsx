@@ -34,6 +34,7 @@ const MySchedulePage = lazy(() => import("./pages/admin/MySchedulePage"));
 const ReceptionPage = lazy(() => import("./pages/ReceptionPage"));
 const DiagnosticsPage = lazy(() => import("./pages/DiagnosticsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const BookingHistoryPage = lazy(() => import("./pages/BookingHistoryPage"));
 const SalonLoginPage = lazy(() => import("./pages/SalonLoginPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const BootstrapPage = lazy(() => import("./pages/BootstrapPage"));
@@ -45,6 +46,25 @@ const LazyFallback = () => (
 );
 
 const queryClient = new QueryClient();
+const CANONICAL_HOST = "booking.papihairdesign.sk";
+
+function useCanonicalHostRedirect() {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const { hostname, pathname, search, hash, protocol } = window.location;
+
+    if (import.meta.env.DEV) return;
+    if (protocol !== "https:") return;
+    if (hostname === CANONICAL_HOST) return;
+
+    const isFirebaseHost =
+      hostname.endsWith(".web.app") || hostname.endsWith(".firebaseapp.com");
+    if (!isFirebaseHost) return;
+
+    const targetUrl = `https://${CANONICAL_HOST}${pathname}${search}${hash}`;
+    window.location.replace(targetUrl);
+  }, []);
+}
 
 /** Speed Insights script is only served at /_vercel/... on Vercel; elsewhere it 404s. Render only on Vercel. */
 function useSpeedInsightsEnabled() {
@@ -62,6 +82,7 @@ function useSpeedInsightsEnabled() {
 }
 
 const App = () => {
+  useCanonicalHostRedirect();
   const speedInsightsEnabled = useSpeedInsightsEnabled();
   const salonLoginEnabled =
     import.meta.env.DEV || import.meta.env.VITE_ENABLE_SALON_LOGIN === "true";
@@ -91,8 +112,9 @@ const App = () => {
                   <Route path="/offline" element={<OfflinePage />} />
                   <Route path="/install" element={<InstallPage />} />
                   <Route path="/diagnostics" element={<DiagnosticsPage />} />
+                  <Route path="/dashboard/history" element={<BookingHistoryPage />} />
                   <Route path="/privacy" element={<PrivacyPage />} />
-                  <Route path="/privacy-policy" element={<TermsPage />} />
+                  <Route path="/privacy-policy" element={<PrivacyPage />} />
                   <Route path="/terms" element={<TermsPage />} />
                   <Route
                     path="/bootstrap"

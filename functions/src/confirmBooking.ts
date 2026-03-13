@@ -4,25 +4,17 @@ import {
   type CallableRequest,
   HttpsError,
 } from "firebase-functions/v2/https";
-import * as crypto from "crypto";
-import { queueCustomerBookingEmail } from "./emailQueue";
+import { queueAdminBookingNotificationEmail, queueCustomerBookingEmail } from "./emailQueue";
+import {
+  buildHistoryAccessUrl,
+  createOpaqueToken,
+  normalizeEmail,
+  normalizePhone,
+} from "./publicBookingAccess";
 
 interface ConfirmBookingInput {
   appointment_id: string;
   idempotency_key?: string;
-}
-
-function normalizeEmail(email: string): string {
-  const [localRaw, domain] = email.toLowerCase().trim().split("@");
-  if (!domain) return email.toLowerCase().trim();
-  const local = localRaw.split("+")[0];
-  return `${local}@${domain}`;
-}
-
-function makeClaimToken(): { token: string; tokenHash: string } {
-  const token = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  return { token, tokenHash };
 }
 
 export const confirmBooking = functions.https.onCall(
@@ -73,13 +65,16 @@ export const confirmBooking = functions.https.onCall(
     await docRef.update(updates);
 
     let claim_token: string | null = null;
+    let history_access_token: string | null = null;
     const businessId = typeof appt.business_id === "string" ? appt.business_id : "";
     const customerEmailRaw = typeof appt.customer_email === "string" ? appt.customer_email : "";
+    const customerPhoneRaw = typeof appt.customer_phone === "string" ? appt.customer_phone : null;
     const customerName = typeof appt.customer_name === "string" ? appt.customer_name : null;
 
     if (businessId && customerEmailRaw) {
       const customerEmail = normalizeEmail(customerEmailRaw);
-      const { token, tokenHash } = makeClaimToken();
+      const customerPhone = normalizePhone(customerPhoneRaw);
+      const { token, tokenHash } = createOpaqueToken();
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
       await db.collection("booking_claims").add({
@@ -93,6 +88,19 @@ export const confirmBooking = functions.https.onCall(
       });
       claim_token = token;
 
+      const historyAccess = createOpaqueToken();
+      await db.collection("booking_history_access").add({
+        business_id: businessId,
+        appointment_id,
+        customer_id: typeof appt.customer_id === "string" ? appt.customer_id : null,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+        token_hash: historyAccess.tokenHash,
+        expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        created_at: new Date().toISOString(),
+      });
+      history_access_token = historyAccess.token;
+
       try {
         await queueCustomerBookingEmail({
           businessId,
@@ -100,11 +108,29 @@ export const confirmBooking = functions.https.onCall(
           customerEmail: customerEmail,
           customerName,
           serviceName: typeof appt.service_name === "string" ? appt.service_name : null,
-          employeeName: typeof appt.employee_name === "string" ? appt.employee_name : null,
           startAtIso: typeof appt.start_at === "string" ? appt.start_at : new Date().toISOString(),
+          historyAccessUrl: buildHistoryAccessUrl(appointment_id, historyAccess.token),
         });
       } catch (err) {
         functions.logger.warn("confirmBooking: queue customer email failed", {
+          appointment_id,
+          business_id: businessId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
+      try {
+        await queueAdminBookingNotificationEmail({
+          businessId,
+          appointmentId: appointment_id,
+          customerName,
+          customerEmail,
+          customerPhone,
+          serviceName: typeof appt.service_name === "string" ? appt.service_name : null,
+          startAtIso: typeof appt.start_at === "string" ? appt.start_at : new Date().toISOString(),
+        });
+      } catch (err) {
+        functions.logger.warn("confirmBooking: queue admin email failed", {
           appointment_id,
           business_id: businessId,
           error: err instanceof Error ? err.message : String(err),
@@ -117,6 +143,8 @@ export const confirmBooking = functions.https.onCall(
       appointment_id,
       status: "confirmed",
       claim_token,
+      history_access_token,
+      history_reference: appointment_id,
       customer_email: customerEmailRaw || null,
       customer_name: customerName,
     };

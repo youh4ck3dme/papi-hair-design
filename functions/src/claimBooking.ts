@@ -1,5 +1,4 @@
 import * as functions from "firebase-functions/v2";
-import * as admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import {
     type CallableRequest,

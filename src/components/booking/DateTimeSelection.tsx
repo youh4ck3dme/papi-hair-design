@@ -11,13 +11,11 @@ interface DateTimeSelectionProps {
     daysInMonth: number;
     today: Date;
     maxDays: number;
-    selectedWorkerId: string | null;
     selectedDate: number | null;
     setSelectedDate: (day: number | null) => void;
     selectedFullDate: Date | null;
     setSelectedTime: (time: string | null) => void;
     isBusinessOpenOnDay: (date: Date) => boolean;
-    isEmployeeAvailableOnDay: (empId: string, date: Date) => boolean;
     loadingSlots: boolean;
     availableSlots: Date[];
     selectedTime: string | null;
@@ -32,13 +30,11 @@ export function DateTimeSelection({
     daysInMonth,
     today,
     maxDays,
-    selectedWorkerId,
     selectedDate,
     setSelectedDate,
     selectedFullDate,
     setSelectedTime,
     isBusinessOpenOnDay,
-    isEmployeeAvailableOnDay,
     loadingSlots,
     availableSlots,
     selectedTime,
@@ -51,13 +47,18 @@ export function DateTimeSelection({
 
     return (
         <div className="animate-fade-in px-4">
-            <StepHeader num="4" title={t("booking.step4")} />
+            <StepHeader num="3" title={t("booking.step3")} />
+            <div className="mb-4 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/12 via-primary/6 to-transparent p-4 sm:p-5">
+                <p className="text-base font-semibold text-foreground">{t("booking.assignmentTitle")}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{t("booking.assignmentSubtitle")}</p>
+            </div>
             <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
                 {/* Month nav bar */}
                 <div className="flex justify-between items-center px-4 pt-4 pb-3 border-b border-border/40">
                     <button
                         onClick={prevMonth}
-                        className="w-8 h-8 rounded-full border border-border/60 flex items-center justify-center hover:bg-accent hover:border-primary/40 transition-all active:scale-90"
+                        className="flex h-10 w-10 min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-border/60 transition-all hover:border-primary/40 hover:bg-accent active:scale-90"
+                        aria-label="Predchádzajúci mesiac"
                     >
                         <ChevronLeft size={16} />
                     </button>
@@ -66,7 +67,8 @@ export function DateTimeSelection({
                     </h3>
                     <button
                         onClick={nextMonth}
-                        className="w-8 h-8 rounded-full bg-primary text-primary-foreground dark:text-background flex items-center justify-center hover:bg-primary/80 transition-all active:scale-90"
+                        className="flex h-10 w-10 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-primary text-primary-foreground transition-all hover:bg-primary/80 active:scale-90 dark:text-background"
+                        aria-label="Ďalší mesiac"
                     >
                         <ChevronRight size={16} />
                     </button>
@@ -76,7 +78,7 @@ export function DateTimeSelection({
                     {/* Weekday labels */}
                     <div className="grid grid-cols-7 mb-1">
                         {["Po", "Ut", "St", "Št", "Pi", "So", "Ne"].map((d) => (
-                            <div key={d} className="text-[10px] font-bold uppercase tracking-wider text-center text-muted-foreground/70 py-1">{d}</div>
+                            <div key={d} className="py-1 text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">{d}</div>
                         ))}
                     </div>
 
@@ -91,8 +93,7 @@ export function DateTimeSelection({
                             const isPast = isBefore(dayDate, today);
                             const isTooFar = isAfter(dayDate, addDays(today, maxDays));
                             const isClosed = !isBusinessOpenOnDay(dayDate);
-                            const empAvailable = selectedWorkerId ? isEmployeeAvailableOnDay(selectedWorkerId, dayDate) : false;
-                            const disabled = isPast || isTooFar || isClosed || !empAvailable;
+                            const disabled = isPast || isTooFar || isClosed;
                             const isSelected = selectedDate === day && isSameDay(dayDate, selectedFullDate ?? new Date(0));
                             const isToday = isSameDay(dayDate, today);
 
@@ -108,7 +109,7 @@ export function DateTimeSelection({
                                         data-testid={disabled ? undefined : `date-btn-${day}`}
                                         onClick={() => { if (!disabled) { setSelectedDate(day); setSelectedTime(null); } }}
                                         disabled={disabled}
-                                        className={`w-9 h-9 rounded-full flex items-center justify-center text-sm transition-all duration-150 ${cls}`}
+                                        className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-all duration-150 ${cls}`}
                                     >
                                         {day}
                                     </button>
@@ -122,7 +123,7 @@ export function DateTimeSelection({
             {/* Time slots */}
             {Boolean(selectedDate) && (
                 <div className="animate-fade-in mt-6">
-                    <StepHeader num="5" title={t("booking.step5")} />
+                    <StepHeader num="4" title={t("booking.step4")} />
                     {loadingSlots ? (
                         <div className="flex justify-center py-10">
                             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -135,14 +136,14 @@ export function DateTimeSelection({
                         <>
                             {timeGroups.dopoludnia.length > 0 && (
                                 <div className="mb-6">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70 mb-3">{t("booking.timeAm")}</p>
+                                    <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground/80">{t("booking.timeAm")}</p>
                                     <div className="flex flex-wrap gap-2">
                                         {timeGroups.dopoludnia.map((tVal) => (
                                             <button
                                                 key={tVal}
                                                 data-testid="time-slot"
                                                 onClick={() => setSelectedTime(tVal)}
-                                                className={`text-sm px-4 py-2 rounded-full transition-all duration-150 font-semibold border ${selectedTime === tVal
+                                                className={`min-h-[44px] rounded-full border px-4 py-2.5 text-sm font-semibold transition-all duration-150 ${selectedTime === tVal
                                                     ? "bg-primary text-primary-foreground dark:text-background border-primary shadow-md shadow-primary/20"
                                                     : "bg-card text-foreground border-border/60 hover:border-primary/50 hover:text-primary hover:bg-primary/5"
                                                     }`}
@@ -155,14 +156,14 @@ export function DateTimeSelection({
                             )}
                             {timeGroups.popoludni.length > 0 && (
                                 <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70 mb-3">{t("booking.timePm")}</p>
+                                    <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground/80">{t("booking.timePm")}</p>
                                     <div className="flex flex-wrap gap-2">
                                         {timeGroups.popoludni.map((tVal) => (
                                             <button
                                                 key={tVal}
                                                 data-testid="time-slot"
                                                 onClick={() => setSelectedTime(tVal)}
-                                                className={`text-sm px-4 py-2 rounded-full transition-all duration-150 font-semibold border ${selectedTime === tVal
+                                                className={`min-h-[44px] rounded-full border px-4 py-2.5 text-sm font-semibold transition-all duration-150 ${selectedTime === tVal
                                                     ? "bg-primary text-primary-foreground dark:text-background border-primary shadow-md shadow-primary/20"
                                                     : "bg-card text-foreground border-border/60 hover:border-primary/50 hover:text-primary hover:bg-primary/5"
                                                     }`}

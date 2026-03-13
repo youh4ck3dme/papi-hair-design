@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -85,18 +85,18 @@ export function AdminSidebar() {
         />
       </SidebarContent>
 
-      <div className="mt-auto border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <Avatar className="w-8 h-8">
-            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="Profilová fotka" />}
-            <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-xs">{initials}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 overflow-hidden">
-            <p className="text-xs font-medium text-sidebar-foreground truncate">{profile?.full_name ?? "Používateľ"}</p>
-            <p className="text-xs text-sidebar-foreground/50 truncate">{profile?.email}</p>
+        <div className="mt-auto border-t border-sidebar-border p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <Avatar className="w-8 h-8">
+              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="Profilová fotka" />}
+              <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-xs">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 overflow-hidden">
+              <p className="text-xs font-medium text-sidebar-foreground truncate">{profile?.full_name ?? "Používateľ"}</p>
+              <p className="text-xs text-sidebar-foreground/50 truncate">{profile?.email}</p>
+            </div>
           </div>
-        </div>
-        <Button
+          <Button
           variant="ghost"
           size="sm"
           className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
@@ -104,17 +104,25 @@ export function AdminSidebar() {
         >
           <LogOut className="w-4 h-4 mr-2" />
           Odhlásiť sa
-        </Button>
-        <a
-          href="/booking"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 px-2 py-1.5 mt-1 text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors rounded"
-        >
-          <ChevronRight className="w-3 h-3" />
-          Online rezervácia
-        </a>
-      </div>
+          </Button>
+          <a
+            href="/booking"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-2 py-1.5 mt-1 text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors rounded"
+          >
+            <ChevronRight className="w-3 h-3" />
+            Online rezervácia
+          </a>
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.3em] text-sidebar-foreground/60">
+            <Link to="/privacy" className="hover:text-sidebar-foreground/80">
+              Zásady ochrany osobných údajov
+            </Link>
+            <Link to="/terms" className="hover:text-sidebar-foreground/80">
+              Obchodné podmienky
+            </Link>
+          </div>
+        </div>
     </Sidebar>
   );
 }
@@ -132,7 +140,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-[100dvh] flex w-full max-w-full bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_45%)]" data-testid="admin-layout">
+      <div className="min-h-[100dvh] flex w-full max-w-full bg-background" data-testid="admin-layout">
         <AdminSidebar />
         <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden">
           <header className="min-h-[44px] h-12 flex items-center border-b border-border/70 px-4 safe-x bg-background/80 backdrop-blur-xl sticky top-0 z-10 pt-[env(safe-area-inset-top)]">

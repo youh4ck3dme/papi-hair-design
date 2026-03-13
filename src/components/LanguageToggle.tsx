@@ -16,7 +16,7 @@ export function LanguageToggle() {
       variant="ghost"
       size="sm"
       onClick={toggle}
-      className="h-8 px-2 rounded-full text-xs font-bold tracking-wider"
+      className="h-10 rounded-full px-3 text-sm font-bold tracking-wider"
       aria-label="Switch language / Zmeniť jazyk"
     >
       {isEn ? "SK" : "EN"}

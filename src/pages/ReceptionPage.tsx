@@ -53,7 +53,7 @@ const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-500/20 text-yellow-700 border-yellow-500/30",
   confirmed: "bg-green-500/20 text-green-700 border-green-500/30",
   cancelled: "bg-red-500/20 text-red-700 border-red-500/30",
-  completed: "bg-blue-500/20 text-blue-700 border-blue-500/30",
+  completed: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 border-zinc-500/30",
 };
 
 const STATUS_LABELS: Record<string, string> = {

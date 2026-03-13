@@ -54,6 +54,28 @@ coverage
 .firebase
 firebase-debug.log
 
+# Local tool settings
+.claude/settings.json
+.claude/settings.local.json
+.cursor/mcp.json
+.kilocode/mcp.json
+.lovable/.claude/settings.json
+.lovable/.claude/settings.local.json
+
+# Local diagnostics and ad-hoc outputs
+deploy_log.txt
+login_output.txt
+login_fresh.txt
+test-output.txt
+test-results.json
+functions_list.txt
+functions_list_plain.txt
+run_view.txt
+/firebase-config.json
+/jobs.json
+/projects.json
+/booking-papihairdesign-sk/projects.json
+
 # Local import reports
 docs/import-reports/
 docs/customerExport_*.xlsx

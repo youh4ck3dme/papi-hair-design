@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import {
   getEffectiveIntervals,
   generateSlots,
+  generateSharedSlots,
   isSlotAvailable,
   type BusinessHours,
   type BusinessHourEntry,
@@ -12,9 +13,9 @@ import {
 } from "./availability";
 
 describe("getEffectiveIntervals", () => {
-  it("returns null when no hours configured", () => {
+  it("returns default 08:00-18:00 when no hours configured", () => {
     const d = new Date("2026-02-26");
-    expect(getEffectiveIntervals(d)).toBeNull();
+    expect(getEffectiveIntervals(d)).toEqual([{ start: "08:00", end: "18:00" }]);
   });
 
   it("returns open interval from legacy openingHours", () => {
@@ -112,6 +113,64 @@ describe("generateSlots", () => {
       (t) => t.includes("T10:00") || t.includes("T09:00")
     );
     expect(hasDuringConflict).toBe(false);
+  });
+});
+
+describe("generateSharedSlots", () => {
+  const thursday = new Date("2099-02-26T12:00:00.000Z");
+  const openingHours: BusinessHours = {
+    thursday: { open: true, start: "09:00", end: "18:00" },
+  };
+
+  it("returns slots when at least one employee is free", () => {
+    const dayStr = format(thursday, "yyyy-MM-dd");
+    const slots = generateSharedSlots({
+      date: thursday,
+      serviceDuration: 60,
+      serviceBuffer: 0,
+      openingHours,
+      employeeIds: ["emp-1", "emp-2"],
+      existingAppointments: [
+        {
+          employee_id: "emp-1",
+          start_at: `${dayStr}T09:00:00.000Z`,
+          end_at: `${dayStr}T10:00:00.000Z`,
+          status: "confirmed",
+        },
+      ],
+      slotInterval: 60,
+    });
+
+    expect(slots.length).toBeGreaterThan(0);
+  });
+
+  it("removes a slot only when all eligible employees are busy", () => {
+    const dayStr = format(thursday, "yyyy-MM-dd");
+    const slots = generateSharedSlots({
+      date: thursday,
+      serviceDuration: 60,
+      serviceBuffer: 0,
+      openingHours,
+      employeeIds: ["emp-1", "emp-2"],
+      existingAppointments: [
+        {
+          employee_id: "emp-1",
+          start_at: `${dayStr}T09:00:00.000Z`,
+          end_at: `${dayStr}T10:00:00.000Z`,
+          status: "confirmed",
+        },
+        {
+          employee_id: "emp-2",
+          start_at: `${dayStr}T09:00:00.000Z`,
+          end_at: `${dayStr}T10:00:00.000Z`,
+          status: "confirmed",
+        },
+      ],
+      slotInterval: 60,
+    });
+
+    const isoSlots = slots.map((slot) => slot.toISOString());
+    expect(isoSlots.some((slot) => slot.includes("T09:00"))).toBe(false);
   });
 });
 

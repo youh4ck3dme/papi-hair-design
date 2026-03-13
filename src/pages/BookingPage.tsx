@@ -4,25 +4,17 @@ import { useTheme } from "next-themes";
 import { Loader2 } from "lucide-react";
 import { enGB, sk } from "date-fns/locale";
 
-import miskaImg from "@/assets/employee-miska.jpeg";
-import matoImg from "@/assets/employee-mato.jpg";
 
 import { BookingHeader } from "@/components/booking/BookingHeader";
 import { ServiceSelection } from "@/components/booking/ServiceSelection";
-import { EmployeeSelection } from "@/components/booking/EmployeeSelection";
 import { DateTimeSelection } from "@/components/booking/DateTimeSelection";
 import { ContactConfirmation } from "@/components/booking/ContactConfirmation";
 import { BookingSuccess } from "@/components/booking/BookingSuccess";
+import { getEffectiveIntervals, type BusinessHours } from "@/lib/availability";
 
 import { useBookingData } from "@/hooks/useBookingData";
 import { useAvailability } from "@/hooks/useAvailability";
 import { useBookingForm } from "@/hooks/useBookingForm";
-
-// Map employee IDs to local photos
-const EMPLOYEE_PHOTOS: Record<string, string> = {
-  "c1000000-0000-0000-0000-000000000001": miskaImg,
-  "c1000000-0000-0000-0000-000000000002": matoImg,
-};
 
 export default function BookingPage() {
   const { i18n } = useTranslation();
@@ -52,8 +44,6 @@ export default function BookingPage() {
     setSubcategory,
     selectedServiceId,
     setSelectedServiceId,
-    selectedWorkerId,
-    setSelectedWorkerId,
     formData,
     setFormData,
     contactErrors,
@@ -64,7 +54,6 @@ export default function BookingPage() {
     filteredServices,
     selectedService,
     filteredEmployees,
-    selectedEmployee,
     handleCheckAll,
     handleConsentChange,
     handleSubmit
@@ -80,15 +69,38 @@ export default function BookingPage() {
     setCalendarMonth,
     availableSlots,
     loadingSlots,
-    monthStart,
     daysInMonth,
     firstDayOffset,
     today,
     maxDays,
-    isEmployeeAvailableOnDay,
     isBusinessOpenOnDay,
     timeGroups
-  } = useAvailability(business, businessHourEntries, dateOverrides, schedules, selectedService, selectedEmployee);
+  } = useAvailability(business, businessHourEntries, dateOverrides, schedules, selectedService, filteredEmployees);
+
+  const isBusinessOpenNow = useMemo(() => {
+    if (!business) return false;
+
+    const now = new Date();
+    const intervals = getEffectiveIntervals(
+      now,
+      businessHourEntries,
+      dateOverrides,
+      business.opening_hours as BusinessHours | undefined
+    );
+
+    if (!intervals?.length) return false;
+
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    return intervals.some(({ start, end }) => {
+      const [startHour, startMinute] = start.split(":").map((v) => Number(v));
+      const [endHour, endMinute] = end.split(":").map((v) => Number(v));
+      if ([startHour, startMinute, endHour, endMinute].some((v) => Number.isNaN(v))) return false;
+
+      const intervalStart = startHour * 60 + startMinute;
+      const intervalEnd = endHour * 60 + endMinute;
+      return nowMinutes >= intervalStart && nowMinutes < intervalEnd;
+    });
+  }, [business, businessHourEntries, dateOverrides]);
 
   if (initialLoading) {
     return (
@@ -103,7 +115,6 @@ export default function BookingPage() {
       <BookingSuccess
         bookingResult={bookingResult}
         selectedService={selectedService}
-        selectedEmployee={selectedEmployee}
         selectedFullDate={selectedFullDate}
         selectedTime={selectedTime}
         dateLocale={dateLocale}
@@ -124,27 +135,14 @@ export default function BookingPage() {
         filteredServices={filteredServices}
         selectedServiceId={selectedServiceId}
         setSelectedServiceId={setSelectedServiceId}
+        isBusinessOpenNow={isBusinessOpenNow}
         onCategoryChange={() => {
-          setSelectedWorkerId(null);
           setSelectedDate(null);
           setSelectedTime(null);
         }}
       />
 
       {selectedServiceId && (
-        <EmployeeSelection
-          filteredEmployees={filteredEmployees}
-          selectedWorkerId={selectedWorkerId}
-          setSelectedWorkerId={setSelectedWorkerId}
-          employeePhotos={EMPLOYEE_PHOTOS}
-          onEmployeeSelect={() => {
-            setSelectedDate(null);
-            setSelectedTime(null);
-          }}
-        />
-      )}
-
-      {selectedWorkerId && (
         <DateTimeSelection
           calendarMonth={calendarMonth}
           setCalendarMonth={setCalendarMonth}
@@ -153,13 +151,11 @@ export default function BookingPage() {
           daysInMonth={daysInMonth}
           today={today}
           maxDays={maxDays}
-          selectedWorkerId={selectedWorkerId}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
           selectedFullDate={selectedFullDate}
           setSelectedTime={setSelectedTime}
           isBusinessOpenOnDay={isBusinessOpenOnDay}
-          isEmployeeAvailableOnDay={isEmployeeAvailableOnDay}
           loadingSlots={loadingSlots}
           availableSlots={availableSlots}
           selectedTime={selectedTime}
@@ -175,7 +171,6 @@ export default function BookingPage() {
           handleCheckAll={handleCheckAll}
           handleConsentChange={handleConsentChange}
           selectedService={selectedService}
-          selectedEmployee={selectedEmployee}
           selectedFullDate={selectedFullDate}
           selectedTime={selectedTime}
           dateLocale={dateLocale}

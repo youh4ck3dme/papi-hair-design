@@ -17,24 +17,25 @@ export default function CalendarEventCard({ event, employee, hourHeight, startHo
   const startMinutes = getMinutesInTZ(start, timezone);
   const endMinutes = getMinutesInTZ(end, timezone);
   const top = ((startMinutes - startHour * 60) / 60) * hourHeight;
-  const height = Math.max(((endMinutes - startMinutes) / 60) * hourHeight, 34);
+  const height = Math.max(((endMinutes - startMinutes) / 60) * hourHeight, 44);
   const accent = employee?.color ?? "#64748b";
   const blocked = event.type === "blocked";
 
   return (
     <button
       onClick={() => onClick(event)}
-      className={`absolute left-1 right-1 rounded-lg border px-2 py-1 text-left ${blocked ? "cal-event--blocked" : "cal-event--reservation"}`}
+      className={`absolute left-1 right-1 rounded-lg border px-2 py-1.5 text-left touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 ${blocked ? "cal-event--blocked" : "cal-event--reservation"}`}
       style={{ top, height, borderColor: accent }}
+      aria-label={`${event.serviceName || event.title} ${formatTimeInTZ(start, timezone)} - ${formatTimeInTZ(end, timezone)}`}
     >
-      <p className="truncate text-[11px] font-semibold leading-tight" style={{ color: accent }}>
+      <p className="truncate text-xs font-semibold leading-tight" style={{ color: accent }}>
         {blocked && <Lock className="mr-1 inline h-3 w-3" />}
         {event.serviceName || event.title}
       </p>
-      <p className="truncate text-[10px] text-muted-foreground">
+      <p className="truncate text-[11px] text-muted-foreground">
         {formatTimeInTZ(start, timezone)} – {formatTimeInTZ(end, timezone)}
       </p>
-      {!blocked && event.clientName && <p className="truncate text-[10px] text-foreground/85">{event.clientName}</p>}
+      {!blocked && event.clientName && <p className="truncate text-[11px] text-foreground/85">{event.clientName}</p>}
     </button>
   );
 }

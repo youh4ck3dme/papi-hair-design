@@ -1,14 +1,19 @@
 import * as admin from "firebase-admin";
-import * as Sentry from "@sentry/node";
 
 admin.initializeApp();
 
 const sentryDsn = process.env.SENTRY_DSN;
 if (sentryDsn) {
-  Sentry.init({
-    dsn: sentryDsn,
-    tracesSampleRate: 0.1,
-  });
+  void import("@sentry/node")
+    .then((Sentry) => {
+      Sentry.init({
+        dsn: sentryDsn,
+        tracesSampleRate: 0.1,
+      });
+    })
+    .catch((error) => {
+      console.warn("Sentry init failed", error);
+    });
 }
 
 export { claimBooking } from "./claimBooking";
@@ -21,6 +26,9 @@ export { importMigrationData } from "./importMigrationData";
 export { normalizeMemberships } from "./normalizeMemberships";
 export { createBookingHold } from "./createBookingHold";
 export { confirmBooking } from "./confirmBooking";
+export { getPublicAvailabilityConflicts } from "./getPublicAvailabilityConflicts";
+export { adminUpdateBookingStatus } from "./adminUpdateBookingStatus";
+export { lookupBookingHistory } from "./lookupBookingHistory";
 export { cleanupExpiredHolds } from "./cleanupExpiredHolds";
 export { rebuildPublicSnapshot } from "./rebuildPublicSnapshot";
 export { bootstrapAdminAccess } from "./bootstrapAdminAccess";

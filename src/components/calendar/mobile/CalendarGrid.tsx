@@ -1,3 +1,5 @@
+import { isSameDay } from "date-fns";
+import { useEffect, useRef } from "react";
 import type { CalendarEvent, DayException, Employee, WorkingSchedule } from "./types";
 import EmployeeColumn from "./EmployeeColumn";
 import { computeDaySegments, DAY_END_MINUTES, DAY_START_MINUTES } from "./schedule";
@@ -16,7 +18,7 @@ interface CalendarGridProps {
 
 const START_HOUR = DAY_START_MINUTES / 60;
 const END_HOUR = DAY_END_MINUTES / 60;
-const HOUR_HEIGHT = 58;
+const HOUR_HEIGHT = 88;
 
 export default function CalendarGrid({
   date,
@@ -29,9 +31,27 @@ export default function CalendarGrid({
   onSlotClick,
   onEventClick,
 }: CalendarGridProps) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const selectedEmployees = employees.filter((employee) => selectedEmployeeIds.includes(employee.id));
   const fitToScreen = selectedEmployees.length > 0 && selectedEmployees.length <= 3;
   const useTwoColumnRows = selectedEmployees.length > 3;
+
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    if (!isSameDay(date, new Date())) {
+      scroller.scrollTop = 0;
+      return;
+    }
+
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const startMinutes = START_HOUR * 60;
+    const endMinutes = END_HOUR * 60;
+    const clampedMinutes = Math.max(startMinutes, Math.min(minutes, endMinutes));
+    const top = ((clampedMinutes - startMinutes) / 60) * HOUR_HEIGHT;
+    scroller.scrollTop = Math.max(0, top - HOUR_HEIGHT * 2);
+  }, [date]);
 
   const splitRows = (items: Employee[], size: number): Employee[][] => {
     const rows: Employee[][] = [];
@@ -44,10 +64,10 @@ export default function CalendarGrid({
   const employeeRows = useTwoColumnRows ? splitRows(selectedEmployees, 2) : [selectedEmployees];
 
   const renderTimeAxis = (id: string) => (
-    <div key={`time-axis-${id}`} className="sticky left-0 z-20 w-12 border-r border-border/40 bg-background shrink-0">
-      <div className="h-[36px] border-b border-border/40" />
+    <div key={`time-axis-${id}`} className="sticky left-0 z-20 w-14 border-r border-border/40 bg-background shrink-0">
+      <div className="h-[42px] border-b border-border/40" />
       {Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i).map((hour) => (
-        <div key={`${id}-${hour}`} className="border-b border-border/30 px-1 pt-1 text-[10px] text-muted-foreground" style={{ height: HOUR_HEIGHT }}>
+        <div key={`${id}-${hour}`} className="border-b border-border/30 px-1 pt-1 text-[11px] font-medium text-muted-foreground" style={{ height: HOUR_HEIGHT }}>
           {String(hour).padStart(2, "0")}:00
         </div>
       ))}
@@ -63,7 +83,7 @@ export default function CalendarGrid({
   }
 
   return (
-    <div className="flex-1 min-h-0 overflow-auto border-t border-border/40">
+    <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto border-t border-border/40">
       <div className={useTwoColumnRows ? "flex min-w-0 flex-col gap-3" : fitToScreen ? "flex w-full min-w-0" : "flex min-w-max"}>
         {employeeRows.map((rowEmployees, rowIndex) => (
           <div key={`row-${rowIndex}`} className={fitToScreen || useTwoColumnRows ? "flex w-full min-w-0" : "flex min-w-max"}>
