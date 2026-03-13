@@ -117,7 +117,7 @@ export function BookingSuccess({
                             <CalendarCheck2 size={13} className="text-primary" />
                         </div>
                         <div>
-                            <p className="text-xs text-muted-foreground">{t("booking.confirmBrand")}</p>
+                            <p className="text-sm text-muted-foreground">{t("booking.confirmBrand")}</p>
                             <p className="font-semibold text-foreground">PAPI HAIR DESIGN</p>
                         </div>
                     </div>
@@ -127,7 +127,7 @@ export function BookingSuccess({
                                 <Scissors size={13} className="text-primary" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">{t("booking.confirmService")}</p>
+                                <p className="text-sm text-muted-foreground">{t("booking.confirmService")}</p>
                                 <p className="font-semibold text-foreground">{selectedService.name_sk}</p>
                             </div>
                         </div>
@@ -138,7 +138,7 @@ export function BookingSuccess({
                                 <CalendarCheck2 size={13} className="text-primary" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">{t("booking.confirmDate")}</p>
+                                <p className="text-sm text-muted-foreground">{t("booking.confirmDate")}</p>
                                 <p className="font-semibold text-foreground">{format(selectedFullDate, "d. MMMM yyyy", { locale: dateLocale })}</p>
                             </div>
                         </div>
@@ -149,7 +149,7 @@ export function BookingSuccess({
                                 <Clock4 size={13} className="text-primary" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">{t("booking.confirmTime")}</p>
+                                <p className="text-sm text-muted-foreground">{t("booking.confirmTime")}</p>
                                 <p className="font-bold text-primary text-base">{selectedTime}</p>
                             </div>
                         </div>
@@ -164,14 +164,14 @@ export function BookingSuccess({
                                 href={googleCalendarHref}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center justify-center rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/10"
+                                className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/10"
                             >
                                 {t("booking.addToGoogleCalendar")}
                             </a>
                             <button
                                 type="button"
                                 onClick={handleDownloadIcs}
-                                className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary"
+                                className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary"
                             >
                                 {t("booking.downloadIcs")}
                             </button>
@@ -179,7 +179,7 @@ export function BookingSuccess({
                     )}
                     <a
                         href={historyHref}
-                        className="premium-action-btn flex w-full items-center justify-center rounded-xl py-2.5 px-4 text-sm tracking-wide transition-all active:scale-[0.98]"
+                        className="premium-action-btn flex min-h-[48px] w-full items-center justify-center rounded-xl px-4 py-3 text-sm tracking-wide transition-all active:scale-[0.98]"
                     >
                         {t("booking.historyCta")}
                     </a>

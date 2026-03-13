@@ -140,7 +140,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-[100dvh] flex w-full max-w-full bg-[radial-gradient(circle_at_top_right,rgba(155,211,247,0.2),transparent_42%),radial-gradient(circle_at_bottom_left,rgba(191,229,251,0.16),transparent_36%)]" data-testid="admin-layout">
+      <div className="min-h-[100dvh] flex w-full max-w-full bg-background" data-testid="admin-layout">
         <AdminSidebar />
         <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden">
           <header className="min-h-[44px] h-12 flex items-center border-b border-border/70 px-4 safe-x bg-background/80 backdrop-blur-xl sticky top-0 z-10 pt-[env(safe-area-inset-top)]">

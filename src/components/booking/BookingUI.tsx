@@ -4,18 +4,18 @@ export function GoldText({ children, className = "" }: Readonly<{ children: Reac
 
 export function StepHeader({ num, title, extra }: Readonly<{ num: string; title: string; extra?: React.ReactNode }>) {
     return (
-        <div className="flex items-center justify-between mt-8 mb-5">
+        <div className="mt-8 mb-5 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3.5">
                 <div className="relative flex-shrink-0">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm bg-primary text-primary-foreground dark:text-background shadow-md shadow-primary/30">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground shadow-md shadow-primary/30 dark:text-background">
                         {num}
                     </div>
                     {/* Subtle glow ring */}
                     <div className="absolute inset-0 rounded-full bg-primary/20 blur-sm -z-10" />
                 </div>
-                <h2 className="text-[17px] font-semibold tracking-wide text-foreground">{title}</h2>
+                <h2 className="text-lg font-semibold leading-tight tracking-wide text-foreground sm:text-[19px]">{title}</h2>
             </div>
-            {extra == null ? null : <div>{extra}</div>}
+            {extra == null ? null : <div className="w-full sm:w-auto">{extra}</div>}
         </div>
     );
 }

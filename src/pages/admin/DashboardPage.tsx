@@ -243,7 +243,7 @@ export default function DashboardPage() {
         <Button
           type="button"
           onClick={() => setNewBookingOpen(true)}
-          className="rounded-full bg-primary px-4 text-primary-foreground shadow-[0_16px_40px_-24px_rgba(79,156,255,0.9)]"
+          className="rounded-full bg-primary px-4 text-primary-foreground shadow-[0_16px_40px_-24px_rgba(0,0,0,0.45)]"
         >
           <Plus className="mr-2 h-4 w-4" />
           {t("admin.newBooking")}
@@ -251,10 +251,7 @@ export default function DashboardPage() {
       </div>
 
       <div
-        className="rounded-3xl border border-primary/30 bg-white/80 px-5 py-5 shadow-[0_20px_60px_-40px_rgba(79,156,255,0.8)] backdrop-blur-sm relative overflow-hidden"
-        style={{
-          background: "radial-gradient(circle at top right, rgba(186, 226, 255, 0.45), rgba(255, 255, 255, 0.92) 60%)",
-        }}
+        className="relative overflow-hidden rounded-3xl border border-primary/20 bg-card/80 px-5 py-5 shadow-[0_20px_60px_-40px_rgba(0,0,0,0.5)] backdrop-blur-sm"
       >
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-full bg-primary/10 text-primary">

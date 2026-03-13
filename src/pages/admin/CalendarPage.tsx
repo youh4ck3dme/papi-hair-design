@@ -568,7 +568,7 @@ export default function CalendarPage() {
           </SheetHeader>
           {selectedEvent && (
             <div className="space-y-5 pt-5">
-              <div className="rounded-2xl border border-primary/10 bg-[radial-gradient(circle_at_top_right,rgba(155,211,247,0.16),transparent_58%),rgba(255,255,255,0.92)] p-4 shadow-[0_18px_50px_-38px_rgba(79,156,255,0.75)]">
+              <div className="rounded-2xl border border-primary/10 bg-card/50 p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">Klient</p>

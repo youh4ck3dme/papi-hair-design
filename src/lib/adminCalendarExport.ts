@@ -71,13 +71,13 @@ export function buildAdminCalendarPrintHtml(dateLabel: string, rows: AdminCalend
         <meta charset="utf-8" />
         <title>Denny export - ${dateLabel}</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
+          body { font-family: Arial, sans-serif; margin: 24px; color: #18181b; }
           h1 { margin: 0 0 8px; font-size: 24px; }
-          p { margin: 0 0 24px; color: #475569; }
+          p { margin: 0 0 24px; color: #52525b; }
           table { width: 100%; border-collapse: collapse; font-size: 12px; }
-          th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; vertical-align: top; }
-          th { background: #e0f2fe; }
-          .meta { margin-bottom: 16px; font-size: 12px; color: #64748b; }
+          th, td { border: 1px solid #d4d4d8; padding: 8px; text-align: left; vertical-align: top; }
+          th { background: #111111; color: #fafafa; }
+          .meta { margin-bottom: 16px; font-size: 12px; color: #71717a; }
         </style>
       </head>
       <body>

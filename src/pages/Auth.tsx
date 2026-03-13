@@ -446,7 +446,7 @@ export default function AuthPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground mt-4 space-y-1">
+        <p className="mt-4 space-y-1 text-center text-sm text-muted-foreground">
           <a href="/demo" className="text-primary hover:underline block">
             {t("auth.demoLink")}
           </a>

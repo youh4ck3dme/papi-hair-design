@@ -109,7 +109,7 @@ export function ContactConfirmation({
                             />
                         </InputRow>
                         {contactErrors[input.field] && (
-                            <p className="text-destructive text-xs mt-1 ml-3">{contactErrors[input.field]}</p>
+                            <p className="mt-1 ml-3 text-sm font-medium text-destructive">{contactErrors[input.field]}</p>
                         )}
                     </div>
                 ))}
@@ -119,10 +119,10 @@ export function ContactConfirmation({
                     <div className="flex items-center px-3 border-r border-border/60 bg-muted/40">
                         <div className="w-5 h-3.5 rounded-[2px] overflow-hidden flex flex-col border border-muted-foreground/20 flex-shrink-0">
                             <div className="h-1/3 bg-white" />
-                            <div className="h-1/3 bg-blue-600" />
-                            <div className="h-1/3 bg-red-600" />
+                            <div className="h-1/3 bg-zinc-400" />
+                            <div className="h-1/3 bg-zinc-700" />
                         </div>
-                        <span className="ml-1.5 text-xs text-muted-foreground font-semibold">+421</span>
+                        <span className="ml-1.5 text-sm font-semibold text-muted-foreground">+421</span>
                     </div>
                     <input
                         type="tel"
@@ -168,7 +168,7 @@ export function ContactConfirmation({
                 <ConsentBox checked={formData.terms} onChange={() => handleConsentChange("terms")}>
                     {t("booking.consentTerms")}
                 </ConsentBox>
-                <div className="mt-1 flex items-center justify-end gap-2 text-xs">
+                <div className="mt-1 flex items-center justify-end gap-2 text-sm">
                     <Link to="/privacy" className="text-primary/85 hover:underline">
                         {t("common.privacyPolicy")}
                     </Link>
@@ -185,7 +185,7 @@ export function ContactConfirmation({
                 onClick={handleSubmit}
                 disabled={submitting}
                 data-testid="booking-submit"
-                className="premium-action-btn w-full rounded-xl py-2.5 px-4 text-sm tracking-wide transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="premium-action-btn w-full min-h-[48px] rounded-xl px-4 py-3 text-base font-semibold tracking-wide transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
                 {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t("booking.submitBtn")}
             </button>

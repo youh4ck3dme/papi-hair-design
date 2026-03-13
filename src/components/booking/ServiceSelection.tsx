@@ -38,7 +38,7 @@ export function ServiceSelection({
             {/* Step 1 */}
             <StepHeader num="1" title={t("booking.step1")} extra={
                 <div
-                    className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold border ${isBusinessOpenNow
+                    className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-semibold ${isBusinessOpenNow
                         ? "border-emerald-500/40 text-emerald-600 bg-emerald-500/10"
                         : "border-rose-500/40 text-rose-600 bg-rose-500/10"
                         }`}
@@ -49,7 +49,7 @@ export function ServiceSelection({
             } />
 
             {/* Category Toggle */}
-            <div className="relative flex gap-0 rounded-full overflow-hidden border border-border bg-muted/40 p-1">
+            <div className="relative flex gap-0 rounded-full overflow-hidden border border-border bg-muted/40 p-1.5">
                 {(["damske", "panske"] as const).map((cat) => {
                     const isActive = category === cat && expandedCategory === cat;
                     const Icon = cat === "damske" ? Sparkles : User2;
@@ -72,7 +72,7 @@ export function ServiceSelection({
                             }}
                             aria-pressed={isActive}
                             aria-expanded={isActive}
-                            className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full font-semibold text-sm transition-all duration-300 ${isActive
+                            className={`relative flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-full px-3 py-2.5 text-sm font-semibold transition-all duration-300 ${isActive
                                 ? "bg-primary text-primary-foreground dark:text-background shadow-md shadow-primary/25"
                                 : "text-muted-foreground hover:text-foreground"
                                 }`}
@@ -92,7 +92,7 @@ export function ServiceSelection({
                             key={sub}
                             onClick={() => { setSubcategory(sub); setSelectedServiceId(null); }}
                             aria-pressed={subcategory === sub}
-                            className={`px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 border ${subcategory === sub
+                            className={`min-h-[44px] rounded-full border px-4 py-2.5 text-sm font-semibold uppercase tracking-wider transition-all duration-200 ${subcategory === sub
                                 ? "border-primary bg-primary/10 text-primary shadow-sm shadow-primary/20"
                                 : "border-border/60 text-muted-foreground bg-card hover:border-primary/40 hover:text-foreground"
                                 }`}
@@ -125,12 +125,12 @@ export function ServiceSelection({
                                         <span className={`font-semibold text-sm transition-colors ${isSelected ? "text-primary" : "text-foreground group-hover:text-foreground"}`}>
                                             {srv.name_sk}
                                         </span>
-                                        <span className="text-xs text-muted-foreground mt-0.5">
+                                        <span className="mt-0.5 text-sm text-muted-foreground">
                                             {srv.duration_minutes} min
                                         </span>
                                     </div>
                                     {srv.price != null && (
-                                        <div className={`flex-shrink-0 font-bold text-sm px-3 py-1 rounded-full transition-all ${isSelected ? "bg-primary text-primary-foreground dark:text-background" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"}`}>
+                                        <div className={`flex-shrink-0 rounded-full px-3 py-1.5 text-sm font-bold transition-all ${isSelected ? "bg-primary text-primary-foreground dark:text-background" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"}`}>
                                             {srv.price} €
                                         </div>
                                     )}
