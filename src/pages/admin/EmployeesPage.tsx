@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { compressProfileImage, readFileAsDataUrl, validateProfileImageFile } from "@/lib/profileImage";
 
 const DAYS: { key: string; label: string; sm: string }[] = [
   { key: "monday", label: "Pondelok", sm: "Po" },
@@ -233,26 +234,39 @@ export default function EmployeesPage() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.addEventListener("load", () => {
-        setCropImageSrc(reader.result?.toString() || null);
-      });
-      reader.readAsDataURL(file);
-      e.target.value = '';
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    const validationError = validateProfileImageFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      return;
     }
+
+    void (async () => {
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
+        setCropImageSrc(dataUrl);
+      } catch {
+        toast.error("Fotku sa nepodarilo načítať");
+      }
+    })();
   };
 
   const handleCropConfirm = async (croppedBlob: Blob) => {
-    setCropImageSrc(null);
     setUploadingPhoto(true);
     try {
+      const compressedBlob = await compressProfileImage(croppedBlob);
       const fileName = `employees/${businessId}/${crypto.randomUUID ? crypto.randomUUID() : Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
-      await uploadBytes(storageRef, croppedBlob);
+      await uploadBytes(storageRef, compressedBlob, {
+        contentType: compressedBlob.type || "image/jpeg",
+        cacheControl: "public,max-age=31536000,immutable",
+      });
       const url = await getDownloadURL(storageRef);
       setForm((p) => ({ ...p, photo_url: url }));
+      setCropImageSrc(null);
       toast.success("Fotka pripravená");
     } catch (err) {
       console.error(err);

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { db, functions, storage } from "@/integrations/firebase/config";
 import { doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound, Camera, Trash2 } from "lucide-react";
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
 import type { FirebaseError } from "firebase/app";
+import { compressProfileImage, readFileAsDataUrl, validateProfileImageFile } from "@/lib/profileImage";
 
 function friendlyError(err: unknown, fallback: string): string {
   const e = err as Partial<FirebaseError> | undefined;
@@ -116,13 +117,22 @@ export default function SettingsPage() {
   const saveProfile = async () => {
     if (!profile) return;
     setSaving(true);
+    const previousAvatarUrl = profile.avatar_url ?? null;
+    const nextAvatarUrl = profileForm.avatar_url || null;
     try {
       await updateDoc(doc(db, "profiles", profile.id), {
         full_name: profileForm.full_name,
         phone: profileForm.phone || null,
-        avatar_url: profileForm.avatar_url || null,
+        avatar_url: nextAvatarUrl,
         updated_at: new Date().toISOString()
       });
+      if (previousAvatarUrl && previousAvatarUrl !== nextAvatarUrl) {
+        try {
+          await deleteObject(ref(storage, previousAvatarUrl));
+        } catch (error) {
+          console.warn("SettingsPage: failed to delete previous avatar", error);
+        }
+      }
       await refreshProfile();
       toast.success("Profil aktualizovaný");
     } catch (err) {
@@ -133,24 +143,40 @@ export default function SettingsPage() {
   };
 
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.addEventListener("load", () => setCropImageSrc(reader.result?.toString() ?? null));
-    reader.readAsDataURL(file);
+    const file = e.target.files?.[0];
     e.target.value = "";
+    if (!file) return;
+
+    const validationError = validateProfileImageFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    void (async () => {
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
+        setCropImageSrc(dataUrl);
+      } catch {
+        toast.error("Fotku sa nepodarilo načítať");
+      }
+    })();
   };
 
   const handleAvatarCropConfirm = async (croppedBlob: Blob) => {
     if (!profile) return;
-    setCropImageSrc(null);
     setUploadingAvatar(true);
     try {
+      const compressedBlob = await compressProfileImage(croppedBlob);
       const fileName = `profiles/${profile.id}/${crypto.randomUUID ? crypto.randomUUID() : Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
-      await uploadBytes(storageRef, croppedBlob);
+      await uploadBytes(storageRef, compressedBlob, {
+        contentType: compressedBlob.type || "image/jpeg",
+        cacheControl: "public,max-age=31536000,immutable",
+      });
       const url = await getDownloadURL(storageRef);
       setProfileForm((prev) => ({ ...prev, avatar_url: url }));
+      setCropImageSrc(null);
       toast.success("Fotka pripravená, nezabudnite uložiť profil");
     } catch (err) {
       console.error("SettingsPage: avatar upload error", err);

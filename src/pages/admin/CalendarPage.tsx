@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { addMinutes, startOfDay, addDays, format as fmtDate } from "date-fns";
 import { sk } from "date-fns/locale";
 import { auth, db } from "@/integrations/firebase/config";
@@ -81,6 +81,10 @@ export default function CalendarPage() {
   const [noteText, setNoteText] = useState("");
   const [customerHistory, setCustomerHistory] = useState<CustomerHistoryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [employeeFilter, setEmployeeFilter] = useState<string>("all");
+
+  const filtersStorageKey = `admin-calendar-filters:${businessId}`;
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -183,8 +187,29 @@ export default function CalendarPage() {
     loadData();
   }, [businessId, loadEvents]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(filtersStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { status?: string; employee?: string };
+      if (parsed.status) setStatusFilter(parsed.status);
+      if (parsed.employee) setEmployeeFilter(parsed.employee);
+    } catch {
+      // Ignore broken localStorage value
+    }
+  }, [filtersStorageKey]);
 
-  const filteredEmployees = useCallback(() => {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      filtersStorageKey,
+      JSON.stringify({ status: statusFilter, employee: employeeFilter })
+    );
+  }, [employeeFilter, filtersStorageKey, statusFilter]);
+
+
+  const availableEmployees = useMemo(() => {
     let list = employees;
     if (!business?.allow_admin_as_provider) {
       list = list.filter((emp: any) => {
@@ -196,6 +221,18 @@ export default function CalendarPage() {
     }
     return list;
   }, [employees, business, memberships]);
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      if (statusFilter !== "all" && event.status !== statusFilter) {
+        return false;
+      }
+      if (employeeFilter !== "all" && event.resource?.employee_id !== employeeFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [employeeFilter, events, statusFilter]);
 
 
   const loadAvailableSlots = useCallback(async (slotDate: Date, employeeId: string, serviceId: string) => {
@@ -318,7 +355,7 @@ export default function CalendarPage() {
     void loadCustomerHistory();
   }, [businessId, detailModal, selectedEvent]);
 
-  const bookingCalendarEvents: BookingCalendarEvent[] = events.map((e) => {
+  const bookingCalendarEvents: BookingCalendarEvent[] = filteredEvents.map((e) => {
     const employeeColor = (e.resource as any)?.employee_color;
     return {
       id: e.id,
@@ -330,7 +367,7 @@ export default function CalendarPage() {
     };
   });
 
-  const selectedDayEvents = events
+  const selectedDayEvents = filteredEvents
     .filter((event) => fmtDate(event.start, "yyyy-MM-dd") === fmtDate(date, "yyyy-MM-dd"))
     .sort((a, b) => a.start.getTime() - b.start.getTime());
 
@@ -485,6 +522,45 @@ export default function CalendarPage() {
         </div>
       </div>
 
+      <div className="grid gap-2 sm:grid-cols-3">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger>
+            <SelectValue placeholder="Stav rezervácie" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Všetky stavy</SelectItem>
+            <SelectItem value="pending">Čakajúce</SelectItem>
+            <SelectItem value="confirmed">Potvrdené</SelectItem>
+            <SelectItem value="completed">Dokončené</SelectItem>
+            <SelectItem value="no_show">No-show</SelectItem>
+            <SelectItem value="cancelled">Zrušené</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+          <SelectTrigger>
+            <SelectValue placeholder="Zamestnanec" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Všetci zamestnanci</SelectItem>
+            {availableEmployees.map((employee: any) => (
+              <SelectItem key={employee.id} value={employee.id}>
+                {employee.display_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setStatusFilter("all");
+            setEmployeeFilter("all");
+          }}
+        >
+          Reset filtrov
+        </Button>
+      </div>
+
       <div className="bg-card rounded-xl border border-border p-4 flex flex-col min-h-0" style={{ height: "calc(100vh - 200px)", minHeight: 500 }}>
         <BookingCalendar
           events={bookingCalendarEvents}
@@ -496,7 +572,11 @@ export default function CalendarPage() {
           onSelectEvent={handleSelectEvent}
           selectable={isOwnerOrAdmin}
           businessHours={{ hours: openingHours, overrides }}
-          resources={isOwnerOrAdmin ? employees : employees.filter(e => e.profile_id === activeMembership?.profile_id)}
+          resources={
+            isOwnerOrAdmin
+              ? availableEmployees.filter((employee: any) => employeeFilter === "all" || employee.id === employeeFilter)
+              : availableEmployees.filter((employee: any) => employee.profile_id === activeMembership?.profile_id)
+          }
         />
       </div>
 
@@ -526,7 +606,7 @@ export default function CalendarPage() {
               <Label>Zamestnanec</Label>
               <Select value={bookForm.employee_id} onValueChange={(v) => setBookForm((f) => ({ ...f, employee_id: v, start_at: "" }))}>
                 <SelectTrigger><SelectValue placeholder="Vyberte zamestnanca" /></SelectTrigger>
-                <SelectContent>{filteredEmployees().map((e: any) => <SelectItem key={e.id} value={e.id}>{e.display_name}</SelectItem>)}</SelectContent>
+                <SelectContent>{availableEmployees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.display_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             {availableSlots.length > 0 && (

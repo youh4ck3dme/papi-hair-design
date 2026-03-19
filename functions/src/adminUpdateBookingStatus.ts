@@ -9,6 +9,7 @@ import {
   type AdminBookingStatus,
 } from "./bookingStatus";
 import { queueCustomerCancellationEmail } from "./emailQueue";
+import { appendAppointmentStatusAuditEntry } from "./auditLog";
 
 interface AdminUpdateBookingStatusData {
   business_id: string;
@@ -55,6 +56,23 @@ export const adminUpdateBookingStatus = functions.https.onCall(
 
     const nowIso = new Date().toISOString();
     await appointmentRef.update(buildBookingStatusUpdate(status, nowIso));
+
+    try {
+      await appendAppointmentStatusAuditEntry(db, {
+        appointmentId: appointment_id,
+        businessId: business_id,
+        previousStatus: currentStatus,
+        nextStatus: status,
+        actorType: "admin",
+        actorUid: uid,
+      });
+    } catch (error) {
+      functions.logger.warn("adminUpdateBookingStatus: failed to append audit entry", {
+        appointment_id,
+        business_id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     if (status === "cancelled" && typeof appointment.customer_email === "string" && appointment.customer_email.trim().length > 0) {
       try {

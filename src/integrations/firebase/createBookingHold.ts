@@ -1,5 +1,6 @@
 import { functions } from "./config";
 import { httpsCallable } from "firebase/functions";
+import { toCallableErrorMessage } from "./callableError";
 
 export interface CreateBookingHoldBody {
   business_id: string;
@@ -35,6 +36,6 @@ export async function createBookingHold(
     return result.data;
   } catch (err: any) {
     console.error("createBookingHold error:", err);
-    return { error: err.message || "Chyba pri vytváraní rezervácie" };
+    return { error: toCallableErrorMessage(err, "Chyba pri vytváraní rezervácie") };
   }
 }

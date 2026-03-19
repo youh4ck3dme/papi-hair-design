@@ -1,5 +1,6 @@
 import { functions } from "./config";
 import { httpsCallable } from "firebase/functions";
+import { toCallableErrorMessage } from "./callableError";
 
 export interface ConfirmBookingBody {
   appointment_id: string;
@@ -32,6 +33,6 @@ export async function confirmBooking(
     return result.data;
   } catch (err: any) {
     console.error("confirmBooking error:", err);
-    return { error: err.message || "Chyba pri potvrdení rezervácie" };
+    return { error: toCallableErrorMessage(err, "Chyba pri potvrdení rezervácie") };
   }
 }

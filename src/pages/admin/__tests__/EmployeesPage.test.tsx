@@ -261,6 +261,18 @@ describe("EmployeesPage", () => {
     expect(toastMocks.error).toHaveBeenCalledWith("Zadajte meno");
   });
 
+  it("rejects unsupported profile photo file type", async () => {
+    render(<EmployeesPage />);
+    await screen.findByText("Tím");
+    fireEvent.click(screen.getByRole("button", { name: /Pridať člena tímu/i }));
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const invalidFile = new File(["bad"], "avatar.txt", { type: "text/plain" });
+    fireEvent.change(fileInput, { target: { files: [invalidFile] } });
+
+    expect(toastMocks.error).toHaveBeenCalledWith("Podporované sú iba JPG, PNG alebo WEBP súbory.");
+  });
+
   it("requires owner to select at least one service in restricted mode", async () => {
     render(<EmployeesPage />);
     await screen.findByText("Tím");

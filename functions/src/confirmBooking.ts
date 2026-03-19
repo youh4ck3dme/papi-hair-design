@@ -2,7 +2,6 @@ import * as functions from "firebase-functions/v2";
 import { getFirestore } from "firebase-admin/firestore";
 import {
   type CallableRequest,
-  HttpsError,
 } from "firebase-functions/v2/https";
 import { queueAdminBookingNotificationEmail, queueCustomerBookingEmail } from "./emailQueue";
 import {
@@ -12,6 +11,8 @@ import {
   normalizePhone,
 } from "./publicBookingAccess";
 import { checkRateLimit } from "./middleware/rateLimit";
+import { throwBookingError } from "./errors";
+import { appendAppointmentStatusAuditEntry } from "./auditLog";
 
 interface ConfirmBookingInput {
   appointment_id: string;
@@ -47,7 +48,11 @@ async function verifyRecaptchaIfConfigured(recaptchaToken: string | null | undef
   if (!recaptchaSecret) return;
 
   if (!recaptchaToken || typeof recaptchaToken !== "string") {
-    throw new HttpsError("invalid-argument", "Chýba reCAPTCHA token");
+    throwBookingError({
+      status: "invalid-argument",
+      code: "missing_recaptcha_token",
+      message: "Chýba reCAPTCHA token",
+    });
   }
 
   const payload = new URLSearchParams();
@@ -71,20 +76,36 @@ async function verifyRecaptchaIfConfigured(recaptchaToken: string | null | undef
     }
     verification = await response.json() as RecaptchaVerifyResponse;
   } catch (error) {
-    throw new HttpsError("unavailable", "reCAPTCHA overenie zlyhalo");
+    throwBookingError({
+      status: "unavailable",
+      code: "recaptcha_unavailable",
+      message: "reCAPTCHA overenie zlyhalo",
+    });
   }
 
   if (!verification.success) {
-    throw new HttpsError("permission-denied", "reCAPTCHA overenie neprešlo");
+    throwBookingError({
+      status: "permission-denied",
+      code: "recaptcha_failed",
+      message: "reCAPTCHA overenie neprešlo",
+    });
   }
 
   if (verification.action && verification.action !== RECAPTCHA_EXPECTED_ACTION) {
-    throw new HttpsError("permission-denied", "Neplatná reCAPTCHA akcia");
+    throwBookingError({
+      status: "permission-denied",
+      code: "recaptcha_failed",
+      message: "Neplatná reCAPTCHA akcia",
+    });
   }
 
   const score = typeof verification.score === "number" ? verification.score : 0;
   if (score < RECAPTCHA_MIN_SCORE) {
-    throw new HttpsError("permission-denied", "reCAPTCHA skóre je príliš nízke");
+    throwBookingError({
+      status: "permission-denied",
+      code: "recaptcha_low_score",
+      message: "reCAPTCHA skóre je príliš nízke",
+    });
   }
 }
 
@@ -102,37 +123,29 @@ export const confirmBooking = functions.https.onCall(
     await verifyRecaptchaIfConfigured(recaptcha_token, extractClientIp(request.rawRequest));
 
     if (!appointment_id) {
-      throw new HttpsError("invalid-argument", "Missing appointment_id");
+      throwBookingError({
+        status: "invalid-argument",
+        code: "missing_fields",
+        message: "Chýba appointment_id",
+      });
     }
 
     if (!confirm_token) {
-      throw new HttpsError("invalid-argument", "Missing confirm_token");
-    }
-
-    const clientIp = extractClientIp(request.rawRequest);
-    try {
-      await verifyRecaptchaIfConfigured(recaptcha_token, clientIp);
-    } catch (err) {
-      functions.logger.warn("confirmBooking: reCAPTCHA verification failed", {
-        appointment_id,
-        error: err instanceof Error ? err.message : String(err),
+      throwBookingError({
+        status: "invalid-argument",
+        code: "missing_fields",
+        message: "Chýba confirm_token",
       });
-      throw err;
-    }
-
-    const rateLimitExceeded = await checkRateLimit(
-      "confirmBooking",
-      request.rawRequest,
-      { appointment_id }
-    );
-    if (rateLimitExceeded) {
-      throw new HttpsError("resource-exhausted", "Rate limit exceeded");
     }
 
     const docRef = db.collection("appointments").doc(appointment_id);
     const snap = await docRef.get();
     if (!snap.exists) {
-      throw new HttpsError("not-found", "Appointment not found");
+      throwBookingError({
+        status: "not-found",
+        code: "appointment_not_found",
+        message: "Rezervácia nebola nájdená",
+      });
     }
 
     const appt = snap.data() as Record<string, any>;
@@ -148,14 +161,22 @@ export const confirmBooking = functions.https.onCall(
     }
 
     if (appt.confirm_token !== confirm_token) {
-      throw new HttpsError("permission-denied", "Invalid confirm_token");
+      throwBookingError({
+        status: "permission-denied",
+        code: "invalid_confirm_token",
+        message: "Neplatný potvrdzovací token",
+      });
     }
 
     if (appt.hold_expires_at) {
       const expires = new Date(appt.hold_expires_at).getTime();
       if (Date.now() > expires) {
         await docRef.update({ status: "expired", expired_at: new Date().toISOString() });
-        throw new HttpsError("failed-precondition", "Hold expired");
+        throwBookingError({
+          status: "failed-precondition",
+          code: "hold_expired",
+          message: "Rezervácia už vypršala",
+        });
       }
     }
 
@@ -170,6 +191,23 @@ export const confirmBooking = functions.https.onCall(
     }
 
     await docRef.update(updates);
+    try {
+      if (typeof appt.business_id === "string") {
+        await appendAppointmentStatusAuditEntry(db, {
+          appointmentId: appointment_id,
+          businessId: appt.business_id,
+          previousStatus: "hold_created",
+          nextStatus: "confirmed",
+          actorType: "system",
+          actorUid: null,
+        });
+      }
+    } catch (error) {
+      functions.logger.warn("confirmBooking: failed to append status audit entry", {
+        appointment_id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     let claim_token: string | null = null;
     let history_access_token: string | null = null;

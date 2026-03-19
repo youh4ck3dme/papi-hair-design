@@ -2,12 +2,12 @@ import * as functions from "firebase-functions/v2";
 import { getFirestore } from "firebase-admin/firestore";
 import {
   type CallableRequest,
-  HttpsError,
 } from "firebase-functions/v2/https";
 import * as crypto from "crypto";
 import { assignEmployeeForSlot } from "./autoAssignEmployee";
 import { normalizeEmail, normalizePhone } from "./publicBookingAccess";
 import { checkRateLimit } from "./middleware/rateLimit";
+import { throwBookingError } from "./errors";
 
 interface CreateBookingHoldInput {
   business_id: string;
@@ -34,6 +34,14 @@ interface RecaptchaVerifyResponse {
   "error-codes"?: string[];
 }
 
+function createIdempotencyKey(rawKey: string | undefined): string {
+  const normalized = typeof rawKey === "string" ? rawKey.trim() : "";
+  if (normalized.length > 0) {
+    return normalized.slice(0, 200);
+  }
+  return crypto.randomUUID();
+}
+
 function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): string | null {
   const forwarded = rawRequest.headers["x-forwarded-for"];
   if (typeof forwarded === "string" && forwarded.trim().length > 0) {
@@ -50,7 +58,11 @@ async function verifyRecaptchaIfConfigured(recaptchaToken: string | null | undef
   if (!recaptchaSecret) return;
 
   if (!recaptchaToken || typeof recaptchaToken !== "string") {
-    throw new HttpsError("invalid-argument", "Chýba reCAPTCHA token");
+    throwBookingError({
+      status: "invalid-argument",
+      code: "missing_recaptcha_token",
+      message: "Chýba reCAPTCHA token",
+    });
   }
 
   const payload = new URLSearchParams();
@@ -74,20 +86,36 @@ async function verifyRecaptchaIfConfigured(recaptchaToken: string | null | undef
     }
     verification = await response.json() as RecaptchaVerifyResponse;
   } catch (error) {
-    throw new HttpsError("unavailable", "reCAPTCHA overenie zlyhalo");
+    throwBookingError({
+      status: "unavailable",
+      code: "recaptcha_unavailable",
+      message: "reCAPTCHA overenie zlyhalo",
+    });
   }
 
   if (!verification.success) {
-    throw new HttpsError("permission-denied", "reCAPTCHA overenie neprešlo");
+    throwBookingError({
+      status: "permission-denied",
+      code: "recaptcha_failed",
+      message: "reCAPTCHA overenie neprešlo",
+    });
   }
 
   if (verification.action && verification.action !== RECAPTCHA_EXPECTED_ACTION) {
-    throw new HttpsError("permission-denied", "Neplatná reCAPTCHA akcia");
+    throwBookingError({
+      status: "permission-denied",
+      code: "recaptcha_failed",
+      message: "Neplatná reCAPTCHA akcia",
+    });
   }
 
   const score = typeof verification.score === "number" ? verification.score : 0;
   if (score < RECAPTCHA_MIN_SCORE) {
-    throw new HttpsError("permission-denied", "reCAPTCHA skóre je príliš nízke");
+    throwBookingError({
+      status: "permission-denied",
+      code: "recaptcha_low_score",
+      message: "reCAPTCHA skóre je príliš nízke",
+    });
   }
 }
 
@@ -121,12 +149,20 @@ export const createBookingHold = functions.https.onCall(
       !customer_name ||
       !customer_email
     ) {
-      throw new HttpsError("invalid-argument", "Missing required fields");
+      throwBookingError({
+        status: "invalid-argument",
+        code: "missing_fields",
+        message: "Chýbajú povinné polia rezervácie",
+      });
     }
 
     const startDate = new Date(start_at);
     if (Number.isNaN(startDate.getTime())) {
-      throw new HttpsError("invalid-argument", "Invalid start_at");
+      throwBookingError({
+        status: "invalid-argument",
+        code: "invalid_start_at",
+        message: "Neplatný čas začiatku rezervácie",
+      });
     }
 
     const now = Date.now();
@@ -135,13 +171,6 @@ export const createBookingHold = functions.https.onCall(
     const customerEmail = normalizeEmail(customer_email);
     const customerPhone = normalizePhone(customer_phone);
     const confirmToken = crypto.randomUUID();
-
-    // Rate limiting check
-    const clientIp = extractClientIp(request.rawRequest);
-    const rateLimitCheck = await checkRateLimit(db, request, "createBookingHold");
-    if (!rateLimitCheck.success) {
-      throw new HttpsError("resource-exhausted", rateLimitCheck.message);
-    }
 
     // Idempotency: return existing hold for the same key
     const existingSnap = await db
@@ -158,7 +187,11 @@ export const createBookingHold = functions.https.onCall(
     const serviceSnap = await db.collection("services").doc(service_id).get();
     const service = serviceSnap.data();
     if (!service || service.business_id !== business_id) {
-      throw new HttpsError("not-found", "Service not found");
+      throwBookingError({
+        status: "not-found",
+        code: "service_not_found",
+        message: "Služba nebola nájdená",
+      });
     }
 
     const totalMinutes =
@@ -173,7 +206,11 @@ export const createBookingHold = functions.https.onCall(
     });
 
     if (!assignedEmployee) {
-      throw new HttpsError("already-exists", "Slot is not available");
+      throwBookingError({
+        status: "already-exists",
+        code: "slot_unavailable",
+        message: "Vybraný termín už nie je dostupný",
+      });
     }
 
     // Conflict detection with index-safe query shape.
@@ -206,11 +243,12 @@ export const createBookingHold = functions.https.onCall(
     });
 
     if (hasActiveConflict) {
-      throw new HttpsError("already-exists", "Slot is not available");
+      throwBookingError({
+        status: "already-exists",
+        code: "slot_unavailable",
+        message: "Vybraný termín už nie je dostupný",
+      });
     }
-
-    // Verify reCAPTCHA
-    await verifyRecaptchaIfConfigured(recaptcha_token, clientIp);
 
     // Find or create customer
     const customersSnap = await db
