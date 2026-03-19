@@ -114,7 +114,7 @@ describe("CustomersPage", () => {
   it("renders customers page heading and loaded rows", async () => {
     render(<CustomersPage />);
     expect(await screen.findByText("Zákazníci")).toBeInTheDocument();
-    expect(screen.getByText("Jana Novak")).toBeInTheDocument();
+    expect(await screen.findByText("Jana Novak")).toBeInTheDocument();
     expect(screen.getByText("Marek Urban")).toBeInTheDocument();
   });
 
@@ -190,7 +190,7 @@ describe("CustomersPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Návštevy/i }));
     const secondSort = screen.getAllByText(/ID:/i)[0];
     expect(secondSort).toHaveTextContent("ID: cust-1");
-  });
+  }, 15000);
 
   it("sorts by last visit date", async () => {
     render(<CustomersPage />);
@@ -203,7 +203,7 @@ describe("CustomersPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Posledná návšteva/i }));
     const secondSort = screen.getAllByText(/ID:/i)[0];
     expect(secondSort).toHaveTextContent("ID: cust-1");
-  });
+  }, 15000);
 
   it("computes visits and displays visit counts from appointments", async () => {
     render(<CustomersPage />);

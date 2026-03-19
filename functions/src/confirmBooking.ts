@@ -11,20 +11,122 @@ import {
   normalizeEmail,
   normalizePhone,
 } from "./publicBookingAccess";
+import { checkRateLimit } from "./middleware/rateLimit";
 
 interface ConfirmBookingInput {
   appointment_id: string;
+  confirm_token: string;
   idempotency_key?: string;
+  recaptcha_token?: string | null;
+}
+
+const RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
+const RECAPTCHA_MIN_SCORE = 0.5;
+const RECAPTCHA_EXPECTED_ACTION = "booking";
+
+interface RecaptchaVerifyResponse {
+  success: boolean;
+  score?: number;
+  action?: string;
+  "error-codes"?: string[];
+}
+
+function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): string | null {
+  const forwarded = rawRequest.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim().length > 0) {
+    return forwarded.split(",")[0].trim();
+  }
+  if (Array.isArray(forwarded) && forwarded.length > 0) {
+    return forwarded[0]?.trim() || null;
+  }
+  return rawRequest.socket.remoteAddress ?? null;
+}
+
+async function verifyRecaptchaIfConfigured(recaptchaToken: string | null | undefined, clientIp: string | null): Promise<void> {
+  const recaptchaSecret = process.env.RECAPTCHA_SECRET?.trim();
+  if (!recaptchaSecret) return;
+
+  if (!recaptchaToken || typeof recaptchaToken !== "string") {
+    throw new HttpsError("invalid-argument", "Chýba reCAPTCHA token");
+  }
+
+  const payload = new URLSearchParams();
+  payload.set("secret", recaptchaSecret);
+  payload.set("response", recaptchaToken);
+  if (clientIp) {
+    payload.set("remoteip", clientIp);
+  }
+
+  let verification: RecaptchaVerifyResponse;
+  try {
+    const response = await fetch(RECAPTCHA_VERIFY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: payload.toString()
+    });
+    if (!response.ok) {
+      throw new Error(`reCAPTCHA endpoint returned ${response.status}`);
+    }
+    verification = await response.json() as RecaptchaVerifyResponse;
+  } catch (error) {
+    throw new HttpsError("unavailable", "reCAPTCHA overenie zlyhalo");
+  }
+
+  if (!verification.success) {
+    throw new HttpsError("permission-denied", "reCAPTCHA overenie neprešlo");
+  }
+
+  if (verification.action && verification.action !== RECAPTCHA_EXPECTED_ACTION) {
+    throw new HttpsError("permission-denied", "Neplatná reCAPTCHA akcia");
+  }
+
+  const score = typeof verification.score === "number" ? verification.score : 0;
+  if (score < RECAPTCHA_MIN_SCORE) {
+    throw new HttpsError("permission-denied", "reCAPTCHA skóre je príliš nízke");
+  }
 }
 
 export const confirmBooking = functions.https.onCall(
   { region: "europe-west1" },
   async (request: CallableRequest<ConfirmBookingInput>) => {
-    const { appointment_id, idempotency_key } = request.data;
+    const { appointment_id, confirm_token, idempotency_key, recaptcha_token } = request.data;
     const db = getFirestore();
+
+    // Rate limit by IP
+    const ip = extractClientIp(request.rawRequest) || "unknown";
+    await checkRateLimit(ip);
+
+    // Verify reCAPTCHA
+    await verifyRecaptchaIfConfigured(recaptcha_token, extractClientIp(request.rawRequest));
 
     if (!appointment_id) {
       throw new HttpsError("invalid-argument", "Missing appointment_id");
+    }
+
+    if (!confirm_token) {
+      throw new HttpsError("invalid-argument", "Missing confirm_token");
+    }
+
+    const clientIp = extractClientIp(request.rawRequest);
+    try {
+      await verifyRecaptchaIfConfigured(recaptcha_token, clientIp);
+    } catch (err) {
+      functions.logger.warn("confirmBooking: reCAPTCHA verification failed", {
+        appointment_id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+
+    const rateLimitExceeded = await checkRateLimit(
+      "confirmBooking",
+      request.rawRequest,
+      { appointment_id }
+    );
+    if (rateLimitExceeded) {
+      throw new HttpsError("resource-exhausted", "Rate limit exceeded");
     }
 
     const docRef = db.collection("appointments").doc(appointment_id);
@@ -45,6 +147,10 @@ export const confirmBooking = functions.https.onCall(
       };
     }
 
+    if (appt.confirm_token !== confirm_token) {
+      throw new HttpsError("permission-denied", "Invalid confirm_token");
+    }
+
     if (appt.hold_expires_at) {
       const expires = new Date(appt.hold_expires_at).getTime();
       if (Date.now() > expires) {
@@ -56,6 +162,7 @@ export const confirmBooking = functions.https.onCall(
     const updates: Record<string, any> = {
       status: "confirmed",
       hold_expires_at: null,
+      confirm_token: null, // Invalidate the token
       confirmed_at: new Date().toISOString(),
     };
     if (idempotency_key) {

@@ -80,27 +80,54 @@ export default function MySchedulePage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setEmployeeId(null);
+      setLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+
     (async () => {
-      const employeeForUserSnap = await getDocs(query(
-        collection(db, "employees"),
-        where("business_id", "==", businessId),
-        where("profile_id", "==", user.id),
-        limit(1),
-      ));
+      try {
+        const employeeForUserSnap = await getDocs(query(
+          collection(db, "employees"),
+          where("business_id", "==", businessId),
+          where("profile_id", "==", user.id),
+          limit(1),
+        ));
 
-      if (!employeeForUserSnap.empty) {
-        setEmployeeId(employeeForUserSnap.docs[0].id);
-        return;
+        if (!employeeForUserSnap.empty) {
+          if (!isCancelled) {
+            setEmployeeId(employeeForUserSnap.docs[0].id);
+          }
+          return;
+        }
+
+        const fallbackSnap = await getDocs(query(
+          collection(db, "employees"),
+          where("business_id", "==", businessId),
+          limit(1),
+        ));
+
+        if (!isCancelled) {
+          const fallbackEmployeeId = fallbackSnap.empty ? null : fallbackSnap.docs[0].id;
+          setEmployeeId(fallbackEmployeeId);
+          if (!fallbackEmployeeId) {
+            setLoading(false);
+          }
+        }
+      } catch {
+        if (!isCancelled) {
+          setEmployeeId(null);
+          setLoading(false);
+        }
       }
-
-      const fallbackSnap = await getDocs(query(
-        collection(db, "employees"),
-        where("business_id", "==", businessId),
-        limit(1),
-      ));
-      setEmployeeId(fallbackSnap.empty ? null : fallbackSnap.docs[0].id);
     })();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [user, businessId]);
 
   const loadEvents = useCallback(async () => {

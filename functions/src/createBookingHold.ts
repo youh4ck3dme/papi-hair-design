@@ -7,6 +7,7 @@ import {
 import * as crypto from "crypto";
 import { assignEmployeeForSlot } from "./autoAssignEmployee";
 import { normalizeEmail, normalizePhone } from "./publicBookingAccess";
+import { checkRateLimit } from "./middleware/rateLimit";
 
 interface CreateBookingHoldInput {
   business_id: string;
@@ -17,15 +18,77 @@ interface CreateBookingHoldInput {
   customer_email: string;
   customer_phone?: string;
   idempotency_key?: string;
+  recaptcha_token?: string | null;
 }
 
 const HOLD_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
-function createIdempotencyKey(input?: string): string {
-  if (input && typeof input === "string" && input.trim().length > 0) {
-    return input.trim();
+const RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
+const RECAPTCHA_MIN_SCORE = 0.5;
+const RECAPTCHA_EXPECTED_ACTION = "booking";
+
+interface RecaptchaVerifyResponse {
+  success: boolean;
+  score?: number;
+  action?: string;
+  "error-codes"?: string[];
+}
+
+function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): string | null {
+  const forwarded = rawRequest.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim().length > 0) {
+    return forwarded.split(",")[0].trim();
   }
-  return crypto.randomUUID();
+  if (Array.isArray(forwarded) && forwarded.length > 0) {
+    return forwarded[0]?.trim() || null;
+  }
+  return rawRequest.socket.remoteAddress ?? null;
+}
+
+async function verifyRecaptchaIfConfigured(recaptchaToken: string | null | undefined, clientIp: string | null): Promise<void> {
+  const recaptchaSecret = process.env.RECAPTCHA_SECRET?.trim();
+  if (!recaptchaSecret) return;
+
+  if (!recaptchaToken || typeof recaptchaToken !== "string") {
+    throw new HttpsError("invalid-argument", "Chýba reCAPTCHA token");
+  }
+
+  const payload = new URLSearchParams();
+  payload.set("secret", recaptchaSecret);
+  payload.set("response", recaptchaToken);
+  if (clientIp) {
+    payload.set("remoteip", clientIp);
+  }
+
+  let verification: RecaptchaVerifyResponse;
+  try {
+    const response = await fetch(RECAPTCHA_VERIFY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: payload.toString()
+    });
+    if (!response.ok) {
+      throw new Error(`reCAPTCHA endpoint returned ${response.status}`);
+    }
+    verification = await response.json() as RecaptchaVerifyResponse;
+  } catch (error) {
+    throw new HttpsError("unavailable", "reCAPTCHA overenie zlyhalo");
+  }
+
+  if (!verification.success) {
+    throw new HttpsError("permission-denied", "reCAPTCHA overenie neprešlo");
+  }
+
+  if (verification.action && verification.action !== RECAPTCHA_EXPECTED_ACTION) {
+    throw new HttpsError("permission-denied", "Neplatná reCAPTCHA akcia");
+  }
+
+  const score = typeof verification.score === "number" ? verification.score : 0;
+  if (score < RECAPTCHA_MIN_SCORE) {
+    throw new HttpsError("permission-denied", "reCAPTCHA skóre je príliš nízke");
+  }
 }
 
 export const createBookingHold = functions.https.onCall(
@@ -33,6 +96,13 @@ export const createBookingHold = functions.https.onCall(
   async (request: CallableRequest<CreateBookingHoldInput>) => {
     const { data } = request;
     const db = getFirestore();
+
+    // Rate limit by IP
+    const ip = extractClientIp(request.rawRequest) || "unknown";
+    await checkRateLimit(ip);
+
+    // Verify reCAPTCHA
+    await verifyRecaptchaIfConfigured(data.recaptcha_token, extractClientIp(request.rawRequest));
 
     const {
       business_id,
@@ -64,6 +134,14 @@ export const createBookingHold = functions.https.onCall(
     const idemKey = createIdempotencyKey(idempotency_key);
     const customerEmail = normalizeEmail(customer_email);
     const customerPhone = normalizePhone(customer_phone);
+    const confirmToken = crypto.randomUUID();
+
+    // Rate limiting check
+    const clientIp = extractClientIp(request.rawRequest);
+    const rateLimitCheck = await checkRateLimit(db, request, "createBookingHold");
+    if (!rateLimitCheck.success) {
+      throw new HttpsError("resource-exhausted", rateLimitCheck.message);
+    }
 
     // Idempotency: return existing hold for the same key
     const existingSnap = await db
@@ -73,7 +151,7 @@ export const createBookingHold = functions.https.onCall(
       .get();
     if (!existingSnap.empty) {
       const doc = existingSnap.docs[0];
-      return { success: true, appointment_id: doc.id, reused: true };
+      return { success: true, appointment_id: doc.id, reused: true, confirm_token: doc.data().confirm_token };
     }
 
     // Load service and auto-assign eligible employee
@@ -131,6 +209,9 @@ export const createBookingHold = functions.https.onCall(
       throw new HttpsError("already-exists", "Slot is not available");
     }
 
+    // Verify reCAPTCHA
+    await verifyRecaptchaIfConfigured(recaptcha_token, clientIp);
+
     // Find or create customer
     const customersSnap = await db
       .collection("customers")
@@ -173,6 +254,7 @@ export const createBookingHold = functions.https.onCall(
       end_at: endDate.toISOString(),
       status: "hold_created",
       hold_expires_at: holdExpiresAt.toISOString(),
+      confirm_token: confirmToken,
       idempotency_key: idemKey,
       created_at: new Date().toISOString(),
     });
@@ -181,6 +263,7 @@ export const createBookingHold = functions.https.onCall(
       success: true,
       appointment_id: appointmentRef.id,
       hold_expires_at: holdExpiresAt.toISOString(),
+      confirm_token: confirmToken,
       idempotency_key: idemKey,
       reused: false,
     };

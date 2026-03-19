@@ -18,7 +18,6 @@ interface EventPosition {
   borderLeftWidth?: string;
 }
 
-
 function getOverlappingEvents(
   current: EventType,
   events: EventType[]
@@ -67,7 +66,6 @@ function calculateEventPosition(
   const topPx = ((startMinutes - visibleStartMinutes) / 60) * PIXELS_PER_HOUR;
   const durationMin = endMinutes - startMinutes;
   const heightPx = (durationMin / 60) * PIXELS_PER_HOUR;
-
   return {
     left,
     width,
@@ -94,9 +92,10 @@ export function BookingCalendarEvent({
   if (event.color.startsWith("#") && style) {
     style = {
       ...style,
-      backgroundColor: `${event.color}25`, // 15% opacity
+      backgroundColor: `${event.color}15`, // 5-10% opacity alternative for custom colors to match new theme
       borderColor: event.color,
       color: event.color,
+      // borderLeftWidth: '4px' -> We use the tailwind classes instead where possible, but inline needs this:
       borderLeftWidth: '4px'
     };
   }
@@ -124,9 +123,9 @@ export function BookingCalendarEvent({
         role="button"
         tabIndex={0}
         className={cn(
-          "px-3 py-1.5 rounded-md truncate cursor-pointer transition-all duration-300 border booking-calendar-event",
+          "px-2.5 py-1.5 rounded-md overflow-hidden cursor-pointer transition-all duration-300 border booking-calendar-event flex flex-col hover:shadow-md",
           colorClasses,
-          !month && "absolute",
+          !month && "absolute shadow-sm",
           className
         )}
         style={style}
@@ -149,17 +148,23 @@ export function BookingCalendarEvent({
       >
         <motion.div
           className={cn(
-            "flex flex-col w-full",
-            month && "flex-row items-center justify-between"
+            "flex w-full min-w-0 flex-grow",
+            month ? "flex-row items-center justify-between flex-none" : "flex-col"
           )}
           layout="position"
         >
-          <p className={cn("font-bold truncate", month && "text-xs")}>
+          <p className={cn(
+            "truncate w-full font-semibold",
+            month ? "text-xs" : "text-sm leading-tight tracking-tight"
+          )}>
             {event.title}
           </p>
-          <p className={cn("text-sm", month && "text-xs")}>
+          <p className={cn(
+            "truncate w-full opacity-80",
+            month ? "text-[10px]" : "text-xs font-medium mt-0.5"
+          )}>
             <span>{format(event.start, "HH:mm", { locale: sk })}</span>
-            <span className={cn("mx-1", month && "hidden")}>–</span>
+            <span className={cn("mx-1 opacity-60", month && "hidden")}>–</span>
             <span className={cn(month && "hidden")}>
               {format(event.end, "HH:mm", { locale: sk })}
             </span>

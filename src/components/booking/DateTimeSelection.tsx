@@ -17,6 +17,7 @@ interface DateTimeSelectionProps {
     setSelectedTime: (time: string | null) => void;
     isBusinessOpenOnDay: (date: Date) => boolean;
     loadingSlots: boolean;
+    availabilityStatus: "idle" | "loading" | "success" | "no-slots" | "error";
     availableSlots: Date[];
     selectedTime: string | null;
     timeGroups: { dopoludnia: string[]; popoludni: string[] };
@@ -36,6 +37,7 @@ export function DateTimeSelection({
     setSelectedTime,
     isBusinessOpenOnDay,
     loadingSlots,
+    availabilityStatus,
     availableSlots,
     selectedTime,
     timeGroups,
@@ -53,7 +55,6 @@ export function DateTimeSelection({
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{t("booking.assignmentSubtitle")}</p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
-                {/* Month nav bar */}
                 <div className="flex justify-between items-center px-4 pt-4 pb-3 border-b border-border/40">
                     <button
                         onClick={prevMonth}
@@ -75,14 +76,12 @@ export function DateTimeSelection({
                 </div>
 
                 <div className="p-3">
-                    {/* Weekday labels */}
                     <div className="grid grid-cols-7 mb-1">
                         {["Po", "Ut", "St", "Št", "Pi", "So", "Ne"].map((d) => (
                             <div key={d} className="py-1 text-center text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">{d}</div>
                         ))}
                     </div>
 
-                    {/* Calendar grid */}
                     <div className="grid grid-cols-7 gap-y-1">
                         {Array.from({ length: firstDayOffset }, (_, i) => (
                             <div key={`empty-${calendarMonth.getTime()}-${i}`} />
@@ -98,18 +97,18 @@ export function DateTimeSelection({
                             const isToday = isSameDay(dayDate, today);
 
                             let cls = "";
-                            if (isSelected) cls = "bg-primary text-primary-foreground dark:text-background font-bold shadow-md ring-2 ring-primary/30";
-                            else if (isToday) cls = "ring-1 ring-primary/60 text-primary font-semibold";
-                            else if (disabled) cls = "text-muted-foreground/20 cursor-not-allowed";
-                            else cls = "text-foreground hover:bg-accent hover:text-foreground";
+                            if (isSelected) cls = "bg-primary text-primary-foreground dark:text-background font-bold shadow-md shadow-primary/30 ring-2 ring-primary ring-offset-2 ring-offset-background scale-105";
+                            else if (disabled) cls = "text-muted-foreground/30 bg-muted/20 cursor-not-allowed";
+                            else if (isToday) cls = "border-2 border-primary/50 text-primary font-semibold hover:bg-primary/10";
+                            else cls = "text-foreground hover:bg-accent hover:text-accent-foreground border border-transparent";
 
                             return (
-                                <div key={day} className="flex justify-center">
+                                <div key={day} className="flex justify-center p-0.5">
                                     <button
                                         data-testid={disabled ? undefined : `date-btn-${day}`}
                                         onClick={() => { if (!disabled) { setSelectedDate(day); setSelectedTime(null); } }}
                                         disabled={disabled}
-                                        className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-all duration-150 ${cls}`}
+                                        className={`flex h-11 w-11 items-center justify-center rounded-full text-sm transition-all duration-200 ${cls}`}
                                     >
                                         {day}
                                     </button>
@@ -120,64 +119,70 @@ export function DateTimeSelection({
                 </div>
             </div>
 
-            {/* Time slots */}
-            {Boolean(selectedDate) && (
-                <div className="animate-fade-in mt-6">
-                    <StepHeader num="4" title={t("booking.step4")} />
-                    {loadingSlots ? (
-                        <div className="flex justify-center py-10">
-                            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                        </div>
-                    ) : availableSlots.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground/70 text-sm border border-dashed border-border rounded-2xl">
-                            {t("booking.noSlots")}
-                        </div>
-                    ) : (
-                        <>
-                            {timeGroups.dopoludnia.length > 0 && (
-                                <div className="mb-6">
-                                    <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground/80">{t("booking.timeAm")}</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {timeGroups.dopoludnia.map((tVal) => (
-                                            <button
-                                                key={tVal}
-                                                data-testid="time-slot"
-                                                onClick={() => setSelectedTime(tVal)}
-                                                className={`min-h-[44px] rounded-full border px-4 py-2.5 text-sm font-semibold transition-all duration-150 ${selectedTime === tVal
-                                                    ? "bg-primary text-primary-foreground dark:text-background border-primary shadow-md shadow-primary/20"
-                                                    : "bg-card text-foreground border-border/60 hover:border-primary/50 hover:text-primary hover:bg-primary/5"
-                                                    }`}
-                                            >
-                                                {tVal}
-                                            </button>
-                                        ))}
+            <div className="min-h-[200px] mt-6">
+                {Boolean(selectedDate) && (
+                    <div className="animate-fade-in">
+                        <StepHeader num="4" title={t("booking.step4")} />
+                        {loadingSlots ? (
+                            <div className="flex justify-center py-10">
+                                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                            </div>
+                        ) : availabilityStatus === "error" ? (
+                            <div className="text-center py-8 text-muted-foreground/70 text-sm border border-dashed border-border rounded-2xl">
+                                {t("booking.availabilityLoadError", { defaultValue: "Nepodarilo sa načítať dostupnosť. Skúste to prosím znova." })}
+                            </div>
+                        ) : availabilityStatus === "no-slots" || availableSlots.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground/70 text-sm border border-dashed border-border rounded-2xl">
+                                {t("booking.noSlots")}
+                            </div>
+                        ) : (
+                            <>
+                                {timeGroups.dopoludnia.length > 0 && (
+                                    <div className="mb-8">
+                                        <p className="mb-4 text-xs font-bold uppercase tracking-widest text-muted-foreground/70 border-b border-border/40 pb-2">{t("booking.timeAm")}</p>
+                                        <div className="flex flex-wrap gap-2.5">
+                                            {timeGroups.dopoludnia.map((tVal) => (
+                                                <button
+                                                    key={tVal}
+                                                    data-testid="time-slot"
+                                                    onClick={() => setSelectedTime(tVal)}
+                                                    className={`min-h-[44px] min-w-[80px] rounded-xl border px-5 py-2.5 text-sm font-medium transition-all duration-200 flex-1 sm:flex-none justify-center items-center flex ${selectedTime === tVal
+                                                        ? "bg-primary text-primary-foreground dark:text-background border-primary shadow-md shadow-primary/25 ring-1 ring-primary ring-offset-1 ring-offset-background"
+                                                        : "bg-card text-foreground border-border hover:border-primary/50 hover:text-primary hover:bg-primary/5 active:scale-95 shadow-sm"
+                                                        }`}
+                                                >
+                                                    {tVal}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                            {timeGroups.popoludni.length > 0 && (
-                                <div>
-                                    <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground/80">{t("booking.timePm")}</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {timeGroups.popoludni.map((tVal) => (
-                                            <button
-                                                key={tVal}
-                                                data-testid="time-slot"
-                                                onClick={() => setSelectedTime(tVal)}
-                                                className={`min-h-[44px] rounded-full border px-4 py-2.5 text-sm font-semibold transition-all duration-150 ${selectedTime === tVal
-                                                    ? "bg-primary text-primary-foreground dark:text-background border-primary shadow-md shadow-primary/20"
-                                                    : "bg-card text-foreground border-border/60 hover:border-primary/50 hover:text-primary hover:bg-primary/5"
-                                                    }`}
-                                            >
-                                                {tVal}
-                                            </button>
-                                        ))}
+                                )}
+
+                                {timeGroups.popoludni.length > 0 && (
+                                    <div className="mb-6">
+                                        <p className="mb-4 text-xs font-bold uppercase tracking-widest text-muted-foreground/70 border-b border-border/40 pb-2">{t("booking.timePm")}</p>
+                                        <div className="flex flex-wrap gap-2.5">
+                                            {timeGroups.popoludni.map((tVal) => (
+                                                <button
+                                                    key={tVal}
+                                                    data-testid="time-slot"
+                                                    onClick={() => setSelectedTime(tVal)}
+                                                    className={`min-h-[44px] min-w-[80px] rounded-xl border px-5 py-2.5 text-sm font-medium transition-all duration-200 flex-1 sm:flex-none justify-center items-center flex ${selectedTime === tVal
+                                                        ? "bg-primary text-primary-foreground dark:text-background border-primary shadow-md shadow-primary/25 ring-1 ring-primary ring-offset-1 ring-offset-background"
+                                                        : "bg-card text-foreground border-border hover:border-primary/50 hover:text-primary hover:bg-primary/5 active:scale-95 shadow-sm"
+                                                        }`}
+                                                >
+                                                    {tVal}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
-            )}
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

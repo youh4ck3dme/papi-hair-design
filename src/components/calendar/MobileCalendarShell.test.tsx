@@ -70,6 +70,8 @@ vi.mock("firebase/firestore", async () => {
 vi.mock("./GlassHeader", () => ({
   default: (props: any) => (
     <div data-testid="glass-header">
+      <span data-testid="header-date">{props.currentDate.toISOString()}</span>
+      <span data-testid="header-view">{props.view}</span>
       <button onClick={props.onPrev}>prev</button>
       <button onClick={props.onNext}>next</button>
       <button onClick={props.onToday}>today</button>
@@ -108,6 +110,7 @@ vi.mock("./mobile/CalendarToolbar", () => ({
 vi.mock("./mobile/CalendarGrid", () => ({
   default: (props: any) => (
     <div data-testid="calendar-grid">
+      <span data-testid="grid-date">{props.date.toISOString()}</span>
       <span data-testid="grid-event-count">{String(props.events?.length ?? 0)}</span>
       <button onClick={() => props.onSlotClick("emp-1", new Date("2026-01-15T09:00:00.000Z"), false)}>
         grid-slot-blocked
@@ -123,6 +126,7 @@ vi.mock("./mobile/CalendarGrid", () => ({
 vi.mock("./MonthGrid", () => ({
   default: (props: any) => (
     <div data-testid="month-grid">
+      <span data-testid="month-date">{props.currentDate.toISOString()}</span>
       <button onClick={() => props.onDayClick(new Date("2026-01-16T09:00:00.000Z"))}>month-day</button>
     </div>
   ),
@@ -131,6 +135,7 @@ vi.mock("./MonthGrid", () => ({
 vi.mock("./WeekTimeline", () => ({
   default: (props: any) => (
     <div data-testid="week-timeline">
+      <span data-testid="week-date">{props.currentDate.toISOString()}</span>
       <button onClick={() => props.onDayClick(new Date("2026-01-17T09:00:00.000Z"))}>week-day</button>
       <button onClick={() => props.onTapAppointment(props.appointments?.[0])}>week-open-first</button>
     </div>
@@ -391,5 +396,94 @@ describe("MobileCalendarShell", () => {
 
     fireEvent.click(screen.getByText("toolbar-day"));
     expect(await screen.findByTestId("calendar-grid")).toBeInTheDocument();
+  });
+
+  it("changes active day when month or week view selects a date", async () => {
+    render(<MobileCalendarShell />);
+    await screen.findByTestId("calendar-grid");
+
+    fireEvent.click(screen.getByText("toolbar-month"));
+    fireEvent.click(await screen.findByText("month-day"));
+    expect(await screen.findByTestId("calendar-grid")).toBeInTheDocument();
+    expect(screen.getByTestId("grid-date")).toHaveTextContent("2026-01-16T09:00:00.000Z");
+
+    fireEvent.click(screen.getByText("toolbar-week"));
+    fireEvent.click(await screen.findByText("week-day"));
+    expect(await screen.findByTestId("calendar-grid")).toBeInTheDocument();
+    expect(screen.getByTestId("grid-date")).toHaveTextContent("2026-01-17T09:00:00.000Z");
+  });
+
+  it("filters visible events when employee selection changes", async () => {
+    render(<MobileCalendarShell />);
+    await screen.findByTestId("calendar-grid");
+
+    expect(screen.getByTestId("selected-employee-count")).toHaveTextContent("2");
+    expect(screen.getByTestId("grid-event-count")).toHaveTextContent("1");
+
+    fireEvent.click(screen.getByText("toggle-first"));
+    await waitFor(() => {
+      expect(screen.getByTestId("selected-employee-count")).toHaveTextContent("1");
+      expect(screen.getByTestId("grid-event-count")).toHaveTextContent("0");
+    });
+
+    fireEvent.click(screen.getByText("select-all"));
+    await waitFor(() => {
+      expect(screen.getByTestId("selected-employee-count")).toHaveTextContent("2");
+      expect(screen.getByTestId("grid-event-count")).toHaveTextContent("1");
+    });
+  });
+
+  it("navigates with header controls and resets back to today", async () => {
+    render(<MobileCalendarShell />);
+    await screen.findByTestId("calendar-grid");
+
+    const initialDate = screen.getByTestId("header-date").textContent;
+
+    fireEvent.click(screen.getByText("next"));
+    await waitFor(() => {
+      expect(screen.getByTestId("header-date").textContent).not.toBe(initialDate);
+    });
+
+    fireEvent.click(screen.getByText("today"));
+    await waitFor(() => {
+      expect(screen.getByTestId("header-date").textContent).toBe(initialDate);
+    });
+  });
+
+  it("reuses existing block customer and service records when they already exist", async () => {
+    fixtures.customersByEmail = [{ id: "cust-existing", email: "blocked@internal.invalid" }];
+    fixtures.servicesByName = [{ id: "svc-existing", name_sk: "Blokovaný čas" }];
+
+    render(<MobileCalendarShell />);
+    await screen.findByTestId("calendar-grid");
+
+    fireEvent.click(screen.getByText("toolbar-block"));
+    fireEvent.click(await screen.findByText("block-submit"));
+
+    await waitFor(() => {
+      expect(firestoreMocks.addDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ __collection: "appointments" }),
+        expect.objectContaining({
+          customer_id: "cust-existing",
+          service_id: "svc-existing",
+        }),
+      );
+    });
+
+    const addTargets = firestoreMocks.addDoc.mock.calls.map((call) => call[0]?.__collection);
+    expect(addTargets).toEqual(["appointments"]);
+  });
+
+  it("shows refresh error toast when static reload fails", async () => {
+    render(<MobileCalendarShell />);
+    await screen.findByTestId("calendar-grid");
+
+    callableMocks.listProviders.mockRejectedValueOnce(new Error("refresh failed"));
+    fireEvent.click(screen.getByText("toolbar-refresh"));
+
+    await waitFor(() => {
+      expect(toastMocks.error).toHaveBeenCalledWith("refresh failed");
+    });
+    expect(screen.getByTestId("toolbar-refreshing")).toHaveTextContent("false");
   });
 });

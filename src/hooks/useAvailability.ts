@@ -1,6 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { auth, db } from "@/integrations/firebase/config";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { startOfDay, startOfMonth, getDaysInMonth, getDay, format, addDays } from "date-fns";
 import { generateSharedSlots, getEffectiveIntervals, type BusinessHours, type EmployeeSchedule, type ExistingAppointment, type BusinessHourEntry, type DateOverrideEntry } from "@/lib/availability";
 import { ServiceRow, EmployeeRow } from "@/components/booking/types";
@@ -19,10 +17,11 @@ export function useAvailability(
     const [calendarMonth, setCalendarMonth] = useState(new Date());
     const [availableSlots, setAvailableSlots] = useState<Date[]>([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
+    const [availabilityStatus, setAvailabilityStatus] = useState<"idle" | "loading" | "success" | "no-slots" | "error">("idle");
 
     const monthStart = startOfMonth(calendarMonth);
     const daysInMonth = getDaysInMonth(calendarMonth);
-    const firstDayOffset = (getDay(monthStart) + 6) % 7; // Monday-first
+    const firstDayOffset = (getDay(monthStart) + 6) % 7;
     const today = startOfDay(new Date());
     const maxDays = business?.max_days_ahead ?? 60;
 
@@ -57,61 +56,82 @@ export function useAvailability(
     }, [businessHourEntries, dateOverrides, business]);
 
     useEffect(() => {
-        if (!selectedFullDate || !selectedService || !business || eligibleEmployees.length === 0) {
+        let isCurrentRequest = true;
+
+        if (!selectedFullDate || !selectedService || !business) {
+            setLoadingSlots(false);
             setAvailableSlots([]);
+            setSelectedTime(null);
+            setAvailabilityStatus("idle");
             return;
         }
+
+        if (eligibleEmployees.length === 0) {
+            setLoadingSlots(false);
+            setAvailableSlots([]);
+            setSelectedTime(null);
+            setAvailabilityStatus("no-slots");
+            return;
+        }
+
         const loadSlots = async () => {
             setLoadingSlots(true);
+            setAvailabilityStatus("loading");
+            setSelectedTime(null);
+
             const dayStart = startOfDay(selectedFullDate);
             const dayEnd = addDays(dayStart, 1);
             const employeeIds = eligibleEmployees.map((employee) => employee.id);
 
             try {
-                const shouldUseCallable = !auth.currentUser || auth.currentUser.isAnonymous;
-                const appointmentDocs: any[] = [];
+                const conflicts = await getPublicAvailabilityConflicts({
+                    business_id: business.id,
+                    employee_ids: employeeIds,
+                    day_start: dayStart.toISOString(),
+                    day_end: dayEnd.toISOString(),
+                });
+                if (!isCurrentRequest) return;
 
-                if (shouldUseCallable) {
-                    const conflicts = await getPublicAvailabilityConflicts({
-                        business_id: business.id,
-                        employee_ids: employeeIds,
-                        day_start: dayStart.toISOString(),
-                        day_end: dayEnd.toISOString(),
-                    });
-                    appointmentDocs.push(...conflicts);
-                } else {
-                    for (let index = 0; index < employeeIds.length; index += 10) {
-                        const apptsQuery = query(
-                            collection(db, "appointments"),
-                            where("employee_id", "in", employeeIds.slice(index, index + 10)),
-                            where("start_at", ">=", dayStart.toISOString()),
-                            where("start_at", "<", dayEnd.toISOString())
-                        );
+                const existing = conflicts.map((appointment: any) => ({
+                    employee_id: appointment.employee_id,
+                    start_at: appointment.start_at,
+                    end_at: appointment.end_at,
+                    status: appointment.status,
+                    hold_expires_at: appointment.hold_expires_at ?? null,
+                })) as ExistingAppointment[];
 
-                        const apptsSnap = await getDocs(apptsQuery);
-                        appointmentDocs.push(...apptsSnap.docs.map((docSnap) => docSnap.data()));
-                    }
-                }
+                const nextSlots = buildSlots(selectedFullDate, existing);
+                if (!isCurrentRequest) return;
 
-                const existing = appointmentDocs
-                    .map((appointment: any) => ({
-                        employee_id: appointment.employee_id,
-                        start_at: appointment.start_at,
-                        end_at: appointment.end_at,
-                        status: appointment.status,
-                        hold_expires_at: appointment.hold_expires_at ?? null,
-                    })) as ExistingAppointment[];
-
-                setAvailableSlots(buildSlots(selectedFullDate, existing));
+                setAvailableSlots(nextSlots);
+                setAvailabilityStatus(nextSlots.length > 0 ? "success" : "no-slots");
             } catch (err) {
+                if (!isCurrentRequest) return;
                 console.error("useAvailability: Error loading slots", err);
-                setAvailableSlots(buildSlots(selectedFullDate, []));
+                setAvailableSlots([]);
+                setSelectedTime(null);
+                setAvailabilityStatus("error");
             } finally {
-                setLoadingSlots(false);
+                if (isCurrentRequest) {
+                    setLoadingSlots(false);
+                }
             }
         };
+
         loadSlots();
+
+        return () => {
+            isCurrentRequest = false;
+        };
     }, [selectedFullDate, selectedService, business, schedules, businessHourEntries, dateOverrides, eligibleEmployees, buildSlots]);
+
+    useEffect(() => {
+        if (!selectedTime) return;
+        const selectedStillAvailable = availableSlots.some((slot) => format(slot, "HH:mm") === selectedTime);
+        if (!selectedStillAvailable) {
+            setSelectedTime(null);
+        }
+    }, [availableSlots, selectedTime]);
 
     const timeGroups = useMemo(() => {
         const dopoludnia: string[] = [];
@@ -134,6 +154,7 @@ export function useAvailability(
         setCalendarMonth,
         availableSlots,
         loadingSlots,
+        availabilityStatus,
         monthStart,
         daysInMonth,
         firstDayOffset,

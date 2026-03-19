@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { contactSchema, ServiceRow, EmployeeRow, BookingResult, MembershipRow } from "@/components/booking/types";
 import { createBookingHold } from "@/integrations/firebase/createBookingHold";
 import { confirmBooking } from "@/integrations/firebase/confirmBooking";
+import { getRecaptchaToken } from "@/integrations/firebase/recaptcha";
 
 const makeIdempotencyKey = () =>
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -176,6 +177,8 @@ export function useBookingForm(
                 return;
             }
 
+            const recaptchaToken = await getRecaptchaToken("booking");
+
             const hold = await createBookingHold({
                 business_id: businessId,
                 service_id: selectedServiceId,
@@ -184,6 +187,7 @@ export function useBookingForm(
                 customer_email: formData.email,
                 customer_phone: formData.phone || undefined,
                 idempotency_key: idempotencyKey,
+                recaptcha_token: recaptchaToken,
             });
 
             if (!hold.success || !hold.appointment_id) {
@@ -192,9 +196,13 @@ export function useBookingForm(
                 return;
             }
 
+            const confirmRecaptchaToken = await getRecaptchaToken("booking");
+
             const confirm = await confirmBooking({
                 appointment_id: hold.appointment_id,
+                confirm_token: hold.confirm_token!,
                 idempotency_key: idempotencyKey,
+                recaptcha_token: confirmRecaptchaToken,
             });
 
             if (!confirm.success) {

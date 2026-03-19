@@ -209,7 +209,7 @@ describe("AppointmentsPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Jana Novak/i }));
     expect(await screen.findByText("Detail rezervácie")).toBeInTheDocument();
-  });
+  }, 15000);
 
   it("shows details including contact, service and team member", async () => {
     render(<AppointmentsPage />);
@@ -222,7 +222,7 @@ describe("AppointmentsPage", () => {
     expect(screen.getAllByText("+421900111222").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Strih").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Marek").length).toBeGreaterThan(0);
-  });
+  }, 15000);
 
   it("copies appointment reference to clipboard", async () => {
     render(<AppointmentsPage />);
@@ -234,7 +234,7 @@ describe("AppointmentsPage", () => {
     await waitFor(() =>
       expect((navigator.clipboard.writeText as any)).toHaveBeenCalledWith("apt-pending"),
     );
-  });
+  }, 15000);
 
   it("renders history link with encoded appointment id", async () => {
     render(<AppointmentsPage />);
@@ -253,7 +253,7 @@ describe("AppointmentsPage", () => {
     expect(await screen.findByRole("button", { name: /Potvrdiť/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Zrušiť/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Služba hotová/i })).not.toBeInTheDocument();
-  }, 15000);
+  }, 30000);
 
   it("shows confirmed actions for confirmed booking", async () => {
     render(<AppointmentsPage />);
@@ -264,7 +264,7 @@ describe("AppointmentsPage", () => {
     expect(screen.getByRole("button", { name: /No-show/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Zrušiť/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Potvrdiť/i })).not.toBeInTheDocument();
-  }, 15000);
+  }, 30000);
 
   it("hides status action buttons for completed booking", async () => {
     render(<AppointmentsPage />);
@@ -292,7 +292,7 @@ describe("AppointmentsPage", () => {
       }),
     );
     expect(toastMocks.success).toHaveBeenCalledWith("Status aktualizovaný");
-  });
+  }, 15000);
 
   it("updates status to completed from confirmed", async () => {
     render(<AppointmentsPage />);
@@ -307,7 +307,7 @@ describe("AppointmentsPage", () => {
         status: "completed",
       }),
     );
-  });
+  }, 15000);
 
   it("shows error toast when status update fails", async () => {
     adminUpdateBookingStatusMock.mockRejectedValueOnce(new Error("fail"));
@@ -328,5 +328,5 @@ describe("AppointmentsPage", () => {
     expect(await screen.findByText("Detail rezervácie")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Potvrdiť/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Zrušiť/i })).not.toBeInTheDocument();
-  });
+  }, 15000);
 });

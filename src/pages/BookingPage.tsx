@@ -69,6 +69,7 @@ export default function BookingPage() {
     setCalendarMonth,
     availableSlots,
     loadingSlots,
+    availabilityStatus,
     daysInMonth,
     firstDayOffset,
     today,
@@ -157,6 +158,7 @@ export default function BookingPage() {
           setSelectedTime={setSelectedTime}
           isBusinessOpenOnDay={isBusinessOpenOnDay}
           loadingSlots={loadingSlots}
+          availabilityStatus={availabilityStatus}
           availableSlots={availableSlots}
           selectedTime={selectedTime}
           timeGroups={timeGroups}

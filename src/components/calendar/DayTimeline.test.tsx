@@ -20,6 +20,21 @@ function appointment(partial: Partial<CalendarAppointment> = {}): CalendarAppoin
   };
 }
 
+function dispatchPointerEvent(
+  element: HTMLElement,
+  type: string,
+  coords: { clientX: number; clientY: number; pointerId: number },
+) {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperties(event, {
+    clientX: { configurable: true, value: coords.clientX },
+    clientY: { configurable: true, value: coords.clientY },
+    pointerId: { configurable: true, value: coords.pointerId },
+    pointerType: { configurable: true, value: "touch" },
+  });
+  element.dispatchEvent(event);
+}
+
 function setup(props: Partial<ComponentProps<typeof DayTimeline>> = {}) {
   const onTapSlot = props.onTapSlot ?? vi.fn();
   const onTapAppointment = props.onTapAppointment ?? vi.fn();
@@ -54,6 +69,11 @@ function setup(props: Partial<ComponentProps<typeof DayTimeline>> = {}) {
     toJSON: () => ({}),
   } as DOMRect);
   vi.spyOn(scroller, "scrollTo").mockImplementation(() => {});
+  Object.defineProperty(scroller, "scrollTop", {
+    configurable: true,
+    writable: true,
+    value: 0,
+  });
 
   return { ...view, onTapSlot, onTapAppointment, onMoveAppointment, grid, scroller, date };
 }
@@ -167,4 +187,43 @@ describe("DayTimeline", () => {
 
     expect(onTapSlot).toHaveBeenCalledTimes(1);
   });
+
+  it("moves appointment after long-press drag and snaps target time", () => {
+    const onMoveAppointment = vi.fn();
+    const { container, grid } = setup({
+      appointments: [appointment({ id: "drag-success" })],
+      onMoveAppointment,
+    });
+    const apt = container.querySelector('[data-apt-id="drag-success"]') as HTMLElement;
+
+    vi.spyOn(apt, "getBoundingClientRect").mockReturnValue({
+      width: 200,
+      height: 32,
+      top: 64,
+      left: 52,
+      right: 252,
+      bottom: 96,
+      x: 52,
+      y: 64,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    act(() => {
+      dispatchPointerEvent(apt, "pointerdown", { clientX: 24, clientY: 120, pointerId: 3 });
+    });
+    act(() => {
+      vi.advanceTimersByTime(550);
+    });
+    act(() => {
+      dispatchPointerEvent(grid, "pointermove", { clientX: 24, clientY: 248, pointerId: 3 });
+      dispatchPointerEvent(grid, "pointerup", { clientX: 24, clientY: 248, pointerId: 3 });
+    });
+
+    expect(onMoveAppointment).toHaveBeenCalledTimes(1);
+    const [, newStart] = onMoveAppointment.mock.calls[0] as [string, Date];
+    expect(onMoveAppointment).toHaveBeenCalledWith("drag-success", expect.any(Date));
+    expect(newStart.getHours()).toBe(11);
+    expect(newStart.getMinutes()).toBe(0);
+  });
+
 });

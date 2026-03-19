@@ -1,3 +1,4 @@
+import { Children, isValidElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import CalendarPage from "../CalendarPage";
@@ -43,6 +44,10 @@ const firestoreFixtures = vi.hoisted(() => ({
 
 const adminUpdateBookingStatusMock = vi.hoisted(() => vi.fn());
 const generateSlotsMock = vi.hoisted(() => vi.fn());
+const toastMocks = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+}));
 
 vi.mock("@/hooks/useBusiness", () => ({
   useBusiness: () => businessState.value,
@@ -98,11 +103,54 @@ vi.mock("@/lib/availability", () => ({
   generateSlots: generateSlotsMock,
 }));
 
-vi.mock("sonner", () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
+function collectSelectItems(node: unknown): Array<{ value: string; label: string }> {
+  const items: Array<{ value: string; label: string }> = [];
+
+  Children.forEach(node as any, (child) => {
+    if (!isValidElement(child)) return;
+
+    if (child.props["data-select-item"] === "true") {
+      const label = Children.toArray(child.props.children).join("").trim();
+      items.push({ value: child.props["data-value"], label });
+      return;
+    }
+
+    items.push(...collectSelectItems(child.props.children));
+  });
+
+  return items;
+}
+
+vi.mock("@/components/ui/select", () => ({
+  Select: ({ value, onValueChange, children }: any) => {
+    const items = collectSelectItems(children);
+    const label = items.some((item) => item.value.startsWith("svc-"))
+      ? "service-select"
+      : "employee-select";
+
+    return (
+      <select aria-label={label} value={value} onChange={(e) => onValueChange?.(e.target.value)}>
+        <option value="">--</option>
+        {items.map((item) => (
+          <option key={item.value} value={item.value}>
+            {item.label}
+          </option>
+        ))}
+      </select>
+    );
   },
+  SelectContent: ({ children }: any) => <>{children}</>,
+  SelectItem: ({ value, children }: any) => (
+    <div data-select-item="true" data-value={value}>
+      {children}
+    </div>
+  ),
+  SelectTrigger: ({ children }: any) => <>{children}</>,
+  SelectValue: ({ placeholder }: any) => <>{placeholder ?? null}</>,
+}));
+
+vi.mock("sonner", () => ({
+  toast: toastMocks,
 }));
 
 vi.mock("firebase/firestore", async () => {
@@ -216,6 +264,8 @@ describe("CalendarPage", () => {
     firestoreMocks.updateDocMock.mockReset();
     adminUpdateBookingStatusMock.mockReset();
     generateSlotsMock.mockReset();
+    toastMocks.success.mockReset();
+    toastMocks.error.mockReset();
 
     firestoreMocks.getDocMock.mockResolvedValue({ exists: () => true, data: () => ({}) });
     firestoreMocks.getDocsMock.mockImplementation(async (input: any) => {
@@ -338,6 +388,149 @@ describe("CalendarPage", () => {
         appointment_id: "apt-1",
         status: "confirmed",
       });
+    });
+  });
+
+  it("shows validation error when creating booking without required fields", async () => {
+    seedInitialFirestore();
+    render(<CalendarPage />);
+
+    fireEvent.click(await screen.findByText("open-slot"));
+    await screen.findByText("Nová rezervácia");
+    fireEvent.click(screen.getByRole("button", { name: /Vytvoriť rezerváciu/i }));
+
+    expect(toastMocks.error).toHaveBeenCalledWith("Vyplňte všetky polia");
+    expect(firestoreMocks.addDocMock).not.toHaveBeenCalled();
+  });
+
+  it("shows print error toast when popup window is blocked", async () => {
+    seedInitialFirestore({ withEvent: true });
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+
+    render(<CalendarPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /PDF \/ Tlač/i }));
+
+    expect(openSpy).toHaveBeenCalled();
+    expect(toastMocks.error).toHaveBeenCalledWith("Nepodarilo sa otvoriť tlačové okno");
+  });
+
+  it("saves note from detail sheet", async () => {
+    seedInitialFirestore({ withEvent: true });
+    render(<CalendarPage />);
+
+    fireEvent.click(await screen.findByText("open-event"));
+    fireEvent.change(screen.getByPlaceholderText("Krátka interná poznámka k rezervácii"), {
+      target: { value: "Nová interná poznámka" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Uložiť poznámku/i }));
+
+    await waitFor(() => {
+      expect(firestoreMocks.updateDocMock).toHaveBeenCalledWith(
+        expect.objectContaining({ __collection: "appointments", id: "apt-1" }),
+        expect.objectContaining({
+          note: "Nová interná poznámka",
+          updated_at: expect.any(String),
+        }),
+      );
+    });
+    expect(toastMocks.success).toHaveBeenCalledWith("Poznámka uložená");
+  });
+
+  it("renders customer history items in detail sheet", async () => {
+    seedInitialFirestore({ withEvent: true });
+    firestoreFixtures.customerHistory = [
+      {
+        id: "hist-1",
+        start_at: "2026-01-10T08:00:00.000Z",
+        status: "completed",
+        service_name: "Masáž",
+      },
+      {
+        id: "hist-2",
+        start_at: "2026-01-11T09:30:00.000Z",
+        status: "cancelled",
+        service_name: "Farbenie",
+      },
+    ];
+
+    render(<CalendarPage />);
+
+    fireEvent.click(await screen.findByText("open-event"));
+    expect(await screen.findByText("História klienta")).toBeInTheDocument();
+    expect(await screen.findByText("Masáž")).toBeInTheDocument();
+    expect(screen.getByText("Farbenie")).toBeInTheDocument();
+  });
+
+  it("shows copied label after successful reference copy", async () => {
+    seedInitialFirestore({ withEvent: true });
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: { writeText: writeTextMock },
+    });
+
+    render(<CalendarPage />);
+
+    fireEvent.click(await screen.findByText("open-event"));
+    fireEvent.click(await screen.findByRole("button", { name: /Skopírovať/i }));
+
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledWith("apt-1");
+    });
+    expect(await screen.findByRole("button", { name: /Skopírované/i })).toBeInTheDocument();
+  }, 15000);
+
+  it("shows copy failure label when clipboard write fails", async () => {
+    seedInitialFirestore({ withEvent: true });
+    const writeTextMock = vi.fn().mockRejectedValue(new Error("clipboard denied"));
+    Object.assign(navigator, {
+      clipboard: { writeText: writeTextMock },
+    });
+
+    render(<CalendarPage />);
+
+    fireEvent.click(await screen.findByText("open-event"));
+    fireEvent.click(await screen.findByRole("button", { name: /Skopírovať/i }));
+
+    expect(await screen.findByRole("button", { name: /Kópia zlyhala/i })).toBeInTheDocument();
+  }, 15000);
+
+  it("shows fallback title when service or employee labels are missing", async () => {
+    const dayIso = new Date().toISOString().slice(0, 10);
+    firestoreFixtures.appointments = [
+      {
+        id: "apt-fallback",
+        customer_name: "Jana",
+        service_name: null,
+        employee_name: null,
+        customer_email: "jana@example.com",
+        customer_phone: "+421900000111",
+        customer_id: "cust-1",
+        start_at: `${dayIso}T09:00:00.000Z`,
+        end_at: `${dayIso}T09:30:00.000Z`,
+        status: "pending",
+      },
+    ];
+
+    render(<CalendarPage />);
+
+    fireEvent.click(await screen.findByText("open-event"));
+    expect(await screen.findByText("Jana – Služba")).toBeInTheDocument();
+  });
+
+  it("shows error toast when saving note fails", async () => {
+    seedInitialFirestore({ withEvent: true });
+    firestoreMocks.updateDocMock.mockRejectedValueOnce(new Error("save failed"));
+
+    render(<CalendarPage />);
+
+    fireEvent.click(await screen.findByText("open-event"));
+    fireEvent.change(screen.getByPlaceholderText("Krátka interná poznámka k rezervácii"), {
+      target: { value: "Nepodarilo sa uložiť" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Uložiť poznámku/i }));
+
+    await waitFor(() => {
+      expect(toastMocks.error).toHaveBeenCalledWith("Chyba pri ukladaní poznámky");
     });
   });
 });
