@@ -82,10 +82,32 @@ const contentAnim: any = {
 
 /* ── Card content components ── */
 
-function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null; navigate: ReturnType<typeof useNavigate> }) {
+function BrandContent({
+  openStatus,
+  nextOpening,
+  info,
+  navigate,
+}: {
+  openStatus: OpenStatus | null;
+  nextOpening: NextOpening | null;
+  info: PublicBusinessInfo | null;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
   const { t } = useTranslation();
   const { user, memberships } = useAuth();
   const isRegisteredCustomer = !!user && memberships.some((m) => m.role === "customer");
+  const pricedServices = (info?.services ?? []).filter(
+    (service): service is ServiceItem & { price: number } => typeof service.price === "number",
+  );
+  const cheapestPrice = pricedServices.length
+    ? Math.min(...pricedServices.map((service) => service.price))
+    : null;
+  const openingSummary = openStatus?.is_open
+    ? t("liquid.statusOpen")
+    : nextOpening?.time
+      ? `${t("liquid.nextOpening")} ${nextOpening.time.slice(0, 5)}`
+      : t("liquid.statusClosed");
+  const phoneNumber = info?.business.phone || t("liquid.contactPhone");
   const modeColors: Record<string, string> = {
     open: "bg-green-500/15 text-green-400 border-green-500/30",
     closed: "bg-red-500/15 text-red-400 border-red-500/30",
@@ -127,6 +149,26 @@ function BrandContent({ openStatus, navigate }: { openStatus: OpenStatus | null;
           {modeLabels[openStatus.mode] ?? t("liquid.statusClosed")}
         </div>
       )}
+      <div className="grid grid-cols-2 gap-3 w-full max-w-md">
+        <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-left">
+          <p className="text-[10px] text-white/50 uppercase tracking-widest">{t("liquid.cardTime")}</p>
+          <p className="text-xs font-semibold text-white mt-1">{openingSummary}</p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-left">
+          <p className="text-[10px] text-white/50 uppercase tracking-widest">{t("liquid.cardPrices")}</p>
+          <p className="text-xs font-semibold text-white mt-1">
+            {cheapestPrice != null ? `od ${cheapestPrice.toFixed(0)}€` : "—"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-left">
+          <p className="text-[10px] text-white/50 uppercase tracking-widest">{t("liquid.cardReserve")}</p>
+          <p className="text-xs font-semibold text-white mt-1">24/7 online</p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-left">
+          <p className="text-[10px] text-white/50 uppercase tracking-widest">{t("liquid.cardDetails")}</p>
+          <p className="text-xs font-semibold text-white mt-1">{phoneNumber}</p>
+        </div>
+      </div>
       <div className="flex flex-col gap-4 mt-4 w-full max-w-xs mx-auto items-center justify-center">
         <Button
           size="lg"
@@ -392,7 +434,7 @@ export default function LiquidPlayground() {
   ];
 
   const contentMap: Record<string, React.ReactNode> = {
-    brand: <BrandContent openStatus={openStatus} navigate={navigate} />,
+    brand: <BrandContent openStatus={openStatus} nextOpening={nextOpening} info={info} navigate={navigate} />,
     hours: <HoursContent info={info} openStatus={openStatus} nextOpening={nextOpening} />,
     prices: <PricesContent services={info?.services ?? []} />,
     booking: <BookingContent />,
@@ -405,6 +447,21 @@ export default function LiquidPlayground() {
         <LanguageToggle />
         <ThemeToggle />
       </div>
+
+      <header className="landing-header-menu-wrap safe-top safe-x" style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}>
+        <nav className="landing-header-menu" aria-label="Landing sections">
+          {cards.map((card, index) => (
+            <button
+              key={card.id}
+              type="button"
+              className={`landing-header-menu__item ${activeCard === index ? "landing-header-menu__item--active" : ""}`}
+              onClick={() => setActiveCard(index)}
+            >
+              {card.label}
+            </button>
+          ))}
+        </nav>
+      </header>
 
       <div className="expanding-cards w-full max-w-full px-2 xs:px-3 sm:px-4">
         {cards.map((card, i) => {

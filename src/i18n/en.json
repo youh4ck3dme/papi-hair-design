@@ -318,10 +318,15 @@
   "salonLogin": {
     "enterBtn": "ENTER PAPI HAIR DESIGN",
     "passwordHint": "Enter your password…",
+    "gateTitle": "Team Access",
+    "gateHint": "First enter the access password to unlock staff profiles.",
+    "gatePlaceholder": "Access password...",
+    "gateButton": "Continue",
     "quote": "Behind every perfect cut is a hand that does it with heart.",
     "back": "Back",
     "passwordPlaceholder": "Your password...",
     "loginBtn": "Sign In",
+    "toastGateWrongPassword": "Incorrect access password.",
     "toastEmailMissing": "Email for {{name}} is not configured.",
     "toastWrongPassword": "Incorrect password. Try again.",
     "toastWelcome": "Welcome, {{name}}! 👋"

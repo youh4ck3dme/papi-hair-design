@@ -40,7 +40,8 @@ const PROFILES = [
 ] as const;
 
 type ProfileId = (typeof PROFILES)[number]["id"];
-type Phase = "intro" | "picker" | "login";
+type Phase = "intro" | "gate" | "picker" | "login";
+const ENTRY_PASSWORD = import.meta.env.VITE_SALON_GATE_PASSWORD ?? "88888888";
 
 // ── Responsive avatar size ───────────────────────────────────────────────────
 function calcAvatarPx(w: number, h: number): number {
@@ -464,8 +465,10 @@ export default function SalonLoginPage() {
     const [phase, setPhase] = useState<Phase>("intro");
     const [animStep, setAnimStep] = useState(0);
     const [selected, setSelected] = useState<ProfileId | null>(null);
+    const [entryPassword, setEntryPassword] = useState("");
     const [password, setPassword] = useState("");
     const [showPwd, setShowPwd] = useState(false);
+    const [showEntryPwd, setShowEntryPwd] = useState(false);
     const [loading, setLoading] = useState(false);
     const [surfaceMode, setSurfaceMode] = useState<"dark" | "light">("dark");
     const [venetian, setVenetian] = useState(true);
@@ -512,7 +515,23 @@ export default function SalonLoginPage() {
         return () => window.removeEventListener("resize", onResize);
     }, []);
 
-    const enter = () => setPhase("picker");
+    const enter = () => {
+        setEntryPassword("");
+        setShowEntryPwd(false);
+        setPhase("gate");
+    };
+    const unlockProfiles = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!entryPassword) return;
+        if (entryPassword !== ENTRY_PASSWORD) {
+            toast.error(t("salonLogin.toastGateWrongPassword"));
+            setEntryPassword("");
+            return;
+        }
+        setEntryPassword("");
+        setShowEntryPwd(false);
+        setPhase("picker");
+    };
     const pick = (id: ProfileId) => { setSelected(id); setPhase("login"); setPassword(""); };
     const goBack = () => { setSelected(null); setPhase("picker"); setPassword(""); };
 
@@ -625,6 +644,80 @@ export default function SalonLoginPage() {
                                 </p>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* ──────────── GATE ──────────── */}
+                {phase === "gate" && (
+                    <div
+                        className="flex flex-col items-center gap-4 sm:gap-5 phd-slide w-full max-w-[300px] sm:max-w-sm"
+                        style={{
+                            background: "rgba(255,255,255,0.05)",
+                            backdropFilter: "blur(24px)",
+                            WebkitBackdropFilter: "blur(24px)",
+                            border: "1px solid rgba(201,168,76,0.35)",
+                            borderRadius: "24px",
+                            padding: "28px 22px 24px",
+                            boxShadow: "0 16px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(201,168,76,0.12) inset",
+                        }}
+                    >
+                        <button
+                            onClick={() => setPhase("intro")}
+                            className="self-start flex items-center gap-1 min-h-[44px] text-white/40 hover:text-white/70 text-sm transition-colors"
+                        >
+                            <ChevronLeft size={16} />
+                            {t("salonLogin.back")}
+                        </button>
+
+                        <div className="flex flex-col items-center gap-1.5 text-center">
+                            <h2 className="text-white text-lg sm:text-xl font-bold tracking-wide">
+                                {t("salonLogin.gateTitle")}
+                            </h2>
+                            <p className="text-white/55 text-xs">
+                                {t("salonLogin.gateHint")}
+                            </p>
+                        </div>
+
+                        <form onSubmit={unlockProfiles} className="w-full flex flex-col gap-3">
+                            <div
+                                className="flex items-center rounded-xl overflow-hidden border transition-colors"
+                                style={{
+                                    background: "#ffffff0d",
+                                    borderColor: "rgba(201,168,76,0.55)",
+                                }}
+                            >
+                                <input
+                                    type={showEntryPwd ? "text" : "password"}
+                                    placeholder={t("salonLogin.gatePlaceholder")}
+                                    autoFocus
+                                    value={entryPassword}
+                                    onChange={(e) => setEntryPassword(e.target.value)}
+                                    className="flex-1 bg-transparent py-3 px-4 text-white outline-none text-sm phd-pwd-input"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEntryPwd((v) => !v)}
+                                    className="px-4 min-h-[44px] flex items-center text-white/30 hover:text-white/60 transition-colors"
+                                >
+                                    {showEntryPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={!entryPassword}
+                                className="w-full py-3 rounded-xl font-semibold text-sm tracking-widest uppercase transition-all duration-200 disabled:opacity-40 min-h-[44px]"
+                                style={{
+                                    background: entryPassword
+                                        ? "linear-gradient(135deg, #C9A84C 0%, #E6C970 100%)"
+                                        : "#ffffff11",
+                                    color: entryPassword ? "#0d0d0d" : "#ffffff44",
+                                    boxShadow: "0 8px 32px -4px rgba(201,168,76,0.5)",
+                                }}
+                            >
+                                {t("salonLogin.gateButton")}
+                            </button>
+                        </form>
                     </div>
                 )}
 

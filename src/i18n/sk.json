@@ -318,10 +318,15 @@
   "salonLogin": {
     "enterBtn": "VSTÚPIŤ DO PAPI HAIR DESIGN",
     "passwordHint": "Prihláste sa svojim heslom…",
+    "gateTitle": "Vstup pre tím",
+    "gateHint": "Najprv zadajte vstupné heslo pre otvorenie profilov zamestnancov.",
+    "gatePlaceholder": "Vstupné heslo...",
+    "gateButton": "Pokračovať",
     "quote": "Za každým dokonalým strihom stojí ruka, ktorá to robí srdcom.",
     "back": "Späť",
     "passwordPlaceholder": "Vaše heslo...",
     "loginBtn": "Prihlásiť sa",
+    "toastGateWrongPassword": "Nesprávne vstupné heslo.",
     "toastEmailMissing": "Email pre {{name}} nie je nakonfigurovaný.",
     "toastWrongPassword": "Nesprávne heslo. Skús znova.",
     "toastWelcome": "Vitaj, {{name}}! 👋"
