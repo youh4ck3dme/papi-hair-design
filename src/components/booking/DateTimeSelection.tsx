@@ -49,11 +49,7 @@ export function DateTimeSelection({
 
     return (
         <div className="animate-fade-in px-4">
-            <StepHeader num="3" title={t("booking.step3")} />
-            <div className="mb-4 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/12 via-primary/6 to-transparent p-4 sm:p-5">
-                <p className="text-base font-semibold text-foreground">{t("booking.assignmentTitle")}</p>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{t("booking.assignmentSubtitle")}</p>
-            </div>
+            <StepHeader num="4" title={t("booking.step4")} />
             <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
                 <div className="flex justify-between items-center px-4 pt-4 pb-3 border-b border-border/40">
                     <button
@@ -122,7 +118,7 @@ export function DateTimeSelection({
             <div className="min-h-[200px] mt-6">
                 {Boolean(selectedDate) && (
                     <div className="animate-fade-in">
-                        <StepHeader num="4" title={t("booking.step4")} />
+                        <StepHeader num="5" title={t("booking.step5")} />
                         {loadingSlots ? (
                             <div className="flex justify-center py-10">
                                 <Loader2 className="w-6 h-6 animate-spin text-primary" />

@@ -144,10 +144,18 @@ export async function assignEmployeeForSlot(params: {
   serviceId: string;
   startAtIso: string;
   endAtIso: string;
+  preferredEmployeeId?: string | null;
 }): Promise<AutoAssignedEmployee | null> {
   const db = getFirestore();
   const eligibleEmployees = await listEligibleEmployees(params.businessId, params.serviceId);
   if (!eligibleEmployees.length) {
+    return null;
+  }
+
+  const scopedEmployees = params.preferredEmployeeId
+    ? eligibleEmployees.filter((employee) => employee.id === params.preferredEmployeeId)
+    : eligibleEmployees;
+  if (!scopedEmployees.length) {
     return null;
   }
 
@@ -161,7 +169,7 @@ export async function assignEmployeeForSlot(params: {
   const dayEnd = new Date(dayStart);
   dayEnd.setDate(dayEnd.getDate() + 1);
 
-  const employeeIds = eligibleEmployees.map((employee) => employee.id);
+  const employeeIds = scopedEmployees.map((employee) => employee.id);
   const appointmentDocs = [];
 
   for (let index = 0; index < employeeIds.length; index += 10) {
@@ -176,5 +184,5 @@ export async function assignEmployeeForSlot(params: {
     appointmentDocs.push(...batchSnap.docs.map((docSnap) => docSnap.data() as AppointmentCandidate));
   }
 
-  return pickBestEmployee(eligibleEmployees, appointmentDocs, params.startAtIso, params.endAtIso);
+  return pickBestEmployee(scopedEmployees, appointmentDocs, params.startAtIso, params.endAtIso);
 }

@@ -135,6 +135,7 @@ export const createBookingHold = functions.https.onCall(
     const {
       business_id,
       service_id,
+      employee_id,
       start_at,
       customer_name,
       customer_email,
@@ -203,6 +204,7 @@ export const createBookingHold = functions.https.onCall(
       serviceId: service_id,
       startAtIso: startDate.toISOString(),
       endAtIso: endDate.toISOString(),
+      preferredEmployeeId: employee_id ?? null,
     });
 
     if (!assignedEmployee) {

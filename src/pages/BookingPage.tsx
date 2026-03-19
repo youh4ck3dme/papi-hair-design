@@ -1,12 +1,14 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { Loader2 } from "lucide-react";
 import { enGB, sk } from "date-fns/locale";
+import { addDays, startOfDay } from "date-fns";
 
 
 import { BookingHeader } from "@/components/booking/BookingHeader";
 import { ServiceSelection } from "@/components/booking/ServiceSelection";
+import { EmployeeSelection } from "@/components/booking/EmployeeSelection";
 import { DateTimeSelection } from "@/components/booking/DateTimeSelection";
 import { ContactConfirmation } from "@/components/booking/ContactConfirmation";
 import { BookingSuccess } from "@/components/booking/BookingSuccess";
@@ -44,6 +46,8 @@ export default function BookingPage() {
     setSubcategory,
     selectedServiceId,
     setSelectedServiceId,
+    selectedEmployeeId,
+    setSelectedEmployeeId,
     formData,
     setFormData,
     contactErrors,
@@ -58,6 +62,11 @@ export default function BookingPage() {
     handleConsentChange,
     handleSubmit
   } = useBookingForm(services, employees, business, employeeServiceMap, memberships);
+
+  const selectedAvailabilityEmployees = useMemo(() => {
+    if (!selectedEmployeeId) return filteredEmployees;
+    return filteredEmployees.filter((employee) => employee.id === selectedEmployeeId);
+  }, [filteredEmployees, selectedEmployeeId]);
 
   const {
     selectedDate,
@@ -76,7 +85,52 @@ export default function BookingPage() {
     maxDays,
     isBusinessOpenOnDay,
     timeGroups
-  } = useAvailability(business, businessHourEntries, dateOverrides, schedules, selectedService, filteredEmployees);
+  } = useAvailability(
+    business,
+    businessHourEntries,
+    dateOverrides,
+    schedules,
+    selectedService,
+    selectedAvailabilityEmployees
+  );
+
+  const dateTimeSectionRef = useRef<HTMLDivElement | null>(null);
+  const contactSectionRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!selectedServiceId || selectedDate !== null) return;
+
+    const startDate = startOfDay(today);
+    const maxDate = addDays(startDate, maxDays);
+    let cursor = startDate;
+
+    while (cursor <= maxDate) {
+      if (isBusinessOpenOnDay(cursor)) {
+        setCalendarMonth(new Date(cursor.getFullYear(), cursor.getMonth(), 1));
+        setSelectedDate(cursor.getDate());
+        break;
+      }
+      cursor = addDays(cursor, 1);
+    }
+  }, [selectedServiceId, selectedDate, today, maxDays, isBusinessOpenOnDay, setCalendarMonth, setSelectedDate]);
+
+  useEffect(() => {
+    if (!selectedServiceId) return;
+    if (typeof window !== "undefined" && window.innerWidth >= 768) return;
+
+    requestAnimationFrame(() => {
+      dateTimeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [selectedServiceId, selectedEmployeeId]);
+
+  useEffect(() => {
+    if (!selectedTime) return;
+    if (typeof window !== "undefined" && window.innerWidth >= 768) return;
+
+    requestAnimationFrame(() => {
+      contactSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [selectedTime]);
 
   const isBusinessOpenNow = useMemo(() => {
     if (!business) return false;
@@ -144,41 +198,53 @@ export default function BookingPage() {
       />
 
       {selectedServiceId && (
-        <DateTimeSelection
-          calendarMonth={calendarMonth}
-          setCalendarMonth={setCalendarMonth}
-          dateLocale={dateLocale}
-          firstDayOffset={firstDayOffset}
-          daysInMonth={daysInMonth}
-          today={today}
-          maxDays={maxDays}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          selectedFullDate={selectedFullDate}
-          setSelectedTime={setSelectedTime}
-          isBusinessOpenOnDay={isBusinessOpenOnDay}
-          loadingSlots={loadingSlots}
-          availabilityStatus={availabilityStatus}
-          availableSlots={availableSlots}
-          selectedTime={selectedTime}
-          timeGroups={timeGroups}
-        />
+        <>
+          <EmployeeSelection
+            employees={filteredEmployees}
+            selectedEmployeeId={selectedEmployeeId}
+            setSelectedEmployeeId={setSelectedEmployeeId}
+          />
+
+          <div ref={dateTimeSectionRef}>
+            <DateTimeSelection
+              calendarMonth={calendarMonth}
+              setCalendarMonth={setCalendarMonth}
+              dateLocale={dateLocale}
+              firstDayOffset={firstDayOffset}
+              daysInMonth={daysInMonth}
+              today={today}
+              maxDays={maxDays}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+              selectedFullDate={selectedFullDate}
+              setSelectedTime={setSelectedTime}
+              isBusinessOpenOnDay={isBusinessOpenOnDay}
+              loadingSlots={loadingSlots}
+              availabilityStatus={availabilityStatus}
+              availableSlots={availableSlots}
+              selectedTime={selectedTime}
+              timeGroups={timeGroups}
+            />
+          </div>
+        </>
       )}
 
       {selectedTime && (
-        <ContactConfirmation
-          formData={formData}
-          setFormData={setFormData}
-          contactErrors={contactErrors}
-          handleCheckAll={handleCheckAll}
-          handleConsentChange={handleConsentChange}
-          selectedService={selectedService}
-          selectedFullDate={selectedFullDate}
-          selectedTime={selectedTime}
-          dateLocale={dateLocale}
-          submitting={submitting}
-          handleSubmit={() => handleSubmit(selectedTime, availableSlots)}
-        />
+        <div ref={contactSectionRef}>
+          <ContactConfirmation
+            formData={formData}
+            setFormData={setFormData}
+            contactErrors={contactErrors}
+            handleCheckAll={handleCheckAll}
+            handleConsentChange={handleConsentChange}
+            selectedService={selectedService}
+            selectedFullDate={selectedFullDate}
+            selectedTime={selectedTime}
+            dateLocale={dateLocale}
+            submitting={submitting}
+            handleSubmit={() => handleSubmit(selectedTime, availableSlots, selectedEmployeeId)}
+          />
+        </div>
       )}
     </div>
   );

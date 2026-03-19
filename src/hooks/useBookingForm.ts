@@ -45,6 +45,7 @@ export function useBookingForm(
     const [category, setCategory] = useState<"damske" | "panske">("damske");
     const [subcategory, setSubcategory] = useState<string | null>(null);
     const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         meno: "", priezvisko: "", email: "", phone: "", note: "",
         marketing: false, terms: false, gdpr: false, all: false,
@@ -122,6 +123,23 @@ export function useBookingForm(
         return result;
     }, [employees, selectedServiceId, employeeServiceMap, business, memberships]);
 
+    useEffect(() => {
+        if (!selectedServiceId) {
+            setSelectedEmployeeId(null);
+            return;
+        }
+
+        if (!filteredEmployees.length) {
+            setSelectedEmployeeId(null);
+            return;
+        }
+
+        const stillValid = selectedEmployeeId && filteredEmployees.some((employee) => employee.id === selectedEmployeeId);
+        if (!stillValid) {
+            setSelectedEmployeeId(filteredEmployees[0].id);
+        }
+    }, [selectedServiceId, filteredEmployees, selectedEmployeeId]);
+
     // Handlers
     const handleCheckAll = useCallback(() => {
         setFormData(prev => {
@@ -138,7 +156,7 @@ export function useBookingForm(
         });
     }, []);
 
-    const handleSubmit = async (selectedTime: string | null, availableSlots: Date[]) => {
+    const handleSubmit = async (selectedTime: string | null, availableSlots: Date[], selectedEmployeeId?: string | null) => {
         if (!formData.gdpr) {
             toast.error(t("booking.toastGdprRequired"));
             return;
@@ -182,6 +200,7 @@ export function useBookingForm(
             const hold = await createBookingHold({
                 business_id: businessId,
                 service_id: selectedServiceId,
+                employee_id: selectedEmployeeId ?? undefined,
                 start_at: slotDate.toISOString(),
                 customer_name: `${formData.meno} ${formData.priezvisko}`.trim(),
                 customer_email: formData.email,
@@ -235,6 +254,8 @@ export function useBookingForm(
         setSubcategory,
         selectedServiceId,
         setSelectedServiceId,
+        selectedEmployeeId,
+        setSelectedEmployeeId,
         formData,
         setFormData,
         contactErrors,

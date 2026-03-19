@@ -10,7 +10,7 @@ interface ContactConfirmationProps {
     setFormData: (data: any) => void;
     contactErrors: Record<string, string>;
     handleCheckAll: () => void;
-    handleConsentChange: (field: "marketing" | "terms") => void;
+    handleConsentChange: (field: "marketing" | "terms" | "gdpr") => void;
     selectedService: ServiceRow | null;
     selectedFullDate: Date | null;
     selectedTime: string | null;
@@ -62,7 +62,7 @@ export function ContactConfirmation({
 
     return (
         <div className="animate-fade-in pb-12 px-4" data-testid="booking-step-details">
-            <StepHeader num="5" title={t("booking.step5")} />
+            <StepHeader num="6" title={t("booking.step6")} />
 
             {/* Booking summary card */}
             {selectedService && selectedFullDate && (

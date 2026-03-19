@@ -123,7 +123,7 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
     }
 
     // 0. Validation
-    const { business_id, service_id, start_at, customer_name, customer_email, customer_phone, note, payment_method, idempotency_key } = data;
+    const { business_id, service_id, employee_id, start_at, customer_name, customer_email, customer_phone, note, payment_method, idempotency_key } = data;
     if (!business_id || !service_id || !start_at || !customer_name || !customer_email) {
         throw new HttpsError("invalid-argument", "Chýbajúce povinné polia");
     }
@@ -182,6 +182,7 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
         serviceId: service_id,
         startAtIso: startDate.toISOString(),
         endAtIso: endDate.toISOString(),
+        preferredEmployeeId: employee_id ?? null,
     });
 
     if (!assignedEmployee) {

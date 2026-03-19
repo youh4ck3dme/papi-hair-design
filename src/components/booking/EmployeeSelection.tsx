@@ -3,84 +3,76 @@ import { StepHeader } from "./BookingUI";
 import { EmployeeRow } from "./types";
 
 interface EmployeeSelectionProps {
-    filteredEmployees: EmployeeRow[];
-    selectedWorkerId: string | null;
-    setSelectedWorkerId: (id: string | null) => void;
-    employeePhotos: Record<string, string>;
-    onEmployeeSelect: () => void;
+  employees: EmployeeRow[];
+  selectedEmployeeId: string | null;
+  setSelectedEmployeeId: (id: string | null) => void;
+}
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
 export function EmployeeSelection({
-    filteredEmployees,
-    selectedWorkerId,
-    setSelectedWorkerId,
-    employeePhotos,
-    onEmployeeSelect,
+  employees,
+  selectedEmployeeId,
+  setSelectedEmployeeId,
 }: EmployeeSelectionProps) {
-    const { t } = useTranslation();
+  const { t } = useTranslation();
 
-    const resolvePhotoSrc = (employee: EmployeeRow): string => {
-        if (employee.photo_url) return employee.photo_url;
-        const keyById = employeePhotos[employee.id];
-        if (keyById) return keyById;
-        const normalizedName = employee.display_name.trim().toLowerCase();
-        return employeePhotos[normalizedName] ?? "";
-    };
+  return (
+    <div className="animate-fade-in px-4" data-testid="booking-step-employee">
+      <StepHeader num="3" title={t("booking.step3")} />
 
-    return (
-        <div className="animate-fade-in px-4" data-testid="booking-step-employee">
-            <StepHeader num="3" title={t("booking.step3")} />
-            <div className="flex flex-col gap-3">
-                {filteredEmployees.map((w) => {
-                    const isSelected = selectedWorkerId === w.id;
-                    const photoSrc = resolvePhotoSrc(w);
-                    return (
-                        <button
-                            type="button"
-                            key={w.id}
-                            onClick={() => {
-                                setSelectedWorkerId(w.id);
-                                onEmployeeSelect();
-                            }}
-                            className={`w-full text-left rounded-2xl overflow-hidden flex items-stretch cursor-pointer transition-all duration-300 outline-none group ${isSelected
-                                ? "ring-2 ring-primary shadow-lg shadow-primary/15"
-                                : "ring-1 ring-border hover:ring-primary/40 hover:shadow-md"
-                                }`}
-                        >
-                            {/* Photo section */}
-                            <div className="relative w-24 flex-shrink-0 overflow-hidden">
-                                {photoSrc ? (
-                                    <img
-                                        src={photoSrc}
-                                        alt={w.display_name}
-                                        className="object-cover w-full h-full min-h-[88px]"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full min-h-[88px] bg-muted flex items-center justify-center text-2xl font-bold text-muted-foreground">
-                                        {w.display_name.charAt(0)}
-                                    </div>
-                                )}
-                                {/* Gradient overlay */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-card/40" />
-                            </div>
-
-                            {/* Info section */}
-                            <div className={`flex-1 flex items-center justify-between px-5 py-4 transition-colors ${isSelected ? "bg-primary/5" : "bg-card"}`}>
-                                <div>
-                                    <p className={`font-bold text-base tracking-wide transition-colors ${isSelected ? "text-primary" : "text-foreground"}`}>
-                                        {w.display_name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">{t("booking.employeeRole")}</p>
-                                </div>
-                                {/* Selection pill */}
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0 ${isSelected ? "border-primary scale-110" : "border-muted-foreground/30 group-hover:border-primary/50"}`}>
-                                    <div className={`rounded-full bg-primary transition-all duration-200 ${isSelected ? "w-2.5 h-2.5" : "w-0 h-0"}`} />
-                                </div>
-                            </div>
-                        </button>
-                    );
-                })}
-            </div>
+      {employees.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+          {t("booking.noEmployeeAvailable", {
+            defaultValue: "Pre túto službu momentálne nie je dostupný žiadny kaderník.",
+          })}
         </div>
-    );
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {employees.map((employee) => {
+            const isSelected = selectedEmployeeId === employee.id;
+            const displayName = employee.display_name || t("booking.employeeRole");
+
+            return (
+              <button
+                key={employee.id}
+                type="button"
+                onClick={() => setSelectedEmployeeId(employee.id)}
+                className={`rounded-2xl border p-3 text-left transition-all duration-200 ${
+                  isSelected
+                    ? "border-primary bg-primary/10 shadow-sm shadow-primary/20"
+                    : "border-border/70 bg-card hover:border-primary/50"
+                }`}
+                aria-pressed={isSelected}
+              >
+                <div className="mb-2 flex items-center gap-2.5">
+                  {employee.photo_url ? (
+                    <img
+                      src={employee.photo_url}
+                      alt={displayName}
+                      className="h-10 w-10 rounded-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                      {initialsFromName(displayName)}
+                    </div>
+                  )}
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {t("booking.employeeRole")}
+                  </span>
+                </div>
+                <p className="line-clamp-2 text-sm font-semibold text-foreground">{displayName}</p>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
