@@ -13,7 +13,7 @@ export function CalendarBodyDay() {
             <CalendarBodyMargin />
             {resources?.length ? (
               resources.map((res) => (
-                <div key={res.id} className="flex-1 flex flex-col min-w-[200px] border-r border-border last:border-r-0">
+                <div key={res.id} className="flex-1 basis-0 min-w-0 flex flex-col border-r border-border last:border-r-0">
                   <div className="relative flex-1">
                     <CalendarBodyDayContent date={date} resourceId={res.id} resourceName={res.display_name} />
                   </div>

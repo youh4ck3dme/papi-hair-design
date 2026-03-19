@@ -4,6 +4,23 @@
   @apply bg-card text-card-foreground rounded-xl border border-border overflow-hidden;
 }
 
+.calendar-page-root {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+.calendar-page-shell {
+  --calendar-shell-offset: 200px;
+  height: calc(100vh - var(--calendar-shell-offset));
+  height: calc(100dvh - var(--calendar-shell-offset));
+  min-height: 420px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 .booking-calendar-header {
   @apply border-border bg-card;
 }

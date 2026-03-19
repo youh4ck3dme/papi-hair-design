@@ -539,7 +539,7 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="space-y-4 h-full">
+    <div className="space-y-4 h-full max-w-full overflow-x-hidden calendar-page-root">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Kalendár</h1>
         <div className="flex items-center gap-2">
@@ -575,8 +575,8 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card/40 p-2">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="rounded-xl border border-border bg-card/40 p-2 max-w-full overflow-x-hidden">
+        <div className="flex flex-wrap gap-2 pb-1">
           {[
             { id: "all", label: "Všetky stavy" },
             { id: "pending", label: "Čakajúce" },
@@ -590,19 +590,19 @@ export default function CalendarPage() {
               type="button"
               size="sm"
               variant={statusFilter === statusOption.id ? "default" : "outline"}
-              className="shrink-0"
+              className="max-w-full"
               onClick={() => setStatusFilter(statusOption.id)}
             >
               {statusOption.label}
             </Button>
           ))}
         </div>
-        <div className="mt-2 flex gap-2 overflow-x-auto">
+        <div className="mt-2 flex flex-wrap gap-2">
           <Button
             type="button"
             size="sm"
             variant={employeeFilter === "all" ? "default" : "outline"}
-            className="shrink-0"
+            className="max-w-full"
             onClick={() => setEmployeeFilter("all")}
           >
             Všetci zamestnanci
@@ -613,7 +613,7 @@ export default function CalendarPage() {
               type="button"
               size="sm"
               variant={employeeFilter === employee.id ? "default" : "outline"}
-              className="shrink-0"
+              className="max-w-full"
               onClick={() => setEmployeeFilter(employee.id)}
             >
               {employee.display_name}
@@ -623,7 +623,7 @@ export default function CalendarPage() {
             type="button"
             size="sm"
             variant="outline"
-            className="shrink-0"
+            className="max-w-full"
             onClick={() => {
               setStatusFilter("all");
               setEmployeeFilter("all");
@@ -636,8 +636,8 @@ export default function CalendarPage() {
       </div>
 
       <div
-        className="bg-card rounded-xl border border-border p-2 sm:p-4 flex flex-col min-h-0"
-        style={{ height: compactActionMenu ? "calc(100vh - 150px)" : "calc(100vh - 200px)", minHeight: 420 }}
+        className="bg-card rounded-xl border border-border p-2 sm:p-4 flex flex-col min-h-0 max-w-full overflow-x-hidden calendar-page-shell"
+        style={{ ["--calendar-shell-offset" as string]: compactActionMenu ? "150px" : "200px" }}
       >
         <BookingCalendar
           events={bookingCalendarEvents}
