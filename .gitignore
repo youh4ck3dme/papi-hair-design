@@ -75,6 +75,8 @@ run_view.txt
 /jobs.json
 /projects.json
 /booking-papihairdesign-sk/projects.json
+build-output.txt
+typecheck-output.txt
 
 # Local import reports
 docs/import-reports/
@@ -82,3 +84,8 @@ docs/customerExport_*.xlsx
 
 # Supabase local
 supabase/.temp
+
+# Local IDE/caches and side projects
+.vs/
+booking-buddy/
+*.new
