@@ -24,11 +24,13 @@ import { generateSlots, type BusinessHours, type EmployeeSchedule, type Existing
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer } from "lucide-react";
+import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer, MoreVertical, FilterX } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
 import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
 import {
@@ -72,6 +74,7 @@ export default function CalendarPage() {
   const [selectedSlot, setSelectedSlot] = useState<SlotInfo | null>(null);
   const [bookForm, setBookForm] = useState({ service_id: "", employee_id: "", start_at: "" });
   const [availableSlots, setAvailableSlots] = useState<Date[]>([]);
+  const [customStartTime, setCustomStartTime] = useState("");
   const [saving, setSaving] = useState(false);
 
   const [detailModal, setDetailModal] = useState(false);
@@ -83,6 +86,7 @@ export default function CalendarPage() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [employeeFilter, setEmployeeFilter] = useState<string>("all");
+  const [compactActionMenu, setCompactActionMenu] = useState(false);
 
   const filtersStorageKey = `admin-calendar-filters:${businessId}`;
 
@@ -208,6 +212,15 @@ export default function CalendarPage() {
     );
   }, [employeeFilter, filtersStorageKey, statusFilter]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 1024px)");
+    const updateCompactState = () => setCompactActionMenu(media.matches);
+    updateCompactState();
+    media.addEventListener("change", updateCompactState);
+    return () => media.removeEventListener("change", updateCompactState);
+  }, []);
+
 
   const availableEmployees = useMemo(() => {
     let list = employees;
@@ -272,6 +285,7 @@ export default function CalendarPage() {
         employeeSchedules: schedules[employeeId] ?? [],
         existingAppointments: existing,
         leadTimeMinutes: 0,
+        slotInterval: 15,
       });
 
       setAvailableSlots(slots);
@@ -286,9 +300,20 @@ export default function CalendarPage() {
     }
   }, [bookForm.service_id, bookForm.employee_id, selectedSlot, loadAvailableSlots]);
 
+  const handleCustomTimeChange = (value: string) => {
+    setCustomStartTime(value);
+    if (!selectedSlot || !value) return;
+    const [hours, minutes] = value.split(":").map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return;
+    const preciseStart = new Date(selectedSlot.start);
+    preciseStart.setHours(hours, minutes, 0, 0);
+    setBookForm((current) => ({ ...current, start_at: preciseStart.toISOString() }));
+  };
+
   const handleSelectSlot = (slot: SlotInfo) => {
     if (!isOwnerOrAdmin) return;
     setSelectedSlot(slot);
+    setCustomStartTime(fmtDate(slot.start, "HH:mm"));
     setBookForm({
       service_id: "",
       employee_id: "",
@@ -416,6 +441,14 @@ export default function CalendarPage() {
 
   const handleBook = async () => {
     if (!bookForm.service_id || !bookForm.employee_id || !bookForm.start_at) { toast.error("Vyplňte všetky polia"); return; }
+
+    const selectedIso = new Date(bookForm.start_at).toISOString();
+    const isExactAvailable = availableSlots.some((slot) => slot.toISOString() === selectedIso);
+    if (availableSlots.length > 0 && !isExactAvailable) {
+      toast.error("Zvolený čas nie je dostupný. Vyberte prosím čas zo slotov.");
+      return;
+    }
+
     setSaving(true);
     try {
       const service = services.find((s) => s.id === bookForm.service_id);
@@ -510,58 +543,102 @@ export default function CalendarPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Kalendár</h1>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={handleExportCsv} disabled={exportRows.length === 0}>
-            <Download className="mr-2 h-4 w-4" />
-            CSV
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handlePrintDay} disabled={exportRows.length === 0}>
-            <Printer className="mr-2 h-4 w-4" />
-            PDF / Tlač
-          </Button>
+          {compactActionMenu ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="icon" aria-label="Export a tlač">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportCsv} disabled={exportRows.length === 0}>
+                  <Download className="mr-2 h-4 w-4" /> CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handlePrintDay} disabled={exportRows.length === 0}>
+                  <Printer className="mr-2 h-4 w-4" /> PDF / Tlač
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button type="button" variant="outline" size="sm" onClick={handleExportCsv} disabled={exportRows.length === 0}>
+                <Download className="mr-2 h-4 w-4" />
+                CSV
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={handlePrintDay} disabled={exportRows.length === 0}>
+                <Printer className="mr-2 h-4 w-4" />
+                PDF / Tlač
+              </Button>
+            </>
+          )}
           {loading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-3">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger>
-            <SelectValue placeholder="Stav rezervácie" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Všetky stavy</SelectItem>
-            <SelectItem value="pending">Čakajúce</SelectItem>
-            <SelectItem value="confirmed">Potvrdené</SelectItem>
-            <SelectItem value="completed">Dokončené</SelectItem>
-            <SelectItem value="no_show">No-show</SelectItem>
-            <SelectItem value="cancelled">Zrušené</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-          <SelectTrigger>
-            <SelectValue placeholder="Zamestnanec" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Všetci zamestnanci</SelectItem>
-            {availableEmployees.map((employee: any) => (
-              <SelectItem key={employee.id} value={employee.id}>
-                {employee.display_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            setStatusFilter("all");
-            setEmployeeFilter("all");
-          }}
-        >
-          Reset filtrov
-        </Button>
+      <div className="rounded-xl border border-border bg-card/40 p-2">
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {[
+            { id: "all", label: "Všetky stavy" },
+            { id: "pending", label: "Čakajúce" },
+            { id: "confirmed", label: "Potvrdené" },
+            { id: "completed", label: "Dokončené" },
+            { id: "no_show", label: "No-show" },
+            { id: "cancelled", label: "Zrušené" },
+          ].map((statusOption) => (
+            <Button
+              key={statusOption.id}
+              type="button"
+              size="sm"
+              variant={statusFilter === statusOption.id ? "default" : "outline"}
+              className="shrink-0"
+              onClick={() => setStatusFilter(statusOption.id)}
+            >
+              {statusOption.label}
+            </Button>
+          ))}
+        </div>
+        <div className="mt-2 flex gap-2 overflow-x-auto">
+          <Button
+            type="button"
+            size="sm"
+            variant={employeeFilter === "all" ? "default" : "outline"}
+            className="shrink-0"
+            onClick={() => setEmployeeFilter("all")}
+          >
+            Všetci zamestnanci
+          </Button>
+          {availableEmployees.map((employee: any) => (
+            <Button
+              key={employee.id}
+              type="button"
+              size="sm"
+              variant={employeeFilter === employee.id ? "default" : "outline"}
+              className="shrink-0"
+              onClick={() => setEmployeeFilter(employee.id)}
+            >
+              {employee.display_name}
+            </Button>
+          ))}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="shrink-0"
+            onClick={() => {
+              setStatusFilter("all");
+              setEmployeeFilter("all");
+            }}
+          >
+            <FilterX className="mr-2 h-4 w-4" />
+            Reset
+          </Button>
+        </div>
       </div>
 
-      <div className="bg-card rounded-xl border border-border p-4 flex flex-col min-h-0" style={{ height: "calc(100vh - 200px)", minHeight: 500 }}>
+      <div
+        className="bg-card rounded-xl border border-border p-2 sm:p-4 flex flex-col min-h-0"
+        style={{ height: compactActionMenu ? "calc(100vh - 150px)" : "calc(100vh - 200px)", minHeight: 420 }}
+      >
         <BookingCalendar
           events={bookingCalendarEvents}
           date={date}
@@ -586,7 +663,7 @@ export default function CalendarPage() {
           <DialogHeader>
             <DialogTitle>Nová rezervácia</DialogTitle>
             <DialogDescription>
-              Vyberte službu, zamestnanca a dostupný čas pre novú rezerváciu.
+              Vyberte službu, zamestnanca a čas rezervácie. Presný čas môžete nastaviť aj manuálne.
             </DialogDescription>
           </DialogHeader>
           {selectedSlot && (
@@ -597,26 +674,60 @@ export default function CalendarPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Služba</Label>
-              <Select value={bookForm.service_id} onValueChange={(v) => setBookForm((f) => ({ ...f, service_id: v, start_at: "" }))}>
+              <Select
+                value={bookForm.service_id}
+                onValueChange={(v) =>
+                  setBookForm((f) => ({
+                    ...f,
+                    service_id: v,
+                    start_at: f.start_at || selectedSlot?.start.toISOString() || "",
+                  }))
+                }
+              >
                 <SelectTrigger><SelectValue placeholder="Vyberte službu" /></SelectTrigger>
                 <SelectContent>{services.map((s) => <SelectItem key={s.id} value={s.id}>{s.name_sk} ({s.duration_minutes} min{s.price ? `, ${s.price}€` : ""})</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Zamestnanec</Label>
-              <Select value={bookForm.employee_id} onValueChange={(v) => setBookForm((f) => ({ ...f, employee_id: v, start_at: "" }))}>
+              <Select
+                value={bookForm.employee_id}
+                onValueChange={(v) =>
+                  setBookForm((f) => ({
+                    ...f,
+                    employee_id: v,
+                    start_at: f.start_at || selectedSlot?.start.toISOString() || "",
+                  }))
+                }
+              >
                 <SelectTrigger><SelectValue placeholder="Vyberte zamestnanca" /></SelectTrigger>
                 <SelectContent>{availableEmployees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.display_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            {selectedSlot && (
+              <div className="space-y-1.5">
+                <Label>Presný čas</Label>
+                <Input
+                  type="time"
+                  step={300}
+                  value={customStartTime}
+                  onChange={(event) => handleCustomTimeChange(event.target.value)}
+                />
+              </div>
+            )}
             {availableSlots.length > 0 && (
               <div className="space-y-1.5">
-                <Label>Dostupný čas</Label>
+                <Label>Dostupné sloty (15 min)</Label>
                 <div className="grid grid-cols-4 gap-1.5 max-h-40 overflow-y-auto">
                   {availableSlots.map((slot) => {
                     const iso = slot.toISOString();
                     return (
-                      <button key={iso} onClick={() => setBookForm((f) => ({ ...f, start_at: iso }))}
+                      <button
+                        key={iso}
+                        onClick={() => {
+                          setBookForm((f) => ({ ...f, start_at: iso }));
+                          setCustomStartTime(fmtDate(slot, "HH:mm"));
+                        }}
                         className={`text-xs py-1.5 rounded-md border transition-colors font-medium ${bookForm.start_at === iso ? "bg-primary text-primary-foreground border-primary" : "border-border bg-background hover:bg-accent"}`}>
                         {fmtDate(slot, "HH:mm")}
                       </button>

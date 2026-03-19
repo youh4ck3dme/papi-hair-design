@@ -21,7 +21,7 @@ export function CalendarHeaderAdd() {
     <Button
       size="sm"
       onClick={handleAdd}
-      className="bg-gold text-gold-foreground hover:bg-gold/90 border-0 focus-visible:ring-gold"
+      className="w-full sm:w-auto bg-gold text-gold-foreground hover:bg-gold/90 border-0 focus-visible:ring-gold"
       aria-label="Pridať novú rezerváciu na vybraný deň"
     >
       <Plus className="h-4 w-4 mr-1" aria-hidden />

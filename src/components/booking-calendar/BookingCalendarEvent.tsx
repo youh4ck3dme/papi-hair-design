@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { BookingCalendarEvent as EventType } from "./calendar-types";
 import { useBookingCalendarContext } from "./calendar-context";
-import { CALENDAR_END_HOUR, CALENDAR_START_HOUR, PIXELS_PER_HOUR } from "./calendar-types";
+import { CALENDAR_END_HOUR, CALENDAR_START_HOUR } from "./calendar-types";
 import { getEventColorClasses } from "./event-color-classes";
 
 interface EventPosition {
@@ -34,7 +34,8 @@ function getOverlappingEvents(
 
 function calculateEventPosition(
   event: EventType,
-  allEvents: EventType[]
+  allEvents: EventType[],
+  pixelsPerHour: number
 ): EventPosition | null {
   const overlapping = getOverlappingEvents(event, allEvents);
   const group = [event, ...overlapping].sort(
@@ -63,9 +64,9 @@ function calculateEventPosition(
     return null;
   }
 
-  const topPx = ((startMinutes - visibleStartMinutes) / 60) * PIXELS_PER_HOUR;
+  const topPx = ((startMinutes - visibleStartMinutes) / 60) * pixelsPerHour;
   const durationMin = endMinutes - startMinutes;
-  const heightPx = (durationMin / 60) * PIXELS_PER_HOUR;
+  const heightPx = (durationMin / 60) * pixelsPerHour;
   return {
     left,
     width,
@@ -85,8 +86,8 @@ export function BookingCalendarEvent({
   month = false,
   className,
 }: BookingCalendarEventProps) {
-  const { events, date, onSelectEvent } = useBookingCalendarContext();
-  let style = month ? undefined : calculateEventPosition(event, events);
+  const { events, date, onSelectEvent, pixelsPerHour } = useBookingCalendarContext();
+  let style = month ? undefined : calculateEventPosition(event, events, pixelsPerHour);
   if (!month && !style) return null;
 
   if (event.color.startsWith("#") && style) {

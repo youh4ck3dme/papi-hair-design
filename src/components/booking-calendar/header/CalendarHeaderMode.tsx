@@ -23,13 +23,13 @@ export function CalendarHeaderMode() {
       type="single"
       value={mode}
       onValueChange={(v) => v && setMode(v as BookingCalendarMode)}
-      className="rounded-lg border border-border overflow-hidden bg-muted/30"
+      className="w-full rounded-lg border border-border overflow-hidden bg-muted/30"
     >
       {CALENDAR_MODES.map((m) => (
         <ToggleGroupItem
           key={m}
           value={m}
-          className="rounded-none border-0 data-[state=on]:bg-gold data-[state=on]:text-gold-foreground data-[state=on]:font-medium"
+          className="flex-1 rounded-none border-0 data-[state=on]:bg-gold data-[state=on]:text-gold-foreground data-[state=on]:font-medium"
         >
           <span className="flex items-center gap-1.5">
             {MODE_ICONS[m]}

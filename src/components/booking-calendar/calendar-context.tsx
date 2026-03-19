@@ -17,6 +17,7 @@ export interface BookingCalendarContextValue {
   selectable: boolean;
   businessHours?: any; // Business opening hours
   resources?: any[]; // List of resources (employees) for columns
+  pixelsPerHour: number;
 }
 
 

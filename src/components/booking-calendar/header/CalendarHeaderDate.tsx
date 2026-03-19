@@ -20,11 +20,11 @@ export function CalendarHeaderDate() {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 min-w-0">
       <Button variant="outline" size="icon" className="h-8 w-8 hover:bg-gold/10 hover:border-gold/50 hover:text-gold" onClick={handleBack}>
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      <span className="min-w-[180px] text-center text-sm font-medium text-foreground">
+      <span className="flex-1 text-center text-sm font-medium text-foreground truncate">
         {format(date, "d. MMMM yyyy", { locale: sk })}
       </span>
       <Button variant="outline" size="icon" className="h-8 w-8 hover:bg-gold/10 hover:border-gold/50 hover:text-gold" onClick={handleForward}>

@@ -51,11 +51,11 @@ export function BookingCalendar({
 
       <div className="flex flex-col h-full min-h-0 booking-calendar">
         <CalendarHeader>
-          <CalendarHeaderDate />
-          <div className="flex flex-wrap items-center gap-2">
-            <CalendarHeaderMode />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+            <CalendarHeaderDate />
             <CalendarHeaderAdd />
           </div>
+          <CalendarHeaderMode />
         </CalendarHeader>
         <CalendarBody />
       </div>

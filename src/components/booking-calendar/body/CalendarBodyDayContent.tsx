@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { useBookingCalendarContext } from "../calendar-context";
 import { BookingCalendarEvent } from "../BookingCalendarEvent";
 import { CalendarBodyHeader } from "./CalendarBodyHeader";
-import { HOURS, PIXELS_PER_HOUR } from "../calendar-types";
+import { HOURS } from "../calendar-types";
 
 interface CalendarBodyDayContentProps {
   date: Date;
@@ -19,7 +19,7 @@ export function CalendarBodyDayContent({
   resourceName,
   showHeader = true,
 }: CalendarBodyDayContentProps) {
-  const { events, onSelectSlot, selectable, businessHours } = useBookingCalendarContext();
+  const { events, onSelectSlot, selectable, businessHours, pixelsPerHour } = useBookingCalendarContext();
   const dayEvents = events.filter((e) => {
     const sameDay = isSameDay(e.start, date);
     if (!resourceId) return sameDay;
@@ -106,11 +106,11 @@ export function CalendarBodyDayContent({
             <div
               key={hour}
               className={cn(
-                "h-32 border-b border-border/50 group transition-colors",
+                "relative h-32 border-b border-border/50 group transition-colors",
                 selectable && "cursor-pointer booking-calendar-slot",
                 closed && "bg-muted/30 opacity-60"
               )}
-              style={{ height: PIXELS_PER_HOUR }}
+              style={{ height: pixelsPerHour }}
               onClick={(e) =>
                 selectable && onSelectSlot && handleSlotClick(hour, e)
               }
@@ -120,7 +120,9 @@ export function CalendarBodyDayContent({
               aria-label={
                 selectable ? `Vybrať čas okolo ${hour}:00${closed ? ' (Zatvorené)' : ''}` : undefined
               }
-            />
+            >
+              <div className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-dashed border-border/40" />
+            </div>
           );
         })}
 
