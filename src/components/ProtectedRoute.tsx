@@ -35,7 +35,7 @@ export default function ProtectedRoute({ children, requireAdmin = false, allowed
 
   // Allowlisted emails can enter admin only after bootstrap creates a real membership.
   // This prevents UI access with missing write permissions.
-  if (isAllowlistedAdmin && requestsAdminPrivileges && !hasAdminRole) {
+  if (isAllowlistedAdmin && requestsAdminPrivileges && !hasAdminRole && memberships.length === 0) {
     return <Navigate to="/bootstrap" replace />;
   }
 

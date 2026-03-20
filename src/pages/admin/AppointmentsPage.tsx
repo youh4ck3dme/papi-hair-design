@@ -12,6 +12,7 @@ import {
   limit
 } from "firebase/firestore";
 import { useBusiness } from "@/hooks/useBusiness";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,7 +45,8 @@ const STATUS_MAP: Record<string, { label: string; className: string; icon: any }
 };
 
 export default function AppointmentsPage() {
-  const { businessId, isOwnerOrAdmin } = useBusiness();
+  const { businessId, isOwnerOrAdmin, role } = useBusiness();
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -52,13 +54,79 @@ export default function AppointmentsPage() {
   const [selected, setSelected] = useState<any | null>(null);
   const [updating, setUpdating] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Skopírovať");
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [employeeResolved, setEmployeeResolved] = useState(false);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const resolveEmployeeForViewer = async () => {
+      if (!businessId) {
+        setEmployeeId(null);
+        setEmployeeResolved(false);
+        return;
+      }
+
+      if (isOwnerOrAdmin || role !== "employee") {
+        setEmployeeId(null);
+        setEmployeeResolved(true);
+        return;
+      }
+
+      if (!user?.id) {
+        setEmployeeId(null);
+        setEmployeeResolved(true);
+        return;
+      }
+
+      setLoading(true);
+      setEmployeeResolved(false);
+
+      try {
+        const employeeSnap = await getDocs(
+          query(
+            collection(db, "employees"),
+            where("business_id", "==", businessId),
+            where("profile_id", "==", user.id),
+            limit(1)
+          )
+        );
+
+        if (isCancelled) return;
+        setEmployeeId(employeeSnap.empty ? null : employeeSnap.docs[0].id);
+      } catch (err) {
+        console.error("AppointmentsPage: error resolving employee mapping", err);
+        if (!isCancelled) {
+          setEmployeeId(null);
+        }
+      } finally {
+        if (!isCancelled) {
+          setEmployeeResolved(true);
+        }
+      }
+    };
+
+    resolveEmployeeForViewer();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [businessId, isOwnerOrAdmin, role, user?.id]);
 
   const load = async () => {
     if (!businessId) return;
+    if (role === "employee" && !employeeResolved) return;
+
+    if (role === "employee" && !employeeId) {
+      setAppointments([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-  const statuses = ["pending", "confirmed", "cancelled", "completed", "no_show"] as const;
-  type AppStatus = typeof statuses[number];
+      const statuses = ["pending", "confirmed", "cancelled", "completed", "no_show"] as const;
+      type AppStatus = typeof statuses[number];
 
       let q = query(
         collection(db, "appointments"),
@@ -67,7 +135,15 @@ export default function AppointmentsPage() {
         limit(100)
       );
 
-      if (statusFilter !== "all" && statuses.includes(statusFilter as AppStatus)) {
+      if (role === "employee") {
+        q = query(
+          collection(db, "appointments"),
+          where("business_id", "==", businessId),
+          where("employee_id", "==", employeeId),
+          orderBy("start_at", "desc"),
+          limit(100)
+        );
+      } else if (statusFilter !== "all" && statuses.includes(statusFilter as AppStatus)) {
         q = query(
           collection(db, "appointments"),
           where("business_id", "==", businessId),
@@ -78,7 +154,13 @@ export default function AppointmentsPage() {
       }
 
       const snap = await getDocs(q);
-      setAppointments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const loadedAppointments = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const filteredByStatus =
+        statusFilter !== "all" && role === "employee" && statuses.includes(statusFilter as AppStatus)
+          ? loadedAppointments.filter((entry) => entry.status === statusFilter)
+          : loadedAppointments;
+
+      setAppointments(filteredByStatus);
     } catch (err) {
       console.error("AppointmentsPage: error loading data", err);
     } finally {
@@ -86,7 +168,7 @@ export default function AppointmentsPage() {
     }
   };
 
-  useEffect(() => { load(); }, [businessId, statusFilter]);
+  useEffect(() => { load(); }, [businessId, statusFilter, role, employeeId, employeeResolved]);
 
   const updateStatus = async (id: string, status: "pending" | "confirmed" | "cancelled" | "completed" | "no_show") => {
     setUpdating(true);

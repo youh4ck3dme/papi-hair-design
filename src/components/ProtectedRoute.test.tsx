@@ -159,4 +159,22 @@ describe("ProtectedRoute", () => {
     expect(screen.getByText("BOOTSTRAP_PAGE")).toBeInTheDocument();
     expect(screen.queryByText("SECRET")).not.toBeInTheDocument();
   });
+
+  it("does not force /bootstrap for allowlisted employee with existing membership", () => {
+    setAuthState({
+      user: { id: "u7", email: "mato@papihairdesign.sk" },
+      memberships: [{ role: "employee" }],
+      loading: false,
+    });
+
+    renderWithRoutes(
+      <ProtectedRoute allowedRoles={["owner", "admin", "employee"]}>
+        <div>SECRET</div>
+      </ProtectedRoute>,
+      "/protected"
+    );
+
+    expect(screen.getByText("SECRET")).toBeInTheDocument();
+    expect(screen.queryByText("BOOTSTRAP_PAGE")).not.toBeInTheDocument();
+  });
 });

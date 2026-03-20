@@ -3,7 +3,11 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import AppointmentsPage from "../AppointmentsPage";
 
 const businessState = vi.hoisted(() => ({
-  value: { businessId: "biz-1", isOwnerOrAdmin: true },
+  value: { businessId: "biz-1", isOwnerOrAdmin: true, role: "owner" as const },
+}));
+
+const authState = vi.hoisted(() => ({
+  value: { user: { id: "owner-user", email: "papi@papihairdesign.sk" } },
 }));
 
 const toastMocks = vi.hoisted(() => ({
@@ -19,10 +23,15 @@ const adminUpdateBookingStatusMock = vi.hoisted(() => vi.fn());
 
 const fixtures = vi.hoisted(() => ({
   appointments: [] as any[],
+  employeeForUserId: "emp-mato",
 }));
 
 vi.mock("@/hooks/useBusiness", () => ({
   useBusiness: () => businessState.value,
+}));
+
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => authState.value,
 }));
 
 vi.mock("sonner", () => ({
@@ -100,11 +109,11 @@ function makeSnapshot(items: any[]) {
   };
 }
 
-function findWhereStatus(input: any): string | null {
-  const statusConstraint = (input?.constraints ?? []).find(
-    (c: any) => c?.type === "where" && c?.field === "status",
+function findWhereConstraintValue(input: any, field: string): string | null {
+  const fieldConstraint = (input?.constraints ?? []).find(
+    (c: any) => c?.type === "where" && c?.field === field,
   );
-  return statusConstraint?.value ?? null;
+  return fieldConstraint?.value ?? null;
 }
 
 function makeAppointment(partial: Partial<any> = {}) {
@@ -115,6 +124,7 @@ function makeAppointment(partial: Partial<any> = {}) {
     customer_phone: partial.customer_phone ?? "+421900111222",
     service_name: partial.service_name ?? "Strih",
     service_price: partial.service_price ?? 20,
+    employee_id: partial.employee_id ?? "emp-mato",
     employee_name: partial.employee_name ?? "Marek",
     status: partial.status ?? "pending",
     start_at: partial.start_at ?? "2026-01-15T09:00:00.000Z",
@@ -130,18 +140,42 @@ describe("AppointmentsPage", () => {
     adminUpdateBookingStatusMock.mockReset();
     adminUpdateBookingStatusMock.mockResolvedValue({ status: "confirmed" });
 
-    businessState.value = { businessId: "biz-1", isOwnerOrAdmin: true };
+    businessState.value = { businessId: "biz-1", isOwnerOrAdmin: true, role: "owner" };
+    authState.value = { user: { id: "owner-user", email: "papi@papihairdesign.sk" } };
+    fixtures.employeeForUserId = "emp-mato";
 
     fixtures.appointments = [
-      makeAppointment({ id: "apt-pending", customer_name: "Jana Novak", status: "pending" }),
-      makeAppointment({ id: "apt-confirmed", customer_name: "Marek Urban", status: "confirmed", service_name: "Farbenie" }),
-      makeAppointment({ id: "apt-completed", customer_name: "Eva Test", status: "completed", start_at: "2026-01-14T10:00:00.000Z" }),
+      makeAppointment({ id: "apt-pending", customer_name: "Jana Novak", employee_id: "emp-mato", status: "pending" }),
+      makeAppointment({ id: "apt-confirmed", customer_name: "Marek Urban", employee_id: "emp-miska", status: "confirmed", service_name: "Farbenie" }),
+      makeAppointment({ id: "apt-completed", customer_name: "Eva Test", employee_id: "emp-mato", status: "completed", start_at: "2026-01-14T10:00:00.000Z" }),
     ];
 
     firestoreMocks.getDocs.mockImplementation(async (input: any) => {
-      const status = findWhereStatus(input);
-      const items = status ? fixtures.appointments.filter((a) => a.status === status) : fixtures.appointments;
-      return makeSnapshot(items);
+      const collectionName = input?.__collection;
+
+      if (collectionName === "employees") {
+        const profileId = findWhereConstraintValue(input, "profile_id");
+        if (profileId === authState.value.user?.id) {
+          return makeSnapshot([{ id: fixtures.employeeForUserId }]);
+        }
+        return makeSnapshot([]);
+      }
+
+      if (collectionName === "appointments") {
+        const status = findWhereConstraintValue(input, "status");
+        const employeeId = findWhereConstraintValue(input, "employee_id");
+
+        const filteredByEmployee = employeeId
+          ? fixtures.appointments.filter((a) => a.employee_id === employeeId)
+          : fixtures.appointments;
+        const filteredByStatus = status
+          ? filteredByEmployee.filter((a) => a.status === status)
+          : filteredByEmployee;
+
+        return makeSnapshot(filteredByStatus);
+      }
+
+      return makeSnapshot([]);
     });
 
     vi.stubGlobal("navigator", {
@@ -320,7 +354,7 @@ describe("AppointmentsPage", () => {
   });
 
   it("hides admin actions when user is not owner/admin", async () => {
-    businessState.value = { businessId: "biz-1", isOwnerOrAdmin: false };
+    businessState.value = { businessId: "biz-1", isOwnerOrAdmin: false, role: "employee" };
     render(<AppointmentsPage />);
     await screen.findByText("Rezervácie");
     fireEvent.click(screen.getByRole("button", { name: /Jana Novak/i }));
@@ -329,4 +363,20 @@ describe("AppointmentsPage", () => {
     expect(screen.queryByRole("button", { name: /Potvrdiť/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Zrušiť/i })).not.toBeInTheDocument();
   }, 15000);
+
+  it("shows only own appointments for logged employee", async () => {
+    businessState.value = { businessId: "biz-1", isOwnerOrAdmin: false, role: "employee" };
+    authState.value = { user: { id: "mato-user", email: "mato@papihairdesign.sk" } };
+    fixtures.employeeForUserId = "emp-mato";
+    fixtures.appointments = [
+      makeAppointment({ id: "apt-own", customer_name: "Klient Mato", employee_id: "emp-mato", employee_name: "Mato" }),
+      makeAppointment({ id: "apt-other", customer_name: "Klient Miska", employee_id: "emp-miska", employee_name: "Miska" }),
+    ];
+
+    render(<AppointmentsPage />);
+
+    expect(await screen.findByText("Rezervácie")).toBeInTheDocument();
+    expect(screen.getAllByText("Klient Mato").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Klient Miska")).not.toBeInTheDocument();
+  });
 });
