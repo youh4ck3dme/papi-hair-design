@@ -23,6 +23,7 @@
     "test:responsive": "node ./node_modules/@playwright/test/cli.js test --config=e2e/playwright.config.ts",
     "test:responsive:preview": "npm run build && node ./node_modules/@playwright/test/cli.js test --config=e2e/playwright.config.preview.ts",
     "test:admin": "node ./node_modules/@playwright/test/cli.js test e2e/admin-calendar.spec.ts --config=e2e/playwright.config.ts",
+    "test:booking-mobile-live": "node scripts/booking-mobile-audit-live.mjs",
     "test:calendar-mobile-live": "node scripts/calendar-mobile-audit-live.mjs",
     "budget": "node scripts/budget-check.mjs",
     "lockin:check": "node scripts/lockin-check.mjs"
