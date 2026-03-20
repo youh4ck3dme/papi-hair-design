@@ -12,8 +12,6 @@ const DEFAULT_BUSINESS_ID = "papi-hair-design-main";
 type BootstrapRole = "owner" | "admin";
 const BOOTSTRAP_OWNER_EMAILS = new Set([
   "papi@papihairdesign.sk",
-  "miska@papihairdesign.sk",
-  "mato@papihairdesign.sk",
 ]);
 
 function buildDisplayName(email: string | null | undefined) {

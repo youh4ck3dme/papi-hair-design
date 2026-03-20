@@ -32,6 +32,7 @@ export { lookupBookingHistory } from "./lookupBookingHistory";
 export { cleanupExpiredHolds } from "./cleanupExpiredHolds";
 export { rebuildPublicSnapshot } from "./rebuildPublicSnapshot";
 export { bootstrapAdminAccess } from "./bootstrapAdminAccess";
+export { enforceSalonRoles } from "./enforceSalonRoles";
 export { onProfileWriteSyncEmployeePhoto } from "./syncEmployeePhotoFromProfile";
 export {
   onBusinessWrite,

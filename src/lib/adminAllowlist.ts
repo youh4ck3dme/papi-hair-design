@@ -12,11 +12,8 @@ function parseEnvEmailList(raw: string | undefined): string[] {
 
 function readAdminAllowlistFromEnv(): Set<string> {
   const envEntries = parseEnvEmailList(import.meta.env.VITE_ADMIN_ALLOWLIST as string | undefined);
-  const profileEntries = [
-    normalizeEmail(import.meta.env.VITE_PAPI_EMAIL as string | undefined),
-    normalizeEmail(import.meta.env.VITE_MISKA_EMAIL as string | undefined),
-    normalizeEmail(import.meta.env.VITE_MATO_EMAIL as string | undefined),
-  ].filter((entry) => entry.length > 0);
+  const ownerEntry = normalizeEmail(import.meta.env.VITE_PAPI_EMAIL as string | undefined);
+  const profileEntries = ownerEntry.length > 0 ? [ownerEntry] : [];
 
   return new Set<string>([...envEntries, ...profileEntries]);
 }

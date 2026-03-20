@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { auth, functions } from "@/integrations/firebase/config";
+import { db } from "@/integrations/firebase/config";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -9,6 +10,7 @@ import {
   sendPasswordResetEmail
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
+import { collection, getDocs, limit, query, where } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,21 +29,53 @@ const PUBLIC_BOOKING_URL = "https://booking.papihairdesign.sk/booking";
 const PUBLIC_BOOKING_PATH = "/booking";
 const CROSS_DOMAIN_AUTH_HOST = "booking.papihairdesign.sk";
 
-function redirectAfterAuth(
-  navigate: ReturnType<typeof useNavigate>,
+async function resolvePostAuthPath(
+  uid: string | undefined,
   email: string | null | undefined
-): void {
+): Promise<"/admin" | "/admin/my" | "/booking" | "cross-domain-booking"> {
   if (isAdminAllowlisted(email)) {
-    navigate("/admin");
-    return;
+    return "/admin";
   }
 
+  if (!uid) {
+    if (typeof window !== "undefined" && normalizeEmail(window.location.hostname) === CROSS_DOMAIN_AUTH_HOST) {
+      return "cross-domain-booking";
+    }
+    return "/booking";
+  }
+
+  const membershipsSnap = await getDocs(query(
+    collection(db, "memberships"),
+    where("profile_id", "==", uid),
+    limit(10),
+  ));
+
+  const roles = membershipsSnap.docs
+    .map((docSnap) => docSnap.data().role)
+    .filter((role): role is "owner" | "admin" | "employee" | "customer" =>
+      role === "owner" || role === "admin" || role === "employee" || role === "customer"
+    );
+
+  if (roles.includes("owner") || roles.includes("admin")) return "/admin";
+  if (roles.includes("employee")) return "/admin/my";
+
   if (typeof window !== "undefined" && normalizeEmail(window.location.hostname) === CROSS_DOMAIN_AUTH_HOST) {
+    return "cross-domain-booking";
+  }
+  return "/booking";
+}
+
+async function redirectAfterAuthWithMembership(
+  navigate: ReturnType<typeof useNavigate>,
+  uid: string | undefined,
+  email: string | null | undefined
+): Promise<void> {
+  const target = await resolvePostAuthPath(uid, email);
+  if (target === "cross-domain-booking") {
     window.location.assign(PUBLIC_BOOKING_URL);
     return;
   }
-
-  navigate(PUBLIC_BOOKING_PATH);
+  navigate(target);
 }
 
 // ---------------------------------------------------------------------------
@@ -149,7 +183,11 @@ function useAuthForm() {
       setLoading(true);
       try {
         const credential = await signInWithEmailAndPassword(auth, form.email, form.password);
-        redirectAfterAuth(navigate, credential.user.email ?? form.email);
+        await redirectAfterAuthWithMembership(
+          navigate,
+          credential.user.uid,
+          credential.user.email ?? form.email
+        );
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : t("auth.toastLoginFail"));
       } finally {
@@ -174,7 +212,11 @@ function useAuthForm() {
         const credential = await createUserWithEmailAndPassword(auth, form.email, form.password);
         const claimed = await tryClaimBooking(claimToken);
         toast.success(claimed ? t("auth.toastRegisterOkBooking") : t("auth.toastRegisterOk"));
-        redirectAfterAuth(navigate, credential.user.email ?? form.email);
+        await redirectAfterAuthWithMembership(
+          navigate,
+          credential.user.uid,
+          credential.user.email ?? form.email
+        );
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : t("auth.toastRegisterFail"));
       } finally {
@@ -198,7 +240,7 @@ function useAuthForm() {
           toast.success(t("auth.toastLoginOkBooking"));
         }
       }
-      redirectAfterAuth(navigate, userEmail);
+      await redirectAfterAuthWithMembership(navigate, result.user.uid, userEmail);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t("auth.toastGoogleFail"));
     } finally {

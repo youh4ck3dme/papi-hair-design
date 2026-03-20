@@ -40,7 +40,17 @@ async function login(page, email, password) {
   await page.locator('input[type="password"]').fill(password);
   await page.locator('[data-testid="auth-login-btn"]').click();
 
-  await page.waitForURL(/\/(admin|bootstrap|booking)/, { timeout: 30_000 });
+  await page.waitForTimeout(2_500);
+  const urlAfterLogin = page.url();
+  if (!/\/(admin|bootstrap|booking)/.test(urlAfterLogin)) {
+    const visibleError =
+      (await page.locator("text=Invalid login credentials").first().textContent().catch(() => null)) ||
+      (await page.locator("text=auth/invalid-credential").first().textContent().catch(() => null)) ||
+      (await page.locator("text=Prihlásenie zlyhalo").first().textContent().catch(() => null));
+    throw new Error(
+      `Login did not navigate away from /auth for ${email}. url=${urlAfterLogin} uiError=${visibleError ?? "n/a"}`,
+    );
+  }
 
   if (page.url().includes("/bootstrap")) {
     const activateBtn = page.getByRole("button", { name: "Aktivovať Admin prístup" });
