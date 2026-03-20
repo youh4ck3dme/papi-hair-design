@@ -43,6 +43,7 @@ const firestoreFixtures = vi.hoisted(() => ({
 }));
 
 const adminUpdateBookingStatusMock = vi.hoisted(() => vi.fn());
+const adminCalendarQuickActionMock = vi.hoisted(() => vi.fn());
 const generateSlotsMock = vi.hoisted(() => vi.fn());
 const toastMocks = vi.hoisted(() => ({
   success: vi.fn(),
@@ -97,6 +98,9 @@ vi.mock("@/integrations/firebase/config", () => ({
 
 vi.mock("@/integrations/firebase/adminUpdateBookingStatus", () => ({
   adminUpdateBookingStatus: adminUpdateBookingStatusMock,
+}));
+vi.mock("@/integrations/firebase/adminCalendarQuickAction", () => ({
+  adminCalendarQuickAction: adminCalendarQuickActionMock,
 }));
 
 vi.mock("@/lib/availability", () => ({
@@ -263,6 +267,7 @@ describe("CalendarPage", () => {
     firestoreMocks.addDocMock.mockReset();
     firestoreMocks.updateDocMock.mockReset();
     adminUpdateBookingStatusMock.mockReset();
+    adminCalendarQuickActionMock.mockReset();
     generateSlotsMock.mockReset();
     toastMocks.success.mockReset();
     toastMocks.error.mockReset();
@@ -285,6 +290,7 @@ describe("CalendarPage", () => {
       return makeSnapshot([]);
     });
     adminUpdateBookingStatusMock.mockResolvedValue({ status: "confirmed" });
+    adminCalendarQuickActionMock.mockResolvedValue({ success: true });
     generateSlotsMock.mockReturnValue([new Date("2026-01-15T09:00:00.000Z")]);
   });
 
@@ -531,6 +537,26 @@ describe("CalendarPage", () => {
 
     await waitFor(() => {
       expect(toastMocks.error).toHaveBeenCalledWith("Chyba pri ukladaní poznámky");
+    });
+  });
+
+  it("submits move quick action from detail sheet", async () => {
+    seedInitialFirestore({ withEvent: true });
+    render(<CalendarPage />);
+
+    fireEvent.click(await screen.findByText("open-event"));
+    fireEvent.click(await screen.findByRole("button", { name: /Presunúť/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Uložiť$/i }));
+
+    await waitFor(() => {
+      expect(adminCalendarQuickActionMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          business_id: "biz-1",
+          action: "move",
+          event_type: "appointment",
+          appointment_id: "apt-1",
+        }),
+      );
     });
   });
 });

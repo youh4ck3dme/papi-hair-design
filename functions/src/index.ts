@@ -28,6 +28,7 @@ export { createBookingHold } from "./createBookingHold";
 export { confirmBooking } from "./confirmBooking";
 export { getPublicAvailabilityConflicts } from "./getPublicAvailabilityConflicts";
 export { adminUpdateBookingStatus } from "./adminUpdateBookingStatus";
+export { adminCalendarQuickAction } from "./adminCalendarQuickAction";
 export { lookupBookingHistory } from "./lookupBookingHistory";
 export { cleanupExpiredHolds } from "./cleanupExpiredHolds";
 export { rebuildPublicSnapshot } from "./rebuildPublicSnapshot";

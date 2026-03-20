@@ -135,6 +135,16 @@ service cloud.firestore {
         isStaff(resource.data.business_id);
     }
 
+    match /time_blocks/{blockId} {
+      allow read: if resource.data.business_id is string && isStaff(resource.data.business_id);
+      allow create, update, delete: if false;
+    }
+
+    match /calendar_action_audit/{auditId} {
+      allow read: if resource.data.business_id is string && isOwnerOrAdmin(resource.data.business_id);
+      allow create, update, delete: if false;
+    }
+
     match /customers/{customerId} {
       allow read: if resource.data.business_id is string && isStaff(resource.data.business_id);
       allow create: if request.resource.data.business_id is string &&

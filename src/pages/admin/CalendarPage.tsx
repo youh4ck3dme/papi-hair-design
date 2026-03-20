@@ -30,9 +30,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer, MoreVertical, FilterX } from "lucide-react";
+import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer, MoreVertical, FilterX, MoveRight, CopyPlus, Lock, Trash2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
 import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
+import { adminCalendarQuickAction } from "@/integrations/firebase/adminCalendarQuickAction";
+import { toCallableErrorMessage } from "@/integrations/firebase/callableError";
 import {
   ADMIN_BOOKING_STATUS_LABELS,
   canAdminCancelBooking,
@@ -87,6 +89,13 @@ export default function CalendarPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [employeeFilter, setEmployeeFilter] = useState<string>("all");
   const [compactActionMenu, setCompactActionMenu] = useState(false);
+  const [quickActionOpen, setQuickActionOpen] = useState(false);
+  const [quickActionType, setQuickActionType] = useState<"move" | "duplicate" | "block">("move");
+  const [quickActionStartAt, setQuickActionStartAt] = useState("");
+  const [quickActionEndAt, setQuickActionEndAt] = useState("");
+  const [quickActionEmployeeId, setQuickActionEmployeeId] = useState("");
+  const [quickActionReason, setQuickActionReason] = useState("Blokovaný čas");
+  const [quickActionSaving, setQuickActionSaving] = useState(false);
 
   const filtersStorageKey = `admin-calendar-filters:${businessId}`;
 
@@ -97,6 +106,11 @@ export default function CalendarPage() {
         collection(db, "appointments"),
         where("business_id", "==", businessId)
       );
+      let blocksQuery = query(
+        collection(db, "time_blocks"),
+        where("business_id", "==", businessId)
+      );
+      let employeeIdForUser: string | null = null;
 
       if (!isOwnerOrAdmin) {
         const user = auth.currentUser;
@@ -111,19 +125,21 @@ export default function CalendarPage() {
 
           if (!empSnap.empty) {
             const empId = empSnap.docs[0].id;
+            employeeIdForUser = empId;
             apptsQuery = query(apptsQuery, where("employee_id", "==", empId));
+            blocksQuery = query(blocksQuery, where("employee_id", "==", empId));
           }
         }
       }
 
-      const apptsSnap = await getDocs(apptsQuery);
+      const [apptsSnap, blocksSnap] = await Promise.all([getDocs(apptsQuery), getDocs(blocksQuery)]);
 
       // In Firestore, we don't have automatic foreign key joining (manual client-side denormalization required)
       // For small sets, we can fetch related data manually or denormalize.
       // For the blueprint, we'll assume we either denormalized or we fetch basic info.
       // But to match the UI perfectly, we might need a helper to fetch customers/services/employees.
 
-      const eventsList: CalEvent[] = apptsSnap.docs.map((doc) => {
+      const appointmentEvents: CalEvent[] = apptsSnap.docs.map((doc) => {
         const a = doc.data();
         return {
           id: doc.id,
@@ -136,13 +152,33 @@ export default function CalendarPage() {
         };
       });
 
-      setEvents(eventsList);
+      const blockedEvents: CalEvent[] = blocksSnap.docs.map((docSnap) => {
+        const row = docSnap.data() as Record<string, unknown>;
+        const employee = employees.find((item) => item.id === row.employee_id);
+        return {
+          id: docSnap.id,
+          title: `Blok: ${typeof row.reason === "string" ? row.reason : "Blokovaný čas"}`,
+          start: row.start_at instanceof Timestamp ? row.start_at.toDate() : new Date(String(row.start_at)),
+          end: row.end_at instanceof Timestamp ? row.end_at.toDate() : new Date(String(row.end_at)),
+          status: "blocked",
+          resource: {
+            ...row,
+            id: docSnap.id,
+            event_type: "time_block",
+            employee_name: employee?.display_name ?? null,
+            employee_color: employee?.color ?? null,
+            profile_limited_employee_id: employeeIdForUser,
+          },
+        };
+      });
+
+      setEvents([...appointmentEvents, ...blockedEvents]);
     } catch (err) {
       console.error("CalendarPage: error loading events", err);
     } finally {
       setLoading(false);
     }
-  }, [businessId, isOwnerOrAdmin]);
+  }, [businessId, employees, isOwnerOrAdmin]);
 
 
   useEffect(() => {
@@ -335,6 +371,30 @@ export default function CalendarPage() {
     });
     setNoteText(typeof (event.resource as any)?.note === "string" ? (event.resource as any).note : "");
     setDetailModal(true);
+  };
+
+  const toInputDateTimeLocal = (input: Date) => {
+    const pad = (value: number) => String(value).padStart(2, "0");
+    return `${input.getFullYear()}-${pad(input.getMonth() + 1)}-${pad(input.getDate())}T${pad(input.getHours())}:${pad(input.getMinutes())}`;
+  };
+
+  const openQuickAction = (action: "move" | "duplicate" | "block") => {
+    if (!selectedEvent) return;
+    const employeeId =
+      typeof selectedEvent.resource?.employee_id === "string" ? selectedEvent.resource.employee_id : "";
+    const startAt = toInputDateTimeLocal(selectedEvent.start);
+    const endAt = toInputDateTimeLocal(selectedEvent.end);
+
+    setQuickActionType(action);
+    setQuickActionEmployeeId(employeeId);
+    setQuickActionStartAt(startAt);
+    setQuickActionEndAt(endAt);
+    setQuickActionReason(
+      typeof selectedEvent.resource?.reason === "string"
+        ? selectedEvent.resource.reason
+        : "Blokovaný čas",
+    );
+    setQuickActionOpen(true);
   };
 
   useEffect(() => {
@@ -534,6 +594,68 @@ export default function CalendarPage() {
       toast.error("Chyba pri ukladaní poznámky");
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const handleRunQuickAction = async () => {
+    if (!selectedEvent) return;
+    if (!quickActionStartAt || !quickActionEndAt) {
+      toast.error("Vyberte čas od aj do.");
+      return;
+    }
+
+    const eventType =
+      selectedEvent.resource?.event_type === "time_block" ? "time_block" : "appointment";
+    const payload: Record<string, unknown> = {
+      business_id: businessId,
+      action: quickActionType,
+      event_type: eventType,
+      start_at: new Date(quickActionStartAt).toISOString(),
+      end_at: new Date(quickActionEndAt).toISOString(),
+      employee_id: quickActionEmployeeId || selectedEvent.resource?.employee_id,
+    };
+    if (eventType === "time_block") {
+      payload.time_block_id = selectedEvent.id;
+    } else {
+      payload.appointment_id = selectedEvent.id;
+    }
+    if (quickActionType === "block") {
+      payload.reason = quickActionReason.trim() || "Blokovaný čas";
+    }
+
+    setQuickActionSaving(true);
+    try {
+      await adminCalendarQuickAction(payload as any);
+      toast.success("Akcia bola uložená");
+      setQuickActionOpen(false);
+      setDetailModal(false);
+      await loadEvents();
+    } catch (error) {
+      console.error("CalendarPage: quick action failed", error);
+      toast.error(toCallableErrorMessage(error, "Nepodarilo sa vykonať akciu"));
+    } finally {
+      setQuickActionSaving(false);
+    }
+  };
+
+  const handleDeleteBlock = async () => {
+    if (!selectedEvent || selectedEvent.resource?.event_type !== "time_block") return;
+    setQuickActionSaving(true);
+    try {
+      await adminCalendarQuickAction({
+        business_id: businessId,
+        action: "delete_block",
+        event_type: "time_block",
+        time_block_id: selectedEvent.id,
+      });
+      toast.success("Blokovaný čas bol odstránený");
+      setDetailModal(false);
+      await loadEvents();
+    } catch (error) {
+      console.error("CalendarPage: delete block failed", error);
+      toast.error(toCallableErrorMessage(error, "Nepodarilo sa odstrániť blokovaný čas"));
+    } finally {
+      setQuickActionSaving(false);
     }
   };
 
@@ -808,6 +930,30 @@ export default function CalendarPage() {
               <Badge className="text-xs border-0 bg-secondary text-secondary-foreground">
                 {ADMIN_BOOKING_STATUS_LABELS[selectedEvent.status as keyof typeof ADMIN_BOOKING_STATUS_LABELS] ?? selectedEvent.status}
               </Badge>
+              {isOwnerOrAdmin && (
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <Button size="sm" variant="outline" onClick={() => openQuickAction("move")} disabled={updatingStatus || quickActionSaving}>
+                    <MoveRight className="mr-1 h-3.5 w-3.5" /> Presunúť
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openQuickAction("duplicate")} disabled={updatingStatus || quickActionSaving}>
+                    <CopyPlus className="mr-1 h-3.5 w-3.5" /> Duplikovať
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openQuickAction("block")} disabled={updatingStatus || quickActionSaving}>
+                    <Lock className="mr-1 h-3.5 w-3.5" /> Blokovať
+                  </Button>
+                </div>
+              )}
+              {isOwnerOrAdmin && selectedEvent.resource?.event_type === "time_block" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full border-rose-500/30 text-rose-500 hover:text-rose-500"
+                  onClick={handleDeleteBlock}
+                  disabled={quickActionSaving}
+                >
+                  <Trash2 className="mr-1 h-3.5 w-3.5" /> Odstrániť blok
+                </Button>
+              )}
               <div className="space-y-2.5">
                 <div className="flex items-center gap-2 text-sm">
                   <LogoIcon size="sm" className="w-4 h-4 flex-shrink-0" />
@@ -930,6 +1076,55 @@ export default function CalendarPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={quickActionOpen} onOpenChange={setQuickActionOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {quickActionType === "move" && "Presun termínu"}
+              {quickActionType === "duplicate" && "Duplikácia termínu"}
+              {quickActionType === "block" && "Blokovať čas"}
+            </DialogTitle>
+            <DialogDescription>
+              Vyberte cieľový čas a zamestnanca. Systém automaticky overí kolízie.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Zamestnanec</Label>
+              <Select value={quickActionEmployeeId} onValueChange={setQuickActionEmployeeId}>
+                <SelectTrigger><SelectValue placeholder="Vyberte zamestnanca" /></SelectTrigger>
+                <SelectContent>
+                  {availableEmployees.map((employee: any) => (
+                    <SelectItem key={employee.id} value={employee.id}>{employee.display_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Od</Label>
+              <Input type="datetime-local" step={900} value={quickActionStartAt} onChange={(event) => setQuickActionStartAt(event.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Do</Label>
+              <Input type="datetime-local" step={900} value={quickActionEndAt} onChange={(event) => setQuickActionEndAt(event.target.value)} />
+            </div>
+            {quickActionType === "block" && (
+              <div className="space-y-1.5">
+                <Label>Dôvod blokácie</Label>
+                <Input value={quickActionReason} onChange={(event) => setQuickActionReason(event.target.value)} />
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" className="flex-1" onClick={() => setQuickActionOpen(false)}>Zrušiť</Button>
+            <Button className="flex-1" onClick={handleRunQuickAction} disabled={quickActionSaving}>
+              {quickActionSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Uložiť
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

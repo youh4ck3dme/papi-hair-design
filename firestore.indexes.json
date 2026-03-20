@@ -243,6 +243,38 @@
                     "order": "ASCENDING"
                 }
             ]
+        },
+        {
+            "collectionGroup": "time_blocks",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "business_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "start_at",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "time_blocks",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "business_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "employee_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "start_at",
+                    "order": "ASCENDING"
+                }
+            ]
         }
     ],
     "fieldOverrides": [
