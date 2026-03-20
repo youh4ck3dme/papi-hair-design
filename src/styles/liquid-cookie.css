@@ -7,6 +7,7 @@
   justify-content: center;
   padding: 14px;
   z-index: 9999;
+  pointer-events: none;
   animation: cookie-slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -29,6 +30,7 @@
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
   overflow: hidden;
+  pointer-events: none;
 }
 
 .cookie-glow {
@@ -57,6 +59,11 @@
   font-size: 14px;
   line-height: 1.45;
   color: rgba(255, 255, 255, 0.82);
+  pointer-events: none;
+}
+
+.cookie-body a {
+  pointer-events: auto;
 }
 
 .cookie-actions {
@@ -65,6 +72,7 @@
   gap: 10px;
   padding: 0 16px 16px 16px;
   align-items: center;
+  pointer-events: none;
 }
 
 .cookie-btn {
@@ -74,6 +82,7 @@
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
+  pointer-events: auto;
   transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, border-color 120ms ease;
   outline: none;
 }
@@ -122,6 +131,7 @@
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.22);
   border: 1px solid rgba(255, 255, 255, 0.10);
+  pointer-events: none;
   animation: cookie-panel-in 0.25s ease;
 }
 
@@ -146,6 +156,7 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.07);
   margin-bottom: 10px;
+  pointer-events: auto;
 }
 
 .cookie-toggle:last-of-type { margin-bottom: 12px; }
@@ -213,4 +224,53 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  pointer-events: auto;
+}
+
+@media (max-width: 640px) {
+  .cookie-wrap {
+    justify-content: flex-end;
+    padding: 8px 10px;
+  }
+
+  .cookie-card {
+    width: min(320px, calc(100vw - 20px));
+    border-radius: 14px;
+  }
+
+  .cookie-header {
+    padding: 10px 12px 6px 12px;
+  }
+
+  .cookie-title {
+    font-size: 14px;
+  }
+
+  .cookie-body {
+    padding: 6px 12px 10px 12px;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .cookie-actions {
+    gap: 8px;
+    padding: 0 12px 12px 12px;
+  }
+
+  .cookie-btn {
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}
+
+@media (max-height: 700px) {
+  .cookie-body {
+    display: none;
+  }
+
+  .cookie-header {
+    border-bottom: 0;
+    padding-bottom: 8px;
+  }
 }
