@@ -1,0 +1,199 @@
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { EmployeeRow, MembershipRow, ServiceRow } from "@/components/booking/types";
+import { useBookingForm } from "./useBookingForm";
+
+const mockUseAuth = vi.fn();
+const mockCreateBookingHold = vi.fn();
+const mockConfirmBooking = vi.fn();
+const mockGetRecaptchaToken = vi.fn();
+const toastSuccess = vi.fn();
+const toastError = vi.fn();
+
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => mockUseAuth(),
+}));
+
+vi.mock("@/integrations/firebase/createBookingHold", () => ({
+  createBookingHold: (...args: unknown[]) => mockCreateBookingHold(...args),
+}));
+
+vi.mock("@/integrations/firebase/confirmBooking", () => ({
+  confirmBooking: (...args: unknown[]) => mockConfirmBooking(...args),
+}));
+
+vi.mock("@/integrations/firebase/recaptcha", () => ({
+  getRecaptchaToken: (...args: unknown[]) => mockGetRecaptchaToken(...args),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: (...args: unknown[]) => toastSuccess(...args),
+    error: (...args: unknown[]) => toastError(...args),
+  },
+}));
+
+const makeService = (overrides: Partial<ServiceRow> = {}): ServiceRow => ({
+  id: "svc-1",
+  name_sk: "Dámsky strih",
+  description_sk: null,
+  price: 25,
+  duration_minutes: 30,
+  buffer_minutes: 0,
+  sort_order: 1,
+  is_active: true,
+  business_id: "biz-1",
+  category: "damske",
+  subcategory: "Strih",
+  ...overrides,
+});
+
+const makeEmployee = (overrides: Partial<EmployeeRow> = {}): EmployeeRow => ({
+  id: "emp-1",
+  display_name: "Papi",
+  email: "papi@test.sk",
+  phone: null,
+  is_active: true,
+  business_id: "biz-1",
+  photo_url: null,
+  profile_id: null,
+  service_mode: "all",
+  ...overrides,
+});
+
+const baseBusiness = {
+  id: "biz-1",
+  allow_admin_as_provider: true,
+};
+
+const memberships: MembershipRow[] = [];
+
+describe("useBookingForm", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseAuth.mockReturnValue({
+      profile: null,
+    });
+    mockGetRecaptchaToken.mockResolvedValue("recaptcha-token");
+    mockCreateBookingHold.mockResolvedValue({
+      success: true,
+      appointment_id: "appt-1",
+      confirm_token: "confirm-1",
+    });
+    mockConfirmBooking.mockResolvedValue({
+      success: true,
+      claim_token: "claim-1",
+      history_access_token: "history-token",
+      history_reference: "history-ref",
+      customer_email: "test@example.com",
+      customer_name: "Test User",
+    });
+  });
+
+  it("auto-selects the first eligible employee after service selection", async () => {
+    const services = [makeService()];
+    const employees = [
+      makeEmployee({ id: "emp-1", display_name: "Papi" }),
+      makeEmployee({ id: "emp-2", display_name: "Miška", service_mode: "restricted" }),
+    ];
+    const employeeServiceMap = {
+      "emp-2": ["svc-1"],
+    };
+
+    const { result } = renderHook(() =>
+      useBookingForm(services, employees, baseBusiness, employeeServiceMap, memberships)
+    );
+
+    expect(result.current.selectedEmployeeId).toBeNull();
+
+    act(() => {
+      result.current.setSelectedServiceId("svc-1");
+    });
+
+    await waitFor(() => {
+      expect(result.current.selectedEmployeeId).toBe("emp-1");
+    });
+  });
+
+  it("clears selected employee when service is reset", async () => {
+    const services = [makeService()];
+    const employees = [makeEmployee({ id: "emp-1" })];
+
+    const { result } = renderHook(() =>
+      useBookingForm(services, employees, baseBusiness, {}, memberships)
+    );
+
+    act(() => {
+      result.current.setSelectedServiceId("svc-1");
+    });
+
+    await waitFor(() => {
+      expect(result.current.selectedEmployeeId).toBe("emp-1");
+    });
+
+    act(() => {
+      result.current.setSelectedServiceId(null);
+    });
+
+    await waitFor(() => {
+      expect(result.current.selectedEmployeeId).toBeNull();
+    });
+  });
+
+  it("sends selected employee_id to createBookingHold on submit", async () => {
+    const services = [makeService()];
+    const employees = [
+      makeEmployee({ id: "emp-1", display_name: "Papi" }),
+      makeEmployee({ id: "emp-2", display_name: "Miška" }),
+    ];
+
+    const { result } = renderHook(() =>
+      useBookingForm(services, employees, baseBusiness, {}, memberships)
+    );
+
+    act(() => {
+      result.current.setSelectedServiceId("svc-1");
+    });
+
+    await waitFor(() => {
+      expect(result.current.selectedEmployeeId).toBe("emp-1");
+    });
+
+    act(() => {
+      result.current.setSelectedEmployeeId("emp-2");
+      result.current.setFormData({
+        meno: "Test",
+        priezvisko: "User",
+        email: "test@example.com",
+        phone: "905123456",
+        note: "",
+        marketing: false,
+        terms: true,
+        gdpr: true,
+        all: false,
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.selectedEmployeeId).toBe("emp-2");
+    });
+
+    const slot = new Date(2026, 2, 20, 9, 0, 0);
+
+    await act(async () => {
+      await result.current.handleSubmit("09:00", [slot], result.current.selectedEmployeeId);
+    });
+
+    expect(mockCreateBookingHold).toHaveBeenCalledTimes(1);
+    expect(mockCreateBookingHold).toHaveBeenCalledWith(
+      expect.objectContaining({
+        business_id: "biz-1",
+        service_id: "svc-1",
+        employee_id: "emp-2",
+      })
+    );
+    expect(mockConfirmBooking).toHaveBeenCalledTimes(1);
+    expect(mockGetRecaptchaToken).toHaveBeenCalledTimes(2);
+    expect(toastError).not.toHaveBeenCalled();
+  });
+});
