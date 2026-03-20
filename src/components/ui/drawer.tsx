@@ -3,8 +3,21 @@ import { Drawer as DrawerPrimitive } from "vaul";
 
 import { cn } from "@/lib/utils";
 
-const Drawer = ({ shouldScaleBackground = true, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-  <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />
+interface DrawerRootProps extends React.ComponentProps<typeof DrawerPrimitive.Root> {
+  shouldScaleBackground?: boolean;
+  overlayClassName?: string;
+}
+
+const DrawerOverlayClassContext = React.createContext<string | undefined>(undefined);
+
+const Drawer = ({
+  shouldScaleBackground = true,
+  overlayClassName,
+  ...props
+}: DrawerRootProps) => (
+  <DrawerOverlayClassContext.Provider value={overlayClassName}>
+    <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />
+  </DrawerOverlayClassContext.Provider>
 );
 Drawer.displayName = "Drawer";
 
@@ -17,9 +30,17 @@ const DrawerClose = DrawerPrimitive.Close;
 const DrawerOverlay = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Overlay ref={ref} className={cn("fixed inset-0 z-50 bg-black/80", className)} {...props} />
-));
+>(({ className, ...props }, ref) => {
+  const overlayClassName = React.useContext(DrawerOverlayClassContext);
+
+  return (
+    <DrawerPrimitive.Overlay
+      ref={ref}
+      className={cn("fixed inset-0 z-50 bg-black/80", overlayClassName, className)}
+      {...props}
+    />
+  );
+});
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 
 const DrawerContent = React.forwardRef<

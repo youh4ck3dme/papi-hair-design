@@ -40,8 +40,8 @@ export default function AppointmentDetailSheet({
   const status = STATUS_LABELS[appointment.status] || STATUS_LABELS.pending;
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="bg-[hsl(222,20%,10%)] border-white/10 text-white">
+    <Drawer open={open} onOpenChange={onOpenChange} overlayClassName="bg-black/92">
+      <DrawerContent className="border-white/15 bg-[hsl(222,20%,8%)] text-white shadow-2xl">
         <DrawerHeader className="text-left">
           <DrawerTitle className="text-white text-lg flex items-center gap-2">
             {appointment.service_name}
