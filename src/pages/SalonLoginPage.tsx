@@ -41,7 +41,8 @@ const PROFILES = [
 
 type ProfileId = (typeof PROFILES)[number]["id"];
 type Phase = "intro" | "gate" | "picker" | "login";
-const ENTRY_PASSWORD = import.meta.env.VITE_SALON_GATE_PASSWORD ?? "88888888";
+const ENTRY_PASSWORD = (import.meta.env.VITE_SALON_GATE_PASSWORD ?? "").trim();
+const SALON_GATE_ENABLED = ENTRY_PASSWORD.length > 0;
 
 // ── Responsive avatar size ───────────────────────────────────────────────────
 function calcAvatarPx(w: number, h: number): number {
@@ -518,10 +519,14 @@ export default function SalonLoginPage() {
     const enter = () => {
         setEntryPassword("");
         setShowEntryPwd(false);
-        setPhase("gate");
+        setPhase(SALON_GATE_ENABLED ? "gate" : "picker");
     };
     const unlockProfiles = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!SALON_GATE_ENABLED) {
+            setPhase("picker");
+            return;
+        }
         if (!entryPassword) return;
         if (entryPassword !== ENTRY_PASSWORD) {
             toast.error(t("salonLogin.toastGateWrongPassword"));
@@ -640,7 +645,7 @@ export default function SalonLoginPage() {
                                 </button>
 
                                 <p className="text-white/32 text-[10px] xs:text-[11px] tracking-[0.16em] uppercase mt-0.5">
-                                    {t("salonLogin.passwordHint")}
+                                    {SALON_GATE_ENABLED ? t("salonLogin.passwordHint") : ""}
                                 </p>
                             </div>
                         )}
@@ -648,7 +653,7 @@ export default function SalonLoginPage() {
                 )}
 
                 {/* ──────────── GATE ──────────── */}
-                {phase === "gate" && (
+                {phase === "gate" && SALON_GATE_ENABLED && (
                     <div
                         className="flex flex-col items-center gap-4 sm:gap-5 phd-slide w-full max-w-[300px] sm:max-w-sm"
                         style={{
