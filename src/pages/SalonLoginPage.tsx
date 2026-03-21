@@ -1,893 +1,809 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRef, useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { auth } from "@/integrations/firebase/config";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { toast } from "sonner";
-import { Eye, EyeOff, ChevronLeft, Sun, Moon } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  ChevronLeft,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  ShieldCheck,
+  Smartphone,
+  Users2,
+  type LucideIcon,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "@/components/LanguageToggle";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { LogoIcon } from "@/components/LogoIcon";
 
-// ── Profile definitions ──────────────────────────────────────────────────────
 const PROFILES = [
-    {
-        id: "papi",
-        label: "Papi",
-        role: "Majiteľ & Kaderník",
-        email: import.meta.env.VITE_PAPI_EMAIL ?? "",
-        color: "#C9A84C",
-        photo: "/papi.webp",
-        initials: "P",
-    },
-    {
-        id: "miska",
-        label: "Miska",
-        role: "Stylistka",
-        email: import.meta.env.VITE_MISKA_EMAIL ?? "",
-        color: "#B794F4", // Lighter Violet for better contrast
-        photo: "/miska.webp",
-        initials: "M",
-    },
-    {
-        id: "mato",
-        label: "Mato",
-        role: "Barber",
-        email: import.meta.env.VITE_MATO_EMAIL ?? "",
-        color: "#60A5FA", // Lighter Blue for better contrast
-        photo: "/mato.webp",
-        initials: "M",
-    },
+  {
+    id: "papi",
+    label: "Papi",
+    role: "Majiteľ & Kaderník",
+    email: import.meta.env.VITE_PAPI_EMAIL ?? "",
+    color: "#D7B465",
+    photo: "/papi.webp",
+    initials: "P",
+    summaryKey: "salonLogin.accessOwnerDesc",
+  },
+  {
+    id: "miska",
+    label: "Miska",
+    role: "Stylistka",
+    email: import.meta.env.VITE_MISKA_EMAIL ?? "",
+    color: "#C89B67",
+    photo: "/miska.webp",
+    initials: "M",
+    summaryKey: "salonLogin.accessStaffDesc",
+  },
+  {
+    id: "mato",
+    label: "Mato",
+    role: "Barber",
+    email: import.meta.env.VITE_MATO_EMAIL ?? "",
+    color: "#B98444",
+    photo: "/mato.webp",
+    initials: "M",
+    summaryKey: "salonLogin.accessStaffDesc",
+  },
 ] as const;
 
 type ProfileId = (typeof PROFILES)[number]["id"];
 type Phase = "intro" | "gate" | "picker" | "login";
+
 const ENTRY_PASSWORD = (import.meta.env.VITE_SALON_GATE_PASSWORD ?? "").trim();
 const SALON_GATE_ENABLED = ENTRY_PASSWORD.length > 0;
 
-// ── Responsive avatar size ───────────────────────────────────────────────────
-function calcAvatarPx(w: number, h: number): number {
-    const base = Math.min(w, h);
-    if (w < 375) return Math.min(220, Math.max(136, Math.round(base * 0.42)));
-    if (w < 640) return Math.min(260, Math.max(156, Math.round(base * 0.45)));
-    if (w < 1024) return Math.min(320, Math.max(196, Math.round(base * 0.42)));
-    return Math.min(420, Math.max(240, Math.round(base * 0.48)));
-}
-
-// ── Avatar ───────────────────────────────────────────────────────────────────
-function Avatar({
-    profile,
-    size = 120,
-}: {
-    profile: (typeof PROFILES)[number];
-    size?: number;
-}) {
-    if (profile.photo) {
-        return (
-            <img
-                src={profile.photo}
-                alt={profile.label}
-                draggable={false}
-                style={{ width: size, height: size }}
-                className="rounded-2xl object-cover select-none"
-            />
-        );
-    }
-    return (
-        <div
-            style={{
-                width: size,
-                height: size,
-                background: `radial-gradient(135deg, ${profile.color}55 0%, ${profile.color}22 100%)`,
-                border: `2px solid ${profile.color}66`,
-            }}
-            className="rounded-2xl flex items-center justify-center"
-        >
-            <span
-                style={{ color: profile.color, fontSize: size * 0.4 }}
-                className="font-bold select-none"
-            >
-                {profile.initials}
-            </span>
-        </div>
-    );
-}
-
-type StarPoint = {
-    x: number;
-    y: number;
-    radius: number;
-    alpha: number;
-    phase: number;
-    twinkleSpeed: number;
-    warm: boolean;
-};
-
-// ── Lightweight Starry Sky background (mobile-friendly, older devices) ──────
-function LiquidGoldBg({
-    mouseRef,
-    enabled,
-}: {
-    mouseRef: React.RefObject<[number, number]>;
-    enabled: boolean;
-}) {
-    const ref = useRef<HTMLCanvasElement>(null);
-
-    useEffect(() => {
-        if (!enabled) return;
-        const canvas = ref.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext("2d", { alpha: false });
-        if (!ctx) return;
-
-        const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-        const lowPowerClass = document.documentElement.classList.contains("phd-low-power");
-        const cores = navigator.hardwareConcurrency ?? 4;
-        const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4;
-        const isLowEnd = lowPowerClass || cores <= 2 || memory <= 2;
-
-        let cssW = 0;
-        let cssH = 0;
-        let stars: StarPoint[] = [];
-        let raf = 0;
-        let lastPaint = 0;
-        const targetFps = isLowEnd ? 18 : 28;
-        const minFrameMs = 1000 / targetFps;
-
-        const rebuildStars = () => {
-            const area = cssW * cssH;
-            const density = isLowEnd ? 26000 : 19000;
-            const maxStars = isLowEnd ? 120 : 190;
-            const count = Math.max(60, Math.min(maxStars, Math.floor(area / density)));
-            stars = Array.from({ length: count }, () => ({
-                x: Math.random() * cssW,
-                y: Math.random() * cssH,
-                radius: Math.random() * 1.4 + 0.35,
-                alpha: Math.random() * 0.55 + 0.25,
-                phase: Math.random() * Math.PI * 2,
-                twinkleSpeed: Math.random() * 1.1 + 0.35,
-                warm: Math.random() < 0.2,
-            }));
-        };
-
-        const resize = () => {
-            cssW = Math.max(1, window.innerWidth);
-            cssH = Math.max(1, window.innerHeight);
-            const dprCap = isLowEnd ? 1 : 1.5;
-            const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
-            canvas.width = Math.floor(cssW * dpr);
-            canvas.height = Math.floor(cssH * dpr);
-            canvas.style.width = `${cssW}px`;
-            canvas.style.height = `${cssH}px`;
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            rebuildStars();
-        };
-
-        const draw = (nowMs: number) => {
-            ctx.fillStyle = "#04060f";
-            ctx.fillRect(0, 0, cssW, cssH);
-
-            const gradient = ctx.createLinearGradient(0, 0, 0, cssH);
-            gradient.addColorStop(0, "rgba(14,19,38,0.65)");
-            gradient.addColorStop(1, "rgba(2,4,10,0.82)");
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, cssW, cssH);
-
-            const mx = mouseRef.current?.[0] ?? 0.5;
-            const my = mouseRef.current?.[1] ?? 0.5;
-            const shiftX = (mx - 0.5) * (isLowEnd ? 4 : 8);
-            const shiftY = (0.5 - my) * (isLowEnd ? 3 : 6);
-            const t = nowMs / 1000;
-
-            for (const s of stars) {
-                const twinkle = prefersReducedMotion ? 1 : 0.65 + Math.sin(t * s.twinkleSpeed + s.phase) * 0.35;
-                const alpha = Math.max(0.1, s.alpha * twinkle);
-                const x = (s.x + shiftX + cssW) % cssW;
-                const y = (s.y + shiftY + cssH) % cssH;
-                ctx.beginPath();
-                ctx.fillStyle = s.warm
-                    ? `rgba(230, 200, 130, ${alpha.toFixed(3)})`
-                    : `rgba(220, 235, 255, ${alpha.toFixed(3)})`;
-                ctx.arc(x, y, s.radius, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        };
-
-        const frame = (now: number) => {
-            raf = requestAnimationFrame(frame);
-            if (prefersReducedMotion) return;
-            if (now - lastPaint < minFrameMs) return;
-            lastPaint = now;
-            draw(now);
-        };
-
-        resize();
-        draw(performance.now());
-        window.addEventListener("resize", resize, { passive: true });
-        if (!prefersReducedMotion) {
-            raf = requestAnimationFrame(frame);
-        }
-
-        return () => {
-            cancelAnimationFrame(raf);
-            window.removeEventListener("resize", resize);
-        };
-    }, [enabled]);
-
-    if (!enabled) return null;
-
-    return (
-        <canvas
-            ref={ref}
-            aria-hidden="true"
-            style={{
-                position: "fixed",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                zIndex: 0,
-            }}
-        />
-    );
-}
-
-// ── NÁPAD 2: Venetian Overlay — barber blinds opening effect ─────────────────
-function VenetianOverlay({ active, strips = 14 }: { active: boolean; strips?: number }) {
-    if (!active) return null;
-    return (
-        <div
-            aria-hidden="true"
-            className="pointer-events-none fixed inset-0 overflow-hidden"
-            style={{ zIndex: 60 }}
-        >
-            {Array.from({ length: strips }, (_, i) => (
-                <div
-                    key={i}
-                    style={{
-                        position: "absolute",
-                        left: 0,
-                        right: 0,
-                        height: `${100 / strips}%`,
-                        top: `${(i / strips) * 100}%`,
-                        background: "#050505",
-                        transformOrigin: i % 2 === 0 ? "top center" : "bottom center",
-                        animation: `phd-blind 0.75s ${i * 0.052}s cubic-bezier(.22,1,.36,1) forwards`,
-                    }}
-                />
-            ))}
-        </div>
-    );
-}
-
-// ── NÁPAD 3: PickerCard — holographic 3D tilt member card ────────────────────
-function PickerCard({
-    p,
-    avatarPx,
-    sectionMode = false,
-    stacked = false,
-    compact = false,
-    onPick,
-}: {
-    p: (typeof PROFILES)[number];
-    avatarPx: number;
-    sectionMode?: boolean;
-    stacked?: boolean;
-    compact?: boolean;
-    onPick: (id: ProfileId) => void;
-}) {
-    const [tilt, setTilt] = useState({ x: 0, y: 0 });
-    const [hovered, setHovered] = useState(false);
-    const [canTilt, setCanTilt] = useState(false);
-
-    useEffect(() => {
-        const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-        const coarse = window.matchMedia?.("(pointer: coarse)").matches ?? false;
-        setCanTilt(!reduce && !coarse);
-    }, []);
-
-    const onMove = (e: React.MouseEvent<HTMLButtonElement>) => {
-        if (!canTilt) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        const cx = (e.clientX - rect.left) / rect.width - 0.5;
-        const cy = (e.clientY - rect.top) / rect.height - 0.5;
-        setTilt({ x: cx * 16, y: cy * -12 });
-    };
-
-    const holoAngle = 180 + tilt.x * 14;
-
-    return (
-        <button
-            onClick={() => onPick(p.id)}
-            onMouseMove={onMove}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => { setTilt({ x: 0, y: 0 }); setHovered(false); }}
-            className="group flex flex-col items-center gap-2 sm:gap-2.5 focus:outline-none relative overflow-hidden"
-            style={{
-                width: compact
-                    ? "clamp(108px, 29.2vw, 260px)"
-                    : sectionMode || stacked
-                    ? "min(92vw, 620px)"
-                    : "auto",
-                height: sectionMode
-                    ? "min(84vh, 860px)"
-                    : compact
-                    ? "min(36vh, 310px)"
-                    : stacked
-                    ? "min(34vh, 360px)"
-                    : undefined,
-                borderRadius: sectionMode || stacked ? "2rem" : "1.6rem",
-                padding: sectionMode
-                    ? "22px 20px 28px"
-                    : compact
-                    ? "12px 10px 14px"
-                    : stacked
-                    ? "18px 18px 22px"
-                    : "12px 12px 16px",
-                background: hovered
-                    ? `rgba(255,255,255,0.07)`
-                    : "rgba(255,255,255,0.04)",
-                backdropFilter: "blur(18px)",
-                WebkitBackdropFilter: "blur(18px)",
-                border: `1px solid ${hovered ? p.color + "60" : p.color + "28"}`,
-                boxShadow: hovered
-                    ? `0 20px 56px rgba(0,0,0,0.6), 0 0 40px ${p.color}28, inset 0 1px 0 ${p.color}28`
-                    : `0 8px 28px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.07)`,
-                transform: `perspective(650px) rotateY(${canTilt ? tilt.x : 0}deg) rotateX(${canTilt ? tilt.y : 0}deg) scale(${hovered ? 1.04 : 1}) translateY(${hovered ? -5 : 0}px)`,
-                transition: hovered
-                    ? "border .15s, box-shadow .15s, background .15s, transform .05s"
-                    : "border .4s, box-shadow .4s, background .4s, transform .55s cubic-bezier(.22,1,.36,1)",
-            }}
-        >
-            {/* Holographic iridescent overlay */}
-            <div
-                aria-hidden="true"
-                style={{
-                    position: "absolute",
-                    inset: 0,
-                    borderRadius: "inherit",
-                    background: `conic-gradient(from ${holoAngle}deg, #ff006644, #ffaa0055, #00ff6644, #00aaff55, #aa00ff44, #ff006644)`,
-                    mixBlendMode: "color-dodge",
-                    opacity: hovered ? 0.22 : 0,
-                    transition: "opacity .2s",
-                    pointerEvents: "none",
-                }}
-            />
-
-            {/* Light sweep shimmer on hover */}
-            <div
-                aria-hidden="true"
-                style={{
-                    position: "absolute",
-                    inset: 0,
-                    borderRadius: "inherit",
-                    background: `linear-gradient(${105 + tilt.x * 2}deg, transparent 35%, rgba(255,255,255,0.08) 50%, transparent 65%)`,
-                    opacity: hovered ? 1 : 0,
-                    transition: "opacity .2s",
-                    pointerEvents: "none",
-                }}
-            />
-
-            {/* Avatar with gradient overlay */}
-            <div className="relative rounded-[1.1rem] sm:rounded-[1.3rem] overflow-hidden">
-                <Avatar profile={p} size={avatarPx} />
-                <div
-                    className="absolute inset-0 transition-opacity duration-300"
-                    style={{
-                        background: `linear-gradient(to top, ${p.color}50 0%, transparent 58%)`,
-                        opacity: hovered ? 1 : 0,
-                    }}
-                />
-            </div>
-
-            {/* Name */}
-            <span
-                className={`${sectionMode ? "text-base sm:text-xl lg:text-2xl" : compact ? "text-[11px] sm:text-sm lg:text-base" : stacked ? "text-sm sm:text-lg lg:text-xl" : "text-xs sm:text-sm lg:text-base"} font-bold tracking-wider transition-colors duration-200`}
-                style={{ color: hovered ? "#ffffff" : "rgba(255,255,255,0.92)" }}
-            >
-                {p.label}
-            </span>
-
-            {/* Role label — new */}
-            <span
-                className={`${sectionMode ? "text-[11px] sm:text-xs" : compact ? "text-[9px] sm:text-[10px]" : stacked ? "text-[10px] sm:text-xs" : "text-[9px] sm:text-[10px]"} font-medium tracking-[0.14em] uppercase transition-colors duration-300`}
-                style={{ color: hovered ? p.color : "rgba(255,255,255,0.55)" }}
-            >
-                {p.role}
-            </span>
-        </button>
-    );
-}
-
-// ── Keyframes (inline style tag) ─────────────────────────────────────────────
 const STYLES = `
-  @keyframes phd-logo-in {
-    0%   { filter: blur(28px) brightness(.35); opacity: 0;    transform: scale(1.06); }
-    55%  { filter: blur(7px)  brightness(.82); opacity: .82;  transform: scale(1.02); }
-    100% { filter: blur(0px)  brightness(1);   opacity: 1;    transform: scale(1);    }
-  }
-  @keyframes phd-up {
+  @keyframes salon-fade-up {
     from { opacity: 0; transform: translateY(18px); }
-    to   { opacity: 1; transform: translateY(0);    }
+    to { opacity: 1; transform: translateY(0); }
   }
-  @keyframes phd-shimmer {
-    0%   { background-position: -220% center; }
-    100% { background-position:  220% center; }
+
+  @keyframes salon-glow-drift {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .72; }
+    50% { transform: translate3d(18px, -16px, 0) scale(1.08); opacity: 1; }
   }
-  @keyframes phd-glow {
-    0%,100% { box-shadow: 0 0 18px #C9A84C55, 0 0 42px #C9A84C22, inset 0 0 12px #C9A84C18; }
-    50%     { box-shadow: 0 0 30px #C9A84C99, 0 0 66px #C9A84C44, inset 0 0 20px #C9A84C33; }
+
+  .salon-fade-up {
+    animation: salon-fade-up .7s cubic-bezier(.22,1,.36,1) both;
   }
-  @keyframes phd-slide {
-    from { opacity: 0; transform: translateY(26px) scale(.97); }
-    to   { opacity: 1; transform: translateY(0) scale(1);      }
+
+  .salon-ambient {
+    animation: salon-glow-drift 14s ease-in-out infinite;
   }
-  @keyframes phd-particle {
-    0%   { opacity: 0; transform: translateY(0); }
-    20%  { opacity: 0.55; }
-    80%  { opacity: 0.18; }
-    100% { opacity: 0; transform: translateY(-80px); }
+
+  .salon-input::placeholder {
+    color: rgba(255, 255, 255, 0.38);
   }
-  @keyframes phd-spin { to { transform: rotate(360deg); } }
-  @keyframes phd-blind {
-    0%   { transform: scaleY(1); }
-    100% { transform: scaleY(0); }
-  }
-  .phd-logo  { animation: phd-logo-in 1.5s cubic-bezier(.22,1,.36,1) forwards; }
-  .phd-slide { animation: phd-slide   .6s  cubic-bezier(.22,1,.36,1) forwards; }
-  .phd-pwd-input::placeholder { color: rgba(201,168,76,0.65); }
-  .salon-surface-light {
-    background: radial-gradient(circle at 15% 15%, #ffffff 0%, #f8fafc 46%, #e2e8f0 100%);
-  }
-  .salon-surface-light .phd-pwd-input {
-    color: #0f172a !important;
-  }
-  .salon-surface-light .phd-pwd-input::placeholder {
-    color: rgba(15, 23, 42, 0.45) !important;
-  }
-  .salon-surface-light [class*="text-white"] {
-    color: rgba(15, 23, 42, 0.9) !important;
-  }
-  .salon-surface-light [style*="background: #ffffff0d"] {
-    background: rgba(15, 23, 42, 0.08) !important;
-  }
+
   @media (prefers-reduced-motion: reduce) {
-    .phd-logo, .phd-slide {
+    .salon-fade-up,
+    .salon-ambient {
       animation: none !important;
-      opacity: 1 !important;
-      filter: none !important;
-      transform: none !important;
     }
   }
 `;
 
-// ── Main component ────────────────────────────────────────────────────────────
-export default function SalonLoginPage() {
-    const { t } = useTranslation();
-    const navigate = useNavigate();
-    const [phase, setPhase] = useState<Phase>("intro");
-    const [animStep, setAnimStep] = useState(0);
-    const [selected, setSelected] = useState<ProfileId | null>(null);
-    const [entryPassword, setEntryPassword] = useState("");
-    const [password, setPassword] = useState("");
-    const [showPwd, setShowPwd] = useState(false);
-    const [showEntryPwd, setShowEntryPwd] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [surfaceMode, setSurfaceMode] = useState<"dark" | "light">("dark");
-    const [venetian, setVenetian] = useState(true);
-    const [avatarPx, setAvatarPx] = useState(() =>
-        typeof window !== "undefined" ? calcAvatarPx(window.innerWidth, window.innerHeight) : 180,
+type Profile = (typeof PROFILES)[number];
+
+function Avatar({ profile, size }: { profile: Profile; size: number }) {
+  if (profile.photo) {
+    return (
+      <img
+        src={profile.photo}
+        alt={profile.label}
+        draggable={false}
+        style={{ width: size, height: size }}
+        className="rounded-[1.3rem] object-cover select-none"
+      />
     );
-    const isLightSurface = surfaceMode === "light";
+  }
 
-    // NÁPAD 1: mouse ref for LiquidGoldBg parallax
-    const mouseRef = useRef<[number, number]>([0.5, 0.5]);
+  return (
+    <div
+      className="flex items-center justify-center rounded-[1.3rem] border"
+      style={{
+        width: size,
+        height: size,
+        borderColor: `${profile.color}55`,
+        background: `linear-gradient(135deg, ${profile.color}30 0%, rgba(10,10,10,.95) 100%)`,
+      }}
+    >
+      <span
+        className="text-3xl font-bold"
+        style={{ color: profile.color }}
+      >
+        {profile.initials}
+      </span>
+    </div>
+  );
+}
 
-    const profile = PROFILES.find((p) => p.id === selected) ?? null;
+function AccessFeature({
+  Icon,
+  title,
+  description,
+}: {
+  Icon: LucideIcon;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-[28px] border border-white/8 bg-white/[0.025] p-5 shadow-[0_18px_48px_-36px_rgba(0,0,0,0.9)]">
+      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border border-[#d7b465]/20 bg-[#d7b465]/10 text-[#d7b465]">
+        <Icon className="h-5 w-5" />
+      </div>
+      <h3 className="text-lg font-semibold text-white">{title}</h3>
+      <p className="mt-2 text-sm leading-7 text-white/58">{description}</p>
+    </div>
+  );
+}
 
-    // Intro animation timeline
-    useEffect(() => {
-        const t1 = setTimeout(() => setAnimStep(1), 1300); // electric
-        const t2 = setTimeout(() => setAnimStep(2), 2100); // button
-        return () => { clearTimeout(t1); clearTimeout(t2); };
-    }, []);
+function TeamProfileCard({
+  profile,
+  isLocked,
+  isActive,
+  statusLabel,
+  onPick,
+  summary,
+}: {
+  profile: Profile;
+  isLocked: boolean;
+  isActive: boolean;
+  statusLabel: string;
+  onPick: (id: ProfileId) => void;
+  summary: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={isLocked}
+      onClick={() => onPick(profile.id)}
+      className={`group relative overflow-hidden rounded-[30px] border text-left transition-all duration-300 ${
+        isActive
+          ? "border-[#d7b465]/55 bg-black/80 shadow-[0_22px_72px_-36px_rgba(215,180,101,0.35)]"
+          : "border-white/8 bg-white/[0.02] hover:-translate-y-1 hover:border-[#d7b465]/28 hover:bg-white/[0.04]"
+      } ${isLocked ? "cursor-not-allowed opacity-75" : ""}`}
+    >
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_44%)]" />
+      <div
+        className="absolute -right-10 top-[-3.5rem] h-40 w-40 rounded-full blur-3xl"
+        style={{ background: `${profile.color}18` }}
+      />
+      <div className="absolute bottom-0 right-0 h-16 w-16 bg-[linear-gradient(135deg,transparent_0%,transparent_38%,rgba(215,180,101,0.95)_39%,rgba(215,180,101,0.78)_100%)]" />
 
-    // NÁPAD 2: venetian blinds reveal on page load
-    useEffect(() => {
-        // 14 strips × 0.052s delay + 0.75s animation ≈ 1.48s total — add 220ms buffer
-        const t = setTimeout(() => setVenetian(false), 1700);
-        return () => clearTimeout(t);
-    }, []);
+      <div className="relative flex h-full flex-col gap-5 p-5">
+        <div className="flex items-center justify-between gap-3">
+          <span
+            className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] ${
+              isActive
+                ? "border-[#d7b465]/35 bg-[#d7b465]/10 text-[#e8cb88]"
+                : "border-white/10 bg-black/35 text-white/45"
+            }`}
+          >
+            {statusLabel}
+          </span>
+          <ArrowRight
+            className={`h-4 w-4 transition-transform duration-300 ${
+              isLocked ? "text-white/20" : "text-[#d7b465] group-hover:translate-x-1"
+            }`}
+          />
+        </div>
 
-    // NÁPAD 1: track mouse position (normalized 0–1) for LiquidGoldBg
-    useEffect(() => {
-        const onMove = (e: MouseEvent) => {
-            mouseRef.current = [
-                e.clientX / window.innerWidth,
-                1.0 - e.clientY / window.innerHeight,
-            ];
-        };
-        window.addEventListener("mousemove", onMove, { passive: true });
-        return () => window.removeEventListener("mousemove", onMove);
-    }, []);
+        <div className="flex items-center gap-4">
+          <Avatar profile={profile} size={88} />
+          <div className="min-w-0">
+            <h3 className="truncate text-2xl font-semibold tracking-tight text-white">
+              {profile.label}
+            </h3>
+            <p
+              className="mt-1 text-[11px] font-medium uppercase tracking-[0.24em]"
+              style={{ color: profile.color }}
+            >
+              {profile.role}
+            </p>
+          </div>
+        </div>
 
-    // Responsive avatar sizing
-    useEffect(() => {
-        const onResize = () => setAvatarPx(calcAvatarPx(window.innerWidth, window.innerHeight));
-        window.addEventListener("resize", onResize, { passive: true });
-        return () => window.removeEventListener("resize", onResize);
-    }, []);
+        <p className="max-w-[32ch] text-sm leading-7 text-white/58">{summary}</p>
+      </div>
+    </button>
+  );
+}
 
-    const enter = () => {
-        setEntryPassword("");
-        setShowEntryPwd(false);
-        setPhase(SALON_GATE_ENABLED ? "gate" : "picker");
-    };
-    const unlockProfiles = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!SALON_GATE_ENABLED) {
-            setPhase("picker");
-            return;
-        }
-        if (!entryPassword) return;
-        if (entryPassword !== ENTRY_PASSWORD) {
-            toast.error(t("salonLogin.toastGateWrongPassword"));
-            setEntryPassword("");
-            return;
-        }
-        setEntryPassword("");
-        setShowEntryPwd(false);
-        setPhase("picker");
-    };
-    const pick = (id: ProfileId) => { setSelected(id); setPhase("login"); setPassword(""); };
-    const goBack = () => { setSelected(null); setPhase("picker"); setPassword(""); };
+export default function SalonLoginPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [phase, setPhase] = useState<Phase>(SALON_GATE_ENABLED ? "intro" : "picker");
+  const [selected, setSelected] = useState<ProfileId | null>(null);
+  const [entryPassword, setEntryPassword] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [showEntryPwd, setShowEntryPwd] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const teamRef = useRef<HTMLElement | null>(null);
 
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!profile || !password) return;
-        if (!profile.email) {
-            toast.error(t("salonLogin.toastEmailMissing", { name: profile.label }));
-            return;
-        }
-        setLoading(true);
-        try {
-            await signInWithEmailAndPassword(auth, profile.email, password);
-        } catch {
-            toast.error(t("salonLogin.toastWrongPassword"));
-            setPassword(""); setLoading(false);
-            return;
-        }
-        toast.success(t("salonLogin.toastWelcome", { name: profile.label }));
-        navigate("/admin/calendar");
-    };
+  const profile = PROFILES.find((item) => item.id === selected) ?? null;
+  const isUnlocked = !SALON_GATE_ENABLED || phase === "picker" || phase === "login";
+
+  const heroStats = [
+    {
+      Icon: ShieldCheck,
+      title: t("salonLogin.heroStatOwnerTitle"),
+      description: t("salonLogin.heroStatOwnerDesc"),
+    },
+    {
+      Icon: Users2,
+      title: t("salonLogin.heroStatTeamTitle"),
+      description: t("salonLogin.heroStatTeamDesc"),
+    },
+    {
+      Icon: Smartphone,
+      title: t("salonLogin.heroStatMobileTitle"),
+      description: t("salonLogin.heroStatMobileDesc"),
+    },
+  ];
+
+  const accessFeatures = [
+    {
+      Icon: ShieldCheck,
+      title: t("salonLogin.accessOwnerTitle"),
+      description: t("salonLogin.accessOwnerDesc"),
+    },
+    {
+      Icon: Users2,
+      title: t("salonLogin.accessStaffTitle"),
+      description: t("salonLogin.accessStaffDesc"),
+    },
+    {
+      Icon: CalendarDays,
+      title: t("salonLogin.accessMobileTitle"),
+      description: t("salonLogin.accessMobileDesc"),
+    },
+  ];
+
+  const scrollToSection = (ref: { current: HTMLElement | HTMLDivElement | null }) => {
+    window.setTimeout(() => {
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
+
+  const openTeamAccess = () => {
+    if (SALON_GATE_ENABLED) {
+      setPhase("gate");
+      scrollToSection(panelRef);
+      return;
+    }
+
+    setPhase("picker");
+    scrollToSection(teamRef);
+  };
+
+  const unlockProfiles = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!SALON_GATE_ENABLED) {
+      setPhase("picker");
+      return;
+    }
+
+    if (entryPassword.trim() !== ENTRY_PASSWORD) {
+      toast.error(t("salonLogin.toastGateWrongPassword"));
+      return;
+    }
+
+    setEntryPassword("");
+    setShowEntryPwd(false);
+    setPhase("picker");
+    scrollToSection(teamRef);
+  };
+
+  const pickProfile = (id: ProfileId) => {
+    setSelected(id);
+    setPassword("");
+    setShowPwd(false);
+    setPhase("login");
+    scrollToSection(panelRef);
+  };
+
+  const backToIntro = () => {
+    setEntryPassword("");
+    setShowEntryPwd(false);
+    setPhase("intro");
+    setSelected(null);
+    setPassword("");
+  };
+
+  const backToProfiles = () => {
+    setSelected(null);
+    setPassword("");
+    setShowPwd(false);
+    setLoading(false);
+    setPhase("picker");
+    scrollToSection(teamRef);
+  };
+
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!profile || !password) {
+      return;
+    }
+
+    if (!profile.email) {
+      toast.error(t("salonLogin.toastEmailMissing", { name: profile.label }));
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await signInWithEmailAndPassword(auth, profile.email, password);
+      toast.success(t("salonLogin.toastWelcome", { name: profile.label }));
+      navigate("/admin/calendar");
+    } catch {
+      toast.error(t("salonLogin.toastWrongPassword"));
+      setPassword("");
+      setLoading(false);
+    }
+  };
+
+  const renderPanelContent = () => {
+    if (phase === "intro") {
+      return (
+        <div className="space-y-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#d7b465]/18 bg-[#d7b465]/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#d7b465]">
+            <LockKeyhole className="h-4 w-4" />
+            {t("salonLogin.gateTitle")}
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              {t("salonLogin.introTitle")}
+            </h2>
+            <p className="max-w-xl text-sm leading-7 text-white/62 sm:text-base">
+              {t("salonLogin.introDesc")}
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+            {[t("salonLogin.introStepGate"), t("salonLogin.introStepPick"), t("salonLogin.introStepLogin")].map(
+              (step, index) => (
+                <div
+                  key={step}
+                  className="rounded-2xl border border-white/8 bg-black/35 p-4"
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/35">
+                    0{index + 1}
+                  </p>
+                  <p className="mt-3 text-sm font-semibold text-white">{step}</p>
+                </div>
+              ),
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={openTeamAccess}
+              className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#b98a33] via-[#d7b465] to-[#f0d78c] px-6 text-sm font-bold uppercase tracking-[0.2em] text-[#140d00] shadow-[0_16px_40px_-20px_rgba(215,180,101,0.7)] transition-transform hover:scale-[1.01]"
+            >
+              {t("salonLogin.primaryCta")}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/booking")}
+              className="inline-flex min-h-[52px] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] px-6 text-sm font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:border-[#d7b465]/28 hover:bg-white/[0.05]"
+            >
+              {t("salonLogin.bookingShortcut")}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (phase === "gate") {
+      return (
+        <div className="space-y-6">
+          <button
+            type="button"
+            onClick={backToIntro}
+            className="inline-flex min-h-[44px] items-center gap-1 text-sm text-white/45 transition-colors hover:text-white/78"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            {t("salonLogin.back")}
+          </button>
+
+          <div className="space-y-3">
+            <h2 className="text-3xl font-bold tracking-tight text-white">
+              {t("salonLogin.gateTitle")}
+            </h2>
+            <p className="text-sm leading-7 text-white/62 sm:text-base">
+              {t("salonLogin.gateHint")}
+            </p>
+          </div>
+
+          <form onSubmit={unlockProfiles} className="space-y-4">
+            <div className="flex items-center rounded-2xl border border-[#d7b465]/32 bg-black/45">
+              <input
+                type={showEntryPwd ? "text" : "password"}
+                autoFocus
+                value={entryPassword}
+                onChange={(event) => setEntryPassword(event.target.value)}
+                placeholder={t("salonLogin.gatePlaceholder")}
+                className="salon-input min-h-[54px] flex-1 bg-transparent px-4 text-sm text-white outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowEntryPwd((value) => !value)}
+                className="inline-flex min-h-[54px] min-w-[54px] items-center justify-center text-white/38 transition-colors hover:text-white/72"
+                aria-label={showEntryPwd ? "Skryť heslo" : "Zobraziť heslo"}
+              >
+                {showEntryPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              disabled={!entryPassword.trim()}
+              className="inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#b98a33] via-[#d7b465] to-[#f0d78c] px-6 text-sm font-bold uppercase tracking-[0.2em] text-[#140d00] shadow-[0_16px_40px_-20px_rgba(215,180,101,0.7)] transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t("salonLogin.gateButton")}
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    if (phase === "picker") {
+      return (
+        <div className="space-y-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#d7b465]/18 bg-[#d7b465]/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#d7b465]">
+            <Users2 className="h-4 w-4" />
+            {t("salonLogin.teamTitle")}
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-3xl font-bold tracking-tight text-white">
+              {t("salonLogin.pickerTitle")}
+            </h2>
+            <p className="text-sm leading-7 text-white/62 sm:text-base">
+              {t("salonLogin.pickerDesc")}
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+            {PROFILES.map((member) => (
+              <div
+                key={member.id}
+                className="rounded-2xl border border-white/8 bg-black/35 p-4 text-left"
+              >
+                <p className="text-sm font-semibold text-white">{member.label}</p>
+                <p
+                  className="mt-2 text-[11px] uppercase tracking-[0.24em]"
+                  style={{ color: member.color }}
+                >
+                  {member.role}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => scrollToSection(teamRef)}
+            className="inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] px-6 text-sm font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:border-[#d7b465]/28 hover:bg-white/[0.05]"
+          >
+            {t("salonLogin.chooseProfile")}
+          </button>
+        </div>
+      );
+    }
 
     return (
-        <div
-            className={`h-screen min-h-screen max-h-screen flex flex-col items-center overflow-hidden relative safe-y ${isLightSurface ? "salon-surface-light" : ""}`}
-            style={{ background: isLightSurface ? "#f8fafc" : "#050505" }}
+      <div className="space-y-6">
+        <button
+          type="button"
+          onClick={backToProfiles}
+          className="inline-flex min-h-[44px] items-center gap-1 text-sm text-white/45 transition-colors hover:text-white/78"
         >
-            <style>{STYLES}</style>
+          <ChevronLeft className="h-4 w-4" />
+          {t("salonLogin.back")}
+        </button>
 
-            {/* Lightweight starry sky background */}
-            <LiquidGoldBg mouseRef={mouseRef} enabled={!isLightSurface} />
-
-            <div className="fixed top-4 right-4 z-[70] flex items-center gap-1">
-                <button
-                    type="button"
-                    onClick={() => setSurfaceMode((prev) => (prev === "dark" ? "light" : "dark"))}
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-white/20 bg-white/10 px-3 text-white/85 backdrop-blur-md transition hover:bg-white/20"
-                    aria-label={isLightSurface ? "Prepnúť na tmavé pozadie" : "Prepnúť na svetlé pozadie"}
-                    title={isLightSurface ? "Tmavé pozadie" : "Svetlé pozadie"}
+        {profile && (
+          <>
+            <div className="flex items-center gap-4 rounded-[28px] border border-white/8 bg-black/35 p-4">
+              <Avatar profile={profile} size={88} />
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/35">
+                  {t("salonLogin.selectedBadge")}
+                </p>
+                <h2 className="mt-2 truncate text-2xl font-semibold text-white">
+                  {profile.label}
+                </h2>
+                <p
+                  className="mt-1 text-[11px] uppercase tracking-[0.24em]"
+                  style={{ color: profile.color }}
                 >
-                    {isLightSurface ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                  {profile.role}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-2xl font-bold tracking-tight text-white">
+                {t("salonLogin.loginTitle", { name: profile.label })}
+              </h3>
+              <p className="text-sm leading-7 text-white/62 sm:text-base">
+                {t("salonLogin.loginDesc")}
+              </p>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="flex items-center rounded-2xl border bg-black/45" style={{ borderColor: `${profile.color}4f` }}>
+                <input
+                  type={showPwd ? "text" : "password"}
+                  autoComplete="current-password"
+                  autoFocus
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder={t("salonLogin.passwordPlaceholder")}
+                  className="salon-input min-h-[54px] flex-1 bg-transparent px-4 text-sm text-white outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((value) => !value)}
+                  className="inline-flex min-h-[54px] min-w-[54px] items-center justify-center text-white/38 transition-colors hover:text-white/72"
+                  aria-label={showPwd ? "Skryť heslo" : "Zobraziť heslo"}
+                >
+                  {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
-                <LanguageToggle />
-                <ThemeToggle />
-            </div>
+              </div>
 
-            {/* NÁPAD 2: Venetian blinds opening on page load */}
-            <VenetianOverlay active={venetian} strips={14} />
-
-            {/* ═══════════════════════════════════════════════════════════════
-                ROW A — Logo zone
-                ═══════════════════════════════════════════════════════════════ */}
-            <div className="shrink-0 flex flex-col items-center select-none z-10 w-full pt-[15px] lg:pt-0 lg:-mt-[40px]">
-                <img
-                    src="https://papihairdesign.sk/images/logo-header.webp"
-                    alt="Papi Hair Design"
-                    draggable={false}
-                    className={[
-                        "phd-logo h-auto object-contain object-bottom",
-                        "w-[75vw] xs:w-[74vw] sm:w-[66vw] md:w-[58vw] lg:w-[52vw] xl:w-[46vw] 2xl:w-[40vw]",
-                        "max-w-[1200px] min-w-[280px]",
-                        "-mb-8 xs:-mb-10 sm:-mb-12 md:-mb-14 lg:-mb-16 xl:-mb-20",
-                    ].join(" ")}
-                />
-                <span className="relative z-10 text-[10px] xs:text-xs tracking-widest uppercase text-white/30">
-                    Salon Management
-                </span>
-            </div>
-
-            {/* ═══════════════════════════════════════════════════════════════
-                ROW B — Phase content
-                ═══════════════════════════════════════════════════════════════ */}
-            <div
-                className={`flex-1 min-h-0 w-full flex flex-col items-center z-10 ${
-                    phase === "picker"
-                        ? "justify-start overflow-y-auto px-0 pb-4"
-                        : "justify-center overflow-y-auto px-5 pb-7"
-                }`}
-            >
-
-                {/* ──────────── INTRO ──────────── */}
-                {phase === "intro" && (
-                    <div className="w-full flex flex-col items-center">
-                        {animStep >= 2 && (
-                            <div
-                                className="flex flex-col items-center gap-3 mt-5 sm:mt-7 w-full"
-                                style={{
-                                    opacity: 0,
-                                    animation: "phd-up .75s .08s cubic-bezier(.22,1,.36,1) forwards",
-                                }}
-                            >
-                                <button
-                                    onClick={enter}
-                                    className="w-full max-w-[280px] sm:max-w-xs py-[15px] rounded-2xl font-bold text-[12px] sm:text-[13px] tracking-[0.18em] uppercase overflow-hidden select-none min-h-[44px]"
-                                    style={{
-                                        background:
-                                            "linear-gradient(270deg,#7A530E 0%,#C9A84C 22%,#F7E070 50%,#C9A84C 78%,#7A530E 100%)",
-                                        backgroundSize: "300% 100%",
-                                        animation:
-                                            "phd-shimmer 2.8s linear infinite, phd-glow 2.5s ease-in-out infinite",
-                                        color: "#1A0D00",
-                                        textShadow: "0 1px 0 rgba(255,255,255,0.38)",
-                                    }}
-                                >
-                                    {t("salonLogin.enterBtn")}
-                                </button>
-
-                                <p className="text-white/32 text-[10px] xs:text-[11px] tracking-[0.16em] uppercase mt-0.5">
-                                    {SALON_GATE_ENABLED ? t("salonLogin.passwordHint") : ""}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* ──────────── GATE ──────────── */}
-                {phase === "gate" && SALON_GATE_ENABLED && (
-                    <div
-                        className="flex flex-col items-center gap-4 sm:gap-5 phd-slide w-full max-w-[300px] sm:max-w-sm"
-                        style={{
-                            background: "rgba(255,255,255,0.05)",
-                            backdropFilter: "blur(24px)",
-                            WebkitBackdropFilter: "blur(24px)",
-                            border: "1px solid rgba(201,168,76,0.35)",
-                            borderRadius: "24px",
-                            padding: "28px 22px 24px",
-                            boxShadow: "0 16px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(201,168,76,0.12) inset",
-                        }}
-                    >
-                        <button
-                            onClick={() => setPhase("intro")}
-                            className="self-start flex items-center gap-1 min-h-[44px] text-white/40 hover:text-white/70 text-sm transition-colors"
-                        >
-                            <ChevronLeft size={16} />
-                            {t("salonLogin.back")}
-                        </button>
-
-                        <div className="flex flex-col items-center gap-1.5 text-center">
-                            <h2 className="text-white text-lg sm:text-xl font-bold tracking-wide">
-                                {t("salonLogin.gateTitle")}
-                            </h2>
-                            <p className="text-white/55 text-xs">
-                                {t("salonLogin.gateHint")}
-                            </p>
-                        </div>
-
-                        <form onSubmit={unlockProfiles} className="w-full flex flex-col gap-3">
-                            <div
-                                className="flex items-center rounded-xl overflow-hidden border transition-colors"
-                                style={{
-                                    background: "#ffffff0d",
-                                    borderColor: "rgba(201,168,76,0.55)",
-                                }}
-                            >
-                                <input
-                                    type={showEntryPwd ? "text" : "password"}
-                                    placeholder={t("salonLogin.gatePlaceholder")}
-                                    autoFocus
-                                    value={entryPassword}
-                                    onChange={(e) => setEntryPassword(e.target.value)}
-                                    className="flex-1 bg-transparent py-3 px-4 text-white outline-none text-sm phd-pwd-input"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowEntryPwd((v) => !v)}
-                                    className="px-4 min-h-[44px] flex items-center text-white/30 hover:text-white/60 transition-colors"
-                                >
-                                    {showEntryPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                                </button>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={!entryPassword}
-                                className="w-full py-3 rounded-xl font-semibold text-sm tracking-widest uppercase transition-all duration-200 disabled:opacity-40 min-h-[44px]"
-                                style={{
-                                    background: entryPassword
-                                        ? "linear-gradient(135deg, #C9A84C 0%, #E6C970 100%)"
-                                        : "#ffffff11",
-                                    color: entryPassword ? "#0d0d0d" : "#ffffff44",
-                                    boxShadow: "0 8px 32px -4px rgba(201,168,76,0.5)",
-                                }}
-                            >
-                                {t("salonLogin.gateButton")}
-                            </button>
-                        </form>
-                    </div>
-                )}
-
-                {/* ──────────── PICKER ──────────── */}
-                {phase === "picker" && (
-                    <div className="phd-slide w-full flex flex-col">
-                        <div className="w-full max-w-[560px] mx-auto px-4 sm:px-6 pt-0 -mt-1 sm:-mt-2">
-                            <p
-                                className="text-[11px] sm:text-xs text-center italic leading-relaxed"
-                                style={{
-                                    color: "rgba(201,168,76,0.62)",
-                                    textShadow: "0 0 18px rgba(201,168,76,0.22)",
-                                }}
-                            >
-                                {t("salonLogin.quote")}
-                            </p>
-                            <p className="mt-2 text-center text-[10px] sm:text-xs uppercase tracking-[0.16em] text-white/45">
-                                Potiahnite nižšie a vyberte člena tímu
-                            </p>
-                        </div>
-
-                        <div className="w-full max-w-[1120px] mx-auto mt-2 px-2 sm:px-4 pb-4 flex flex-row flex-nowrap items-start justify-center gap-2 sm:gap-3 md:gap-4 overflow-hidden">
-                            {PROFILES.map((p) => (
-                                <section key={p.id} className="flex items-start justify-center">
-                                    <PickerCard
-                                        p={p}
-                                        avatarPx={Math.min(Math.max(Math.round(avatarPx * 0.44), 86), 170)}
-                                        compact
-                                        onPick={pick}
-                                    />
-                                </section>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* ──────────── LOGIN ──────────── */}
-                {phase === "login" && profile && (
-                    <div
-                        className="flex flex-col items-center gap-4 sm:gap-5 phd-slide w-full max-w-[300px] sm:max-w-sm"
-                        style={{
-                            background: "rgba(255,255,255,0.05)",
-                            backdropFilter: "blur(24px)",
-                            WebkitBackdropFilter: "blur(24px)",
-                            border: `1px solid ${profile.color}30`,
-                            borderRadius: "24px",
-                            padding: "28px 22px 24px",
-                            boxShadow: `0 16px 48px rgba(0,0,0,0.55), 0 0 0 1px ${profile.color}14 inset`,
-                        }}
-                    >
-                        <button
-                            onClick={goBack}
-                            className="self-start flex items-center gap-1 min-h-[44px] text-white/40 hover:text-white/70 text-sm transition-colors"
-                        >
-                            <ChevronLeft size={16} />
-                            {t("salonLogin.back")}
-                        </button>
-
-                        <div
-                            className="rounded-2xl overflow-hidden"
-                            style={{
-                                boxShadow: `0 0 0 2px ${profile.color}, 0 0 44px ${profile.color}55`,
-                            }}
-                        >
-                            <Avatar profile={profile} size={80} />
-                        </div>
-
-                        <div className="flex flex-col items-center gap-0.5">
-                            <h2 className="text-white text-lg sm:text-xl font-bold tracking-wide">
-                                {profile.label}
-                            </h2>
-                            <span
-                                className="text-[10px] tracking-[0.14em] uppercase font-medium"
-                                style={{ color: profile.color }}
-                            >
-                                {profile.role}
-                            </span>
-                        </div>
-
-                        <form onSubmit={handleLogin} className="w-full flex flex-col gap-3">
-                            <div
-                                className="flex items-center rounded-xl overflow-hidden border transition-colors"
-                                style={{
-                                    background: "#ffffff0d",
-                                    borderColor: `${profile.color}55`,
-                                }}
-                            >
-                                <input
-                                    type={showPwd ? "text" : "password"}
-                                    placeholder={t("salonLogin.passwordPlaceholder")}
-                                    autoFocus
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="flex-1 bg-transparent py-3 px-4 text-white outline-none text-sm phd-pwd-input"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPwd((v) => !v)}
-                                    className="px-4 min-h-[44px] flex items-center text-white/30 hover:text-white/60 transition-colors"
-                                >
-                                    {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                                </button>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={!password || loading}
-                                className="w-full py-3 rounded-xl font-semibold text-sm tracking-widest uppercase transition-all duration-200 disabled:opacity-40 min-h-[44px]"
-                                style={{
-                                    background: password
-                                        ? `linear-gradient(135deg, ${profile.color} 0%, ${profile.color}99 100%)`
-                                        : "#ffffff11",
-                                    color: password ? "#0d0d0d" : "#ffffff44",
-                                    boxShadow: `0 8px 32px -4px ${profile.color}40`,
-                                }}
-                            >
-                                {loading ? "..." : t("salonLogin.loginBtn")}
-                            </button>
-                        </form>
-                    </div>
-                )}
-            </div>
-
-            {/* CSS gold particles */}
-            {([
-                { left: "8%", bottom: "25%", size: 2, dur: "12s", delay: "0s" },
-                { left: "18%", bottom: "10%", size: 1, dur: "9s", delay: "2.5s" },
-                { left: "32%", bottom: "32%", size: 2, dur: "15s", delay: "1s" },
-                { left: "45%", bottom: "8%", size: 1, dur: "11s", delay: "3.5s" },
-                { left: "58%", bottom: "20%", size: 2, dur: "13s", delay: "0.5s" },
-                { left: "70%", bottom: "5%", size: 1, dur: "10s", delay: "4s" },
-                { left: "82%", bottom: "28%", size: 2, dur: "14s", delay: "2s" },
-                { left: "91%", bottom: "14%", size: 1, dur: "8s", delay: "6s" },
-            ] as const).map((pt, i) => (
-                <div
-                    key={i}
-                    aria-hidden="true"
-                    className="pointer-events-none absolute"
-                    style={{
-                        left: pt.left,
-                        bottom: pt.bottom,
-                        width: pt.size,
-                        height: pt.size,
-                        borderRadius: "50%",
-                        background: "#C9A84C",
-                        boxShadow: `0 0 ${pt.size * 3}px #C9A84C99`,
-                        animation: `phd-particle ${pt.dur} ${pt.delay} infinite ease-in-out`,
-                        zIndex: 10,
-                    }}
-                />
-            ))}
-
-            {/* Copyright */}
-            <div
-                aria-hidden="true"
-                className="absolute bottom-0 w-full text-center z-10 select-none pointer-events-none"
+              <button
+                type="submit"
+                disabled={!password || loading}
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl px-6 text-sm font-bold uppercase tracking-[0.2em] text-[#140d00] shadow-[0_16px_40px_-20px_rgba(215,180,101,0.7)] transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
                 style={{
-                    paddingBottom: "max(6px, env(safe-area-inset-bottom))",
-                    color: "rgba(255,255,255,0.11)",
-                    fontSize: "9px",
-                    letterSpacing: "0.14em",
+                  background: `linear-gradient(135deg, ${profile.color} 0%, #f0d78c 100%)`,
                 }}
-            >
-                © {new Date().getFullYear()} PAPI HAIR DESIGN. ALL RIGHTS RESERVED.
-            </div>
-        </div>
+              >
+                {loading ? t("common.loading") : t("salonLogin.loginBtn")}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
     );
+  };
+
+  return (
+    <div className="relative min-h-[100dvh] overflow-x-hidden bg-[#040404] text-white">
+      <style>{STYLES}</style>
+
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="salon-ambient absolute -left-20 top-20 h-72 w-72 rounded-full bg-[#d7b465]/10 blur-3xl" />
+        <div
+          className="salon-ambient absolute right-[-4rem] top-[18rem] h-80 w-80 rounded-full bg-[#8a5b26]/12 blur-3xl"
+          style={{ animationDelay: "-6s" }}
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(215,180,101,0.14),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent_16%),linear-gradient(180deg,#030303_0%,#070707_48%,#030303_100%)]" />
+      </div>
+
+      <header className="relative z-20 border-b border-white/8 bg-black/72 backdrop-blur-sm">
+        <div
+          className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8"
+          style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
+        >
+          <Link
+            to="/"
+            className="inline-flex items-center gap-3 rounded-full border border-white/6 bg-white/[0.02] px-3 py-2 transition-colors hover:border-[#d7b465]/20 hover:bg-white/[0.04]"
+          >
+            <LogoIcon size="md" className="shadow-[0_0_24px_rgba(215,180,101,0.18)]" />
+            <div className="text-left">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white">
+                PAPI HAIR
+              </p>
+              <p className="text-[10px] uppercase tracking-[0.28em] text-[#d7b465]">
+                DESIGN
+              </p>
+            </div>
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate("/booking")}
+              className="hidden min-h-[44px] items-center rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:border-[#d7b465]/24 hover:bg-white/[0.05] sm:inline-flex"
+            >
+              {t("salonLogin.bookingShortcut")}
+            </button>
+            <LanguageToggle />
+          </div>
+        </div>
+      </header>
+
+      <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pb-12 pt-6 sm:px-6 lg:px-8 lg:pb-16 lg:pt-8">
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.04fr)_minmax(360px,0.96fr)]">
+          <div className="salon-fade-up relative overflow-hidden rounded-[34px] border border-[#d7b465]/18 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-6 shadow-[0_28px_90px_-54px_rgba(215,180,101,0.32)] sm:p-8 lg:p-10">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(215,180,101,0.16),transparent_34%),linear-gradient(140deg,rgba(255,255,255,0.04),transparent_42%)]" />
+
+            <div className="relative flex h-full flex-col justify-between gap-8">
+              <div className="space-y-6">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#d7b465]/18 bg-[#d7b465]/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#d7b465]">
+                  <LockKeyhole className="h-4 w-4" />
+                  {t("salonLogin.heroEyebrow")}
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-4xl font-bold uppercase tracking-[0.18em] text-white sm:text-5xl xl:text-6xl">
+                      PAPI HAIR
+                    </p>
+                    <p className="mt-2 text-xl font-light uppercase tracking-[0.34em] text-[#d7b465] sm:text-2xl">
+                      DESIGN
+                    </p>
+                  </div>
+
+                  <h1 className="max-w-3xl text-3xl font-bold tracking-tight text-white sm:text-4xl xl:text-5xl">
+                    {t("salonLogin.heroTitle")}
+                  </h1>
+
+                  <p className="max-w-2xl text-base leading-7 text-white/68 sm:text-lg">
+                    {t("salonLogin.heroDesc")}
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {heroStats.map((item) => (
+                    <div
+                      key={item.title}
+                      className="rounded-2xl border border-white/8 bg-black/35 p-4"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#d7b465]/16 bg-[#d7b465]/10 text-[#d7b465]">
+                        <item.Icon className="h-4 w-4" />
+                      </div>
+                      <p className="mt-4 text-sm font-semibold text-white">{item.title}</p>
+                      <p className="mt-2 text-sm leading-6 text-white/55">{item.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex -space-x-3">
+                    {PROFILES.map((member) => (
+                      <div
+                        key={member.id}
+                        className="rounded-[1rem] border-2 border-[#040404] bg-black shadow-[0_0_18px_rgba(0,0,0,0.45)]"
+                      >
+                        <Avatar profile={member} size={54} />
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{t("salonLogin.teamTitle")}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.2em] text-white/40">
+                      3 profiles · booking · calendar
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={openTeamAccess}
+                    className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#b98a33] via-[#d7b465] to-[#f0d78c] px-6 text-sm font-bold uppercase tracking-[0.2em] text-[#140d00] shadow-[0_16px_40px_-20px_rgba(215,180,101,0.7)] transition-transform hover:scale-[1.01]"
+                  >
+                    {t("salonLogin.primaryCta")}
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/booking")}
+                    className="inline-flex min-h-[52px] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] px-6 text-sm font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:border-[#d7b465]/28 hover:bg-white/[0.05]"
+                  >
+                    {t("salonLogin.bookingShortcut")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside
+            ref={panelRef}
+            className="salon-fade-up lg:sticky lg:top-24"
+            style={{ animationDelay: "0.08s" }}
+          >
+            <div className="relative overflow-hidden rounded-[34px] border border-white/8 bg-[#080808] p-6 shadow-[0_26px_88px_-56px_rgba(0,0,0,0.95)] sm:p-8">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(215,180,101,0.14),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_46%)]" />
+              <div className="relative">{renderPanelContent()}</div>
+            </div>
+          </aside>
+        </section>
+
+        <section
+          ref={teamRef}
+          className="salon-fade-up space-y-5"
+          style={{ animationDelay: "0.14s" }}
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#d7b465]/80">
+                {t("salonLogin.teamTitle")}
+              </p>
+              <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                {t("salonLogin.teamTitle")}
+              </h2>
+              <p className="max-w-2xl text-sm leading-7 text-white/58 sm:text-base">
+                {isUnlocked ? t("salonLogin.teamDescReady") : t("salonLogin.teamDescLocked")}
+              </p>
+            </div>
+
+            <Link
+              to="/"
+              className="inline-flex min-h-[44px] items-center rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:border-[#d7b465]/24 hover:bg-white/[0.05]"
+            >
+              {t("salonLogin.homeLink")}
+            </Link>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            {PROFILES.map((member) => (
+              <TeamProfileCard
+                key={member.id}
+                profile={member}
+                isLocked={!isUnlocked}
+                isActive={selected === member.id}
+                statusLabel={
+                  !isUnlocked
+                    ? t("salonLogin.lockedBadge")
+                    : selected === member.id
+                      ? t("salonLogin.selectedBadge")
+                      : t("salonLogin.chooseProfile")
+                }
+                onPick={pickProfile}
+                summary={t(member.summaryKey)}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section
+          className="salon-fade-up space-y-5"
+          style={{ animationDelay: "0.2s" }}
+        >
+          <div className="max-w-2xl space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#d7b465]/80">
+              {t("salonLogin.accessTitle")}
+            </p>
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              {t("salonLogin.accessTitle")}
+            </h2>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            {accessFeatures.map((item) => (
+              <AccessFeature
+                key={item.title}
+                Icon={item.Icon}
+                title={item.title}
+                description={item.description}
+              />
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
 }
