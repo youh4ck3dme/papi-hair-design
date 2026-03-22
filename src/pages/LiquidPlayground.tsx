@@ -160,7 +160,7 @@ function BrandContent({
     <div
       className={`flex h-full flex-col items-center text-center ${
         isHero
-          ? "justify-between gap-3 px-2 py-2 sm:gap-6 sm:px-4 sm:py-4"
+          ? "mx-auto max-w-[34rem] justify-between gap-3 px-2 py-2 sm:gap-6 sm:px-4 sm:py-4"
           : "justify-center gap-8 px-4"
       }`}
     >
@@ -169,7 +169,7 @@ function BrandContent({
         <div className="absolute inset-0 scale-150 rounded-full bg-primary/20 blur-2xl transition-all duration-700 group-hover:bg-primary/30" />
       </div>
 
-      <div className={isHero ? "space-y-2 sm:space-y-3" : "space-y-3"}>
+      <div className={isHero ? "max-w-[30rem] space-y-2 sm:space-y-3" : "space-y-3"}>
         <h1 className={`bg-gradient-to-b from-white via-white to-white/60 bg-clip-text font-bold uppercase leading-tight text-transparent ${
           isHero
             ? "text-[2.4rem] tracking-[0.06em] sm:text-6xl sm:tracking-[0.2em]"
@@ -199,7 +199,7 @@ function BrandContent({
       )}
 
       {isHero && (
-        <div className="mx-auto flex w-full max-w-xs flex-col items-center justify-center gap-3">
+        <div className="mx-auto flex w-full max-w-sm flex-col items-center justify-center gap-3">
           <Button
             size="lg"
             className="h-12 w-full rounded-xl bg-gradient-to-r from-primary via-[#ffd700] to-primary font-bold uppercase tracking-widest text-black shadow-[0_10px_30px_-10px_rgba(218,165,32,0.5)] transition-transform hover:scale-[1.02] sm:h-14"
@@ -220,7 +220,7 @@ function BrandContent({
         </div>
       )}
 
-      <div className={isHero ? "grid w-full max-w-md grid-cols-2 gap-3 min-[360px]:gap-3.5 sm:max-w-[38rem] sm:gap-4" : "grid w-full max-w-md grid-cols-2 gap-3"}>
+      <div className={isHero ? "grid w-full max-w-[34rem] grid-cols-2 gap-3 min-[360px]:gap-3.5 sm:gap-4" : "grid w-full max-w-md grid-cols-2 gap-3"}>
         <div className={isHero ? "rounded-xl border border-white/10 bg-black/30 p-3 text-left min-[360px]:min-h-[70px] min-[360px]:rounded-2xl min-[360px]:p-[0.95rem] sm:p-[1.15rem]" : "rounded-xl border border-white/10 bg-black/30 p-3 text-left"}>
           <p className={isHero ? "text-[10px] uppercase tracking-widest text-white/50 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em] sm:text-xs" : "text-[10px] uppercase tracking-widest text-white/50"}>{t("liquid.cardTime")}</p>
           <p className={isHero ? "mt-1 text-xs font-semibold text-white min-[360px]:mt-1.5 min-[360px]:text-sm min-[360px]:leading-snug sm:text-[15px]" : "mt-1 text-xs font-semibold text-white"}>{openingSummary}</p>
@@ -610,7 +610,7 @@ function AnchorRailButton({
         isActive
           ? "border-primary/40 bg-primary/14 text-primary shadow-[0_14px_36px_-24px_rgba(218,165,32,0.7)]"
           : "border-white/10 bg-black/60 text-white/55 hover:border-primary/22 hover:text-white"
-      } ${isExpanded ? "w-[126px] sm:w-[164px]" : "w-9 sm:w-12"}`}
+      } ${isExpanded ? "w-[118px] sm:w-[152px]" : "w-9 sm:w-12"}`}
       aria-label={module.label}
     >
       <span
@@ -641,8 +641,8 @@ function LandingAnchorSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
-      <div className="rounded-[24px] border border-white/8 bg-white/[0.02] p-4 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.9)] sm:rounded-[28px] sm:p-5">
+    <section className="grid items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="rounded-[24px] border border-white/8 bg-white/[0.02] p-4 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.9)] lg:sticky lg:top-24 sm:rounded-[28px] sm:p-5">
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/12 text-primary shadow-[0_0_18px_rgba(218,165,32,0.15)]">
           <module.Icon className="h-5 w-5" />
         </div>
@@ -774,14 +774,14 @@ export default function LiquidPlayground() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black via-black/65 to-transparent" />
 
       <div
-        className="fixed left-4 top-4 z-50 flex items-center gap-1 safe-left safe-top"
+        className="fixed left-4 top-4 z-50 flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-1.5 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.95)] backdrop-blur-xl safe-left safe-top"
         style={{ top: "max(1rem, env(safe-area-inset-top))" }}
       >
         <LanguageToggle />
       </div>
 
       <nav
-        className="fixed left-3 top-1/2 z-40 flex -translate-y-1/2 flex-col gap-2 safe-left sm:left-4"
+        className="fixed left-3 top-1/2 z-40 flex -translate-y-1/2 flex-col gap-2 rounded-[24px] border border-white/8 bg-black/40 p-1.5 shadow-[0_18px_50px_-34px_rgba(0,0,0,0.95)] backdrop-blur-xl safe-left sm:left-4"
         aria-label="Sekcie"
       >
         {cards.map((card) => (
@@ -809,6 +809,7 @@ export default function LiquidPlayground() {
 
           <div className="relative flex min-h-full w-full max-w-[720px] flex-1">
             <div className="relative w-full rounded-[26px] border border-primary/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-1.5 shadow-[0_30px_90px_-50px_rgba(218,165,32,0.25)] sm:rounded-[30px] sm:p-2.5">
+              <div className="pointer-events-none absolute inset-[1px] rounded-[24px] border border-white/5 sm:rounded-[28px]" />
               <div className="min-h-full overflow-hidden rounded-[22px] border border-white/6 bg-black/50 p-3 sm:rounded-[26px] sm:p-5">
                 <BrandContent
                   openStatus={openStatus}
