@@ -797,32 +797,7 @@ export default function LiquidPlayground() {
         ))}
       </nav>
 
-      <main className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-20 pt-0 sm:px-6 lg:px-8">
-        <section
-          className="relative box-border flex h-screen min-h-[100dvh] items-stretch justify-center"
-          style={{
-            paddingTop: "max(3.25rem, calc(env(safe-area-inset-top) + 2.5rem))",
-            paddingBottom: "max(4.25rem, calc(env(safe-area-inset-bottom) + 4rem))",
-          }}
-        >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(218,165,32,0.18),transparent_24%),radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.03),transparent_26%),radial-gradient(circle_at_bottom,rgba(218,165,32,0.1),transparent_28%)]" />
-
-          <div className="relative flex min-h-full w-full max-w-[720px] flex-1">
-            <div className="relative w-full rounded-[26px] border border-primary/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-1.5 shadow-[0_30px_90px_-50px_rgba(218,165,32,0.25)] sm:rounded-[30px] sm:p-2.5">
-              <div className="pointer-events-none absolute inset-[1px] rounded-[24px] border border-white/5 sm:rounded-[28px]" />
-              <div className="min-h-full overflow-hidden rounded-[22px] border border-white/6 bg-black/50 p-3 sm:rounded-[26px] sm:p-5">
-                <BrandContent
-                  openStatus={openStatus}
-                  nextOpening={nextOpening}
-                  info={info}
-                  navigate={navigate}
-                  variant="hero"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
+      <main className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-20 pt-[max(5.25rem,calc(env(safe-area-inset-top)+4.75rem))] sm:px-6 sm:pt-28 lg:px-8">
         <div className="space-y-4 sm:space-y-5">
           {cards.map((card) => (
             <div
