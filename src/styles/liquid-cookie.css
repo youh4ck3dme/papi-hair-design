@@ -6,6 +6,7 @@
   display: flex;
   justify-content: center;
   padding: 14px;
+  padding-bottom: max(14px, calc(env(safe-area-inset-bottom) + 10px));
   z-index: 9999;
   pointer-events: none;
   animation: cookie-slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -229,38 +230,56 @@
 
 @media (max-width: 640px) {
   .cookie-wrap {
-    justify-content: flex-end;
-    padding: 8px 10px;
+    justify-content: center;
+    padding: 4px;
+    padding-bottom: max(4px, calc(env(safe-area-inset-bottom) + 4px));
   }
 
   .cookie-card {
-    width: min(320px, calc(100vw - 20px));
+    width: min(320px, calc(100vw - 8px));
     border-radius: 14px;
   }
 
   .cookie-header {
-    padding: 10px 12px 6px 12px;
+    padding: 3px 8px 0 8px;
+    border-bottom: 0;
   }
 
   .cookie-title {
-    font-size: 14px;
+    font-size: 10px;
+    line-height: 1.15;
   }
 
   .cookie-body {
-    padding: 6px 12px 10px 12px;
-    font-size: 12px;
-    line-height: 1.35;
+    display: none;
   }
 
   .cookie-actions {
-    gap: 8px;
-    padding: 0 12px 12px 12px;
+    gap: 4px;
+    padding: 0 8px 5px 8px;
+    flex-wrap: nowrap;
   }
 
   .cookie-btn {
-    border-radius: 10px;
-    padding: 8px 10px;
-    font-size: 12px;
+    border-radius: 8px;
+    padding: 5px 4px;
+    font-size: 9px;
+    line-height: 1;
+    min-width: 0;
+    white-space: nowrap;
+    flex: 1 1 0;
+  }
+
+  .cookie-btn--ghost {
+    flex: 0 0 auto;
+    padding-inline: 7px;
+  }
+
+  .cookie-panel {
+    margin: 0 12px 12px 12px;
+    padding: 12px;
+    max-height: min(52vh, 360px);
+    overflow: auto;
   }
 }
 

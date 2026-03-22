@@ -1,6 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   Sparkles,
   Clock,
@@ -12,15 +11,10 @@ import {
   Check,
   Copy,
   ArrowRight,
-  ShieldCheck,
-  Gem,
-  Layers3,
-  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LogoIcon } from "@/components/LogoIcon";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,11 +26,7 @@ import {
   type BusinessHourEntry,
 } from "@/hooks/useBusinessInfo";
 
-import cardBgHero from "@/assets/luxury-hero.png";
-import cardBgHow from "@/assets/luxury-hours.png";
-import cardBgFeatures from "@/assets/luxury-features.png";
 import cardBgQr from "@/assets/luxury-qr.png";
-import cardBgAccounts from "@/assets/luxury-accounts.png";
 import cardBgQr3d from "@/assets/luxury-qr-3d.png";
 
 const DEMO_BUSINESS_ID = "papi-hair-design-main";
@@ -78,34 +68,12 @@ interface ServiceItem {
 }
 
 interface LandingModule {
-  id: keyof typeof cardBgs;
+  id: "brand" | "hours" | "prices" | "booking" | "contact";
   label: string;
   sub: string;
   summary: string;
   Icon: LucideIcon;
 }
-
-const cardBgs = {
-  brand: cardBgHero,
-  hours: cardBgHow,
-  prices: cardBgFeatures,
-  booking: cardBgQr,
-  contact: cardBgAccounts,
-};
-
-const contentAnim = {
-  initial: { opacity: 0, y: 12 },
-  animate: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const },
-  },
-  exit: {
-    opacity: 0,
-    y: -8,
-    transition: { duration: 0.18, ease: "easeIn" as const },
-  },
-};
 
 function normalizeSearch(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -154,15 +122,18 @@ function BrandContent({
   nextOpening,
   info,
   navigate,
+  variant = "section",
 }: {
   openStatus: OpenStatus | null;
   nextOpening: NextOpening | null;
   info: PublicBusinessInfo | null;
   navigate: ReturnType<typeof useNavigate>;
+  variant?: "hero" | "section";
 }) {
   const { t } = useTranslation();
   const { user, memberships } = useAuth();
   const isRegisteredCustomer = !!user && memberships.some((membership) => membership.role === "customer");
+  const isHero = variant === "hero";
   const pricedServices = (info?.services ?? []).filter(
     (service): service is ServiceItem & { price: number } => typeof service.price === "number",
   );
@@ -186,75 +157,111 @@ function BrandContent({
   };
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-8 px-4 text-center">
+    <div
+      className={`flex h-full flex-col items-center text-center ${
+        isHero
+          ? "justify-between gap-3 px-2 py-2 sm:gap-6 sm:px-4 sm:py-4"
+          : "justify-center gap-8 px-4"
+      }`}
+    >
       <div className="relative group">
         <LogoIcon size="lg" className="relative z-10" />
         <div className="absolute inset-0 scale-150 rounded-full bg-primary/20 blur-2xl transition-all duration-700 group-hover:bg-primary/30" />
       </div>
 
-      <div className="space-y-3">
-        <h1 className="bg-gradient-to-b from-white via-white to-white/60 bg-clip-text text-5xl font-bold uppercase leading-tight tracking-[0.2em] text-transparent sm:text-7xl">
+      <div className={isHero ? "space-y-2 sm:space-y-3" : "space-y-3"}>
+        <h1 className={`bg-gradient-to-b from-white via-white to-white/60 bg-clip-text font-bold uppercase leading-tight text-transparent ${
+          isHero
+            ? "text-[2.4rem] tracking-[0.06em] sm:text-6xl sm:tracking-[0.2em]"
+            : "text-5xl tracking-[0.2em] sm:text-7xl"
+        }`}>
           PAPI HAIR
         </h1>
-        <h2 className="-mt-2 text-2xl font-light uppercase tracking-[0.4em] text-primary sm:text-3xl">
+        <h2 className={`font-light uppercase text-primary ${isHero ? "-mt-0.5 text-base tracking-[0.22em] sm:-mt-2 sm:text-3xl sm:tracking-[0.4em]" : "-mt-2 text-2xl tracking-[0.4em] sm:text-3xl"}`}>
           DESIGN
         </h2>
-        <div className="mx-auto mt-6 h-px w-24 bg-gradient-to-r from-transparent via-primary to-transparent" />
-        <p className="mt-4 text-xs uppercase tracking-[0.3em] text-white/50">
+        <div className={`mx-auto h-px w-24 bg-gradient-to-r from-transparent via-primary to-transparent ${isHero ? "mt-4 sm:mt-6" : "mt-6"}`} />
+        <p className={`uppercase text-white/50 ${isHero ? "mt-3 text-[11px] tracking-[0.24em] sm:mt-4 sm:text-xs sm:tracking-[0.3em]" : "mt-4 text-xs tracking-[0.3em]"}`}>
           est. 2018 · Kosice
         </p>
-        <p className="mt-2 text-sm font-medium italic tracking-wide text-amber-200/80">
+        <p className={`font-medium italic text-amber-200/80 ${isHero ? "mt-1.5 text-[13px] leading-6 tracking-[0.02em] sm:mt-2 sm:text-sm sm:tracking-wide" : "mt-2 text-sm tracking-wide"}`}>
           {t("liquid.brandTagline")}
         </p>
       </div>
 
       {openStatus && (
-        <div className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-widest backdrop-blur-md ${modeColors[openStatus.mode] ?? modeColors.closed}`}>
+        <div className={`inline-flex items-center rounded-full border font-semibold uppercase backdrop-blur-md ${
+          isHero ? "gap-2 px-3 py-1.5 text-[11px] tracking-[0.22em] sm:gap-3 sm:px-4 sm:py-2 sm:text-xs sm:tracking-widest" : "gap-3 px-4 py-2 text-xs tracking-widest"
+        } ${modeColors[openStatus.mode] ?? modeColors.closed}`}>
           <span className={`h-2 w-2 animate-pulse rounded-full ${dotColors[openStatus.mode] ?? dotColors.closed}`} />
           {modeLabels[openStatus.mode] ?? t("liquid.statusClosed")}
         </div>
       )}
 
-      <div className="grid w-full max-w-md grid-cols-2 gap-3">
-        <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-left">
-          <p className="text-[10px] uppercase tracking-widest text-white/50">{t("liquid.cardTime")}</p>
-          <p className="mt-1 text-xs font-semibold text-white">{openingSummary}</p>
+      {isHero && (
+        <div className="mx-auto flex w-full max-w-xs flex-col items-center justify-center gap-3">
+          <Button
+            size="lg"
+            className="h-12 w-full rounded-xl bg-gradient-to-r from-primary via-[#ffd700] to-primary font-bold uppercase tracking-widest text-black shadow-[0_10px_30px_-10px_rgba(218,165,32,0.5)] transition-transform hover:scale-[1.02] sm:h-14"
+            onClick={() => navigate("/booking")}
+          >
+            {t("liquid.reserveBtn")}
+          </Button>
+          {isRegisteredCustomer && (
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-14 w-full rounded-xl border-white/10 font-medium uppercase tracking-widest text-white backdrop-blur-sm hover:border-primary/50"
+              onClick={() => navigate("/booking")}
+            >
+              {t("liquid.memberBtn")}
+            </Button>
+          )}
         </div>
-        <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-left">
-          <p className="text-[10px] uppercase tracking-widest text-white/50">{t("liquid.cardPrices")}</p>
-          <p className="mt-1 text-xs font-semibold text-white">
+      )}
+
+      <div className={isHero ? "grid w-full max-w-md grid-cols-2 gap-3 min-[360px]:gap-3.5 sm:max-w-[38rem] sm:gap-4" : "grid w-full max-w-md grid-cols-2 gap-3"}>
+        <div className={isHero ? "rounded-xl border border-white/10 bg-black/30 p-3 text-left min-[360px]:min-h-[70px] min-[360px]:rounded-2xl min-[360px]:p-[0.95rem] sm:p-[1.15rem]" : "rounded-xl border border-white/10 bg-black/30 p-3 text-left"}>
+          <p className={isHero ? "text-[10px] uppercase tracking-widest text-white/50 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em] sm:text-xs" : "text-[10px] uppercase tracking-widest text-white/50"}>{t("liquid.cardTime")}</p>
+          <p className={isHero ? "mt-1 text-xs font-semibold text-white min-[360px]:mt-1.5 min-[360px]:text-sm min-[360px]:leading-snug sm:text-[15px]" : "mt-1 text-xs font-semibold text-white"}>{openingSummary}</p>
+        </div>
+        <div className={isHero ? "rounded-xl border border-white/10 bg-black/30 p-3 text-left min-[360px]:min-h-[70px] min-[360px]:rounded-2xl min-[360px]:p-[0.95rem] sm:p-[1.15rem]" : "rounded-xl border border-white/10 bg-black/30 p-3 text-left"}>
+          <p className={isHero ? "text-[10px] uppercase tracking-widest text-white/50 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em] sm:text-xs" : "text-[10px] uppercase tracking-widest text-white/50"}>{t("liquid.cardPrices")}</p>
+          <p className={isHero ? "mt-1 text-xs font-semibold text-white min-[360px]:mt-1.5 min-[360px]:text-sm min-[360px]:leading-snug sm:text-[15px]" : "mt-1 text-xs font-semibold text-white"}>
             {cheapestPrice != null ? `od ${cheapestPrice.toFixed(0)}EUR` : "-"}
           </p>
         </div>
-        <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-left">
-          <p className="text-[10px] uppercase tracking-widest text-white/50">{t("liquid.cardReserve")}</p>
-          <p className="mt-1 text-xs font-semibold text-white">24/7 online</p>
+        <div className={isHero ? "rounded-xl border border-white/10 bg-black/30 p-3 text-left min-[360px]:min-h-[70px] min-[360px]:rounded-2xl min-[360px]:p-[0.95rem] sm:p-[1.15rem]" : "rounded-xl border border-white/10 bg-black/30 p-3 text-left"}>
+          <p className={isHero ? "text-[10px] uppercase tracking-widest text-white/50 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em] sm:text-xs" : "text-[10px] uppercase tracking-widest text-white/50"}>{t("liquid.cardReserve")}</p>
+          <p className={isHero ? "mt-1 text-xs font-semibold text-white min-[360px]:mt-1.5 min-[360px]:text-sm min-[360px]:leading-snug sm:text-[15px]" : "mt-1 text-xs font-semibold text-white"}>24/7 online</p>
         </div>
-        <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-left">
-          <p className="text-[10px] uppercase tracking-widest text-white/50">{t("liquid.cardDetails")}</p>
-          <p className="mt-1 text-xs font-semibold text-white">{phoneNumber}</p>
+        <div className={isHero ? "rounded-xl border border-white/10 bg-black/30 p-3 text-left min-[360px]:min-h-[70px] min-[360px]:rounded-2xl min-[360px]:p-[0.95rem] sm:p-[1.15rem]" : "rounded-xl border border-white/10 bg-black/30 p-3 text-left"}>
+          <p className={isHero ? "text-[10px] uppercase tracking-widest text-white/50 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em] sm:text-xs" : "text-[10px] uppercase tracking-widest text-white/50"}>{t("liquid.cardDetails")}</p>
+          <p className={isHero ? "mt-1 text-xs font-semibold text-white min-[360px]:mt-1.5 min-[360px]:text-sm min-[360px]:leading-snug sm:text-[15px]" : "mt-1 text-xs font-semibold text-white"}>{phoneNumber}</p>
         </div>
       </div>
 
-      <div className="mx-auto mt-4 flex w-full max-w-xs flex-col items-center justify-center gap-4">
-        <Button
-          size="lg"
-          className="h-14 w-full rounded-xl bg-gradient-to-r from-primary via-[#ffd700] to-primary font-bold uppercase tracking-widest text-black shadow-[0_10px_30px_-10px_rgba(218,165,32,0.5)] transition-transform hover:scale-[1.02]"
-          onClick={() => navigate("/booking")}
-        >
-          {t("liquid.reserveBtn")}
-        </Button>
-        {isRegisteredCustomer && (
+      {!isHero && (
+        <div className="mx-auto mt-4 flex w-full max-w-xs flex-col items-center justify-center gap-4">
           <Button
             size="lg"
-            variant="outline"
-            className="h-14 w-full rounded-xl border-white/10 font-medium uppercase tracking-widest text-white backdrop-blur-sm hover:border-primary/50"
+            className="h-14 w-full rounded-xl bg-gradient-to-r from-primary via-[#ffd700] to-primary font-bold uppercase tracking-widest text-black shadow-[0_10px_30px_-10px_rgba(218,165,32,0.5)] transition-transform hover:scale-[1.02]"
             onClick={() => navigate("/booking")}
           >
-            {t("liquid.memberBtn")}
+            {t("liquid.reserveBtn")}
           </Button>
-        )}
-      </div>
+          {isRegisteredCustomer && (
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-14 w-full rounded-xl border-white/10 font-medium uppercase tracking-widest text-white backdrop-blur-sm hover:border-primary/50"
+              onClick={() => navigate("/booking")}
+            >
+              {t("liquid.memberBtn")}
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -578,92 +585,93 @@ function ContactContent() {
   );
 }
 
-function ModuleNavCard({
+function AnchorRailButton({
   module,
   isActive,
+  isExpanded,
   onClick,
-  actionLabel,
-  activeLabel,
+  onMouseEnter,
+  onMouseLeave,
 }: {
   module: LandingModule;
   isActive: boolean;
+  isExpanded: boolean;
   onClick: () => void;
-  actionLabel: string;
-  activeLabel: string;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`group relative overflow-hidden rounded-[28px] border text-left transition-all duration-300 ${
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      className={`group flex items-center justify-end gap-1.5 rounded-full border px-1.5 py-1.5 transition-all duration-300 sm:gap-2 sm:px-2 sm:py-2 ${
         isActive
-          ? "border-primary/55 bg-black/80 shadow-[0_22px_70px_-34px_rgba(218,165,32,0.45)]"
-          : "border-white/8 bg-white/[0.02] hover:border-primary/30 hover:bg-white/[0.04]"
-      }`}
+          ? "border-primary/40 bg-primary/14 text-primary shadow-[0_14px_36px_-24px_rgba(218,165,32,0.7)]"
+          : "border-white/10 bg-black/60 text-white/55 hover:border-primary/22 hover:text-white"
+      } ${isExpanded ? "w-[126px] sm:w-[164px]" : "w-9 sm:w-12"}`}
+      aria-label={module.label}
     >
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-25 transition-transform duration-500 group-hover:scale-105"
-        style={{ backgroundImage: `url(${cardBgs[module.id]})` }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/35 to-black/95" />
-
-      <div className="relative flex min-h-[180px] flex-col justify-between p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#b8860b] via-[#daa520] to-[#ffd700] text-black shadow-[0_0_25px_rgba(218,165,32,0.3)]">
-            <module.Icon className="h-5 w-5" />
-          </div>
-          <span
-            className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] ${
-              isActive
-                ? "border-primary/40 bg-primary/18 text-primary"
-                : "border-white/10 bg-black/35 text-white/45"
-            }`}
-          >
-            {isActive ? activeLabel : actionLabel}
-          </span>
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <p className="text-xl font-bold uppercase tracking-[0.16em] text-white">
-              {module.label}
-            </p>
-            <p className="mt-1 text-sm text-white/72">{module.sub}</p>
-          </div>
-          <p className="max-w-[28ch] text-sm leading-relaxed text-white/54">
-            {module.summary}
-          </p>
-        </div>
-      </div>
+      <span
+        className={`overflow-hidden whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.18em] transition-all duration-300 sm:text-[10px] sm:tracking-[0.22em] ${
+          isExpanded ? "max-w-[74px] opacity-100 sm:max-w-[92px]" : "max-w-0 opacity-0"
+        }`}
+      >
+        {module.label}
+      </span>
+      <span
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors duration-300 sm:h-8 sm:w-8 ${
+          isActive
+            ? "border-primary/40 bg-primary/18 text-primary"
+            : "border-white/10 bg-white/[0.04] text-white/70"
+        }`}
+      >
+        <module.Icon className="h-3 w-3 sm:h-4 sm:w-4" />
+      </span>
     </button>
   );
 }
 
-function TrustCard({
-  Icon,
-  title,
-  description,
+function LandingAnchorSection({
+  module,
+  children,
 }: {
-  Icon: LucideIcon;
-  title: string;
-  description: string;
+  module: LandingModule;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[28px] border border-white/8 bg-white/[0.025] p-6 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.8)]">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12 text-primary shadow-[0_0_18px_rgba(218,165,32,0.15)]">
-        <Icon className="h-5 w-5" />
+    <section className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="rounded-[24px] border border-white/8 bg-white/[0.02] p-4 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.9)] sm:rounded-[28px] sm:p-5">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/12 text-primary shadow-[0_0_18px_rgba(218,165,32,0.15)]">
+          <module.Icon className="h-5 w-5" />
+        </div>
+        <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary/75">
+          {module.label}
+        </p>
+        <h3 className="mt-2 text-xl font-bold text-white sm:text-2xl">
+          {module.sub}
+        </h3>
+        <p className="mt-3 text-sm leading-6 text-white/58">
+          {module.summary}
+        </p>
       </div>
-      <h3 className="text-lg font-semibold text-white">{title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-white/58">{description}</p>
-    </div>
+
+      <div className="rounded-[24px] border border-primary/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-1.5 shadow-[0_30px_90px_-50px_rgba(218,165,32,0.25)] sm:rounded-[30px] sm:p-2.5">
+        <div className="overflow-hidden rounded-[22px] border border-white/6 bg-black/50 p-4 sm:rounded-[26px] sm:p-5 lg:p-6">
+          {children}
+        </div>
+      </div>
+    </section>
   );
 }
 
 export default function LiquidPlayground() {
-  const [activeCard, setActiveCard] = useState(0);
+  const [activeSectionId, setActiveSectionId] = useState<LandingModule["id"]>("brand");
+  const [expandedNavId, setExpandedNavId] = useState<LandingModule["id"] | null>(null);
   const navigate = useNavigate();
-  const { t } = useTranslation();
-  const showcaseRef = useRef<HTMLElement | null>(null);
+  const { t, i18n } = useTranslation();
+  const sectionRefs = useRef<Partial<Record<LandingModule["id"], HTMLElement | null>>>({});
   const { info, openStatus, nextOpening } = useBusinessInfo(DEMO_BUSINESS_ID);
 
   const cards: LandingModule[] = [
@@ -725,54 +733,39 @@ export default function LiquidPlayground() {
     contact: <ContactContent />,
   };
 
-  const activeModule = cards[activeCard];
-  const pricingServices = (info?.services ?? []).filter(
-    (service): service is ServiceItem & { price: number } =>
-      typeof service.price === "number",
-  );
-  const cheapestPrice = pricingServices.length
-    ? Math.min(...pricingServices.map((service) => service.price))
-    : null;
+  useEffect(() => {
+    const elements = cards
+      .map((card) => sectionRefs.current[card.id])
+      .filter((element): element is HTMLElement => Boolean(element));
 
-  const heroFacts = [
-    {
-      label: t("liquid.cardTime"),
-      value: getOpenStatusLabel(openStatus, nextOpening, t),
-    },
-    {
-      label: t("liquid.cardPrices"),
-      value: cheapestPrice != null ? `od ${cheapestPrice.toFixed(0)}EUR` : "-",
-    },
-    {
-      label: t("liquid.cardReserve"),
-      value: "24/7 online",
-    },
-  ];
+    if (!elements.length) return;
 
-  const trustCards = [
-    {
-      Icon: Gem,
-      title: t("liquid.trustLuxuryTitle"),
-      description: t("liquid.trustLuxuryDesc"),
-    },
-    {
-      Icon: ShieldCheck,
-      title: t("liquid.trustClarityTitle"),
-      description: t("liquid.trustClarityDesc"),
-    },
-    {
-      Icon: Layers3,
-      title: t("liquid.trustScaleTitle"),
-      description: t("liquid.trustScaleDesc"),
-    },
-  ];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((left, right) => right.intersectionRatio - left.intersectionRatio);
 
-  const selectCard = (index: number, scrollToShowcase = false) => {
-    setActiveCard(index);
-    if (!scrollToShowcase) return;
-    window.setTimeout(() => {
-      showcaseRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
+        if (!visible.length) return;
+
+        const nextId = visible[0].target.getAttribute("data-section-id") as LandingModule["id"] | null;
+        if (!nextId) return;
+        setActiveSectionId(nextId);
+      },
+      {
+        threshold: [0.2, 0.4, 0.65],
+        rootMargin: "-18% 0px -48% 0px",
+      },
+    );
+
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollToSection = (moduleId: LandingModule["id"]) => {
+    setActiveSectionId(moduleId);
+    setExpandedNavId(moduleId);
+    sectionRefs.current[moduleId]?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -781,253 +774,71 @@ export default function LiquidPlayground() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black via-black/65 to-transparent" />
 
       <div
-        className="fixed right-4 top-4 z-50 flex items-center gap-1 safe-right safe-top"
+        className="fixed left-4 top-4 z-50 flex items-center gap-1 safe-left safe-top"
         style={{ top: "max(1rem, env(safe-area-inset-top))" }}
       >
         <LanguageToggle />
-        <ThemeToggle />
       </div>
 
-      <main className="relative mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pb-20 pt-24 sm:px-6 lg:px-8 lg:pt-28">
-        <section className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
-          <div className="relative overflow-hidden rounded-[34px] border border-primary/18 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-6 shadow-[0_25px_80px_-45px_rgba(218,165,32,0.35)] sm:p-8 lg:p-10">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(218,165,32,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent_45%)]" />
-            <div className="relative flex h-full flex-col justify-between gap-8">
-              <div className="space-y-5">
-                <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-primary">
-                  <LogoIcon size="sm" className="h-4 w-4" />
-                  {t("liquid.homeEyebrow")}
-                </div>
+      <nav
+        className="fixed left-3 top-1/2 z-40 flex -translate-y-1/2 flex-col gap-2 safe-left sm:left-4"
+        aria-label="Sekcie"
+      >
+        {cards.map((card) => (
+          <AnchorRailButton
+            key={card.id}
+            module={card}
+            isActive={activeSectionId === card.id}
+            isExpanded={expandedNavId === card.id}
+            onClick={() => scrollToSection(card.id)}
+            onMouseEnter={() => setExpandedNavId(card.id)}
+            onMouseLeave={() => setExpandedNavId(null)}
+          />
+        ))}
+      </nav>
 
-                <div className="space-y-4">
-                  <div>
-                    <h1 className="text-4xl font-bold uppercase tracking-[0.18em] text-white sm:text-5xl xl:text-6xl">
-                      PAPI HAIR
-                    </h1>
-                    <p className="mt-2 text-xl font-light uppercase tracking-[0.34em] text-primary sm:text-2xl">
-                      DESIGN
-                    </p>
-                  </div>
-                  <p className="max-w-2xl text-base leading-7 text-white/68 sm:text-lg">
-                    {t("liquid.homeDesc")}
-                  </p>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {heroFacts.map((fact) => (
-                    <div
-                      key={fact.label}
-                      className="rounded-2xl border border-white/8 bg-black/35 p-4 backdrop-blur-sm"
-                    >
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">
-                        {fact.label}
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-white">{fact.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button
-                  size="lg"
-                  className="h-14 rounded-2xl bg-gradient-to-r from-primary via-[#d9ab2e] to-[#ffd978] px-7 font-bold uppercase tracking-[0.18em] text-black shadow-[0_14px_40px_-18px_rgba(218,165,32,0.6)] hover:scale-[1.01]"
-                  onClick={() => navigate("/booking")}
-                >
-                  {t("liquid.reserveBtn")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-14 rounded-2xl border-white/10 bg-white/[0.02] px-7 font-semibold uppercase tracking-[0.16em] text-white hover:border-primary/35 hover:bg-white/[0.05]"
-                  onClick={() => navigate("/papihairsalon2026")}
-                >
-                  {t("liquid.teamEntryBtn")}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative overflow-hidden rounded-[34px] border border-white/8 bg-black/65 shadow-[0_25px_80px_-50px_rgba(0,0,0,0.9)]">
-            <div
-              className="absolute inset-0 bg-cover bg-center opacity-30"
-              style={{ backgroundImage: `url(${cardBgs[activeModule.id]})` }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/55 to-black/95" />
-
-            <div className="relative flex h-full min-h-[360px] flex-col justify-between p-6 sm:p-8">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.26em] text-primary">
-                <span className="h-2 w-2 rounded-full bg-primary" />
-                {t("liquid.activeModule")}
-              </div>
-
-              <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#b8860b] via-[#daa520] to-[#ffd700] text-black shadow-[0_0_30px_rgba(218,165,32,0.35)]">
-                    <activeModule.Icon className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold uppercase tracking-[0.16em] text-white">
-                      {activeModule.label}
-                    </p>
-                    <p className="mt-1 text-sm text-white/70">{activeModule.sub}</p>
-                  </div>
-                </div>
-
-                <p className="max-w-md text-sm leading-7 text-white/58">
-                  {activeModule.summary}
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => selectCard(activeCard, true)}
-                  className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-primary transition-colors hover:text-[#ffd978]"
-                >
-                  {t("liquid.moduleAction")}
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-5">
-          <div className="max-w-2xl space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/80">
-              {t("liquid.modulesTitle")}
-            </p>
-            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              {t("liquid.modulesDesc")}
-            </h2>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-            {cards.map((card, index) => (
-              <ModuleNavCard
-                key={card.id}
-                module={card}
-                isActive={activeCard === index}
-                onClick={() => selectCard(index, true)}
-                actionLabel={t("liquid.moduleAction")}
-                activeLabel={t("liquid.activeModule")}
-              />
-            ))}
-          </div>
-        </section>
-
+      <main className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-20 pt-0 sm:px-6 lg:px-8">
         <section
-          ref={showcaseRef}
-          className="grid scroll-mt-24 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]"
+          className="relative box-border flex h-screen min-h-[100dvh] items-stretch justify-center"
+          style={{
+            paddingTop: "max(3.25rem, calc(env(safe-area-inset-top) + 2.5rem))",
+            paddingBottom: "max(4.25rem, calc(env(safe-area-inset-bottom) + 4rem))",
+          }}
         >
-          <div className="rounded-[30px] border border-white/8 bg-white/[0.02] p-6 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.9)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-primary/75">
-              {t("liquid.showcaseEyebrow")}
-            </p>
-            <h3 className="mt-3 text-2xl font-bold text-white">
-              {activeModule.label}
-            </h3>
-            <p className="mt-2 text-sm leading-7 text-white/58">
-              {t("liquid.showcaseDesc")}
-            </p>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(218,165,32,0.18),transparent_24%),radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.03),transparent_26%),radial-gradient(circle_at_bottom,rgba(218,165,32,0.1),transparent_28%)]" />
 
-            <div className="mt-6 space-y-2">
-              {cards.map((card, index) => (
-                <button
-                  key={card.id}
-                  type="button"
-                  onClick={() => selectCard(index)}
-                  className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors ${
-                    activeCard === index
-                      ? "border-primary/45 bg-primary/10 text-white"
-                      : "border-white/6 bg-black/30 text-white/65 hover:border-primary/20 hover:text-white"
-                  }`}
-                >
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.14em]">
-                      {card.label}
-                    </p>
-                    <p className="mt-1 text-xs text-white/45">{card.sub}</p>
-                  </div>
-                  <card.Icon className="h-4 w-4 text-primary" />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[30px] border border-primary/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-2 shadow-[0_30px_90px_-50px_rgba(218,165,32,0.25)] sm:p-3">
-            <div className="min-h-[560px] overflow-hidden rounded-[26px] border border-white/6 bg-black/50 p-4 sm:p-6">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeModule.id}
-                  className="h-full"
-                  initial={contentAnim.initial}
-                  animate={contentAnim.animate}
-                  exit={contentAnim.exit}
-                >
-                  {contentMap[activeModule.id]}
-                </motion.div>
-              </AnimatePresence>
+          <div className="relative flex min-h-full w-full max-w-[720px] flex-1">
+            <div className="relative w-full rounded-[26px] border border-primary/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-1.5 shadow-[0_30px_90px_-50px_rgba(218,165,32,0.25)] sm:rounded-[30px] sm:p-2.5">
+              <div className="min-h-full overflow-hidden rounded-[22px] border border-white/6 bg-black/50 p-3 sm:rounded-[26px] sm:p-5">
+                <BrandContent
+                  openStatus={openStatus}
+                  nextOpening={nextOpening}
+                  info={info}
+                  navigate={navigate}
+                  variant="hero"
+                />
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="space-y-5">
-          <div className="max-w-2xl space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/80">
-              {t("liquid.trustTitle")}
-            </p>
-            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              {t("liquid.trustDesc")}
-            </h2>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-3">
-            {trustCards.map((card) => (
-              <TrustCard
-                key={card.title}
-                Icon={card.Icon}
-                title={card.title}
-                description={card.description}
-              />
-            ))}
-          </div>
-        </section>
-
-        <section className="relative overflow-hidden rounded-[34px] border border-primary/18 bg-[linear-gradient(135deg,rgba(218,165,32,0.12),rgba(255,255,255,0.03),rgba(0,0,0,0.5))] p-6 shadow-[0_25px_80px_-45px_rgba(218,165,32,0.32)] sm:p-8">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(218,165,32,0.16),transparent_30%)]" />
-          <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/85">
-                CTA
-              </p>
-              <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                {t("liquid.ctaTitle")}
-              </h2>
-              <p className="max-w-2xl text-sm leading-7 text-white/62 sm:text-base">
-                {t("liquid.ctaDesc")}
-              </p>
+        <div className="space-y-4 sm:space-y-5">
+          {cards.map((card) => (
+            <div
+              key={card.id}
+              id={`section-${card.id}`}
+              data-section-id={card.id}
+              className="scroll-mt-28"
+              ref={(element) => {
+                sectionRefs.current[card.id] = element;
+              }}
+            >
+              <LandingAnchorSection module={card}>
+                {contentMap[card.id]}
+              </LandingAnchorSection>
             </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button
-                size="lg"
-                className="h-14 rounded-2xl bg-gradient-to-r from-primary via-[#d9ab2e] to-[#ffd978] px-7 font-bold uppercase tracking-[0.18em] text-black shadow-[0_14px_40px_-18px_rgba(218,165,32,0.6)] hover:scale-[1.01]"
-                onClick={() => navigate("/booking")}
-              >
-                {t("liquid.reserveBtn")}
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-14 rounded-2xl border-white/12 bg-black/35 px-7 font-semibold uppercase tracking-[0.16em] text-white hover:border-primary/35 hover:bg-black/45"
-                onClick={() => navigate("/papihairsalon2026")}
-              >
-                {t("liquid.teamEntryBtn")}
-              </Button>
-            </div>
-          </div>
-        </section>
+          ))}
+        </div>
       </main>
     </div>
   );

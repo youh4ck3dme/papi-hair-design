@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { functions } from "@/integrations/firebase/config";
 import { httpsCallable } from "firebase/functions";
 import "@/styles/liquid-cookie.css";
@@ -79,10 +79,12 @@ async function trackConsentEvent(prefs: Omit<CookiePrefs, "timestamp">, action: 
 }
 
 export default function CookieConsent() {
+  const { pathname } = useLocation();
   const [visible, setVisible] = useState(false);
   const [customize, setCustomize] = useState(false);
   const [analytics, setAnalytics] = useState(false);
   const [marketing, setMarketing] = useState(false);
+  const isHiddenRoute = pathname.startsWith("/papihairsalon2026");
 
   useEffect(() => {
     const existing = loadPrefs();
@@ -131,7 +133,7 @@ export default function CookieConsent() {
     setVisible(false);
   }, [analytics, marketing]);
 
-  if (!visible) return null;
+  if (!visible || isHiddenRoute) return null;
 
   return (
     <div className="cookie-wrap" role="dialog" aria-label="Cookie consent" aria-describedby="cookie-desc">
