@@ -24,13 +24,28 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      host: "::",
+      host: "0.0.0.0",
       port: 5678,
+      headers: {
+        "Cache-Control": "no-store",
+      },
       hmr: {
         overlay: false,
       },
     },
     plugins: [
+      {
+        name: "dev-disable-conditional-requests",
+        apply: "serve",
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            delete req.headers["if-none-match"];
+            delete req.headers["if-modified-since"];
+            res.setHeader("Cache-Control", "no-store");
+            next();
+          });
+        },
+      },
       {
         name: 'validate-env-vars',
         buildStart() {

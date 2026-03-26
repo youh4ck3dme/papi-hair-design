@@ -608,14 +608,14 @@ function AnchorRailButton({
       onMouseLeave={onMouseLeave}
       className={`group flex items-center justify-end gap-1.5 rounded-full border px-1.5 py-1.5 transition-all duration-300 sm:gap-2 sm:px-2 sm:py-2 ${
         isActive
-          ? "border-primary/40 bg-primary/14 text-primary shadow-[0_14px_36px_-24px_rgba(218,165,32,0.7)]"
-          : "border-white/10 bg-black/60 text-white/55 hover:border-primary/22 hover:text-white"
-      } ${isExpanded ? "w-[118px] sm:w-[152px]" : "w-9 sm:w-12"}`}
+          ? "border-primary/35 bg-primary/12 text-primary shadow-[0_14px_32px_-24px_rgba(218,165,32,0.55)]"
+          : "border-white/8 bg-black/55 text-white/55 hover:border-primary/20 hover:bg-black/70 hover:text-white"
+      } ${isExpanded ? "w-[114px] sm:w-[146px]" : "w-9 sm:w-11"}`}
       aria-label={module.label}
     >
       <span
         className={`overflow-hidden whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.18em] transition-all duration-300 sm:text-[10px] sm:tracking-[0.22em] ${
-          isExpanded ? "max-w-[74px] opacity-100 sm:max-w-[92px]" : "max-w-0 opacity-0"
+          isExpanded ? "max-w-[70px] opacity-100 sm:max-w-[88px]" : "max-w-0 opacity-0"
         }`}
       >
         {module.label}
@@ -623,8 +623,8 @@ function AnchorRailButton({
       <span
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors duration-300 sm:h-8 sm:w-8 ${
           isActive
-            ? "border-primary/40 bg-primary/18 text-primary"
-            : "border-white/10 bg-white/[0.04] text-white/70"
+            ? "border-primary/35 bg-primary/16 text-primary"
+            : "border-white/8 bg-white/[0.03] text-white/70"
         }`}
       >
         <module.Icon className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -642,7 +642,7 @@ function LandingAnchorSection({
 }) {
   return (
     <section className="grid items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
-      <div className="rounded-[24px] border border-white/8 bg-white/[0.02] p-4 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.9)] lg:sticky lg:top-24 sm:rounded-[28px] sm:p-5">
+      <div className="rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-4 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.9)] lg:sticky lg:top-24 sm:rounded-[28px] sm:p-5">
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/12 text-primary shadow-[0_0_18px_rgba(218,165,32,0.15)]">
           <module.Icon className="h-5 w-5" />
         </div>
@@ -657,8 +657,8 @@ function LandingAnchorSection({
         </p>
       </div>
 
-      <div className="rounded-[24px] border border-primary/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-1.5 shadow-[0_30px_90px_-50px_rgba(218,165,32,0.25)] sm:rounded-[30px] sm:p-2.5">
-        <div className="overflow-hidden rounded-[22px] border border-white/6 bg-black/50 p-4 sm:rounded-[26px] sm:p-5 lg:p-6">
+      <div className="rounded-[24px] border border-primary/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-1.5 shadow-[0_30px_90px_-50px_rgba(218,165,32,0.22)] sm:rounded-[30px] sm:p-2.5">
+        <div className="overflow-hidden rounded-[22px] border border-white/6 bg-[linear-gradient(180deg,rgba(0,0,0,0.62),rgba(0,0,0,0.5))] p-4 sm:rounded-[26px] sm:p-5 lg:p-6">
           {children}
         </div>
       </div>
@@ -774,14 +774,14 @@ export default function LiquidPlayground() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black via-black/65 to-transparent" />
 
       <div
-        className="fixed left-4 top-4 z-50 flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-1.5 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.95)] backdrop-blur-xl safe-left safe-top"
-        style={{ top: "max(1rem, env(safe-area-inset-top))" }}
+        className="fixed left-4 top-4 z-50 flex items-center gap-1 rounded-full border border-white/8 bg-black/55 px-2 py-1.5 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.95)] backdrop-blur-xl safe-left safe-top"
+        style={{ top: "max(0.9rem, env(safe-area-inset-top))" }}
       >
         <LanguageToggle />
       </div>
 
       <nav
-        className="fixed left-3 top-1/2 z-40 flex -translate-y-1/2 flex-col gap-2 rounded-[24px] border border-white/8 bg-black/40 p-1.5 shadow-[0_18px_50px_-34px_rgba(0,0,0,0.95)] backdrop-blur-xl safe-left sm:left-4"
+        className="fixed left-3 top-1/2 z-40 flex -translate-y-1/2 flex-col gap-2 rounded-[24px] border border-white/8 bg-black/36 p-1.5 shadow-[0_18px_50px_-34px_rgba(0,0,0,0.95)] backdrop-blur-xl safe-left sm:left-4"
         aria-label="Sekcie"
       >
         {cards.map((card) => (
@@ -797,7 +797,7 @@ export default function LiquidPlayground() {
         ))}
       </nav>
 
-      <main className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-20 pt-[max(5.25rem,calc(env(safe-area-inset-top)+4.75rem))] sm:px-6 sm:pt-28 lg:px-8">
+      <main className="relative mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 pb-20 pt-[max(5rem,calc(env(safe-area-inset-top)+4.5rem))] sm:px-6 sm:pt-24 lg:px-8">
         <div className="space-y-4 sm:space-y-5">
           {cards.map((card) => (
             <div

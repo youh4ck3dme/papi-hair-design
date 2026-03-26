@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import { isAdminAllowlisted } from "@/lib/adminAllowlist";
@@ -17,6 +17,7 @@ function resolveFallbackByRole(userRoles: Set<"owner" | "admin" | "employee" | "
 
 export default function ProtectedRoute({ children, requireAdmin = false, allowedRoles }: ProtectedRouteProps) {
   const { user, memberships, loading } = useAuth();
+  const { pathname } = useLocation();
   const userRoles = new Set(memberships.map((m) => m.role));
   const isAllowlistedAdmin = isAdminAllowlisted(user?.email);
   const hasAdminRole = userRoles.has("owner") || userRoles.has("admin");
@@ -31,7 +32,12 @@ export default function ProtectedRoute({ children, requireAdmin = false, allowed
     );
   }
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) {
+    if (pathname.startsWith("/admin")) {
+      return <Navigate to="/papihairsalon2026" replace />;
+    }
+    return <Navigate to="/auth" replace />;
+  }
 
   // Allowlisted emails can enter admin only after bootstrap creates a real membership.
   // This prevents UI access with missing write permissions.
