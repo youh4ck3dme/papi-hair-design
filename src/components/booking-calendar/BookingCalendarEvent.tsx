@@ -86,8 +86,8 @@ export function BookingCalendarEvent({
   month = false,
   className,
 }: BookingCalendarEventProps) {
-  const { events, date, onSelectEvent, pixelsPerHour } = useBookingCalendarContext();
-  let style = month ? undefined : calculateEventPosition(event, events, pixelsPerHour);
+  const { filteredEvents, date, onSelectEvent, pixelsPerHour } = useBookingCalendarContext();
+  let style = month ? undefined : calculateEventPosition(event, filteredEvents, pixelsPerHour);
   if (!month && !style) return null;
 
   if (event.color.startsWith("#") && style) {
@@ -132,37 +132,41 @@ export function BookingCalendarEvent({
         style={style}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
-        initial={{ opacity: 0, y: -3, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{
-          opacity: 0,
-          scale: 0.98,
-          transition: { duration: 0.15, ease: "easeOut" },
-        }}
+        initial={month ? { opacity: 0 } : { opacity: 0, y: -3, scale: 0.98 }}
+        animate={month ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+        exit={
+          month
+            ? { opacity: 0, transition: { duration: 0.12, ease: "linear" } }
+            : {
+                opacity: 0,
+                scale: 0.98,
+                transition: { duration: 0.15, ease: "easeOut" },
+              }
+        }
         transition={{
           duration: 0.2,
           ease: [0.25, 0.1, 0.25, 1],
           opacity: { duration: 0.2, ease: "linear" },
           layout: { duration: 0.2, ease: "easeOut" },
         }}
-        layoutId={`event-${animationKey}-${month ? "month" : "day"}`}
+        layoutId={month ? undefined : `event-${animationKey}-day`}
       >
         <motion.div
           className={cn(
             "flex w-full min-w-0 flex-grow",
             month ? "flex-row items-center justify-between flex-none" : "flex-col"
           )}
-          layout="position"
+          layout={month ? false : "position"}
         >
           <p className={cn(
             "truncate w-full font-semibold",
-            month ? "text-xs" : "text-sm leading-tight tracking-tight"
+            month ? "text-sm leading-tight" : "text-sm leading-tight tracking-tight"
           )}>
             {event.title}
           </p>
           <p className={cn(
-            "truncate w-full opacity-80",
-            month ? "text-[10px]" : "text-xs font-medium mt-0.5"
+            "truncate w-full",
+            month ? "text-xs font-medium opacity-100" : "text-xs font-medium mt-0.5 opacity-80"
           )}>
             <span>{format(event.start, "HH:mm", { locale: sk })}</span>
             <span className={cn("mx-1 opacity-60", month && "hidden")}>–</span>

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -474,6 +474,7 @@ describe("booking-calendar components", () => {
       makeEvent({ id: "e2", start: new Date(2026, 0, 15, 9, 0), end: new Date(2026, 0, 15, 9, 30) }),
       makeEvent({ id: "e3", start: new Date(2026, 0, 15, 10, 0), end: new Date(2026, 0, 15, 10, 30) }),
       makeEvent({ id: "e4", start: new Date(2026, 0, 15, 11, 0), end: new Date(2026, 0, 15, 11, 30) }),
+      makeEvent({ id: "e5", start: new Date(2026, 0, 15, 12, 0), end: new Date(2026, 0, 15, 12, 30) }),
     ];
 
     renderWithProvider(<CalendarBodyMonth />, {
@@ -503,6 +504,73 @@ describe("booking-calendar components", () => {
     expect(container.querySelector(".booking-calendar")).not.toBeNull();
     expect(container.querySelector(".booking-calendar-header")).not.toBeNull();
     expect(container.querySelector(".booking-calendar-body")).not.toBeNull();
+  });
+
+  it("filters day events using centered calendar search", () => {
+    vi.useFakeTimers();
+    const date = new Date(2026, 0, 15);
+    const events = [
+      makeEvent({
+        id: "search-1",
+        title: "Anna - Farbenie",
+        start: new Date(2026, 0, 15, 9, 0),
+        end: new Date(2026, 0, 15, 9, 30),
+        resource: { customer_name: "Anna", customer_phone: "+421111111111" },
+      }),
+      makeEvent({
+        id: "search-2",
+        title: "Mato - Strih",
+        start: new Date(2026, 0, 15, 10, 0),
+        end: new Date(2026, 0, 15, 10, 30),
+        resource: { customer_name: "Mato", customer_phone: "+421222222222" },
+      }),
+    ];
+
+    render(
+      <BookingCalendar
+        events={events}
+        date={date}
+        setDate={vi.fn()}
+        mode="day"
+        setMode={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Hľadať v kalendári"), {
+      target: { value: "2222" },
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(220);
+    });
+
+    expect(screen.queryByText("Anna - Farbenie")).not.toBeInTheDocument();
+    expect(screen.getByText("Mato - Strih")).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("switches month density to compact and shows +N more earlier", () => {
+    const date = new Date(2026, 0, 15);
+    const events = [
+      makeEvent({ id: "m1", start: new Date(2026, 0, 15, 8, 0), end: new Date(2026, 0, 15, 8, 30) }),
+      makeEvent({ id: "m2", start: new Date(2026, 0, 15, 9, 0), end: new Date(2026, 0, 15, 9, 30) }),
+      makeEvent({ id: "m3", start: new Date(2026, 0, 15, 10, 0), end: new Date(2026, 0, 15, 10, 30) }),
+      makeEvent({ id: "m4", start: new Date(2026, 0, 15, 11, 0), end: new Date(2026, 0, 15, 11, 30) }),
+    ];
+
+    render(
+      <BookingCalendar
+        events={events}
+        date={date}
+        setDate={vi.fn()}
+        mode="month"
+        setMode={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("+2 ďalších")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Compact" }));
+    expect(screen.getByText("+2 ďalších")).toBeInTheDocument();
   });
 
   it("renders resource columns in day mode when resources are present", () => {

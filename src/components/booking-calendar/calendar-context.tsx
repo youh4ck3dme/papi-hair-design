@@ -8,10 +8,15 @@ export interface SlotInfo {
 
 export interface BookingCalendarContextValue {
   events: BookingCalendarEvent[];
+  filteredEvents: BookingCalendarEvent[];
   date: Date;
   setDate: (date: Date) => void;
   mode: BookingCalendarMode;
   setMode: (mode: BookingCalendarMode) => void;
+  searchQuery: string;
+  setSearchQuery: (value: string) => void;
+  monthDensity: "compact" | "comfortable";
+  setMonthDensity: (value: "compact" | "comfortable") => void;
   onSelectSlot?: (slot: SlotInfo) => void;
   onSelectEvent?: (event: BookingCalendarEvent) => void;
   selectable: boolean;

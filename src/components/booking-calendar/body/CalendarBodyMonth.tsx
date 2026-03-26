@@ -18,7 +18,7 @@ import { BookingCalendarEvent } from "../BookingCalendarEvent";
 const WEEKDAY_LABELS = ["Po", "Ut", "St", "Št", "Pi", "So", "Ne"];
 
 export function CalendarBodyMonth() {
-  const { date, events, setDate, setMode } = useBookingCalendarContext();
+  const { date, filteredEvents, setDate, setMode, monthDensity } = useBookingCalendarContext();
 
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(date);
@@ -32,7 +32,7 @@ export function CalendarBodyMonth() {
 
   const today = new Date();
 
-  const visibleEvents = events.filter(
+  const visibleEvents = filteredEvents.filter(
     (event) =>
       isWithinInterval(event.start, {
         start: calendarStart,
@@ -41,13 +41,19 @@ export function CalendarBodyMonth() {
       isWithinInterval(event.end, { start: calendarStart, end: calendarEnd })
   );
 
+  const maxVisibleEvents = monthDensity === "compact" ? 2 : 4;
+  const dayCellClass =
+    monthDensity === "compact"
+      ? "min-h-[84px] sm:min-h-[92px] p-1.5"
+      : "min-h-[104px] sm:min-h-[122px] p-2";
+
   return (
     <div className="flex flex-col flex-grow overflow-hidden min-h-0">
-      <div className="hidden md:grid grid-cols-7 border-border divide-x divide-border">
+      <div className="grid grid-cols-7 border-border divide-x divide-border">
         {WEEKDAY_LABELS.map((day) => (
           <div
             key={day}
-            className="py-2 text-center text-sm font-medium text-muted-foreground border-b border-border"
+            className="border-b border-border py-2 text-center text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground md:text-sm md:tracking-normal"
           >
             {day}
           </div>
@@ -57,11 +63,11 @@ export function CalendarBodyMonth() {
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={monthStart.toISOString()}
-          className="grid md:grid-cols-7 flex-grow overflow-y-auto relative min-h-0"
-          initial={{ opacity: 0 }}
+          className="relative grid min-h-0 flex-grow grid-cols-7 overflow-y-auto auto-rows-fr"
+          initial={{ opacity: 0.95 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: "easeInOut" }}
+          exit={{ opacity: 0.95 }}
+          transition={{ duration: 0.16, ease: "easeInOut" }}
         >
           {calendarDays.map((day) => {
             const dayEvents = visibleEvents.filter((e) =>
@@ -75,8 +81,10 @@ export function CalendarBodyMonth() {
                 type="button"
                 key={day.toISOString()}
                 className={cn(
-                  "relative flex flex-col border-b border-r border-border p-2 aspect-square cursor-pointer min-h-[80px] md:min-h-0 w-full text-left",
-                  !isCurrentMonth && "bg-muted/50 hidden md:flex"
+                  "relative flex w-full flex-col border-b border-r border-border text-left transition-colors cursor-pointer",
+                  dayCellClass,
+                  !isCurrentMonth && "bg-muted/35 text-muted-foreground/60",
+                  isCurrentMonth && "hover:bg-muted/25"
                 )}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -86,15 +94,15 @@ export function CalendarBodyMonth() {
               >
                 <div
                   className={cn(
-                    "text-sm font-medium w-fit p-1 flex flex-col items-center justify-center rounded-full aspect-square",
+                    "w-fit rounded-full px-2 py-1 text-sm font-semibold md:text-base",
                     isToday && "booking-calendar-today"
                   )}
                 >
                   {format(day, "d", { locale: sk })}
                 </div>
                 <AnimatePresence mode="wait">
-                  <div className="flex flex-col gap-1 mt-1">
-                    {dayEvents.slice(0, 3).map((event) => (
+                  <div className="mt-1.5 flex flex-col gap-1.5">
+                    {dayEvents.slice(0, maxVisibleEvents).map((event) => (
                       <BookingCalendarEvent
                         key={event.id}
                         event={event}
@@ -102,7 +110,7 @@ export function CalendarBodyMonth() {
                         month
                       />
                     ))}
-                    {dayEvents.length > 3 && (
+                    {dayEvents.length > maxVisibleEvents && (
                       <motion.div
                         key={`more-${day.toISOString()}`}
                         role="button"
@@ -111,7 +119,7 @@ export function CalendarBodyMonth() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="text-xs font-medium booking-calendar-more hover:underline cursor-pointer rounded px-1 -mx-1"
+                        className="booking-calendar-more -mx-1 rounded px-1 text-xs font-semibold hover:underline cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
                           setDate(day);
@@ -123,9 +131,9 @@ export function CalendarBodyMonth() {
                           setDate(day);
                           setMode("day");
                         }}
-                        aria-label={`Prejsť na deň ${format(day, "d. M.", { locale: sk })} (${dayEvents.length - 3} ďalších)`}
+                        aria-label={`Prejsť na deň ${format(day, "d. M.", { locale: sk })} (${dayEvents.length - maxVisibleEvents} ďalších)`}
                       >
-                        +{dayEvents.length - 3} ďalších
+                        +{dayEvents.length - maxVisibleEvents} ďalších
                       </motion.div>
                     )}
                   </div>

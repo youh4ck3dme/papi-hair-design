@@ -19,8 +19,8 @@ export function CalendarBodyDayContent({
   resourceName,
   showHeader = true,
 }: CalendarBodyDayContentProps) {
-  const { events, onSelectSlot, selectable, businessHours, pixelsPerHour } = useBookingCalendarContext();
-  const dayEvents = events.filter((e) => {
+  const { filteredEvents, onSelectSlot, selectable, businessHours, pixelsPerHour } = useBookingCalendarContext();
+  const dayEvents = filteredEvents.filter((e) => {
     const sameDay = isSameDay(e.start, date);
     if (!resourceId) return sameDay;
     return sameDay && (e.resource as any)?.employee_id === resourceId;

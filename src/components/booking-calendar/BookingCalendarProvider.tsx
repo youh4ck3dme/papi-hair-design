@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { BookingCalendarContext } from "./calendar-context";
 import type { BookingCalendarEvent, BookingCalendarMode } from "./calendar-types";
 import type { SlotInfo } from "./calendar-context";
+import { matchesCalendarSearch } from "./event-search";
 
 export interface BookingCalendarProviderProps {
   events: BookingCalendarEvent[];
@@ -31,6 +32,9 @@ export function BookingCalendarProvider({
   children,
 }: BookingCalendarProviderProps) {
   const [pixelsPerHour, setPixelsPerHour] = useState(128);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [monthDensity, setMonthDensity] = useState<"compact" | "comfortable">("comfortable");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -41,14 +45,31 @@ export function BookingCalendarProvider({
     return () => query.removeEventListener("change", updatePixelsPerHour);
   }, []);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 200);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  const filteredEvents = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) return events;
+    return events.filter((event) => matchesCalendarSearch(event, debouncedSearchQuery));
+  }, [debouncedSearchQuery, events]);
+
   return (
     <BookingCalendarContext.Provider
       value={{
         events,
+        filteredEvents,
         date,
         setDate,
         mode,
         setMode,
+        searchQuery,
+        setSearchQuery,
+        monthDensity,
+        setMonthDensity,
         onSelectSlot,
         onSelectEvent,
         selectable,

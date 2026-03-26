@@ -9,6 +9,7 @@
   "scripts": {
     "setup": "powershell -ExecutionPolicy Bypass -File ./setup.ps1",
     "dev": "$cwd = $PWD.Path; if ($cwd -like 'Microsoft.PowerShell.Core\\FileSystem::*') { $cwd = $cwd -replace '^Microsoft\\.PowerShell\\.Core\\\\FileSystem::', '' }; if ($cwd -like '\\\\?\\*') { $cwd = $cwd.Substring(4) }; Set-Location -LiteralPath $cwd; node ./node_modules/vite/bin/vite.js --port 5678 --strictPort",
+    "dev:clean": "npm run kill-dev; npm run dev",
     "kill-dev": "$ports = 5678,5679,8080,8081,8082; $connections = Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Object { $ports -contains $_.LocalPort }; $connections | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }",
     "sync": "npm run lint && npm run build && git add . && (git commit -m 'fix: final Firebase migration and cleanup' || echo 'No changes to commit') && git push origin main",
     "prebuild": "node scripts/check-env.mjs",

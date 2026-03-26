@@ -5,6 +5,7 @@ import { CalendarHeader } from "./header/CalendarHeader";
 import { CalendarHeaderDate } from "./header/CalendarHeaderDate";
 import { CalendarHeaderMode } from "./header/CalendarHeaderMode";
 import { CalendarHeaderAdd } from "./header/CalendarHeaderAdd";
+import { CalendarHeaderSearch } from "./header/CalendarHeaderSearch";
 import { CalendarBody } from "./body/CalendarBody";
 
 export interface BookingCalendarProps {
@@ -51,8 +52,9 @@ export function BookingCalendar({
 
       <div className="flex flex-col h-full min-h-0 booking-calendar">
         <CalendarHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(210px,1fr)_minmax(320px,1.2fr)_auto] lg:items-center">
             <CalendarHeaderDate />
+            <CalendarHeaderSearch />
             <CalendarHeaderAdd />
           </div>
           <CalendarHeaderMode />
