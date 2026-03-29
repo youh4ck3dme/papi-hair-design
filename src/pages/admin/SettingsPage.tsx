@@ -68,6 +68,12 @@ function mapAvatarUploadError(err: unknown): string {
   return "Chyba pri nahrávaní fotky.";
 }
 
+function maybeWarnBlockedRequest(err: unknown) {
+  if (isBlockedByClientError(err)) {
+    warnBlockedByClientOnce((message) => toast.warning(message));
+  }
+}
+
 export default function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
   const { businessId, isOwner, isOwnerOrAdmin } = useBusiness();
@@ -173,7 +179,9 @@ export default function SettingsPage() {
       await refreshProfile();
       toast.success("Profil aktualizovaný");
     } catch (err) {
-      toast.error("Chyba pri ukladaní");
+      maybeWarnBlockedRequest(err);
+      console.error("SettingsPage: profile save error", err);
+      toast.error(friendlyError(err, "Chyba pri ukladaní profilu"));
     } finally {
       setSaving(false);
     }
@@ -256,6 +264,7 @@ export default function SettingsPage() {
       });
       toast.success("Nastavenia firmy aktualizované");
     } catch (err) {
+      maybeWarnBlockedRequest(err);
       console.error("Business save error:", err);
       toast.error(friendlyError(err, "Chyba pri ukladaní"));
     } finally {
@@ -288,6 +297,7 @@ export default function SettingsPage() {
       if (smtpForm.pass) setSmtpHasPassword(true);
       setSmtpForm((f) => ({ ...f, pass: "" })); // Clear password from memory
     } catch (err) {
+      maybeWarnBlockedRequest(err);
       console.error("SMTP save error:", err);
       toast.error(friendlyError(err, "Chyba pri ukladaní SMTP"));
     } finally {
@@ -305,6 +315,7 @@ export default function SettingsPage() {
       });
       toast.success("Nastavenia booking uložené");
     } catch (err) {
+      maybeWarnBlockedRequest(err);
       console.error("Booking settings save error:", err);
       toast.error(friendlyError(err, "Chyba pri ukladaní nastavení booking"));
     } finally {
@@ -325,8 +336,9 @@ export default function SettingsPage() {
         toast.error("Snapshot rebuild zlyhal");
       }
     } catch (err) {
+      maybeWarnBlockedRequest(err);
       console.error("Snapshot rebuild error:", err);
-      toast.error("Snapshot rebuild zlyhal");
+      toast.error(friendlyError(err, "Snapshot rebuild zlyhal"));
     } finally {
       setSnapshotLoading(false);
     }
@@ -371,9 +383,10 @@ export default function SettingsPage() {
       );
       toast.success("Licencia aktivovaná");
     } catch (err) {
+      maybeWarnBlockedRequest(err);
       console.error("License apply error:", err);
       setLicenseState("error");
-      setLicenseMessage("Chyba pri aktivácii licencie");
+      setLicenseMessage(friendlyError(err, "Chyba pri aktivácii licencie"));
     }
   };
 
