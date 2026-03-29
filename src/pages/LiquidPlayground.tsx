@@ -79,6 +79,25 @@ function normalizeSearch(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+function isDesktopLikeViewport() {
+  if (typeof window === "undefined") return false;
+  const viewportWidth = window.innerWidth;
+  const screenWidth = window.screen?.width ?? viewportWidth;
+  const effectiveWidth = Math.max(viewportWidth, screenWidth);
+  const hasDesktopInput =
+    window.matchMedia("(any-hover: hover)").matches ||
+    window.matchMedia("(any-pointer: fine)").matches;
+  const isMobileUa =
+    /Android|iPhone|iPad|iPod|Mobile|Tablet|Windows Phone/i.test(
+      window.navigator.userAgent,
+    );
+
+  if (effectiveWidth >= 960) return true;
+  if (effectiveWidth < 900) return false;
+
+  return hasDesktopInput && !isMobileUa;
+}
+
 function categorizeServices(services: ServiceItem[], t: (key: string) => string) {
   const categories = [
     { label: t("liquid.catWomenHair"), icon: "DI", match: (name: string) => /damsky strih|fukana|finalny styling/i.test(normalizeSearch(name)) },
@@ -155,89 +174,94 @@ function BrandContent({
     closed: "bg-red-500",
     on_request: "bg-amber-500",
   };
+  const quickFacts = [
+    { label: t("liquid.cardTime"), value: openingSummary },
+    { label: t("liquid.cardPrices"), value: cheapestPrice != null ? `od ${cheapestPrice.toFixed(0)}EUR` : "-" },
+    { label: t("liquid.cardReserve"), value: "24/7 online" },
+    { label: t("liquid.cardDetails"), value: phoneNumber },
+  ];
 
   return (
     <div
       className={`flex h-full flex-col items-center text-center ${
         isHero
-          ? "mx-auto max-w-[34rem] justify-between gap-3 px-2 py-2 sm:gap-6 sm:px-4 sm:py-4"
+          ? "mx-auto max-w-[38rem] justify-between gap-3 px-2 py-2 sm:gap-6 sm:px-4 sm:py-4 xl:max-w-[44rem]"
           : "justify-center gap-8 px-4"
       }`}
     >
-      <div className="relative group">
-        <LogoIcon size="lg" className="relative z-10" />
-        <div className="absolute inset-0 scale-150 rounded-full bg-primary/20 blur-2xl transition-all duration-700 group-hover:bg-primary/30" />
-      </div>
+      <div className={isHero ? "grid w-full items-center gap-8 xl:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)] xl:gap-10" : "contents"}>
+        <div className={`flex flex-col items-center ${isHero ? "w-full xl:items-start xl:text-left" : ""}`}>
+          <div className="relative group">
+            <LogoIcon size="lg" className="relative z-10" />
+            <div className="absolute inset-0 scale-150 rounded-full bg-primary/20 blur-2xl transition-all duration-700 group-hover:bg-primary/30" />
+          </div>
 
-      <div className={isHero ? "max-w-[30rem] space-y-2 sm:space-y-3" : "space-y-3"}>
-        <h1 className={`bg-gradient-to-b from-white via-white to-white/60 bg-clip-text font-bold uppercase leading-tight text-transparent ${
-          isHero
-            ? "text-[2.4rem] tracking-[0.06em] sm:text-6xl sm:tracking-[0.2em]"
-            : "text-5xl tracking-[0.2em] sm:text-7xl"
-        }`}>
-          PAPI HAIR
-        </h1>
-        <h2 className={`font-light uppercase text-primary ${isHero ? "-mt-0.5 text-base tracking-[0.22em] sm:-mt-2 sm:text-3xl sm:tracking-[0.4em]" : "-mt-2 text-2xl tracking-[0.4em] sm:text-3xl"}`}>
-          DESIGN
-        </h2>
-        <div className={`mx-auto h-px w-24 bg-gradient-to-r from-transparent via-primary to-transparent ${isHero ? "mt-4 sm:mt-6" : "mt-6"}`} />
-        <p className={`uppercase text-white/50 ${isHero ? "mt-3 text-[11px] tracking-[0.24em] sm:mt-4 sm:text-xs sm:tracking-[0.3em]" : "mt-4 text-xs tracking-[0.3em]"}`}>
-          est. 2018 · Kosice
-        </p>
-        <p className={`font-medium italic text-amber-200/80 ${isHero ? "mt-1.5 text-[13px] leading-6 tracking-[0.02em] sm:mt-2 sm:text-sm sm:tracking-wide" : "mt-2 text-sm tracking-wide"}`}>
-          {t("liquid.brandTagline")}
-        </p>
-      </div>
+          <div className={isHero ? "max-w-[34rem] space-y-2 sm:space-y-3 xl:max-w-[42rem]" : "space-y-3"}>
+            <h1 className={`bg-gradient-to-b from-white via-white to-white/60 bg-clip-text font-bold uppercase leading-tight text-transparent ${
+              isHero
+                ? "text-[2.4rem] tracking-[0.06em] sm:text-6xl sm:tracking-[0.2em] xl:text-7xl"
+                : "text-5xl tracking-[0.2em] sm:text-7xl"
+            }`}>
+              PAPI HAIR
+            </h1>
+            <h2 className={`font-light uppercase text-primary ${isHero ? "-mt-0.5 text-base tracking-[0.22em] sm:-mt-2 sm:text-3xl sm:tracking-[0.4em] xl:text-[2rem]" : "-mt-2 text-2xl tracking-[0.4em] sm:text-3xl"}`}>
+              DESIGN
+            </h2>
+            <div className={`h-px w-24 bg-gradient-to-r from-transparent via-primary to-transparent ${isHero ? "mx-auto mt-4 sm:mt-6 xl:mx-0" : "mx-auto mt-6"}`} />
+            <p className={`uppercase text-white/50 ${isHero ? "mt-3 text-[11px] tracking-[0.24em] sm:mt-4 sm:text-xs sm:tracking-[0.3em]" : "mt-4 text-xs tracking-[0.3em]"}`}>
+              est. 2018 · Kosice
+            </p>
+            <p className={`font-medium italic text-amber-200/80 ${isHero ? "mt-1.5 text-[13px] leading-6 tracking-[0.02em] sm:mt-2 sm:text-sm sm:tracking-wide xl:max-w-[32rem]" : "mt-2 text-sm tracking-wide"}`}>
+              {t("liquid.brandTagline")}
+            </p>
+          </div>
 
-      {openStatus && (
-        <div className={`inline-flex items-center rounded-full border font-semibold uppercase backdrop-blur-md ${
-          isHero ? "gap-2 px-3 py-1.5 text-[11px] tracking-[0.22em] sm:gap-3 sm:px-4 sm:py-2 sm:text-xs sm:tracking-widest" : "gap-3 px-4 py-2 text-xs tracking-widest"
-        } ${modeColors[openStatus.mode] ?? modeColors.closed}`}>
-          <span className={`h-2 w-2 animate-pulse rounded-full ${dotColors[openStatus.mode] ?? dotColors.closed}`} />
-          {modeLabels[openStatus.mode] ?? t("liquid.statusClosed")}
-        </div>
-      )}
+          {openStatus && (
+            <div className={`inline-flex items-center rounded-full border font-semibold uppercase backdrop-blur-md ${
+              isHero ? "mt-5 gap-2 px-3 py-1.5 text-[11px] tracking-[0.22em] sm:gap-3 sm:px-4 sm:py-2 sm:text-xs sm:tracking-widest" : "gap-3 px-4 py-2 text-xs tracking-widest"
+            } ${modeColors[openStatus.mode] ?? modeColors.closed}`}>
+              <span className={`h-2 w-2 animate-pulse rounded-full ${dotColors[openStatus.mode] ?? dotColors.closed}`} />
+              {modeLabels[openStatus.mode] ?? t("liquid.statusClosed")}
+            </div>
+          )}
 
-      {isHero && (
-        <div className="mx-auto flex w-full max-w-sm flex-col items-center justify-center gap-3">
-          <Button
-            size="lg"
-            className="h-12 w-full rounded-xl bg-gradient-to-r from-primary via-[#ffd700] to-primary font-bold uppercase tracking-widest text-black shadow-[0_10px_30px_-10px_rgba(218,165,32,0.5)] transition-transform hover:scale-[1.02] sm:h-14"
-            onClick={() => navigate("/booking")}
-          >
-            {t("liquid.reserveBtn")}
-          </Button>
-          {isRegisteredCustomer && (
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-14 w-full rounded-xl border-white/10 font-medium uppercase tracking-widest text-white backdrop-blur-sm hover:border-primary/50"
-              onClick={() => navigate("/booking")}
-            >
-              {t("liquid.memberBtn")}
-            </Button>
+          {isHero && (
+            <div className="mx-auto mt-5 flex w-full max-w-sm flex-col items-center justify-center gap-3 xl:mx-0 xl:max-w-md xl:items-start">
+              <Button
+                size="lg"
+                className="h-12 w-full rounded-xl bg-gradient-to-r from-primary via-[#ffd700] to-primary font-bold uppercase tracking-widest text-black shadow-[0_10px_30px_-10px_rgba(218,165,32,0.5)] transition-transform hover:scale-[1.02] sm:h-14"
+                onClick={() => navigate("/booking")}
+              >
+                {t("liquid.reserveBtn")}
+              </Button>
+              {isRegisteredCustomer && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-14 w-full rounded-xl border-white/10 font-medium uppercase tracking-widest text-white backdrop-blur-sm hover:border-primary/50"
+                  onClick={() => navigate("/booking")}
+                >
+                  {t("liquid.memberBtn")}
+                </Button>
+              )}
+            </div>
           )}
         </div>
-      )}
 
-      <div className={isHero ? "grid w-full max-w-[34rem] grid-cols-2 gap-3 min-[360px]:gap-3.5 sm:gap-4" : "grid w-full max-w-md grid-cols-2 gap-3"}>
-        <div className={isHero ? "rounded-xl border border-white/10 bg-black/30 p-3 text-left min-[360px]:min-h-[70px] min-[360px]:rounded-2xl min-[360px]:p-[0.95rem] sm:p-[1.15rem]" : "rounded-xl border border-white/10 bg-black/30 p-3 text-left"}>
-          <p className={isHero ? "text-[10px] uppercase tracking-widest text-white/50 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em] sm:text-xs" : "text-[10px] uppercase tracking-widest text-white/50"}>{t("liquid.cardTime")}</p>
-          <p className={isHero ? "mt-1 text-xs font-semibold text-white min-[360px]:mt-1.5 min-[360px]:text-sm min-[360px]:leading-snug sm:text-[15px]" : "mt-1 text-xs font-semibold text-white"}>{openingSummary}</p>
-        </div>
-        <div className={isHero ? "rounded-xl border border-white/10 bg-black/30 p-3 text-left min-[360px]:min-h-[70px] min-[360px]:rounded-2xl min-[360px]:p-[0.95rem] sm:p-[1.15rem]" : "rounded-xl border border-white/10 bg-black/30 p-3 text-left"}>
-          <p className={isHero ? "text-[10px] uppercase tracking-widest text-white/50 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em] sm:text-xs" : "text-[10px] uppercase tracking-widest text-white/50"}>{t("liquid.cardPrices")}</p>
-          <p className={isHero ? "mt-1 text-xs font-semibold text-white min-[360px]:mt-1.5 min-[360px]:text-sm min-[360px]:leading-snug sm:text-[15px]" : "mt-1 text-xs font-semibold text-white"}>
-            {cheapestPrice != null ? `od ${cheapestPrice.toFixed(0)}EUR` : "-"}
-          </p>
-        </div>
-        <div className={isHero ? "rounded-xl border border-white/10 bg-black/30 p-3 text-left min-[360px]:min-h-[70px] min-[360px]:rounded-2xl min-[360px]:p-[0.95rem] sm:p-[1.15rem]" : "rounded-xl border border-white/10 bg-black/30 p-3 text-left"}>
-          <p className={isHero ? "text-[10px] uppercase tracking-widest text-white/50 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em] sm:text-xs" : "text-[10px] uppercase tracking-widest text-white/50"}>{t("liquid.cardReserve")}</p>
-          <p className={isHero ? "mt-1 text-xs font-semibold text-white min-[360px]:mt-1.5 min-[360px]:text-sm min-[360px]:leading-snug sm:text-[15px]" : "mt-1 text-xs font-semibold text-white"}>24/7 online</p>
-        </div>
-        <div className={isHero ? "rounded-xl border border-white/10 bg-black/30 p-3 text-left min-[360px]:min-h-[70px] min-[360px]:rounded-2xl min-[360px]:p-[0.95rem] sm:p-[1.15rem]" : "rounded-xl border border-white/10 bg-black/30 p-3 text-left"}>
-          <p className={isHero ? "text-[10px] uppercase tracking-widest text-white/50 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em] sm:text-xs" : "text-[10px] uppercase tracking-widest text-white/50"}>{t("liquid.cardDetails")}</p>
-          <p className={isHero ? "mt-1 text-xs font-semibold text-white min-[360px]:mt-1.5 min-[360px]:text-sm min-[360px]:leading-snug sm:text-[15px]" : "mt-1 text-xs font-semibold text-white"}>{phoneNumber}</p>
+        <div className={isHero ? "grid w-full max-w-[38rem] grid-cols-2 gap-3 min-[360px]:gap-3.5 sm:gap-4 xl:ml-auto xl:max-w-none xl:grid-cols-1 xl:gap-4" : "grid w-full max-w-md grid-cols-2 gap-3"}>
+          {quickFacts.map((fact) => (
+            <div
+              key={fact.label}
+              className={isHero ? "rounded-xl border border-white/10 bg-black/30 p-3 text-left min-[360px]:min-h-[70px] min-[360px]:rounded-2xl min-[360px]:p-[0.95rem] sm:p-[1.15rem] xl:min-h-[88px]" : "rounded-xl border border-white/10 bg-black/30 p-3 text-left"}
+            >
+              <p className={isHero ? "text-[10px] uppercase tracking-widest text-white/50 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em] sm:text-xs" : "text-[10px] uppercase tracking-widest text-white/50"}>
+                {fact.label}
+              </p>
+              <p className={isHero ? "mt-1 text-xs font-semibold text-white min-[360px]:mt-1.5 min-[360px]:text-sm min-[360px]:leading-snug sm:text-[15px] xl:text-base" : "mt-1 text-xs font-semibold text-white"}>
+                {fact.value}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -634,31 +658,16 @@ function AnchorRailButton({
 }
 
 function LandingAnchorSection({
-  module,
   children,
 }: {
-  module: LandingModule;
   children: React.ReactNode;
 }) {
   return (
-    <section className="grid items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
-      <div className="rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-4 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.9)] lg:sticky lg:top-24 sm:rounded-[28px] sm:p-5">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/12 text-primary shadow-[0_0_18px_rgba(218,165,32,0.15)]">
-          <module.Icon className="h-5 w-5" />
-        </div>
-        <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary/75">
-          {module.label}
-        </p>
-        <h3 className="mt-2 text-xl font-bold text-white sm:text-2xl">
-          {module.sub}
-        </h3>
-        <p className="mt-3 text-sm leading-6 text-white/58">
-          {module.summary}
-        </p>
-      </div>
-
-      <div className="rounded-[24px] border border-primary/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-1.5 shadow-[0_30px_90px_-50px_rgba(218,165,32,0.22)] sm:rounded-[30px] sm:p-2.5">
-        <div className="overflow-hidden rounded-[22px] border border-white/6 bg-[linear-gradient(180deg,rgba(0,0,0,0.62),rgba(0,0,0,0.5))] p-4 sm:rounded-[26px] sm:p-5 lg:p-6">
+    <section className="grid w-full grid-cols-1 items-start gap-3">
+      <div className="w-full rounded-[24px] border border-primary/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-1.5 shadow-[0_30px_90px_-50px_rgba(218,165,32,0.22)] sm:rounded-[30px] sm:p-2.5">
+        <div
+          className="overflow-hidden rounded-[22px] border border-white/6 bg-[linear-gradient(180deg,rgba(0,0,0,0.62),rgba(0,0,0,0.5))] p-4 sm:rounded-[26px] sm:p-5 lg:p-6"
+        >
           {children}
         </div>
       </div>
@@ -669,6 +678,7 @@ function LandingAnchorSection({
 export default function LiquidPlayground() {
   const [activeSectionId, setActiveSectionId] = useState<LandingModule["id"]>("brand");
   const [expandedNavId, setExpandedNavId] = useState<LandingModule["id"] | null>(null);
+  const [desktopLikeLayout, setDesktopLikeLayout] = useState<boolean>(() => isDesktopLikeViewport());
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const sectionRefs = useRef<Partial<Record<LandingModule["id"], HTMLElement | null>>>({});
@@ -719,6 +729,7 @@ export default function LiquidPlayground() {
         nextOpening={nextOpening}
         info={info}
         navigate={navigate}
+        variant={desktopLikeLayout ? "hero" : "section"}
       />
     ),
     hours: (
@@ -732,6 +743,13 @@ export default function LiquidPlayground() {
     booking: <BookingContent />,
     contact: <ContactContent />,
   };
+
+  useEffect(() => {
+    const updateLayoutMode = () => setDesktopLikeLayout(isDesktopLikeViewport());
+    updateLayoutMode();
+    window.addEventListener("resize", updateLayoutMode);
+    return () => window.removeEventListener("resize", updateLayoutMode);
+  }, []);
 
   useEffect(() => {
     const elements = cards
@@ -769,7 +787,7 @@ export default function LiquidPlayground() {
   };
 
   return (
-    <div className="safe-x safe-y relative min-h-[100dvh] overflow-x-hidden bg-[#040404] text-white">
+    <div className="safe-x safe-y relative min-h-screen min-h-[100svh] overflow-x-hidden bg-[#040404] text-white">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(218,165,32,0.12),transparent_32%),radial-gradient(circle_at_85%_18%,rgba(255,255,255,0.06),transparent_20%),radial-gradient(circle_at_bottom,rgba(218,165,32,0.07),transparent_30%)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black via-black/65 to-transparent" />
 
@@ -797,8 +815,8 @@ export default function LiquidPlayground() {
         ))}
       </nav>
 
-      <main className="relative mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 pb-20 pt-[max(5rem,calc(env(safe-area-inset-top)+4.5rem))] sm:px-6 sm:pt-24 lg:px-8">
-        <div className="space-y-4 sm:space-y-5">
+      <main className="relative mx-auto flex w-full max-w-none flex-col gap-4 px-0 pb-20 pt-[max(5rem,calc(env(safe-area-inset-top)+4.5rem))] sm:px-2 sm:pt-24 lg:max-w-[96rem] lg:px-8">
+        <div className="space-y-3 sm:space-y-4 lg:space-y-5">
           {cards.map((card) => (
             <div
               key={card.id}
@@ -809,7 +827,7 @@ export default function LiquidPlayground() {
                 sectionRefs.current[card.id] = element;
               }}
             >
-              <LandingAnchorSection module={card}>
+              <LandingAnchorSection>
                 {contentMap[card.id]}
               </LandingAnchorSection>
             </div>

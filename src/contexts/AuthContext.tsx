@@ -3,6 +3,12 @@ import { auth, db, functions } from "@/integrations/firebase/config";
 import { onAuthStateChanged, signOut as firebaseSignOut, User } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
+import { toast } from "sonner";
+import {
+  isBlockedByClientError,
+  isIgnorableBlockedFirestoreError,
+  warnBlockedByClientOnce,
+} from "@/lib/firebaseClientErrors";
 
 interface Profile {
   id: string;
@@ -113,7 +119,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       })) as Membership[]);
 
     } catch (err) {
-      console.error("AuthContext: Error fetching profile/memberships:", err);
+      if (isIgnorableBlockedFirestoreError(err) || isBlockedByClientError(err)) {
+        warnBlockedByClientOnce((message) => toast.warning(message));
+        console.info("AuthContext: non-critical blocked request", err);
+      } else {
+        console.error("AuthContext: Error fetching profile/memberships:", err);
+      }
     }
   }, [fbUser]);
 
@@ -134,7 +145,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         try {
           await refreshProfile(currentFbUser.uid);
         } catch (err) {
-          console.error("AuthContext: Failed to refresh profile on auth change:", err);
+          if (isIgnorableBlockedFirestoreError(err) || isBlockedByClientError(err)) {
+            warnBlockedByClientOnce((message) => toast.warning(message));
+            console.info("AuthContext: non-critical blocked auth refresh request", err);
+          } else {
+            console.error("AuthContext: Failed to refresh profile on auth change:", err);
+          }
         }
       } else {
         setUser(null);

@@ -46,6 +46,7 @@ scripts/vercel-deploy-token.txt
 
 # E2E / Playwright
 e2e-results
+test-results
 
 # Test coverage
 coverage
@@ -77,6 +78,16 @@ run_view.txt
 /booking-papihairdesign-sk/projects.json
 build-output.txt
 typecheck-output.txt
+.codex-dev.log
+deploy_debug.log
+devserver.log
+preview.log
+projects_debug.log
+firestore-debug.log
+functions_debug.log
+*.diff.tmp
+home-*.png
+salon-*.png
 
 # Local import reports
 docs/import-reports/

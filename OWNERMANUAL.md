@@ -278,6 +278,20 @@ Kazdy den rano:
 4. potvrdit alebo upravit nove rezervacie
 5. na konci smeny sa odhlasit
 
+## Firebase Storage CORS (avatar upload)
+
+Ak upload profilovej fotky v `/admin/settings` pada na CORS, aplikujte CORS policy z repozitara:
+
+```bash
+gsutil cors set storage.cors.json gs://hairchainger-main-876665-176e8.firebasestorage.app
+```
+
+Kontrola aktualnej policy:
+
+```bash
+gsutil cors get gs://hairchainger-main-876665-176e8.firebasestorage.app
+```
+
 ## Oficialne zdroje
 
 - Apple Command Line Tools: `https://developer.apple.com/library/archive/technotes/tn2339/_index.html`

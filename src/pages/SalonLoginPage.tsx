@@ -12,6 +12,12 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import {
+  getFirebaseErrorCode,
+  isBlockedByClientError,
+  isIgnorableBlockedFirestoreError,
+  warnBlockedByClientOnce,
+} from "@/lib/firebaseClientErrors";
 
 const PROFILES = [
   {
@@ -170,7 +176,7 @@ function TeamProfileCard({
           </div>
         </div>
 
-        <p className="max-w-[30ch] text-base leading-8 text-white/88">
+        <p className="max-w-[30ch] text-base leading-8 text-white/88 md:max-w-[38ch] lg:max-w-[44ch]">
           {summary}
         </p>
       </div>
@@ -271,8 +277,30 @@ export default function SalonLoginPage() {
       await signInWithEmailAndPassword(auth, profile.email, password);
       toast.success(t("salonLogin.toastWelcome", { name: profile.label }));
       navigate("/admin/calendar");
-    } catch {
-      toast.error(t("salonLogin.toastWrongPassword"));
+    } catch (error) {
+      if (auth.currentUser) {
+        toast.success(t("salonLogin.toastWelcome", { name: profile.label }));
+        navigate("/admin/calendar");
+        return;
+      }
+
+      if (isIgnorableBlockedFirestoreError(error) || isBlockedByClientError(error)) {
+        warnBlockedByClientOnce((message) => toast.warning(message));
+      }
+
+      const code = getFirebaseErrorCode(error);
+      const isCredentialIssue =
+        code.includes("wrong-password") ||
+        code.includes("invalid-login-credentials") ||
+        code.includes("user-not-found") ||
+        code.includes("invalid-credential");
+
+      if (isCredentialIssue) {
+        toast.error(t("salonLogin.toastWrongPassword"));
+      } else {
+        toast.error("Prihlásenie zlyhalo. Skúste to znova.");
+      }
+    } finally {
       setPassword("");
       setLoading(false);
     }
@@ -523,7 +551,7 @@ export default function SalonLoginPage() {
         <LanguageToggle />
       </div>
 
-      <main className="relative z-10 mx-auto flex w-full max-w-[580px] flex-col px-4 pb-10 pt-16 sm:px-6 sm:pt-20">
+      <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-col px-4 pb-10 pt-16 sm:px-6 sm:pt-20 lg:px-8">
         {phase === "intro" && renderIntro()}
         {phase === "gate" && renderGate()}
         {phase === "picker" && renderPicker()}

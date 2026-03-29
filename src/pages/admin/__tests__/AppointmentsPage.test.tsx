@@ -13,6 +13,7 @@ const authState = vi.hoisted(() => ({
 const toastMocks = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
+  warning: vi.fn(),
 }));
 
 const firestoreMocks = vi.hoisted(() => ({
@@ -85,6 +86,7 @@ vi.mock("firebase/firestore", async () => {
     where: (field: string, op: string, value: unknown) => ({ type: "where", field, op, value }),
     orderBy: (field: string, direction: string) => ({ type: "orderBy", field, direction }),
     limit: (value: number) => ({ type: "limit", value }),
+    limitToLast: (value: number) => ({ type: "limitToLast", value }),
     query: (base: any, ...constraints: any[]) => ({
       __collection: base?.__collection ?? "unknown",
       constraints: [...(base?.constraints ?? []), ...constraints],
@@ -136,6 +138,7 @@ describe("AppointmentsPage", () => {
   beforeEach(() => {
     toastMocks.success.mockReset();
     toastMocks.error.mockReset();
+    toastMocks.warning.mockReset();
     firestoreMocks.getDocs.mockReset();
     adminUpdateBookingStatusMock.mockReset();
     adminUpdateBookingStatusMock.mockResolvedValue({ status: "confirmed" });
@@ -235,6 +238,29 @@ describe("AppointmentsPage", () => {
       expect(screen.getAllByText("Marek Urban").length).toBeGreaterThan(0);
     });
     expect(screen.queryByText("Jana Novak")).not.toBeInTheDocument();
+  });
+
+  it("falls back to non-indexed query when firestore index is missing", async () => {
+    let appointmentsPrimaryAttempted = false;
+    firestoreMocks.getDocs.mockImplementation(async (input: any) => {
+      const collectionName = input?.__collection;
+      if (collectionName === "employees") return makeSnapshot([]);
+      if (collectionName === "appointments") {
+        const hasOrderBy = (input?.constraints ?? []).some((c: any) => c?.type === "orderBy");
+        if (hasOrderBy && !appointmentsPrimaryAttempted) {
+          appointmentsPrimaryAttempted = true;
+          throw new Error("The query requires an index.");
+        }
+        return makeSnapshot(fixtures.appointments);
+      }
+      return makeSnapshot([]);
+    });
+
+    render(<AppointmentsPage />);
+
+    expect(await screen.findByText("Rezervácie")).toBeInTheDocument();
+    expect(screen.getAllByText("Jana Novak").length).toBeGreaterThan(0);
+    expect(toastMocks.warning).toHaveBeenCalled();
   });
 
   it("opens detail dialog on card click", async () => {

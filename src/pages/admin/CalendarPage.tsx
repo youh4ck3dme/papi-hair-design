@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { addMinutes, startOfDay, addDays, format as fmtDate } from "date-fns";
 import { sk } from "date-fns/locale";
 import { auth, db } from "@/integrations/firebase/config";
@@ -7,7 +7,6 @@ import {
   query,
   where,
   getDocs,
-  getDoc,
   doc,
   orderBy,
   addDoc,
@@ -43,6 +42,11 @@ import {
   canAdminMarkNoShow,
 } from "@/lib/adminBookingStatus";
 import { buildAdminCalendarCsv, buildAdminCalendarPrintHtml } from "@/lib/adminCalendarExport";
+import {
+  isBlockedByClientError,
+  isIgnorableBlockedFirestoreError,
+  warnBlockedByClientOnce,
+} from "@/lib/firebaseClientErrors";
 
 interface CalEvent {
   id: string; title: string; start: Date; end: Date; status: string; resource: any;
@@ -96,10 +100,18 @@ export default function CalendarPage() {
   const [quickActionEmployeeId, setQuickActionEmployeeId] = useState("");
   const [quickActionReason, setQuickActionReason] = useState("Blokovaný čas");
   const [quickActionSaving, setQuickActionSaving] = useState(false);
+  const eventsRequestRef = useRef(0);
 
   const filtersStorageKey = `admin-calendar-filters:${businessId}`;
 
   const loadEvents = useCallback(async () => {
+    if (!businessId) {
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
+
+    const requestId = ++eventsRequestRef.current;
     setLoading(true);
     try {
       let apptsQuery = query(
@@ -134,16 +146,10 @@ export default function CalendarPage() {
 
       const [apptsSnap, blocksSnap] = await Promise.all([getDocs(apptsQuery), getDocs(blocksQuery)]);
 
-      // In Firestore, we don't have automatic foreign key joining (manual client-side denormalization required)
-      // For small sets, we can fetch related data manually or denormalize.
-      // For the blueprint, we'll assume we either denormalized or we fetch basic info.
-      // But to match the UI perfectly, we might need a helper to fetch customers/services/employees.
-
       const appointmentEvents: CalEvent[] = apptsSnap.docs.map((doc) => {
         const a = doc.data();
         return {
           id: doc.id,
-          // Use denormalized labels if available or placeholder
           title: `${a.customer_name ?? "Zákazník"} – ${a.service_name ?? "Služba"}`,
           start: a.start_at instanceof Timestamp ? a.start_at.toDate() : new Date(a.start_at),
           end: a.end_at instanceof Timestamp ? a.end_at.toDate() : new Date(a.end_at),
@@ -154,7 +160,10 @@ export default function CalendarPage() {
 
       const blockedEvents: CalEvent[] = blocksSnap.docs.map((docSnap) => {
         const row = docSnap.data() as Record<string, unknown>;
-        const employee = employees.find((item) => item.id === row.employee_id);
+        const employeeName =
+          typeof row.employee_name === "string" ? row.employee_name : null;
+        const employeeColor =
+          typeof row.employee_color === "string" ? row.employee_color : null;
         return {
           id: docSnap.id,
           title: `Blok: ${typeof row.reason === "string" ? row.reason : "Blokovaný čas"}`,
@@ -165,67 +174,100 @@ export default function CalendarPage() {
             ...row,
             id: docSnap.id,
             event_type: "time_block",
-            employee_name: employee?.display_name ?? null,
-            employee_color: employee?.color ?? null,
+            employee_name: employeeName,
+            employee_color: employeeColor,
             profile_limited_employee_id: employeeIdForUser,
           },
         };
       });
 
+      if (requestId !== eventsRequestRef.current) return;
       setEvents([...appointmentEvents, ...blockedEvents]);
     } catch (err) {
-      console.error("CalendarPage: error loading events", err);
+      if (isIgnorableBlockedFirestoreError(err) || isBlockedByClientError(err)) {
+        warnBlockedByClientOnce((message) => toast.warning(message));
+        console.warn("CalendarPage: non-critical blocked request", err);
+      } else {
+        console.error("CalendarPage: error loading events", err);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === eventsRequestRef.current) {
+        setLoading(false);
+      }
     }
-  }, [businessId, employees, isOwnerOrAdmin]);
+  }, [businessId, isOwnerOrAdmin]);
 
 
   useEffect(() => {
-    loadEvents();
+    if (!businessId) {
+      setServices([]);
+      setEmployees([]);
+      setSchedules({});
+      setMemberships([]);
+      return;
+    }
 
-    const loadData = async () => {
+    let isCancelled = false;
+
+    const loadStaticData = async () => {
       try {
-        const [bizSnap, svcSnap, empSnap, memSnap] = await Promise.all([
-          getDoc(doc(db, "businesses", businessId)),
+        const [svcSnap, empSnap, memSnap] = await Promise.all([
           getDocs(query(collection(db, "services"), where("business_id", "==", businessId), where("is_active", "==", true))),
           getDocs(query(collection(db, "employees"), where("business_id", "==", businessId), where("is_active", "==", true))),
           getDocs(query(collection(db, "memberships"), where("business_id", "==", businessId)))
         ]);
 
+        if (isCancelled) return;
+
         setServices(svcSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-        if (!empSnap.empty) {
-          const emps = empSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          setEmployees(emps);
 
-          const ids = emps.map(e => e.id);
-          // Fetch schedules for these employees
-          const schedSnap = await getDocs(query(
-            collection(db, "schedules"),
-            where("employee_id", "in", ids.slice(0, 10))
-          ));
-
-          const map: Record<string, EmployeeSchedule[]> = {};
-          schedSnap.forEach((s) => {
-            const d = s.data();
-            const eid = d.employee_id;
-            if (!map[eid]) map[eid] = [];
-            map[eid].push({
-              day_of_week: d.day_of_week,
-              start_time: d.start_time,
-              end_time: d.end_time
-            });
-          });
-          setSchedules(map);
-        }
+        const emps = empSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setEmployees(emps);
         setMemberships(memSnap.docs.map(d => ({ profile_id: d.data().profile_id, role: d.data().role })));
+
+        const ids = emps.map(e => e.id).slice(0, 10);
+        if (!ids.length) {
+          setSchedules({});
+          return;
+        }
+
+        const schedSnap = await getDocs(query(
+          collection(db, "schedules"),
+          where("employee_id", "in", ids)
+        ));
+
+        if (isCancelled) return;
+        const map: Record<string, EmployeeSchedule[]> = {};
+        schedSnap.forEach((s) => {
+          const d = s.data();
+          const eid = d.employee_id;
+          if (!map[eid]) map[eid] = [];
+          map[eid].push({
+            day_of_week: d.day_of_week,
+            start_time: d.start_time,
+            end_time: d.end_time
+          });
+        });
+        setSchedules(map);
       } catch (err) {
-        console.error("CalendarPage: error loading secondary data", err);
+        if (isIgnorableBlockedFirestoreError(err) || isBlockedByClientError(err)) {
+          warnBlockedByClientOnce((message) => toast.warning(message));
+          console.warn("CalendarPage: non-critical blocked static-data request", err);
+        } else {
+          console.error("CalendarPage: error loading secondary data", err);
+        }
       }
     };
 
-    loadData();
-  }, [businessId, loadEvents]);
+    void loadStaticData();
+    return () => {
+      isCancelled = true;
+    };
+  }, [businessId]);
+
+  useEffect(() => {
+    void loadEvents();
+  }, [loadEvents]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -430,7 +472,12 @@ export default function CalendarPage() {
           };
         }));
       } catch (error) {
-        console.error("CalendarPage: error loading customer history", error);
+        if (isIgnorableBlockedFirestoreError(error) || isBlockedByClientError(error)) {
+          warnBlockedByClientOnce((message) => toast.warning(message));
+          console.warn("CalendarPage: non-critical blocked history request", error);
+        } else {
+          console.error("CalendarPage: error loading customer history", error);
+        }
         setCustomerHistory([]);
       } finally {
         setLoadingHistory(false);

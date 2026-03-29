@@ -29,6 +29,11 @@ import { createPublicBooking } from "@/integrations/firebase/createPublicBooking
 import { toast } from "sonner";
 import { ADMIN_BOOKING_STATUS_LABELS } from "@/lib/adminBookingStatus";
 import { useTranslation } from "react-i18next";
+import {
+  isBlockedByClientError,
+  isIgnorableBlockedFirestoreError,
+  warnBlockedByClientOnce,
+} from "@/lib/firebaseClientErrors";
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   pending: { label: ADMIN_BOOKING_STATUS_LABELS.pending, className: "bg-amber-100 text-amber-800" },
@@ -146,8 +151,14 @@ export default function DashboardPage() {
         ...(docSnap.data() as { name_sk?: string | null }),
       })));
     } catch (err) {
-      console.error("DashboardPage: Unable to load stats", err);
-      setError("Nepodarilo sa načítať údaje");
+      if (isIgnorableBlockedFirestoreError(err) || isBlockedByClientError(err)) {
+        warnBlockedByClientOnce((message) => toast.warning(message));
+        console.warn("DashboardPage: non-critical blocked request", err);
+        setError("Načítanie je obmedzené blokovaním požiadaviek v prehliadači.");
+      } else {
+        console.error("DashboardPage: Unable to load stats", err);
+        setError("Nepodarilo sa načítať údaje");
+      }
     } finally {
       setLoading(false);
     }

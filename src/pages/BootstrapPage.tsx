@@ -1,19 +1,60 @@
 import { useState } from "react";
 import { db, auth, functions } from "@/integrations/firebase/config";
-import { doc, setDoc, serverTimestamp, writeBatch, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, writeBatch, collection, query, where, getDocs } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ShieldCheck, AlertCircle } from "lucide-react";
+import { Loader2, ShieldCheck, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+    getFirebaseErrorCode,
+    isBlockedByClientError,
+    isIgnorableBlockedFirestoreError,
+    warnBlockedByClientOnce,
+} from "@/lib/firebaseClientErrors";
+
+type BootstrapStatus = { type: "success" | "error"; msg: string };
+
+function mapBootstrapError(err: unknown): string {
+    const code = getFirebaseErrorCode(err);
+    switch (code) {
+        case "unauthenticated":
+        case "functions/unauthenticated":
+            return "Prihlásenie vypršalo. Prihláste sa znova.";
+        case "permission-denied":
+        case "functions/permission-denied":
+            return "Účet nemá admin oprávnenie pre bootstrap.";
+        case "not-found":
+        case "functions/not-found":
+            return "Cloud Function bootstrapAdminAccess nie je nasadená.";
+        case "unavailable":
+        case "functions/unavailable":
+        case "deadline-exceeded":
+        case "functions/deadline-exceeded":
+            return "Služba je dočasne nedostupná. Skontrolujte sieť alebo blokovanie prehliadačom.";
+        case "failed-precondition":
+        case "functions/failed-precondition":
+            return "Konfigurácia prostredia nie je pripravená (App Check / Firebase setup).";
+        default:
+            return "Nepodarilo sa aktivovať admin prístup. Skúste to znova.";
+    }
+}
 
 export default function BootstrapPage() {
     const { user } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
+    const [status, setStatus] = useState<BootstrapStatus | null>(null);
+    const [diagnostics, setDiagnostics] = useState<{
+        uid: string;
+        email: string | null;
+        projectId: string;
+        region: string;
+    } | null>(null);
 
     const runBootstrap = async () => {
-        if (!auth.currentUser) {
+        if (loading) return;
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
             setStatus({ type: 'error', msg: "Musíš byť najprv prihlásený!" });
             return;
         }
@@ -24,12 +65,30 @@ export default function BootstrapPage() {
         const businessId = "papi-hair-design-main";
 
         try {
+            await currentUser.getIdToken(true);
+            if (import.meta.env.DEV) {
+                setDiagnostics({
+                    uid: currentUser.uid,
+                    email: currentUser.email ?? null,
+                    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? "unknown",
+                    region: "europe-west1",
+                });
+            }
+
             const bootstrapAdminAccess = httpsCallable(functions, "bootstrapAdminAccess");
             await bootstrapAdminAccess({ business_id: businessId });
             setStatus({ type: 'success', msg: "Admin prístup a prvý provider boli úspešne vytvorené. Teraz môžeš prejsť do Dashboardu." });
-        } catch (err: any) {
-            console.error(err);
-            setStatus({ type: 'error', msg: "Chyba: " + err.message });
+        } catch (err) {
+            if (isIgnorableBlockedFirestoreError(err) || isBlockedByClientError(err)) {
+                const blockedMessage = "Prehliadač blokuje časť Firebase požiadaviek (Shields/AdBlock). Odporúčame whitelist pre localhost.";
+                warnBlockedByClientOnce((message) => {
+                    setStatus({ type: "error", msg: message });
+                }, blockedMessage);
+                setStatus((current) => current ?? { type: "error", msg: blockedMessage });
+                return;
+            }
+
+            setStatus({ type: 'error', msg: mapBootstrapError(err) });
         } finally {
             setLoading(false);
         }
@@ -145,6 +204,14 @@ export default function BootstrapPage() {
                     <div className="text-sm text-center text-muted-foreground">
                         Tento nástroj vytvorí tvoj admin profil a priradí ti rolu <strong>majiteľa alebo admina</strong> podľa stavu firmy.
                     </div>
+                    {import.meta.env.DEV && diagnostics && (
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-left">
+                            <p><strong>UID:</strong> {diagnostics.uid}</p>
+                            <p><strong>Email:</strong> {diagnostics.email ?? "—"}</p>
+                            <p><strong>Project:</strong> {diagnostics.projectId}</p>
+                            <p><strong>Region:</strong> {diagnostics.region}</p>
+                        </div>
+                    )}
 
                     {!user ? (
                         <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
@@ -159,7 +226,7 @@ export default function BootstrapPage() {
 
                             <Button
                                 onClick={runBootstrap}
-                                disabled={loading}
+                                disabled={loading || !auth.currentUser}
                                 className="w-full h-12 text-base font-semibold"
                             >
                                 {loading ? (
@@ -197,9 +264,16 @@ export default function BootstrapPage() {
                     )}
 
                     <div className="text-center">
-                        <Button variant="link" onClick={() => window.location.href = '/admin'}>
-                            Prejsť do Admin Dashboardu
-                        </Button>
+                        {status?.type === "success" ? (
+                            <Button className="w-full" onClick={() => window.location.href = '/admin'}>
+                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                Prejsť do Admin Dashboardu
+                            </Button>
+                        ) : (
+                            <Button variant="link" onClick={() => window.location.href = '/admin'}>
+                                Prejsť do Admin Dashboardu
+                            </Button>
+                        )}
                     </div>
                 </CardContent>
             </Card>

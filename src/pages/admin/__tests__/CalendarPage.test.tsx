@@ -48,6 +48,7 @@ const generateSlotsMock = vi.hoisted(() => vi.fn());
 const toastMocks = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
+  warning: vi.fn(),
 }));
 
 vi.mock("@/hooks/useBusiness", () => ({
@@ -271,6 +272,7 @@ describe("CalendarPage", () => {
     generateSlotsMock.mockReset();
     toastMocks.success.mockReset();
     toastMocks.error.mockReset();
+    toastMocks.warning.mockReset();
 
     firestoreMocks.getDocMock.mockResolvedValue({ exists: () => true, data: () => ({}) });
     firestoreMocks.getDocsMock.mockImplementation(async (input: any) => {
@@ -312,6 +314,22 @@ describe("CalendarPage", () => {
     });
     expect(bookingCalendarSpy.props?.events?.[0]?.title).toContain("Jana");
     expect(bookingCalendarSpy.props?.events?.[0]?.color).toBe("#22aa88");
+  });
+
+  it("does not trigger an infinite reload loop after employees state hydration", async () => {
+    seedInitialFirestore({ withEvent: true });
+    render(<CalendarPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("events-count")).toHaveTextContent("1");
+    });
+
+    await waitFor(() => {
+      const appointmentsCalls = firestoreMocks.getDocsMock.mock.calls.filter(
+        ([input]) => input?.__collection === "appointments",
+      ).length;
+      expect(appointmentsCalls).toBeLessThanOrEqual(3);
+    });
   });
 
   it("opens booking modal when selecting slot as admin", async () => {

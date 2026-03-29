@@ -9,7 +9,7 @@ const authState = vi.hoisted(() => ({
 }));
 
 const firebaseConfigState = vi.hoisted(() => ({
-  currentUser: null as null | { uid: string },
+  currentUser: null as null | { uid: string; email?: string | null; getIdToken: (force?: boolean) => Promise<string> },
 }));
 
 const functionMocks = vi.hoisted(() => ({
@@ -81,18 +81,21 @@ describe("BootstrapPage", () => {
     expect(screen.getByText(/Nie si prihlásený/i)).toBeInTheDocument();
   });
 
-  it("shows bootstrap error when current user is missing", async () => {
+  it("disables bootstrap action when firebase currentUser is missing", async () => {
     authState.value = { user: { email: "owner@example.com" } };
 
     render(<BootstrapPage />);
-    fireEvent.click(screen.getByRole("button", { name: /Aktivovať Admin prístup/i }));
-
-    expect(await screen.findByText(/Musíš byť najprv prihlásený/i)).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: /Aktivovať Admin prístup/i });
+    expect(button).toBeDisabled();
   });
 
   it("shows success message after bootstrap callable succeeds", async () => {
     authState.value = { user: { email: "owner@example.com" } };
-    firebaseConfigState.currentUser = { uid: "user-1" };
+    firebaseConfigState.currentUser = {
+      uid: "user-1",
+      email: "owner@example.com",
+      getIdToken: vi.fn().mockResolvedValue("token"),
+    };
     functionMocks.callableImpl.mockResolvedValue({});
 
     render(<BootstrapPage />);
@@ -106,7 +109,11 @@ describe("BootstrapPage", () => {
 
   it("shows upload success after seeding business data", async () => {
     authState.value = { user: { email: "owner@example.com" } };
-    firebaseConfigState.currentUser = { uid: "user-1" };
+    firebaseConfigState.currentUser = {
+      uid: "user-1",
+      email: "owner@example.com",
+      getIdToken: vi.fn().mockResolvedValue("token"),
+    };
     const batch = {
       delete: vi.fn(),
       set: vi.fn(),
@@ -126,5 +133,35 @@ describe("BootstrapPage", () => {
     expect(batch.delete).toHaveBeenCalledTimes(2);
     expect(batch.set).toHaveBeenCalled();
     expect(await screen.findByText(/Dáta \(hodiny a služby\) boli úspešne nahraté/i)).toBeInTheDocument();
+  });
+
+  it("maps permission-denied callable errors to friendly text", async () => {
+    authState.value = { user: { email: "owner@example.com" } };
+    firebaseConfigState.currentUser = {
+      uid: "user-1",
+      email: "owner@example.com",
+      getIdToken: vi.fn().mockResolvedValue("token"),
+    };
+    functionMocks.callableImpl.mockRejectedValue({ code: "functions/permission-denied" });
+
+    render(<BootstrapPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Aktivovať Admin prístup/i }));
+
+    expect(await screen.findByText(/Účet nemá admin oprávnenie/i)).toBeInTheDocument();
+  });
+
+  it("maps missing function errors to friendly text", async () => {
+    authState.value = { user: { email: "owner@example.com" } };
+    firebaseConfigState.currentUser = {
+      uid: "user-1",
+      email: "owner@example.com",
+      getIdToken: vi.fn().mockResolvedValue("token"),
+    };
+    functionMocks.callableImpl.mockRejectedValue({ code: "functions/not-found" });
+
+    render(<BootstrapPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Aktivovať Admin prístup/i }));
+
+    expect(await screen.findByText(/Cloud Function bootstrapAdminAccess nie je nasadená/i)).toBeInTheDocument();
   });
 });

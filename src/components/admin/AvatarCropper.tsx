@@ -3,10 +3,11 @@ import Cropper from "react-easy-crop";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { toast } from "sonner";
 
 interface AvatarCropperProps {
     imageSrc: string;
-    onConfirm: (croppedImageBlob: Blob) => void;
+    onConfirm: (croppedImageBlob: Blob) => Promise<void> | void;
     onCancel: () => void;
 }
 
@@ -14,19 +15,25 @@ export function AvatarCropper({ imageSrc, onConfirm, onCancel }: AvatarCropperPr
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+    const [processing, setProcessing] = useState(false);
 
     const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
         setCroppedAreaPixels(croppedAreaPixels);
     }, []);
 
     const createCropBlob = async () => {
+        if (processing || !croppedAreaPixels) return;
+        setProcessing(true);
         try {
             const blob = await getCroppedImg(imageSrc, croppedAreaPixels);
             if (blob) {
-                onConfirm(blob);
+                await onConfirm(blob);
             }
         } catch (e) {
             console.error(e);
+            toast.error("Nepodarilo sa spracovať obrázok.");
+        } finally {
+            setProcessing(false);
         }
     };
 
@@ -64,8 +71,10 @@ export function AvatarCropper({ imageSrc, onConfirm, onCancel }: AvatarCropperPr
                     />
                 </div>
                 <DialogFooter className="gap-2 sm:gap-0">
-                    <Button variant="ghost" onClick={onCancel} className="rounded-xl">Zrušiť</Button>
-                    <Button onClick={createCropBlob} className="rounded-xl px-8 shadow-lg shadow-primary/20">Použiť</Button>
+                    <Button variant="ghost" onClick={onCancel} className="rounded-xl" disabled={processing}>Zrušiť</Button>
+                    <Button onClick={createCropBlob} className="rounded-xl px-8 shadow-lg shadow-primary/20" disabled={processing}>
+                        {processing ? "Spracúvam..." : "Použiť"}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

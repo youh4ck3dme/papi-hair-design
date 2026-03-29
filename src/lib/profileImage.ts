@@ -21,6 +21,18 @@ export function validateProfileImageFile(file: File): string | null {
   return null;
 }
 
+export function validateProfileImageBlob(blob: Blob): string | null {
+  if (blob.type && !ACCEPTED_IMAGE_TYPES.has(blob.type)) {
+    return "Podporované sú iba JPG, PNG alebo WEBP súbory.";
+  }
+
+  if (blob.size > MAX_IMAGE_BYTES) {
+    return "Maximálna veľkosť fotky je 5 MB.";
+  }
+
+  return null;
+}
+
 export async function readFileAsDataUrl(file: File): Promise<string> {
   return await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -79,4 +91,3 @@ export async function compressProfileImage(blob: Blob): Promise<Blob> {
 
   return compressed ?? blob;
 }
-

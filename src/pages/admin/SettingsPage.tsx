@@ -17,7 +17,13 @@ import { toast } from "sonner";
 import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound, Camera, Trash2 } from "lucide-react";
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
 import type { FirebaseError } from "firebase/app";
-import { compressProfileImage, readFileAsDataUrl, validateProfileImageFile } from "@/lib/profileImage";
+import { compressProfileImage, readFileAsDataUrl, validateProfileImageBlob, validateProfileImageFile } from "@/lib/profileImage";
+import {
+  getFirebaseErrorCode,
+  getFirebaseErrorMessage,
+  isBlockedByClientError,
+  warnBlockedByClientOnce,
+} from "@/lib/firebaseClientErrors";
 
 function friendlyError(err: unknown, fallback: string): string {
   const e = err as Partial<FirebaseError> | undefined;
@@ -29,6 +35,37 @@ function friendlyError(err: unknown, fallback: string): string {
     return "Relácia vypršala. Prihláste sa znova.";
   }
   return fallback;
+}
+
+function mapAvatarUploadError(err: unknown): string {
+  const code = getFirebaseErrorCode(err);
+  const message = getFirebaseErrorMessage(err);
+
+  if (isBlockedByClientError(err)) {
+    return "Prehliadač blokuje upload požiadavky (Shields/AdBlock). Povoľte stránku a skúste znova.";
+  }
+
+  if (
+    code === "storage/unauthorized" ||
+    code === "permission-denied" ||
+    code === "storage/unauthenticated"
+  ) {
+    return "Nemáte oprávnenie na nahratie profilovej fotky.";
+  }
+
+  if (
+    message.includes("cors") ||
+    message.includes("preflight") ||
+    code === "storage/unknown"
+  ) {
+    return "Upload blokovaný CORS politikou Storage bucketu. Skontrolujte CORS konfiguráciu.";
+  }
+
+  if (code === "storage/quota-exceeded") {
+    return "Úložisko je dočasne nedostupné (quota). Skúste to neskôr.";
+  }
+
+  return "Chyba pri nahrávaní fotky.";
 }
 
 export default function SettingsPage() {
@@ -165,9 +202,22 @@ export default function SettingsPage() {
 
   const handleAvatarCropConfirm = async (croppedBlob: Blob) => {
     if (!profile) return;
+    if (uploadingAvatar) return;
+
+    const validationError = validateProfileImageBlob(croppedBlob);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     setUploadingAvatar(true);
     try {
       const compressedBlob = await compressProfileImage(croppedBlob);
+      const compressedValidationError = validateProfileImageBlob(compressedBlob);
+      if (compressedValidationError) {
+        toast.error(compressedValidationError);
+        return;
+      }
       const fileName = `profiles/${profile.id}/${crypto.randomUUID ? crypto.randomUUID() : Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       await uploadBytes(storageRef, compressedBlob, {
@@ -179,8 +229,11 @@ export default function SettingsPage() {
       setCropImageSrc(null);
       toast.success("Fotka pripravená, nezabudnite uložiť profil");
     } catch (err) {
+      if (isBlockedByClientError(err)) {
+        warnBlockedByClientOnce((message) => toast.warning(message));
+      }
       console.error("SettingsPage: avatar upload error", err);
-      toast.error("Chyba pri nahrávaní fotky");
+      toast.error(mapAvatarUploadError(err));
     } finally {
       setUploadingAvatar(false);
     }

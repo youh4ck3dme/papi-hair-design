@@ -1,15 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { db } from "@/integrations/firebase/config";
 import {
   collection,
   query,
   where,
   getDocs,
-  doc,
   orderBy,
-  updateDoc,
   Timestamp,
-  limit
+  limit,
+  limitToLast,
 } from "firebase/firestore";
 import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +34,12 @@ import {
   canAdminConfirmBooking,
   canAdminMarkNoShow,
 } from "@/lib/adminBookingStatus";
+import {
+  isBlockedByClientError,
+  isIgnorableBlockedFirestoreError,
+  isMissingFirestoreIndexError,
+  warnBlockedByClientOnce,
+} from "@/lib/firebaseClientErrors";
 
 const STATUS_MAP: Record<string, { label: string; className: string; icon: any }> = {
   pending: { label: ADMIN_BOOKING_STATUS_LABELS.pending, className: ADMIN_BOOKING_STATUS_BADGES.pending, icon: Clock },
@@ -56,6 +61,7 @@ export default function AppointmentsPage() {
   const [copyLabel, setCopyLabel] = useState("Skopírovať");
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [employeeResolved, setEmployeeResolved] = useState(false);
+  const [indexWarning, setIndexWarning] = useState<string | null>(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -113,7 +119,7 @@ export default function AppointmentsPage() {
     };
   }, [businessId, isOwnerOrAdmin, role, user?.id]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!businessId) return;
     if (role === "employee" && !employeeResolved) return;
 
@@ -125,50 +131,69 @@ export default function AppointmentsPage() {
 
     setLoading(true);
     try {
-      const statuses = ["pending", "confirmed", "cancelled", "completed", "no_show"] as const;
-      type AppStatus = typeof statuses[number];
-
-      let q = query(
-        collection(db, "appointments"),
-        where("business_id", "==", businessId),
-        orderBy("start_at", "desc"),
-        limit(100)
-      );
-
-      if (role === "employee") {
-        q = query(
-          collection(db, "appointments"),
-          where("business_id", "==", businessId),
-          where("employee_id", "==", employeeId),
-          orderBy("start_at", "desc"),
-          limit(100)
-        );
-      } else if (statusFilter !== "all" && statuses.includes(statusFilter as AppStatus)) {
-        q = query(
-          collection(db, "appointments"),
-          where("business_id", "==", businessId),
-          where("status", "==", statusFilter),
-          orderBy("start_at", "desc"),
-          limit(100)
-        );
+      const constraints = [where("business_id", "==", businessId)];
+      if (role === "employee" && employeeId) {
+        constraints.push(where("employee_id", "==", employeeId));
       }
 
-      const snap = await getDocs(q);
-      const loadedAppointments = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const primaryQuery = query(
+        collection(db, "appointments"),
+        ...constraints,
+        orderBy("start_at", "asc"),
+        limitToLast(100)
+      );
+
+      let snap;
+      try {
+        snap = await getDocs(primaryQuery);
+        setIndexWarning(null);
+      } catch (error) {
+        if (!isMissingFirestoreIndexError(error)) {
+          throw error;
+        }
+
+        const warning =
+          "Chýba Firestore index pre rezervácie. Používam fallback načítanie bez serverového zoradenia.";
+        setIndexWarning(warning);
+        toast.warning(warning);
+
+        const fallbackQuery = query(
+          collection(db, "appointments"),
+          ...constraints,
+          limit(200)
+        );
+        snap = await getDocs(fallbackQuery);
+      }
+
+      const loadedAppointments = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .sort((left, right) => {
+          const leftDate = left.start_at instanceof Timestamp ? left.start_at.toDate() : new Date(left.start_at);
+          const rightDate = right.start_at instanceof Timestamp ? right.start_at.toDate() : new Date(right.start_at);
+          return rightDate.getTime() - leftDate.getTime();
+        });
+
       const filteredByStatus =
-        statusFilter !== "all" && role === "employee" && statuses.includes(statusFilter as AppStatus)
-          ? loadedAppointments.filter((entry) => entry.status === statusFilter)
-          : loadedAppointments;
+        statusFilter === "all"
+          ? loadedAppointments
+          : loadedAppointments.filter((entry) => entry.status === statusFilter);
 
       setAppointments(filteredByStatus);
     } catch (err) {
-      console.error("AppointmentsPage: error loading data", err);
+      if (isIgnorableBlockedFirestoreError(err) || isBlockedByClientError(err)) {
+        warnBlockedByClientOnce((message) => toast.warning(message));
+        console.warn("AppointmentsPage: non-critical blocked request", err);
+      } else {
+        console.error("AppointmentsPage: error loading data", err);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [businessId, employeeId, employeeResolved, role, statusFilter]);
 
-  useEffect(() => { load(); }, [businessId, statusFilter, role, employeeId, employeeResolved]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const updateStatus = async (id: string, status: "pending" | "confirmed" | "cancelled" | "completed" | "no_show") => {
     setUpdating(true);
@@ -180,7 +205,7 @@ export default function AppointmentsPage() {
       });
       toast.success("Status aktualizovaný");
       setSelected(null);
-      load();
+      void load();
     } catch (err) {
       console.error("updateStatus error:", err);
       toast.error("Chyba pri aktualizácii");
@@ -231,6 +256,11 @@ export default function AppointmentsPage() {
           </Select>
         </div>
       </div>
+      {indexWarning && !loading && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          {indexWarning}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">

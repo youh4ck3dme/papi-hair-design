@@ -37,6 +37,20 @@
                     "order": "ASCENDING"
                 },
                 {
+                    "fieldPath": "start_at",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "appointments",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "business_id",
+                    "order": "ASCENDING"
+                },
+                {
                     "fieldPath": "status",
                     "order": "ASCENDING"
                 },
@@ -107,6 +121,24 @@
                 {
                     "fieldPath": "start_at",
                     "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "appointments",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "business_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "employee_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "start_at",
+                    "order": "DESCENDING"
                 }
             ]
         },

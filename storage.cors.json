@@ -1,0 +1,18 @@
+[
+  {
+    "origin": [
+      "http://localhost:5678",
+      "http://192.168.0.8:5678",
+      "https://booking.papihairdesign.sk",
+      "https://hairchainger-main-876665-176e8.web.app"
+    ],
+    "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type",
+      "Authorization",
+      "x-goog-resumable",
+      "x-firebase-storage-version"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]
