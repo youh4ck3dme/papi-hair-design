@@ -134,7 +134,7 @@ export default function SettingsPage() {
             from: (smtp.from ?? "").trim() || DEFAULT_SMTP.from,
             pass: "", // Never load actual password to client
           });
-          setSmtpHasPassword(!!(smtp.pass));
+          setSmtpHasPassword(!!(smtp.has_password || smtp.password_secret));
         }
       } catch (err) {
         console.error("Error loading business info:", err);

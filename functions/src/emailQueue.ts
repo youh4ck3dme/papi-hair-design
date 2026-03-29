@@ -1,4 +1,6 @@
 import { getFirestore } from "firebase-admin/firestore";
+import nodemailer from "nodemailer";
+import { readSecret } from "./secretManager";
 
 interface QueueBookingEmailInput {
   businessId: string;
@@ -45,6 +47,38 @@ function resolveMailCollectionPath(): string {
   return raw.replace(/^\/+|\/+$/g, "");
 }
 
+type MailMessage = {
+  subject: string;
+  text: string;
+  html: string;
+};
+
+type SmtpSendResult = {
+  sent: boolean;
+  reason?: string;
+};
+
+function normalizeSmtpConfig(raw: Record<string, any> | null | undefined) {
+  if (!raw) return null;
+
+  const host = typeof raw.host === "string" ? raw.host.trim() : "";
+  const user = typeof raw.user === "string" ? raw.user.trim() : "";
+  const from = typeof raw.from === "string" ? raw.from.trim() : "";
+  const portNumber = Number(raw.port);
+  const port = Number.isFinite(portNumber) && portNumber > 0 ? portNumber : 465;
+  const passwordSecret = typeof raw.password_secret === "string" ? raw.password_secret.trim() : "";
+
+  if (!host || !user || !from || !passwordSecret) return null;
+
+  return {
+    host,
+    port,
+    user,
+    from,
+    passwordSecret,
+  };
+}
+
 async function resolveBusinessMailContext(businessId: string) {
   const db = getFirestore();
   const businessSnap = await db.collection("businesses").doc(businessId).get();
@@ -65,10 +99,63 @@ async function resolveBusinessMailContext(businessId: string) {
   return { business, timezone, businessName };
 }
 
+async function trySendViaBusinessSmtp(
+  business: Record<string, any>,
+  recipients: string[],
+  message: MailMessage
+): Promise<SmtpSendResult> {
+  const smtpConfig = normalizeSmtpConfig(business.smtp_config as Record<string, any> | undefined);
+  if (!smtpConfig) {
+    return { sent: false, reason: "smtp_not_configured" };
+  }
+
+  try {
+    const password = await readSecret(smtpConfig.passwordSecret);
+    const transporter = nodemailer.createTransport({
+      host: smtpConfig.host,
+      port: smtpConfig.port,
+      secure: smtpConfig.port === 465,
+      auth: {
+        user: smtpConfig.user,
+        pass: password,
+      },
+    });
+
+    await transporter.sendMail({
+      from: smtpConfig.from,
+      to: recipients,
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+    });
+
+    return { sent: true };
+  } catch (error) {
+    return {
+      sent: false,
+      reason: error instanceof Error ? error.message : "smtp_send_failed",
+    };
+  }
+}
+
+async function queueFallbackMail(
+  recipients: string[],
+  message: MailMessage,
+  metadata: Record<string, any>
+): Promise<void> {
+  const db = getFirestore();
+  const collectionPath = resolveMailCollectionPath();
+  await db.collection(collectionPath).add({
+    to: recipients,
+    message,
+    metadata,
+    created_at: new Date().toISOString(),
+  });
+}
+
 export async function queueCustomerBookingEmail(
   input: QueueBookingEmailInput
 ): Promise<{ queued: boolean; reason?: string }> {
-  const db = getFirestore();
   const context = await resolveBusinessMailContext(input.businessId);
   if (!context) {
     return { queued: false, reason: "business_not_found" };
@@ -105,17 +192,19 @@ export async function queueCustomerBookingEmail(
     </div>
   `;
 
-  const collectionPath = resolveMailCollectionPath();
-  await db.collection(collectionPath).add({
-    to: [input.customerEmail],
-    message: { subject, text, html },
-    metadata: {
-      source: "booking-confirmation",
-      business_id: input.businessId,
-      appointment_id: input.appointmentId,
-    },
-    created_at: new Date().toISOString(),
-  });
+  const smtpResult = await trySendViaBusinessSmtp(context.business, [input.customerEmail], { subject, text, html });
+  if (!smtpResult.sent) {
+    await queueFallbackMail(
+      [input.customerEmail],
+      { subject, text, html },
+      {
+        source: "booking-confirmation",
+        business_id: input.businessId,
+        appointment_id: input.appointmentId,
+        fallback_reason: smtpResult.reason ?? "smtp_not_configured",
+      }
+    );
+  }
 
   return { queued: true };
 }
@@ -123,7 +212,6 @@ export async function queueCustomerBookingEmail(
 export async function queueCustomerCancellationEmail(
   input: QueueCancellationEmailInput
 ): Promise<{ queued: boolean; reason?: string }> {
-  const db = getFirestore();
   const context = await resolveBusinessMailContext(input.businessId);
   if (!context) {
     return { queued: false, reason: "business_not_found" };
@@ -155,17 +243,20 @@ export async function queueCustomerCancellationEmail(
     </div>
   `;
 
-  await db.collection(resolveMailCollectionPath()).add({
-    to: [input.customerEmail],
-    message: { subject, text, html },
-    metadata: {
-      source: "booking-cancellation",
-      business_id: input.businessId,
-      appointment_id: input.appointmentId,
-      cancelled_by: input.cancelledBy,
-    },
-    created_at: new Date().toISOString(),
-  });
+  const smtpResult = await trySendViaBusinessSmtp(context.business, [input.customerEmail], { subject, text, html });
+  if (!smtpResult.sent) {
+    await queueFallbackMail(
+      [input.customerEmail],
+      { subject, text, html },
+      {
+        source: "booking-cancellation",
+        business_id: input.businessId,
+        appointment_id: input.appointmentId,
+        cancelled_by: input.cancelledBy,
+        fallback_reason: smtpResult.reason ?? "smtp_not_configured",
+      }
+    );
+  }
 
   return { queued: true };
 }
@@ -178,7 +269,6 @@ export async function queueAdminBookingNotificationEmail(
     return { queued: false, reason: "missing_admin_notification_email" };
   }
 
-  const db = getFirestore();
   const context = await resolveBusinessMailContext(input.businessId);
   if (!context) {
     return { queued: false, reason: "business_not_found" };
@@ -220,16 +310,19 @@ export async function queueAdminBookingNotificationEmail(
     </div>
   `;
 
-  await db.collection(resolveMailCollectionPath()).add({
-    to: [adminEmail],
-    message: { subject, text, html },
-    metadata: {
-      source: "admin-booking-notification",
-      business_id: input.businessId,
-      appointment_id: input.appointmentId,
-    },
-    created_at: new Date().toISOString(),
-  });
+  const smtpResult = await trySendViaBusinessSmtp(context.business, [adminEmail], { subject, text, html });
+  if (!smtpResult.sent) {
+    await queueFallbackMail(
+      [adminEmail],
+      { subject, text, html },
+      {
+        source: "admin-booking-notification",
+        business_id: input.businessId,
+        appointment_id: input.appointmentId,
+        fallback_reason: smtpResult.reason ?? "smtp_not_configured",
+      }
+    );
+  }
 
   return { queued: true };
 }

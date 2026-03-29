@@ -184,13 +184,13 @@ export function BusinessHoursEditor() {
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
           {hours.map((h, i) => (
-            <div key={h.day_of_week} className="flex items-center gap-4 p-3 rounded-xl border border-primary/5 bg-background/40 hover:bg-primary/5 transition-colors group">
-              <span className="w-28 text-sm font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">
+            <div key={h.day_of_week} className="flex flex-col gap-3 p-3 rounded-xl border border-primary/5 bg-background/40 hover:bg-primary/5 transition-colors group sm:flex-row sm:items-center sm:gap-4">
+              <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors sm:w-28 sm:shrink-0">
                 {DAYS.find((d) => d.key === h.day_of_week)?.label}
               </span>
-              <div className="flex items-center gap-3 flex-1 lg:flex-none">
+              <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 sm:flex-1">
                 <Select value={h.mode} onValueChange={(v) => updateHour(i, "mode", v)}>
-                  <SelectTrigger className="w-40 bg-background/50 border-primary/10 focus:ring-primary/20">
+                  <SelectTrigger className="w-full bg-background/50 border-primary/10 focus:ring-primary/20 sm:w-40 sm:shrink-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="backdrop-blur-xl bg-background/95 border-primary/10">
@@ -200,19 +200,19 @@ export function BusinessHoursEditor() {
                   </SelectContent>
                 </Select>
                 {h.mode !== "closed" && (
-                  <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="flex w-full items-center gap-2 animate-in fade-in zoom-in-95 duration-300">
                     <Input
                       type="time"
                       value={h.start_time}
                       onChange={(e) => updateHour(i, "start_time", e.target.value)}
-                      className="w-32 bg-background/50 border-primary/10 focus:ring-primary/20"
+                      className="flex-1 bg-background/50 border-primary/10 focus:ring-primary/20 sm:w-32 sm:flex-none"
                     />
                     <span className="text-muted-foreground font-medium">–</span>
                     <Input
                       type="time"
                       value={h.end_time}
                       onChange={(e) => updateHour(i, "end_time", e.target.value)}
-                      className="w-32 bg-background/50 border-primary/10 focus:ring-primary/20"
+                      className="flex-1 bg-background/50 border-primary/10 focus:ring-primary/20 sm:w-32 sm:flex-none"
                     />
                   </div>
                 )}
@@ -246,18 +246,18 @@ export function BusinessHoursEditor() {
             </div>
           )}
           {overrides.map((o, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-primary/10 bg-background/40 hover:border-gold/30 transition-all animate-in slide-in-from-left-4 duration-300">
+            <div key={i} className="flex flex-col gap-3 p-3 rounded-xl border border-primary/10 bg-background/40 hover:border-gold/30 transition-all animate-in slide-in-from-left-4 duration-300 sm:flex-row sm:items-center">
               <Input
                 type="date"
                 value={o.override_date}
                 onChange={(e) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, override_date: e.target.value } : x))}
-                className="w-44 bg-background/50 border-primary/10 focus:ring-primary/20"
+                className="w-full bg-background/50 border-primary/10 focus:ring-primary/20 sm:w-44 sm:shrink-0"
               />
               <Select
                 value={o.mode}
                 onValueChange={(v) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, mode: v as any } : x))}
               >
-                <SelectTrigger className="w-40 bg-background/50 border-primary/10 focus:ring-primary/20"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full bg-background/50 border-primary/10 focus:ring-primary/20 sm:w-40 sm:shrink-0"><SelectValue /></SelectTrigger>
                 <SelectContent className="backdrop-blur-xl bg-background/95 border-primary/10">
                   <SelectItem value="open">Otvorené</SelectItem>
                   <SelectItem value="closed">Zatvorené</SelectItem>
@@ -265,19 +265,19 @@ export function BusinessHoursEditor() {
                 </SelectContent>
               </Select>
               {o.mode !== "closed" && (
-                <div className="flex items-center gap-2">
-                  <Input type="time" value={o.start_time} onChange={(e) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, start_time: e.target.value } : x))} className="w-32 bg-background/50 border-primary/10 focus:ring-primary/20" />
+                <div className="flex w-full items-center gap-2 sm:w-auto">
+                  <Input type="time" value={o.start_time} onChange={(e) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, start_time: e.target.value } : x))} className="flex-1 bg-background/50 border-primary/10 focus:ring-primary/20 sm:w-32 sm:flex-none" />
                   <span className="text-muted-foreground">–</span>
-                  <Input type="time" value={o.end_time} onChange={(e) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, end_time: e.target.value } : x))} className="w-32 bg-background/50 border-primary/10 focus:ring-primary/20" />
+                  <Input type="time" value={o.end_time} onChange={(e) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, end_time: e.target.value } : x))} className="flex-1 bg-background/50 border-primary/10 focus:ring-primary/20 sm:w-32 sm:flex-none" />
                 </div>
               )}
               <Input
                 value={o.label}
                 onChange={(e) => setOverrides((ov) => ov.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
                 placeholder="Dôvod (napr. Sviatok)"
-                className="flex-1 bg-background/50 border-primary/10 focus:ring-primary/20"
+                className="w-full bg-background/50 border-primary/10 focus:ring-primary/20 sm:flex-1"
               />
-              <Button size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10 rounded-full" onClick={() => setOverrides((ov) => ov.filter((_, j) => j !== i))}>
+              <Button size="icon" variant="ghost" className="self-end text-destructive hover:bg-destructive/10 rounded-full sm:self-auto" onClick={() => setOverrides((ov) => ov.filter((_, j) => j !== i))}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -303,12 +303,12 @@ export function BusinessHoursEditor() {
             </div>
           )}
           {links.map((l, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-primary/10 bg-background/40 hover:border-gold/30 transition-all animate-in zoom-in-95 duration-300">
+            <div key={i} className="flex flex-col gap-3 p-3 rounded-xl border border-primary/10 bg-background/40 hover:border-gold/30 transition-all animate-in zoom-in-95 duration-300 sm:flex-row sm:items-center">
               <Input
                 value={l.label}
                 onChange={(e) => setLinks((ls) => ls.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
                 placeholder="Názov (napr. Cenník)"
-                className="w-48 bg-background/50 border-primary/10 focus:ring-primary/20"
+                className="w-full bg-background/50 border-primary/10 focus:ring-primary/20 sm:w-48 sm:shrink-0"
               />
               <div className="flex-1 flex items-center gap-2 group">
                 <Input
@@ -318,14 +318,14 @@ export function BusinessHoursEditor() {
                   className="flex-1 bg-background/50 border-primary/10 focus:ring-primary/20"
                 />
                 {l.url && (
-                  <Button variant="ghost" size="icon" asChild className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="icon" asChild className="opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                     <a href={l.url} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="w-4 h-4 text-primary" />
                     </a>
                   </Button>
                 )}
               </div>
-              <Button size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10 rounded-full" onClick={() => setLinks((ls) => ls.filter((_, j) => j !== i))}>
+              <Button size="icon" variant="ghost" className="self-end text-destructive hover:bg-destructive/10 rounded-full sm:self-auto" onClick={() => setLinks((ls) => ls.filter((_, j) => j !== i))}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
