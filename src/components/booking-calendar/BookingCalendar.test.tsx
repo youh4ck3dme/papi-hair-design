@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { BookingCalendarProvider } from "./BookingCalendarProvider";
 import { useBookingCalendarContext } from "./calendar-context";
 import type { BookingCalendarEvent as BookingEvent, BookingCalendarMode } from "./calendar-types";
-import { CALENDAR_START_HOUR, HOURS } from "./calendar-types";
+import { CALENDAR_END_HOUR, CALENDAR_START_HOUR, HOURS } from "./calendar-types";
 import { BookingCalendar } from "./BookingCalendar";
 import { CalendarHeaderDate } from "./header/CalendarHeaderDate";
 import { CalendarHeaderAdd } from "./header/CalendarHeaderAdd";
@@ -218,7 +218,7 @@ describe("booking-calendar components", () => {
     fireEvent.click(firstHourSlot, { clientY: 110 });
     const slot = onSelectSlot.mock.calls[0][0] as { start: Date; end: Date };
 
-    expect(slot.start.getHours()).toBe(6);
+    expect(slot.start.getHours()).toBe(CALENDAR_START_HOUR);
     expect(slot.start.getMinutes()).toBe(0);
     rectSpy.mockRestore();
   });
@@ -248,7 +248,7 @@ describe("booking-calendar components", () => {
     fireEvent.click(firstHourSlot, { clientY: 190 });
     const slot = onSelectSlot.mock.calls[0][0] as { start: Date; end: Date };
 
-    expect(slot.start.getHours()).toBe(6);
+    expect(slot.start.getHours()).toBe(CALENDAR_START_HOUR);
     expect(slot.start.getMinutes()).toBe(30);
     rectSpy.mockRestore();
   });
@@ -264,7 +264,7 @@ describe("booking-calendar components", () => {
     fireEvent.keyDown(firstHourSlot, { key: "Enter" });
     const slot = onSelectSlot.mock.calls[0][0] as { start: Date; end: Date };
 
-    expect(slot.start.getHours()).toBe(6);
+    expect(slot.start.getHours()).toBe(CALENDAR_START_HOUR);
     expect(slot.start.getMinutes()).toBe(0);
   });
 
@@ -292,7 +292,9 @@ describe("booking-calendar components", () => {
     });
 
     expect(
-      screen.getByRole("button", { name: "Vybrať čas okolo 6:00 (Zatvorené)" }),
+      screen.getByRole("button", {
+        name: `Vybrať čas okolo ${CALENDAR_START_HOUR}:00 (Zatvorené)`,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -346,8 +348,8 @@ describe("booking-calendar components", () => {
 
   it("renders hour margin labels", () => {
     render(<CalendarBodyMargin />);
-    expect(screen.getByText("6:00")).toBeInTheDocument();
-    expect(screen.getByText("19:00")).toBeInTheDocument();
+    expect(screen.getByText(`${CALENDAR_START_HOUR}:00`)).toBeInTheDocument();
+    expect(screen.getByText(`${CALENDAR_END_HOUR - 1}:00`)).toBeInTheDocument();
   });
 
   it("renders booking event title and time range", () => {

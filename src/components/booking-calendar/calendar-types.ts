@@ -16,8 +16,8 @@ export const CALENDAR_MODES: BookingCalendarMode[] = ["day", "week", "month"];
 /** 128px per hour in day/week grid */
 export const PIXELS_PER_HOUR = 128;
 
-export const CALENDAR_START_HOUR = 6;
-export const CALENDAR_END_HOUR = 20;
+export const CALENDAR_START_HOUR = 3;
+export const CALENDAR_END_HOUR = 23;
 export const HOURS = Array.from(
   { length: CALENDAR_END_HOUR - CALENDAR_START_HOUR },
   (_, i) => CALENDAR_START_HOUR + i

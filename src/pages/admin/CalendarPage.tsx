@@ -101,8 +101,28 @@ export default function CalendarPage() {
   const [quickActionReason, setQuickActionReason] = useState("Blokovaný čas");
   const [quickActionSaving, setQuickActionSaving] = useState(false);
   const eventsRequestRef = useRef(0);
+  const copyLabelResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filtersStorageKey = `admin-calendar-filters:${businessId}`;
+
+  const scheduleCopyLabelReset = useCallback(() => {
+    if (copyLabelResetTimeoutRef.current) {
+      clearTimeout(copyLabelResetTimeoutRef.current);
+    }
+    copyLabelResetTimeoutRef.current = setTimeout(() => {
+      setCopyLabel("Skopírovať");
+      copyLabelResetTimeoutRef.current = null;
+    }, 1500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyLabelResetTimeoutRef.current) {
+        clearTimeout(copyLabelResetTimeoutRef.current);
+        copyLabelResetTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const loadEvents = useCallback(async () => {
     if (!businessId) {
@@ -324,6 +344,15 @@ export default function CalendarPage() {
       return true;
     });
   }, [employeeFilter, events, statusFilter]);
+
+  const statusOptions = [
+    { id: "all", label: "Všetky stavy" },
+    { id: "pending", label: "Čakajúce" },
+    { id: "confirmed", label: "Potvrdené" },
+    { id: "completed", label: "Dokončené" },
+    { id: "no_show", label: "No-show" },
+    { id: "cancelled", label: "Zrušené" },
+  ] as const;
 
 
   const loadAvailableSlots = useCallback(async (slotDate: Date, employeeId: string, serviceId: string) => {
@@ -708,7 +737,7 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="space-y-4 h-full max-w-full overflow-x-hidden calendar-page-root">
+    <div className="space-y-3 h-full max-w-full overflow-x-hidden calendar-page-root">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Kalendár</h1>
         <div className="flex items-center gap-2">
@@ -745,54 +774,39 @@ export default function CalendarPage() {
       </div>
 
       <div className="rounded-xl border border-border bg-card/40 p-2 max-w-full overflow-x-hidden">
-        <div className="flex flex-wrap gap-2 pb-1">
-          {[
-            { id: "all", label: "Všetky stavy" },
-            { id: "pending", label: "Čakajúce" },
-            { id: "confirmed", label: "Potvrdené" },
-            { id: "completed", label: "Dokončené" },
-            { id: "no_show", label: "No-show" },
-            { id: "cancelled", label: "Zrušené" },
-          ].map((statusOption) => (
-            <Button
-              key={statusOption.id}
-              type="button"
-              size="sm"
-              variant={statusFilter === statusOption.id ? "default" : "outline"}
-              className="max-w-full"
-              onClick={() => setStatusFilter(statusOption.id)}
-            >
-              {statusOption.label}
-            </Button>
-          ))}
-        </div>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={employeeFilter === "all" ? "default" : "outline"}
-            className="max-w-full"
-            onClick={() => setEmployeeFilter("all")}
-          >
-            Všetci zamestnanci
-          </Button>
-          {availableEmployees.map((employee: any) => (
-            <Button
-              key={employee.id}
-              type="button"
-              size="sm"
-              variant={employeeFilter === employee.id ? "default" : "outline"}
-              className="max-w-full"
-              onClick={() => setEmployeeFilter(employee.id)}
-            >
-              {employee.display_name}
-            </Button>
-          ))}
+        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-9 min-h-[44px] w-[11.5rem] max-w-full shrink-0">
+              <SelectValue placeholder="Všetky stavy" />
+            </SelectTrigger>
+            <SelectContent>
+              {statusOptions.map((statusOption) => (
+                <SelectItem key={statusOption.id} value={statusOption.id}>
+                  {statusOption.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+            <SelectTrigger className="h-9 min-h-[44px] w-[13rem] max-w-full shrink-0">
+              <SelectValue placeholder="Všetci zamestnanci" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Všetci zamestnanci</SelectItem>
+              {availableEmployees.map((employee: any) => (
+                <SelectItem key={employee.id} value={employee.id}>
+                  {employee.display_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="max-w-full"
+            className="h-9 min-h-[44px] max-w-full shrink-0"
             onClick={() => {
               setStatusFilter("all");
               setEmployeeFilter("all");
@@ -806,7 +820,7 @@ export default function CalendarPage() {
 
       <div
         className="bg-card rounded-xl border border-border p-2 sm:p-4 flex flex-col min-h-0 max-w-full overflow-x-hidden calendar-page-shell"
-        style={{ ["--calendar-shell-offset" as string]: compactActionMenu ? "150px" : "200px" }}
+        style={{ ["--calendar-shell-offset" as string]: compactActionMenu ? "110px" : "150px" }}
       >
         <BookingCalendar
           events={bookingCalendarEvents}
@@ -1023,10 +1037,10 @@ export default function CalendarPage() {
                       try {
                         await navigator.clipboard.writeText(selectedEvent.id);
                         setCopyLabel("Skopírované");
-                        setTimeout(() => setCopyLabel("Skopírovať"), 1500);
+                        scheduleCopyLabelReset();
                       } catch {
                         setCopyLabel("Kópia zlyhala");
-                        setTimeout(() => setCopyLabel("Skopírovať"), 1500);
+                        scheduleCopyLabelReset();
                       }
                     }}
                     className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
