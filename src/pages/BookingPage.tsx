@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { Loader2 } from "lucide-react";
 import { enGB, sk } from "date-fns/locale";
-import { addDays, startOfDay } from "date-fns";
+import { addDays, format, startOfDay } from "date-fns";
 
 
 import { BookingHeader } from "@/components/booking/BookingHeader";
@@ -68,6 +68,11 @@ export default function BookingPage() {
     return filteredEmployees.filter((employee) => employee.id === selectedEmployeeId);
   }, [filteredEmployees, selectedEmployeeId]);
 
+  const selectedEmployee = useMemo(
+    () => filteredEmployees.find((employee) => employee.id === selectedEmployeeId) ?? null,
+    [filteredEmployees, selectedEmployeeId],
+  );
+
   const {
     selectedDate,
     setSelectedDate,
@@ -94,6 +99,7 @@ export default function BookingPage() {
     selectedAvailabilityEmployees
   );
 
+  const employeeSectionRef = useRef<HTMLDivElement | null>(null);
   const dateTimeSectionRef = useRef<HTMLDivElement | null>(null);
   const contactSectionRef = useRef<HTMLDivElement | null>(null);
 
@@ -119,9 +125,18 @@ export default function BookingPage() {
     if (typeof window !== "undefined" && window.innerWidth >= 768) return;
 
     requestAnimationFrame(() => {
+      employeeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [selectedServiceId]);
+
+  useEffect(() => {
+    if (!selectedEmployeeId) return;
+    if (typeof window !== "undefined" && window.innerWidth >= 768) return;
+
+    requestAnimationFrame(() => {
       dateTimeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
-  }, [selectedServiceId, selectedEmployeeId]);
+  }, [selectedEmployeeId]);
 
   useEffect(() => {
     if (!selectedTime) return;
@@ -178,74 +193,118 @@ export default function BookingPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] font-sans pb-24 max-w-md w-full mx-auto shadow-2xl relative overflow-x-hidden transition-colors duration-300 bg-background text-foreground safe-x" data-testid="booking-page">
-      <BookingHeader isDark={isDark} setTheme={setTheme} />
+    <div
+      className="min-h-[100dvh] bg-background text-foreground transition-colors duration-300 safe-x"
+      data-testid="booking-page"
+    >
+      <div className="mx-auto w-full max-w-md overflow-x-hidden shadow-2xl lg:max-w-6xl lg:shadow-none">
+        <BookingHeader isDark={isDark} setTheme={setTheme} />
 
-      <ServiceSelection
-        category={category}
-        setCategory={setCategory}
-        subcategory={subcategory}
-        setSubcategory={setSubcategory}
-        subcategories={subcategories}
-        filteredServices={filteredServices}
-        selectedServiceId={selectedServiceId}
-        setSelectedServiceId={setSelectedServiceId}
-        isBusinessOpenNow={isBusinessOpenNow}
-        onCategoryChange={() => {
-          setSelectedDate(null);
-          setSelectedTime(null);
-        }}
-      />
-
-      {selectedServiceId && (
-        <>
-          <EmployeeSelection
-            employees={filteredEmployees}
-            selectedEmployeeId={selectedEmployeeId}
-            setSelectedEmployeeId={setSelectedEmployeeId}
-          />
-
-          <div ref={dateTimeSectionRef}>
-            <DateTimeSelection
-              calendarMonth={calendarMonth}
-              setCalendarMonth={setCalendarMonth}
-              dateLocale={dateLocale}
-              firstDayOffset={firstDayOffset}
-              daysInMonth={daysInMonth}
-              today={today}
-              maxDays={maxDays}
-              selectedDate={selectedDate}
-              setSelectedDate={setSelectedDate}
-              selectedFullDate={selectedFullDate}
-              setSelectedTime={setSelectedTime}
-              isBusinessOpenOnDay={isBusinessOpenOnDay}
-              loadingSlots={loadingSlots}
-              availabilityStatus={availabilityStatus}
-              availableSlots={availableSlots}
-              selectedTime={selectedTime}
-              timeGroups={timeGroups}
-            />
+        {selectedService && (
+          <div className="px-4 pt-4 lg:px-6">
+            <div className="grid gap-3 rounded-2xl border border-primary/15 bg-[linear-gradient(180deg,rgba(218,165,32,0.09),rgba(218,165,32,0.03))] p-4 lg:grid-cols-3">
+              <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
+                  {i18n.language === "en" ? "Service" : "Služba"}
+                </p>
+                <p className="mt-1 truncate text-sm font-semibold text-white">{selectedService.name_sk}</p>
+              </div>
+              <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
+                  {i18n.language === "en" ? "Stylist" : "Kaderník"}
+                </p>
+                <p className="mt-1 truncate text-sm font-semibold text-white">
+                  {selectedEmployee?.display_name ?? (i18n.language === "en" ? "Choose stylist" : "Vyber kaderníka")}
+                </p>
+              </div>
+              <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
+                  {i18n.language === "en" ? "Appointment" : "Termín"}
+                </p>
+                <p className="mt-1 truncate text-sm font-semibold text-white">
+                  {selectedFullDate && selectedTime
+                    ? `${format(selectedFullDate, "d. M.", { locale: dateLocale })} • ${selectedTime}`
+                    : i18n.language === "en"
+                      ? "Choose date and time"
+                      : "Vyber dátum a čas"}
+                </p>
+              </div>
+            </div>
           </div>
-        </>
-      )}
+        )}
 
-      {selectedTime && (
-        <div ref={contactSectionRef}>
-          <ContactConfirmation
-            formData={formData}
-            setFormData={setFormData}
-            contactErrors={contactErrors}
-            handleCheckAll={handleCheckAll}
-            handleConsentChange={handleConsentChange}
-            selectedService={selectedService}
-            selectedFullDate={selectedFullDate}
-            selectedTime={selectedTime}
-            dateLocale={dateLocale}
-            submitting={submitting}
-            handleSubmit={() => handleSubmit(selectedTime, availableSlots, selectedEmployeeId)}
+        <div className="pb-24 lg:px-2 lg:pb-12">
+          <ServiceSelection
+            category={category}
+            setCategory={setCategory}
+            subcategory={subcategory}
+            setSubcategory={setSubcategory}
+            subcategories={subcategories}
+            filteredServices={filteredServices}
+            selectedServiceId={selectedServiceId}
+            setSelectedServiceId={setSelectedServiceId}
+            isBusinessOpenNow={isBusinessOpenNow}
+            onCategoryChange={() => {
+              setSelectedDate(null);
+              setSelectedTime(null);
+            }}
           />
+
+          {selectedServiceId && (
+            <div className="lg:grid lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:items-start lg:gap-6">
+              <div className="space-y-1">
+                <div ref={employeeSectionRef}>
+                  <EmployeeSelection
+                    employees={filteredEmployees}
+                    selectedEmployeeId={selectedEmployeeId}
+                    setSelectedEmployeeId={setSelectedEmployeeId}
+                  />
+                </div>
+              </div>
+
+              <div ref={dateTimeSectionRef}>
+                <DateTimeSelection
+                  calendarMonth={calendarMonth}
+                  setCalendarMonth={setCalendarMonth}
+                  dateLocale={dateLocale}
+                  firstDayOffset={firstDayOffset}
+                  daysInMonth={daysInMonth}
+                  today={today}
+                  maxDays={maxDays}
+                  selectedDate={selectedDate}
+                  setSelectedDate={setSelectedDate}
+                  selectedFullDate={selectedFullDate}
+                  setSelectedTime={setSelectedTime}
+                  isBusinessOpenOnDay={isBusinessOpenOnDay}
+                  loadingSlots={loadingSlots}
+                  availabilityStatus={availabilityStatus}
+                  availableSlots={availableSlots}
+                  selectedTime={selectedTime}
+                  timeGroups={timeGroups}
+                />
+              </div>
+            </div>
+          )}
+
+          {selectedTime && (
+            <div ref={contactSectionRef} className="lg:mx-auto lg:max-w-3xl">
+              <ContactConfirmation
+                formData={formData}
+                setFormData={setFormData}
+                contactErrors={contactErrors}
+                handleCheckAll={handleCheckAll}
+                handleConsentChange={handleConsentChange}
+                selectedService={selectedService}
+                selectedFullDate={selectedFullDate}
+                selectedTime={selectedTime}
+                dateLocale={dateLocale}
+                submitting={submitting}
+                handleSubmit={() => handleSubmit(selectedTime, availableSlots, selectedEmployeeId)}
+              />
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
