@@ -113,14 +113,12 @@ function Avatar({ profile, size }: { profile: Profile; size: number }) {
 function TeamProfileCard({
   profile,
   statusLabel,
-  summary,
   isActive,
   isLocked,
   onPick,
 }: {
   profile: Profile;
   statusLabel: string;
-  summary: string;
   isActive: boolean;
   isLocked: boolean;
   onPick: (id: ProfileId) => void;
@@ -175,10 +173,6 @@ function TeamProfileCard({
             </p>
           </div>
         </div>
-
-        <p className="max-w-[30ch] text-base leading-8 text-white/88 md:max-w-[38ch] lg:max-w-[44ch]">
-          {summary}
-        </p>
       </div>
     </button>
   );
@@ -413,24 +407,8 @@ export default function SalonLoginPage() {
   );
 
   const renderPicker = () => (
-    <div className="salon-fade-up space-y-5">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-          {t("salonLogin.teamTitle")}
-        </h1>
-        <p className="max-w-[36rem] text-base font-medium leading-8 text-white/92">
-          {isUnlocked ? t("salonLogin.teamDescReady") : t("salonLogin.teamDescLocked")}
-        </p>
-      </div>
-
-      <Link
-        to="/"
-        className="inline-flex min-h-[48px] w-full items-center rounded-2xl border border-white/10 bg-white/[0.03] px-5 text-sm font-semibold uppercase tracking-[0.22em] text-white transition-colors hover:border-[#d7b465]/24 hover:bg-white/[0.05]"
-      >
-        {t("salonLogin.homeLink")}
-      </Link>
-
-      <div className="grid gap-4">
+    <div className="salon-fade-up flex min-h-[calc(100svh-5.5rem)] min-h-[calc(100vh-5.5rem)] items-center">
+      <div className="grid w-full gap-4 lg:grid-cols-3">
         {PROFILES.map((member) => (
           <TeamProfileCard
             key={member.id}
@@ -445,7 +423,6 @@ export default function SalonLoginPage() {
                   : t("salonLogin.chooseProfile")
             }
             onPick={pickProfile}
-            summary={t(member.summaryKey)}
           />
         ))}
       </div>
@@ -489,7 +466,6 @@ export default function SalonLoginPage() {
             isActive
             statusLabel={t("salonLogin.selectedBadge")}
             onPick={() => {}}
-            summary={t(profile.summaryKey)}
           />
 
           <PanelCard>
@@ -535,7 +511,7 @@ export default function SalonLoginPage() {
   );
 
   return (
-    <div className="relative min-h-[100dvh] overflow-x-hidden bg-[#040404] text-white">
+    <div className="relative min-h-screen min-h-[100svh] overflow-x-hidden bg-[#040404] text-white">
       <style>{STYLES}</style>
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
