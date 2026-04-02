@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useBookingCalendarContext } from "../calendar-context";
 import { BookingCalendarEvent } from "../BookingCalendarEvent";
 
-const WEEKDAY_LABELS = ["Po", "Ut", "St", "Št", "Pi", "So", "Ne"];
+const WEEKDAY_LABELS = ["po", "ut", "st", "št", "pi", "so", "ne"];
 
 export function CalendarBodyMonth() {
   const { date, filteredEvents, setDate, setMode, monthDensity } = useBookingCalendarContext();
@@ -68,7 +68,7 @@ export function CalendarBodyMonth() {
   const dayCellClass =
     monthDensity === "compact"
       ? "min-h-[84px] sm:min-h-[92px] p-1.5"
-      : "min-h-[104px] sm:min-h-[122px] p-2";
+      : "min-h-[102px] sm:min-h-[120px] p-2";
 
   return (
     <div className="flex flex-col flex-grow overflow-hidden min-h-0">
@@ -76,7 +76,7 @@ export function CalendarBodyMonth() {
         {WEEKDAY_LABELS.map((day) => (
           <div
             key={day}
-            className="border-b border-border py-2 text-center text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground md:text-sm md:tracking-normal"
+            className="border-b border-border/80 bg-background py-1.5 text-center text-[11px] font-medium tracking-[0.02em] text-muted-foreground md:py-2 md:text-xs"
           >
             {day}
           </div>
@@ -103,10 +103,10 @@ export function CalendarBodyMonth() {
                 type="button"
                 key={day.toISOString()}
                 className={cn(
-                  "relative flex w-full flex-col border-b border-r border-border text-left transition-colors cursor-pointer",
+                  "relative flex w-full flex-col border-b border-r border-border/70 text-left transition-colors cursor-pointer",
                   dayCellClass,
-                  !isCurrentMonth && "bg-muted/35 text-muted-foreground/60",
-                  isCurrentMonth && "hover:bg-muted/25"
+                  !isCurrentMonth && "bg-background/70 text-muted-foreground/65",
+                  isCurrentMonth && "bg-background hover:bg-background/95"
                 )}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -116,8 +116,10 @@ export function CalendarBodyMonth() {
               >
                 <div
                   className={cn(
-                    "w-fit rounded-full px-2 py-1 text-sm font-semibold md:text-base",
-                    isToday && "booking-calendar-today"
+                    "w-fit text-xs font-semibold md:text-sm",
+                    isToday
+                      ? "booking-calendar-today inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 py-0"
+                      : "px-0.5 py-0 text-foreground/85"
                   )}
                 >
                   {format(day, "d", { locale: sk })}

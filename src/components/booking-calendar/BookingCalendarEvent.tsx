@@ -142,10 +142,9 @@ function BookingCalendarEventComponent({
       role="button"
       tabIndex={0}
       className={cn(
-        "px-2.5 py-1.5 rounded-md overflow-hidden cursor-pointer transition-all duration-300 border booking-calendar-event flex flex-col hover:shadow-md max-w-full min-w-0",
+        "rounded-md overflow-hidden cursor-pointer transition-all duration-300 border booking-calendar-event flex flex-col hover:shadow-md max-w-full min-w-0",
         colorClasses,
-        month && "min-h-11",
-        !month && "absolute shadow-sm",
+        month ? "min-h-0 px-1.5 py-0.5 rounded-sm" : "absolute shadow-sm px-2.5 py-1.5",
         className
       )}
       style={style ?? undefined}
@@ -169,13 +168,13 @@ function BookingCalendarEventComponent({
       >
         <p className={cn(
           "truncate w-full font-semibold",
-          month ? "text-sm leading-tight" : "text-sm leading-tight tracking-tight"
+          month ? "text-[10px] leading-tight" : "text-sm leading-tight tracking-tight"
         )}>
           {event.title}
         </p>
         <p className={cn(
           "truncate w-full font-medium",
-          month ? "text-xs opacity-100" : "text-xs mt-0.5 opacity-90"
+          month ? "text-[10px] opacity-90" : "text-xs mt-0.5 opacity-90"
         )}>
           <span>{format(event.start, "HH:mm", { locale: sk })}</span>
           <span className={cn("mx-1 opacity-60", month && "hidden")}>–</span>

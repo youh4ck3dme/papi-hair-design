@@ -3,9 +3,11 @@ import { sk } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useBookingCalendarContext } from "../calendar-context";
+import { cn } from "@/lib/utils";
 
 export function CalendarHeaderDate() {
   const { mode, date, setDate } = useBookingCalendarContext();
+  const isMonthMode = mode === "month";
 
   const handleBack = () => {
     if (mode === "month") setDate(subMonths(date, 1));
@@ -21,13 +23,18 @@ export function CalendarHeaderDate() {
 
   return (
     <div className="flex items-center gap-2 min-w-0">
-      <Button variant="outline" size="icon" className="h-8 w-8 hover:bg-gold/10 hover:border-gold/50 hover:text-gold" onClick={handleBack}>
+      <Button variant="outline" size="icon" className="h-8 w-8 shrink-0 hover:bg-gold/10 hover:border-gold/50 hover:text-gold" onClick={handleBack}>
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      <span className="flex-1 text-center text-sm font-medium text-foreground truncate">
-        {format(date, "d. MMMM yyyy", { locale: sk })}
+      <span
+        className={cn(
+          "flex-1 truncate text-sm font-semibold text-foreground",
+          isMonthMode ? "text-left text-base md:text-sm" : "text-center",
+        )}
+      >
+        {format(date, isMonthMode ? "LLLL yyyy" : "d. MMMM yyyy", { locale: sk })}
       </span>
-      <Button variant="outline" size="icon" className="h-8 w-8 hover:bg-gold/10 hover:border-gold/50 hover:text-gold" onClick={handleForward}>
+      <Button variant="outline" size="icon" className="h-8 w-8 shrink-0 hover:bg-gold/10 hover:border-gold/50 hover:text-gold" onClick={handleForward}>
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>

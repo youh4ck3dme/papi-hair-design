@@ -7,6 +7,7 @@ import { CalendarHeaderMode } from "./header/CalendarHeaderMode";
 import { CalendarHeaderAdd } from "./header/CalendarHeaderAdd";
 import { CalendarHeaderSearch } from "./header/CalendarHeaderSearch";
 import { CalendarBody } from "./body/CalendarBody";
+import { cn } from "@/lib/utils";
 
 export interface BookingCalendarProps {
   events: BookingCalendarEvent[];
@@ -47,14 +48,23 @@ export function BookingCalendar({
       selectable={selectable}
       businessHours={businessHours}
       resources={resources}
-    >
+      >
 
 
       <div className="flex flex-col h-full min-h-0 booking-calendar">
-        <CalendarHeader>
-          <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(210px,1fr)_minmax(320px,1.2fr)_auto] lg:items-center">
+        <CalendarHeader compact={mode === "month"}>
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-2",
+              mode === "month"
+                ? "grid-cols-[minmax(0,1fr)_auto] items-center lg:grid-cols-[minmax(210px,1fr)_minmax(320px,1.2fr)_auto]"
+                : "lg:grid-cols-[minmax(210px,1fr)_minmax(320px,1.2fr)_auto] lg:items-center",
+            )}
+          >
             <CalendarHeaderDate />
-            <CalendarHeaderSearch />
+            <div className={cn("min-w-0", mode === "month" ? "hidden lg:block" : "block")}>
+              <CalendarHeaderSearch />
+            </div>
             <CalendarHeaderAdd />
           </div>
           <CalendarHeaderMode />

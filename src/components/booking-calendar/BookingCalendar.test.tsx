@@ -179,8 +179,8 @@ describe("booking-calendar components", () => {
 
   it("renders month body weekday labels", () => {
     renderWithProvider(<CalendarBody />, { mode: "month" });
-    expect(screen.getByText("Po")).toBeInTheDocument();
-    expect(screen.getByText("Ne")).toBeInTheDocument();
+    expect(screen.getByText("po")).toBeInTheDocument();
+    expect(screen.getByText("ne")).toBeInTheDocument();
   });
 
   it("renders one selectable slot per hour in day content", () => {

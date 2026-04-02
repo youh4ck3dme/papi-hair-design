@@ -2,6 +2,7 @@ import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useBookingCalendarContext } from "../calendar-context";
+import { cn } from "@/lib/utils";
 
 export function CalendarHeaderSearch() {
   const {
@@ -9,12 +10,18 @@ export function CalendarHeaderSearch() {
     filteredEvents,
     searchQuery,
     setSearchQuery,
+    mode,
     monthDensity,
     setMonthDensity,
   } = useBookingCalendarContext();
 
   return (
-    <div className="flex w-full min-w-0 items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-2 py-1.5">
+    <div
+      className={cn(
+        "flex w-full min-w-0 items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-2 py-1.5",
+        mode === "month" && "lg:max-w-[36rem]",
+      )}
+    >
       <Search className="h-4 w-4 shrink-0 text-primary" aria-hidden />
       <Input
         value={searchQuery}
