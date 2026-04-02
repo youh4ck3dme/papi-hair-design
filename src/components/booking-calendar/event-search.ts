@@ -8,6 +8,10 @@ function normalize(value: string): string {
     .trim();
 }
 
+export function normalizeCalendarSearchQuery(value: string): string {
+  return normalize(value);
+}
+
 function getResourceValue(
   resource: unknown,
   key: string,
@@ -17,13 +21,9 @@ function getResourceValue(
   return typeof value === "string" ? value : "";
 }
 
-export function matchesCalendarSearch(
+export function buildCalendarSearchHaystack(
   event: BookingCalendarEvent,
-  query: string,
-): boolean {
-  const normalizedQuery = normalize(query);
-  if (!normalizedQuery) return true;
-
+): string {
   const searchable = [
     event.id,
     event.title,
@@ -38,5 +38,25 @@ export function matchesCalendarSearch(
     .map(normalize)
     .filter(Boolean);
 
-  return searchable.some((item) => item.includes(normalizedQuery));
+  return searchable.join(" ");
+}
+
+export function buildCalendarSearchIndex(
+  events: BookingCalendarEvent[],
+): Map<string, string> {
+  const index = new Map<string, string>();
+  for (const event of events) {
+    index.set(event.id, buildCalendarSearchHaystack(event));
+  }
+  return index;
+}
+
+export function matchesCalendarSearch(
+  event: BookingCalendarEvent,
+  query: string,
+): boolean {
+  const normalizedQuery = normalizeCalendarSearchQuery(query);
+  if (!normalizedQuery) return true;
+  const haystack = buildCalendarSearchHaystack(event);
+  return haystack.includes(normalizedQuery);
 }

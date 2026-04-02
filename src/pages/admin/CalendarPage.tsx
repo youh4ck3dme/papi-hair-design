@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { addMinutes, startOfDay, addDays, format as fmtDate } from "date-fns";
+import { addMinutes, startOfDay, addDays, startOfMonth, startOfWeek, format as fmtDate } from "date-fns";
 import { sk } from "date-fns/locale";
 import { auth, db } from "@/integrations/firebase/config";
 import {
@@ -354,6 +354,14 @@ export default function CalendarPage() {
     { id: "cancelled", label: "Zrušené" },
   ] as const;
 
+  const visibleResources = useMemo(
+    () =>
+      isOwnerOrAdmin
+        ? availableEmployees.filter((employee: any) => employeeFilter === "all" || employee.id === employeeFilter)
+        : availableEmployees.filter((employee: any) => employee.profile_id === activeMembership?.profile_id),
+    [activeMembership?.profile_id, availableEmployees, employeeFilter, isOwnerOrAdmin],
+  );
+
 
   const loadAvailableSlots = useCallback(async (slotDate: Date, employeeId: string, serviceId: string) => {
     const service = services.find((s) => s.id === serviceId);
@@ -516,36 +524,48 @@ export default function CalendarPage() {
     void loadCustomerHistory();
   }, [businessId, detailModal, selectedEvent]);
 
-  const bookingCalendarEvents: BookingCalendarEvent[] = filteredEvents.map((e) => {
-    const employeeColor = (e.resource as any)?.employee_color;
-    return {
-      id: e.id,
-      title: e.title,
-      start: e.start,
-      end: e.end,
-      color: employeeColor || statusToColor(e.status),
-      resource: e.resource,
-    };
-  });
+  const bookingCalendarEvents: BookingCalendarEvent[] = useMemo(
+    () =>
+      filteredEvents.map((e) => {
+        const employeeColor = (e.resource as any)?.employee_color;
+        return {
+          id: e.id,
+          title: e.title,
+          start: e.start,
+          end: e.end,
+          color: employeeColor || statusToColor(e.status),
+          resource: e.resource,
+        };
+      }),
+    [filteredEvents],
+  );
 
-  const selectedDayEvents = filteredEvents
-    .filter((event) => fmtDate(event.start, "yyyy-MM-dd") === fmtDate(date, "yyyy-MM-dd"))
-    .sort((a, b) => a.start.getTime() - b.start.getTime());
+  const selectedDayEvents = useMemo(
+    () =>
+      filteredEvents
+        .filter((event) => fmtDate(event.start, "yyyy-MM-dd") === fmtDate(date, "yyyy-MM-dd"))
+        .sort((a, b) => a.start.getTime() - b.start.getTime()),
+    [date, filteredEvents],
+  );
 
-  const exportRows = selectedDayEvents.map((event) => ({
-    reference: event.id,
-    customerName: event.resource?.customer_name ?? event.title,
-    customerEmail: event.resource?.customer_email ?? null,
-    customerPhone: event.resource?.customer_phone ?? null,
-    serviceName: event.resource?.service_name ?? null,
-    employeeName: event.resource?.employee_name ?? null,
-    start: event.start,
-    end: event.end,
-    status: ADMIN_BOOKING_STATUS_LABELS[event.status as keyof typeof ADMIN_BOOKING_STATUS_LABELS] ?? event.status,
-    note: typeof event.resource?.note === "string" ? event.resource.note : null,
-  }));
+  const exportRows = useMemo(
+    () =>
+      selectedDayEvents.map((event) => ({
+        reference: event.id,
+        customerName: event.resource?.customer_name ?? event.title,
+        customerEmail: event.resource?.customer_email ?? null,
+        customerPhone: event.resource?.customer_phone ?? null,
+        serviceName: event.resource?.service_name ?? null,
+        employeeName: event.resource?.employee_name ?? null,
+        start: event.start,
+        end: event.end,
+        status: ADMIN_BOOKING_STATUS_LABELS[event.status as keyof typeof ADMIN_BOOKING_STATUS_LABELS] ?? event.status,
+        note: typeof event.resource?.note === "string" ? event.resource.note : null,
+      })),
+    [selectedDayEvents],
+  );
 
-  const handleExportCsv = () => {
+  const handleExportCsv = useCallback(() => {
     const csv = buildAdminCalendarCsv(exportRows);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -554,9 +574,9 @@ export default function CalendarPage() {
     link.download = `kalendar-${fmtDate(date, "yyyy-MM-dd")}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-  };
+  }, [date, exportRows]);
 
-  const handlePrintDay = () => {
+  const handlePrintDay = useCallback(() => {
     const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1200,height=900");
     if (!printWindow) {
       toast.error("Nepodarilo sa otvoriť tlačové okno");
@@ -572,7 +592,25 @@ export default function CalendarPage() {
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();
-  };
+  }, [date, exportRows]);
+
+  const handleJumpToday = useCallback(() => {
+    const now = new Date();
+    setDate(now);
+    setView("day");
+  }, []);
+
+  const handleJumpWeek = useCallback(() => {
+    const now = new Date();
+    setDate(startOfWeek(now, { weekStartsOn: 1 }));
+    setView("week");
+  }, []);
+
+  const handleJumpMonth = useCallback(() => {
+    const now = new Date();
+    setDate(startOfMonth(now));
+    setView("month");
+  }, []);
 
 
   const handleBook = async () => {
@@ -816,6 +854,17 @@ export default function CalendarPage() {
             Reset
           </Button>
         </div>
+        <div className="hidden lg:flex items-center gap-2 pt-2">
+          <Button type="button" size="sm" variant="ghost" onClick={handleJumpToday}>
+            Today
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={handleJumpWeek}>
+            This Week
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={handleJumpMonth}>
+            This Month
+          </Button>
+        </div>
       </div>
 
       <div
@@ -832,11 +881,7 @@ export default function CalendarPage() {
           onSelectEvent={handleSelectEvent}
           selectable={isOwnerOrAdmin}
           businessHours={{ hours: openingHours, overrides }}
-          resources={
-            isOwnerOrAdmin
-              ? availableEmployees.filter((employee: any) => employeeFilter === "all" || employee.id === employeeFilter)
-              : availableEmployees.filter((employee: any) => employee.profile_id === activeMembership?.profile_id)
-          }
+          resources={visibleResources}
         />
       </div>
 

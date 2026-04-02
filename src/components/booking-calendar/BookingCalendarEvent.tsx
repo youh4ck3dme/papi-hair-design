@@ -1,6 +1,7 @@
 import { format, isSameDay, isSameMonth } from "date-fns";
 import { sk } from "date-fns/locale";
-import { motion, AnimatePresence } from "framer-motion";
+import { memo, useMemo } from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { BookingCalendarEvent as EventType } from "./calendar-types";
 import { useBookingCalendarContext } from "./calendar-context";
@@ -16,6 +17,17 @@ interface EventPosition {
   borderColor?: string;
   color?: string;
   borderLeftWidth?: string;
+}
+
+function toStatusLabel(status?: string): string {
+  if (!status) return "";
+  if (status === "pending") return "Čakajúce";
+  if (status === "confirmed") return "Potvrdené";
+  if (status === "completed") return "Dokončené";
+  if (status === "no_show") return "No-show";
+  if (status === "cancelled") return "Zrušené";
+  if (status === "blocked") return "Blok";
+  return status;
 }
 
 function getOverlappingEvents(
@@ -81,25 +93,32 @@ export interface BookingCalendarEventProps {
   className?: string;
 }
 
-export function BookingCalendarEvent({
+function BookingCalendarEventComponent({
   event,
   month = false,
   className,
 }: BookingCalendarEventProps) {
   const { filteredEvents, date, onSelectEvent, pixelsPerHour } = useBookingCalendarContext();
-  let style = month ? undefined : calculateEventPosition(event, filteredEvents, pixelsPerHour);
-  if (!month && !style) return null;
+  const statusLabel = toStatusLabel(typeof event.resource?.status === "string" ? event.resource.status : undefined);
 
-  if (event.color.startsWith("#") && style) {
-    style = {
-      ...style,
-      backgroundColor: `${event.color}15`, // 5-10% opacity alternative for custom colors to match new theme
-      borderColor: event.color,
-      color: event.color,
-      // borderLeftWidth: '4px' -> We use the tailwind classes instead where possible, but inline needs this:
-      borderLeftWidth: '4px'
-    };
-  }
+  const style = useMemo(() => {
+    const baseStyle = month ? undefined : calculateEventPosition(event, filteredEvents, pixelsPerHour);
+    if (!month && !baseStyle) return null;
+
+    if (event.color.startsWith("#") && baseStyle) {
+      return {
+        ...baseStyle,
+        backgroundColor: `${event.color}15`,
+        borderColor: event.color,
+        color: event.color,
+        borderLeftWidth: "4px",
+      };
+    }
+
+    return baseStyle;
+  }, [event, filteredEvents, month, pixelsPerHour]);
+
+  if (!month && !style) return null;
 
   const isInCurrentMonth = isSameMonth(event.start, date);
   const animationKey = `${event.id}-${isInCurrentMonth ? "current" : "adjacent"}`;
@@ -119,63 +138,59 @@ export function BookingCalendarEvent({
   };
 
   return (
-    <AnimatePresence mode="wait">
+    <motion.div
+      role="button"
+      tabIndex={0}
+      className={cn(
+        "px-2.5 py-1.5 rounded-md overflow-hidden cursor-pointer transition-all duration-300 border booking-calendar-event flex flex-col hover:shadow-md max-w-full min-w-0",
+        colorClasses,
+        month && "min-h-11",
+        !month && "absolute shadow-sm",
+        className
+      )}
+      style={style ?? undefined}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      initial={month ? { opacity: 0 } : { opacity: 0, y: -3, scale: 0.98 }}
+      animate={month ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+      transition={{
+        duration: 0.2,
+        ease: [0.25, 0.1, 0.25, 1],
+        opacity: { duration: 0.2, ease: "linear" },
+      }}
+      layoutId={month ? undefined : `event-${animationKey}-day`}
+    >
       <motion.div
-        role="button"
-        tabIndex={0}
         className={cn(
-          "px-2.5 py-1.5 rounded-md overflow-hidden cursor-pointer transition-all duration-300 border booking-calendar-event flex flex-col hover:shadow-md",
-          colorClasses,
-          !month && "absolute shadow-sm",
-          className
+          "flex w-full min-w-0 flex-grow",
+          month ? "flex-row items-center justify-between flex-none" : "flex-col gap-0.5"
         )}
-        style={style}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        initial={month ? { opacity: 0 } : { opacity: 0, y: -3, scale: 0.98 }}
-        animate={month ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-        exit={
-          month
-            ? { opacity: 0, transition: { duration: 0.12, ease: "linear" } }
-            : {
-                opacity: 0,
-                scale: 0.98,
-                transition: { duration: 0.15, ease: "easeOut" },
-              }
-        }
-        transition={{
-          duration: 0.2,
-          ease: [0.25, 0.1, 0.25, 1],
-          opacity: { duration: 0.2, ease: "linear" },
-          layout: { duration: 0.2, ease: "easeOut" },
-        }}
-        layoutId={month ? undefined : `event-${animationKey}-day`}
+        layout={month ? false : "position"}
       >
-        <motion.div
-          className={cn(
-            "flex w-full min-w-0 flex-grow",
-            month ? "flex-row items-center justify-between flex-none" : "flex-col"
-          )}
-          layout={month ? false : "position"}
-        >
-          <p className={cn(
-            "truncate w-full font-semibold",
-            month ? "text-sm leading-tight" : "text-sm leading-tight tracking-tight"
-          )}>
-            {event.title}
+        <p className={cn(
+          "truncate w-full font-semibold",
+          month ? "text-sm leading-tight" : "text-sm leading-tight tracking-tight"
+        )}>
+          {event.title}
+        </p>
+        <p className={cn(
+          "truncate w-full font-medium",
+          month ? "text-xs opacity-100" : "text-xs mt-0.5 opacity-90"
+        )}>
+          <span>{format(event.start, "HH:mm", { locale: sk })}</span>
+          <span className={cn("mx-1 opacity-60", month && "hidden")}>–</span>
+          <span className={cn(month && "hidden")}>
+            {format(event.end, "HH:mm", { locale: sk })}
+          </span>
+        </p>
+        {!month && statusLabel ? (
+          <p className="truncate w-full text-[10px] font-semibold uppercase tracking-[0.08em] opacity-75">
+            {statusLabel}
           </p>
-          <p className={cn(
-            "truncate w-full",
-            month ? "text-xs font-medium opacity-100" : "text-xs font-medium mt-0.5 opacity-80"
-          )}>
-            <span>{format(event.start, "HH:mm", { locale: sk })}</span>
-            <span className={cn("mx-1 opacity-60", month && "hidden")}>–</span>
-            <span className={cn(month && "hidden")}>
-              {format(event.end, "HH:mm", { locale: sk })}
-            </span>
-          </p>
-        </motion.div>
+        ) : null}
       </motion.div>
-    </AnimatePresence>
+    </motion.div>
   );
 }
+
+export const BookingCalendarEvent = memo(BookingCalendarEventComponent);

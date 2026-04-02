@@ -9,6 +9,7 @@ import {
   format,
   isWithinInterval,
 } from "date-fns";
+import { useMemo } from "react";
 import { sk } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,27 +20,49 @@ const WEEKDAY_LABELS = ["Po", "Ut", "St", "Št", "Pi", "So", "Ne"];
 
 export function CalendarBodyMonth() {
   const { date, filteredEvents, setDate, setMode, monthDensity } = useBookingCalendarContext();
+  const monthStart = useMemo(() => startOfMonth(date), [date]);
+  const monthEnd = useMemo(() => endOfMonth(date), [date]);
+  const calendarStart = useMemo(
+    () => startOfWeek(monthStart, { weekStartsOn: 1 }),
+    [monthStart],
+  );
+  const calendarEnd = useMemo(
+    () => endOfWeek(monthEnd, { weekStartsOn: 1 }),
+    [monthEnd],
+  );
 
-  const monthStart = startOfMonth(date);
-  const monthEnd = endOfMonth(date);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
-
-  const calendarDays = eachDayOfInterval({
-    start: calendarStart,
-    end: calendarEnd,
-  });
+  const calendarDays = useMemo(
+    () =>
+      eachDayOfInterval({
+        start: calendarStart,
+        end: calendarEnd,
+      }),
+    [calendarEnd, calendarStart],
+  );
 
   const today = new Date();
 
-  const visibleEvents = filteredEvents.filter(
-    (event) =>
-      isWithinInterval(event.start, {
-        start: calendarStart,
-        end: calendarEnd,
-      }) ||
-      isWithinInterval(event.end, { start: calendarStart, end: calendarEnd })
-  );
+  const dayEventMap = useMemo(() => {
+    const map = new Map<string, typeof filteredEvents>();
+    for (const event of filteredEvents) {
+      const isVisible =
+        isWithinInterval(event.start, {
+          start: calendarStart,
+          end: calendarEnd,
+        }) ||
+        isWithinInterval(event.end, { start: calendarStart, end: calendarEnd });
+      if (!isVisible) continue;
+
+      const dayKey = format(event.start, "yyyy-MM-dd");
+      const eventsForDay = map.get(dayKey);
+      if (eventsForDay) {
+        eventsForDay.push(event);
+      } else {
+        map.set(dayKey, [event]);
+      }
+    }
+    return map;
+  }, [calendarEnd, calendarStart, filteredEvents]);
 
   const maxVisibleEvents = monthDensity === "compact" ? 2 : 4;
   const dayCellClass =
@@ -70,9 +93,8 @@ export function CalendarBodyMonth() {
           transition={{ duration: 0.16, ease: "easeInOut" }}
         >
           {calendarDays.map((day) => {
-            const dayEvents = visibleEvents.filter((e) =>
-              isSameDay(e.start, day)
-            );
+            const dayKey = format(day, "yyyy-MM-dd");
+            const dayEvents = dayEventMap.get(dayKey) ?? [];
             const isToday = isSameDay(day, today);
             const isCurrentMonth = isSameMonth(day, date);
 

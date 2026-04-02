@@ -114,6 +114,12 @@ function collectSelectItems(node: unknown): Array<{ value: string; label: string
   Children.forEach(node as any, (child) => {
     if (!isValidElement(child)) return;
 
+    if (typeof child.props?.value === "string") {
+      const label = Children.toArray(child.props.children).join("").trim();
+      items.push({ value: child.props.value, label });
+      return;
+    }
+
     if (child.props["data-select-item"] === "true") {
       const label = Children.toArray(child.props.children).join("").trim();
       items.push({ value: child.props["data-value"], label });
@@ -129,9 +135,12 @@ function collectSelectItems(node: unknown): Array<{ value: string; label: string
 vi.mock("@/components/ui/select", () => ({
   Select: ({ value, onValueChange, children }: any) => {
     const items = collectSelectItems(children);
-    const label = items.some((item) => item.value.startsWith("svc-"))
-      ? "service-select"
-      : "employee-select";
+    const values = items.map((item) => item.value);
+    const isServiceSelect = values.some((value) => value.startsWith("svc-"));
+    const isStatusSelect = ["pending", "confirmed", "completed", "no_show", "cancelled"].some((value) =>
+      values.includes(value),
+    );
+    const label = isServiceSelect ? "service-select" : isStatusSelect ? "status-select" : "employee-select";
 
     return (
       <select aria-label={label} value={value} onChange={(e) => onValueChange?.(e.target.value)}>
@@ -273,6 +282,7 @@ describe("CalendarPage", () => {
     toastMocks.success.mockReset();
     toastMocks.error.mockReset();
     toastMocks.warning.mockReset();
+    window.localStorage.clear();
 
     firestoreMocks.getDocMock.mockResolvedValue({ exists: () => true, data: () => ({}) });
     firestoreMocks.getDocsMock.mockImplementation(async (input: any) => {
@@ -330,6 +340,106 @@ describe("CalendarPage", () => {
       ).length;
       expect(appointmentsCalls).toBeLessThanOrEqual(3);
     });
+  });
+
+  it("keeps calendar containers overflow-safe on mobile widths", async () => {
+    seedInitialFirestore({ withEvent: true });
+    const { container } = render(<CalendarPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("events-count")).toHaveTextContent("1");
+    });
+
+    const root = container.querySelector(".calendar-page-root");
+    const shell = container.querySelector(".calendar-page-shell");
+    expect(root).toHaveClass("overflow-x-hidden");
+    expect(shell).toHaveClass("overflow-x-hidden");
+  });
+
+  it("keeps role-based employee visibility for non-admin users", async () => {
+    businessState.value = {
+      businessId: "biz-1",
+      isOwnerOrAdmin: false,
+      activeMembership: { profile_id: "profile-1" },
+    };
+
+    seedInitialFirestore({ withEvent: true, employeeProfileId: "profile-1", nonAdmin: true });
+    firestoreFixtures.employees = [
+      { id: "emp-1", display_name: "Marek", is_active: true, profile_id: "profile-1", color: "#123456" },
+      { id: "emp-2", display_name: "Nika", is_active: true, profile_id: "profile-2", color: "#999999" },
+    ];
+
+    render(<CalendarPage />);
+
+    await waitFor(() => {
+      expect(bookingCalendarSpy.props?.resources).toHaveLength(1);
+    });
+    expect(bookingCalendarSpy.props?.resources?.[0]?.id).toBe("emp-1");
+  });
+
+  it("filters larger datasets by status without instability", async () => {
+    const dayIso = new Date().toISOString().slice(0, 10);
+    firestoreFixtures.appointments = Array.from({ length: 80 }, (_, index) => ({
+      id: `apt-${index}`,
+      customer_name: `Customer ${index}`,
+      service_name: "Strih",
+      employee_name: "Marek",
+      employee_color: "#22aa88",
+      customer_email: `user${index}@example.com`,
+      customer_phone: `+42190000${index}`,
+      customer_id: `cust-${index}`,
+      start_at: `${dayIso}T09:${String(index % 60).padStart(2, "0")}:00.000Z`,
+      end_at: `${dayIso}T10:${String(index % 60).padStart(2, "0")}:00.000Z`,
+      status: index % 2 === 0 ? "confirmed" : "pending",
+    }));
+    firestoreFixtures.services = [{ id: "svc-1", name_sk: "Strih", duration_minutes: 30, buffer_minutes: 0, price: 20 }];
+    firestoreFixtures.employees = [{ id: "emp-1", display_name: "Marek", is_active: true, profile_id: "profile-1", color: "#123456" }];
+    firestoreFixtures.memberships = [{ profile_id: "profile-1", role: "owner" }];
+    firestoreFixtures.schedules = [{ employee_id: "emp-1", day_of_week: "monday", start_time: "08:00", end_time: "16:00" }];
+
+    render(<CalendarPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("events-count")).toHaveTextContent("80");
+    });
+
+    fireEvent.change(screen.getByLabelText("status-select"), { target: { value: "confirmed" } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("events-count")).toHaveTextContent("40");
+    });
+  });
+
+  it("shows desktop quick presets and updates calendar mode", async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(max-width: 1024px)" ? false : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+
+    try {
+      seedInitialFirestore({ withEvent: true });
+      render(<CalendarPage />);
+
+      await screen.findByText("Kalendár");
+      fireEvent.click(screen.getByRole("button", { name: "Today" }));
+      await waitFor(() => {
+        expect(bookingCalendarSpy.props?.mode).toBe("day");
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "This Month" }));
+      await waitFor(() => {
+        expect(bookingCalendarSpy.props?.mode).toBe("month");
+      });
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
   });
 
   it("opens booking modal when selecting slot as admin", async () => {

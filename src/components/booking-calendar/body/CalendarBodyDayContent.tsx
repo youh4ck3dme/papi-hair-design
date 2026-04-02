@@ -1,5 +1,6 @@
 import { addMinutes, startOfDay } from "date-fns";
 import { isSameDay } from "date-fns";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useBookingCalendarContext } from "../calendar-context";
 import { BookingCalendarEvent } from "../BookingCalendarEvent";
@@ -20,35 +21,47 @@ export function CalendarBodyDayContent({
   showHeader = true,
 }: CalendarBodyDayContentProps) {
   const { filteredEvents, onSelectSlot, selectable, businessHours, pixelsPerHour } = useBookingCalendarContext();
-  const dayEvents = filteredEvents.filter((e) => {
-    const sameDay = isSameDay(e.start, date);
-    if (!resourceId) return sameDay;
-    return sameDay && (e.resource as any)?.employee_id === resourceId;
-  });
+  const dayEvents = useMemo(
+    () =>
+      filteredEvents.filter((e) => {
+        const sameDay = isSameDay(e.start, date);
+        if (!resourceId) return sameDay;
+        return sameDay && (e.resource as any)?.employee_id === resourceId;
+      }),
+    [date, filteredEvents, resourceId],
+  );
 
+  const dayName = useMemo(
+    () => new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(date).toLowerCase(),
+    [date],
+  );
+  const dateStr = useMemo(() => date.toLocaleDateString("en-CA"), [date]);
+  const dayOverride = useMemo(
+    () => businessHours?.overrides?.find((o: any) => o.override_date === dateStr),
+    [businessHours?.overrides, dateStr],
+  );
+  const regularDayHours = useMemo(
+    () => businessHours?.hours?.filter((h: any) => h.day_of_week === dayName) ?? [],
+    [businessHours?.hours, dayName],
+  );
 
   const isClosed = (hour: number) => {
     if (!businessHours || !businessHours.hours) return false;
 
-    const dayName = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(date).toLowerCase();
-    const dateStr = date.toLocaleDateString("en-CA"); // YYYY-MM-DD
-
     // Check overrides
-    const override = businessHours.overrides?.find((o: any) => o.override_date === dateStr);
-    if (override) {
-      if (override.mode === "closed" || override.mode === "on_request") return true;
-      if (override.start_time && override.end_time) {
+    if (dayOverride) {
+      if (dayOverride.mode === "closed" || dayOverride.mode === "on_request") return true;
+      if (dayOverride.start_time && dayOverride.end_time) {
         const timeStr = `${String(hour).padStart(2, '0')}:00`;
-        return timeStr < override.start_time || timeStr >= override.end_time;
+        return timeStr < dayOverride.start_time || timeStr >= dayOverride.end_time;
       }
     }
 
     // Check regular hours
-    const dayHours = businessHours.hours.filter((h: any) => h.day_of_week === dayName);
-    if (!dayHours.length) return true; // No hours defined means closed
+    if (!regularDayHours.length) return true; // No hours defined means closed
 
     const timeStr = `${String(hour).padStart(2, '0')}:00`;
-    const isOpen = dayHours.some((h: any) => {
+    const isOpen = regularDayHours.some((h: any) => {
       if (h.mode !== "open") return false;
       return timeStr >= h.start_time && timeStr < h.end_time;
     });

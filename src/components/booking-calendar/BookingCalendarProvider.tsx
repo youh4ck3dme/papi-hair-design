@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
 import { BookingCalendarContext } from "./calendar-context";
 import type { BookingCalendarEvent, BookingCalendarMode } from "./calendar-types";
 import type { SlotInfo } from "./calendar-context";
-import { matchesCalendarSearch } from "./event-search";
+import {
+  buildCalendarSearchHaystack,
+  buildCalendarSearchIndex,
+  normalizeCalendarSearchQuery,
+} from "./event-search";
 
 export interface BookingCalendarProviderProps {
   events: BookingCalendarEvent[];
@@ -33,8 +37,8 @@ export function BookingCalendarProvider({
 }: BookingCalendarProviderProps) {
   const [pixelsPerHour, setPixelsPerHour] = useState(128);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [monthDensity, setMonthDensity] = useState<"compact" | "comfortable">("comfortable");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -45,41 +49,60 @@ export function BookingCalendarProvider({
     return () => query.removeEventListener("change", updatePixelsPerHour);
   }, []);
 
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 200);
-    return () => window.clearTimeout(timeoutId);
-  }, [searchQuery]);
+  const normalizedSearchQuery = useMemo(
+    () => normalizeCalendarSearchQuery(deferredSearchQuery),
+    [deferredSearchQuery],
+  );
+
+  const searchIndex = useMemo(() => buildCalendarSearchIndex(events), [events]);
 
   const filteredEvents = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) return events;
-    return events.filter((event) => matchesCalendarSearch(event, debouncedSearchQuery));
-  }, [debouncedSearchQuery, events]);
+    if (!normalizedSearchQuery) return events;
+    return events.filter((event) => {
+      const haystack = searchIndex.get(event.id) ?? buildCalendarSearchHaystack(event);
+      return haystack.includes(normalizedSearchQuery);
+    });
+  }, [events, normalizedSearchQuery, searchIndex]);
+
+  const contextValue = useMemo(
+    () => ({
+      events,
+      filteredEvents,
+      date,
+      setDate,
+      mode,
+      setMode,
+      searchQuery,
+      setSearchQuery,
+      monthDensity,
+      setMonthDensity,
+      onSelectSlot,
+      onSelectEvent,
+      selectable,
+      businessHours,
+      resources,
+      pixelsPerHour,
+    }),
+    [
+      businessHours,
+      date,
+      events,
+      filteredEvents,
+      mode,
+      monthDensity,
+      onSelectEvent,
+      onSelectSlot,
+      pixelsPerHour,
+      resources,
+      searchQuery,
+      selectable,
+      setDate,
+      setMode,
+    ],
+  );
 
   return (
-    <BookingCalendarContext.Provider
-      value={{
-        events,
-        filteredEvents,
-        date,
-        setDate,
-        mode,
-        setMode,
-        searchQuery,
-        setSearchQuery,
-        monthDensity,
-        setMonthDensity,
-        onSelectSlot,
-        onSelectEvent,
-        selectable,
-        businessHours,
-        resources,
-        pixelsPerHour,
-      }}
-    >
-
-
+    <BookingCalendarContext.Provider value={contextValue}>
       {children}
     </BookingCalendarContext.Provider>
   );
