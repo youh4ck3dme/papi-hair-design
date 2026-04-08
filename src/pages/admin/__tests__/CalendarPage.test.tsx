@@ -217,6 +217,13 @@ function hasWhere(input: any, field: string): boolean {
   return (input?.constraints ?? []).some((c: any) => c?.type === "where" && c?.field === field);
 }
 
+function localDateIso(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function seedInitialFirestore(options?: {
   withEvent?: boolean;
   employeeProfileId?: string | null;
@@ -225,7 +232,7 @@ function seedInitialFirestore(options?: {
   const withEvent = options?.withEvent ?? false;
   const employeeProfileId = options?.employeeProfileId ?? "profile-1";
   const nonAdmin = options?.nonAdmin ?? false;
-  const dayIso = new Date().toISOString().slice(0, 10);
+  const dayIso = localDateIso();
 
   const appointments = withEvent
     ? [
@@ -378,7 +385,7 @@ describe("CalendarPage", () => {
   });
 
   it("filters larger datasets by status without instability", async () => {
-    const dayIso = new Date().toISOString().slice(0, 10);
+    const dayIso = localDateIso();
     firestoreFixtures.appointments = Array.from({ length: 80 }, (_, index) => ({
       id: `apt-${index}`,
       customer_name: `Customer ${index}`,
@@ -472,24 +479,23 @@ describe("CalendarPage", () => {
       createObjectURL: createObjectURLMock,
       revokeObjectURL: revokeObjectURLMock,
     });
-    const nativeCreateElement = document.createElement.bind(document);
-    const createElementSpy = vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
-      if (tag === "a") {
-        return { href: "", download: "", click: clickMock } as any;
-      }
-      return nativeCreateElement(tag);
-    });
+    const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(clickMock as any);
 
-    render(<CalendarPage />);
-    const csvBtn = await screen.findByRole("button", { name: /CSV/i });
-    fireEvent.click(csvBtn);
+    try {
+      render(<CalendarPage />);
+      await waitFor(() => {
+        expect(screen.getByTestId("events-count")).toHaveTextContent("1");
+      });
+      const csvBtn = await screen.findByRole("button", { name: /CSV/i });
+      fireEvent.click(csvBtn);
 
-    expect(createObjectURLMock).toHaveBeenCalledTimes(1);
-    expect(clickMock).toHaveBeenCalledTimes(1);
-    expect(revokeObjectURLMock).toHaveBeenCalledTimes(1);
-
-    createElementSpy.mockRestore();
-    vi.unstubAllGlobals();
+      expect(createObjectURLMock).toHaveBeenCalledTimes(1);
+      expect(clickMock).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURLMock).toHaveBeenCalledTimes(1);
+    } finally {
+      anchorClickSpy.mockRestore();
+      vi.unstubAllGlobals();
+    }
   });
 
   it("opens print window and triggers print", async () => {
@@ -502,6 +508,9 @@ describe("CalendarPage", () => {
     const openSpy = vi.spyOn(window, "open").mockReturnValue(printWindowMock as any);
 
     render(<CalendarPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("events-count")).toHaveTextContent("1");
+    });
     fireEvent.click(await screen.findByRole("button", { name: /PDF \/ Tlač/i }));
 
     expect(openSpy).toHaveBeenCalled();
@@ -542,6 +551,9 @@ describe("CalendarPage", () => {
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
 
     render(<CalendarPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("events-count")).toHaveTextContent("1");
+    });
     fireEvent.click(await screen.findByRole("button", { name: /PDF \/ Tlač/i }));
 
     expect(openSpy).toHaveBeenCalled();
@@ -629,7 +641,7 @@ describe("CalendarPage", () => {
   }, 15000);
 
   it("shows fallback title when service or employee labels are missing", async () => {
-    const dayIso = new Date().toISOString().slice(0, 10);
+    const dayIso = localDateIso();
     firestoreFixtures.appointments = [
       {
         id: "apt-fallback",

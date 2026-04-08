@@ -8,7 +8,6 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  npm_config_script_shell: /bin/bash
 
 jobs:
   lint-and-test:
