@@ -549,6 +549,42 @@ describe("booking-calendar components", () => {
     expect(zoomInButton).toBeDisabled();
   });
 
+  it("scales pixels per hour monotonically across all zoom levels", () => {
+    function ZoomProbe() {
+      const { pixelsPerHour, setZoomLevel } = useBookingCalendarContext();
+      return (
+        <div>
+          <div data-testid="pph">{pixelsPerHour}</div>
+          <button type="button" onClick={() => setZoomLevel("zoomOut30")}>z30</button>
+          <button type="button" onClick={() => setZoomLevel("zoomOut20")}>z20</button>
+          <button type="button" onClick={() => setZoomLevel("zoomOut10")}>z10</button>
+          <button type="button" onClick={() => setZoomLevel("normal")}>zn</button>
+          <button type="button" onClick={() => setZoomLevel("detail")}>zd</button>
+        </div>
+      );
+    }
+
+    renderWithProvider(<ZoomProbe />, { mode: "day" });
+
+    const read = () => Number(screen.getByTestId("pph").textContent);
+
+    fireEvent.click(screen.getByRole("button", { name: "z30" }));
+    const z30 = read();
+    fireEvent.click(screen.getByRole("button", { name: "z20" }));
+    const z20 = read();
+    fireEvent.click(screen.getByRole("button", { name: "z10" }));
+    const z10 = read();
+    fireEvent.click(screen.getByRole("button", { name: "zn" }));
+    const zn = read();
+    fireEvent.click(screen.getByRole("button", { name: "zd" }));
+    const zd = read();
+
+    expect(z30).toBeLessThan(z20);
+    expect(z20).toBeLessThan(z10);
+    expect(z10).toBeLessThan(zn);
+    expect(zn).toBeLessThan(zd);
+  });
+
   it("filters day events using centered calendar search", () => {
     vi.useFakeTimers();
     const date = new Date(2026, 0, 15);
