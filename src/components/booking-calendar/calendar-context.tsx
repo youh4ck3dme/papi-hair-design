@@ -1,6 +1,13 @@
 import { createContext, useContext } from "react";
 import type { BookingCalendarEvent, BookingCalendarMode } from "./calendar-types";
 
+export type CalendarZoomLevel =
+  | "zoomOut30"
+  | "zoomOut20"
+  | "zoomOut10"
+  | "normal"
+  | "detail";
+
 export interface SlotInfo {
   start: Date;
   end: Date;
@@ -23,8 +30,8 @@ export interface BookingCalendarContextValue {
   businessHours?: any; // Business opening hours
   resources?: any[]; // List of resources (employees) for columns
   pixelsPerHour: number;
-  zoomLevel: "compact" | "normal" | "detail";
-  setZoomLevel: (value: "compact" | "normal" | "detail") => void;
+  zoomLevel: CalendarZoomLevel;
+  setZoomLevel: (value: CalendarZoomLevel) => void;
 }
 
 

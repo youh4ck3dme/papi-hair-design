@@ -1,14 +1,20 @@
 import { useBookingCalendarContext } from "../calendar-context";
+import type { CalendarZoomLevel } from "../calendar-context";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Maximize2, Minimize2, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Minus, Plus } from "lucide-react";
 
 export function CalendarZoomControls() {
   const { mode, zoomLevel, setZoomLevel } = useBookingCalendarContext();
 
   if (mode === "month") return null;
 
-  const steps: ("compact" | "normal" | "detail")[] = ["compact", "normal", "detail"];
+  const steps: CalendarZoomLevel[] = [
+    "zoomOut30",
+    "zoomOut20",
+    "zoomOut10",
+    "normal",
+    "detail",
+  ];
   const currentIndex = steps.indexOf(zoomLevel);
 
   const handleZoomIn = () => {
@@ -23,10 +29,12 @@ export function CalendarZoomControls() {
     }
   };
 
-  const labels = {
-    compact: "Kompaktné",
-    normal: "Normálne",
-    detail: "Detailné",
+  const labels: Record<CalendarZoomLevel, string> = {
+    zoomOut30: "-30%",
+    zoomOut20: "-20%",
+    zoomOut10: "-10%",
+    normal: "100%",
+    detail: "+20%",
   };
 
   return (

@@ -1,7 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
 import { BookingCalendarContext } from "./calendar-context";
+import type { CalendarZoomLevel, SlotInfo } from "./calendar-context";
 import type { BookingCalendarEvent, BookingCalendarMode } from "./calendar-types";
-import type { SlotInfo } from "./calendar-context";
 import {
   buildCalendarSearchHaystack,
   buildCalendarSearchIndex,
@@ -36,7 +36,7 @@ export function BookingCalendarProvider({
   children,
 }: BookingCalendarProviderProps) {
   const [pixelsPerHourBase, setPixelsPerHourBase] = useState(128);
-  const [zoomLevel, setZoomLevel] = useState<"compact" | "normal" | "detail">("normal");
+  const [zoomLevel, setZoomLevel] = useState<CalendarZoomLevel>("normal");
   const [searchQuery, setSearchQuery] = useState("");
   const [monthDensity, setMonthDensity] = useState<"compact" | "comfortable">("comfortable");
   const deferredSearchQuery = useDeferredValue(searchQuery);
@@ -51,7 +51,13 @@ export function BookingCalendarProvider({
   }, []);
 
   const pixelsPerHour = useMemo(() => {
-    const zoomMap = { compact: 0.9, normal: 1.0, detail: 1.2 };
+    const zoomMap: Record<CalendarZoomLevel, number> = {
+      zoomOut30: 0.7,
+      zoomOut20: 0.8,
+      zoomOut10: 0.9,
+      normal: 1.0,
+      detail: 1.2,
+    };
     return Math.round(pixelsPerHourBase * zoomMap[zoomLevel]);
   }, [pixelsPerHourBase, zoomLevel]);
 

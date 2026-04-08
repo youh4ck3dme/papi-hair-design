@@ -508,6 +508,47 @@ describe("booking-calendar components", () => {
     expect(container.querySelector(".booking-calendar-body")).not.toBeNull();
   });
 
+  it("supports zoom out in 10%, 20% and 30% steps", () => {
+    render(
+      <BookingCalendar
+        events={[]}
+        date={new Date(2026, 0, 15)}
+        setDate={vi.fn()}
+        mode="day"
+        setMode={vi.fn()}
+      />,
+    );
+
+    const zoomOutButton = screen.getByRole("button", { name: "Zmenšiť" });
+
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    fireEvent.click(zoomOutButton);
+    expect(screen.getByText("-10%")).toBeInTheDocument();
+    fireEvent.click(zoomOutButton);
+    expect(screen.getByText("-20%")).toBeInTheDocument();
+    fireEvent.click(zoomOutButton);
+    expect(screen.getByText("-30%")).toBeInTheDocument();
+    expect(zoomOutButton).toBeDisabled();
+  });
+
+  it("caps zoom in at +20%", () => {
+    render(
+      <BookingCalendar
+        events={[]}
+        date={new Date(2026, 0, 15)}
+        setDate={vi.fn()}
+        mode="day"
+        setMode={vi.fn()}
+      />,
+    );
+
+    const zoomInButton = screen.getByRole("button", { name: "Zväčšiť" });
+
+    fireEvent.click(zoomInButton);
+    expect(screen.getByText("+20%")).toBeInTheDocument();
+    expect(zoomInButton).toBeDisabled();
+  });
+
   it("filters day events using centered calendar search", () => {
     vi.useFakeTimers();
     const date = new Date(2026, 0, 15);
