@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useBookingCalendarContext } from "../calendar-context";
 import { cn } from "@/lib/utils";
 
-export function CalendarHeaderSearch() {
+export function CalendarHeaderSearch({ className }: { className?: string }) {
   const {
     events,
     filteredEvents,
@@ -20,6 +20,7 @@ export function CalendarHeaderSearch() {
       className={cn(
         "flex w-full min-w-0 items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-2 py-1.5",
         mode === "month" && "lg:max-w-[36rem]",
+        className
       )}
     >
       <Search className="h-4 w-4 shrink-0 text-primary" aria-hidden />

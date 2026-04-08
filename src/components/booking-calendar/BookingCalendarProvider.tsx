@@ -35,7 +35,8 @@ export function BookingCalendarProvider({
   resources,
   children,
 }: BookingCalendarProviderProps) {
-  const [pixelsPerHour, setPixelsPerHour] = useState(128);
+  const [pixelsPerHourBase, setPixelsPerHourBase] = useState(128);
+  const [zoomLevel, setZoomLevel] = useState<"compact" | "normal" | "detail">("normal");
   const [searchQuery, setSearchQuery] = useState("");
   const [monthDensity, setMonthDensity] = useState<"compact" | "comfortable">("comfortable");
   const deferredSearchQuery = useDeferredValue(searchQuery);
@@ -43,11 +44,16 @@ export function BookingCalendarProvider({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const query = window.matchMedia("(max-width: 1024px)");
-    const updatePixelsPerHour = () => setPixelsPerHour(query.matches ? 102 : 128);
+    const updatePixelsPerHour = () => setPixelsPerHourBase(query.matches ? 102 : 128);
     updatePixelsPerHour();
     query.addEventListener("change", updatePixelsPerHour);
     return () => query.removeEventListener("change", updatePixelsPerHour);
   }, []);
+
+  const pixelsPerHour = useMemo(() => {
+    const zoomMap = { compact: 0.9, normal: 1.0, detail: 1.2 };
+    return Math.round(pixelsPerHourBase * zoomMap[zoomLevel]);
+  }, [pixelsPerHourBase, zoomLevel]);
 
   const normalizedSearchQuery = useMemo(
     () => normalizeCalendarSearchQuery(deferredSearchQuery),
@@ -82,6 +88,8 @@ export function BookingCalendarProvider({
       businessHours,
       resources,
       pixelsPerHour,
+      zoomLevel,
+      setZoomLevel,
     }),
     [
       businessHours,
@@ -98,6 +106,7 @@ export function BookingCalendarProvider({
       selectable,
       setDate,
       setMode,
+      zoomLevel,
     ],
   );
 

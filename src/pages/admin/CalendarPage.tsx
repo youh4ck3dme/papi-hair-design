@@ -31,6 +31,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from "sonner";
 import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer, MoreVertical, FilterX, MoveRight, CopyPlus, Lock, Trash2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
 import { adminCalendarQuickAction } from "@/integrations/firebase/adminCalendarQuickAction";
 import { toCallableErrorMessage } from "@/integrations/firebase/callableError";
@@ -775,100 +776,106 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="space-y-3 h-full max-w-full overflow-x-hidden calendar-page-root">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Kalendár</h1>
-        <div className="flex items-center gap-2">
-          {compactActionMenu ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="icon" aria-label="Export a tlač">
-                  <MoreVertical className="h-4 w-4" />
+    <div className="space-y-2 md:space-y-3 h-full max-w-full overflow-x-hidden calendar-page-root">
+      <div className="rounded-xl border border-border bg-card/40 p-1.5 md:p-3 flex flex-col gap-2 md:gap-3">
+        {/* Row 1: Title & Actions (mobile: includes theme toggle + 3-dot menu) */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg md:text-2xl font-bold text-foreground">Kalendár</h1>
+          <div className="flex items-center gap-1.5 md:gap-2">
+            {loading && <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin text-muted-foreground" />}
+            <div className="md:hidden"><ThemeToggle /></div>
+            {compactActionMenu ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" size="icon" className="h-9 w-9" aria-label="Export a tlač">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleExportCsv} disabled={exportRows.length === 0}>
+                    <Download className="mr-2 h-4 w-4" /> CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handlePrintDay} disabled={exportRows.length === 0}>
+                    <Printer className="mr-2 h-4 w-4" /> PDF / Tlač
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Button type="button" variant="outline" size="sm" onClick={handleExportCsv} disabled={exportRows.length === 0}>
+                  <Download className="mr-2 h-4 w-4" />
+                  CSV
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExportCsv} disabled={exportRows.length === 0}>
-                  <Download className="mr-2 h-4 w-4" /> CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handlePrintDay} disabled={exportRows.length === 0}>
-                  <Printer className="mr-2 h-4 w-4" /> PDF / Tlač
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <>
-              <Button type="button" variant="outline" size="sm" onClick={handleExportCsv} disabled={exportRows.length === 0}>
-                <Download className="mr-2 h-4 w-4" />
-                CSV
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={handlePrintDay} disabled={exportRows.length === 0}>
-                <Printer className="mr-2 h-4 w-4" />
-                PDF / Tlač
-              </Button>
-            </>
-          )}
-          {loading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
+                <Button type="button" variant="outline" size="sm" onClick={handlePrintDay} disabled={exportRows.length === 0}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  PDF / Tlač
+                </Button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div className="rounded-xl border border-border bg-card/40 p-2 max-w-full overflow-x-hidden">
-        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9 min-h-[44px] w-[11.5rem] max-w-full shrink-0">
-              <SelectValue placeholder="Všetky stavy" />
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map((statusOption) => (
-                <SelectItem key={statusOption.id} value={statusOption.id}>
-                  {statusOption.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Row 2: Filters & Desktop Navigation */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center overflow-x-auto pb-1 sm:pb-0 lg:flex-1 max-w-full">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-9 min-h-[44px] w-full shrink-0">
+                <SelectValue placeholder="Všetky stavy" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((statusOption) => (
+                  <SelectItem key={statusOption.id} value={statusOption.id}>
+                    {statusOption.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-            <SelectTrigger className="h-9 min-h-[44px] w-[13rem] max-w-full shrink-0">
-              <SelectValue placeholder="Všetci zamestnanci" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Všetci zamestnanci</SelectItem>
-              {availableEmployees.map((employee: any) => (
-                <SelectItem key={employee.id} value={employee.id}>
-                  {employee.display_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+              <SelectTrigger className="h-9 min-h-[44px] w-full shrink-0">
+                <SelectValue placeholder="Všetci zamestnanci" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Všetci zamestnanci</SelectItem>
+                {availableEmployees.map((employee: any) => (
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {employee.display_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-9 min-h-[44px] max-w-full shrink-0"
-            onClick={() => {
-              setStatusFilter("all");
-              setEmployeeFilter("all");
-            }}
-          >
-            <FilterX className="mr-2 h-4 w-4" />
-            Reset
-          </Button>
-        </div>
-        <div className="hidden lg:flex items-center gap-2 pt-2">
-          <Button type="button" size="sm" variant="ghost" onClick={handleJumpToday}>
-            Today
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={handleJumpWeek}>
-            This Week
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={handleJumpMonth}>
-            This Month
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 min-h-[44px] w-[44px] md:w-auto px-0 md:px-3 shrink-0"
+              onClick={() => {
+                setStatusFilter("all");
+                setEmployeeFilter("all");
+              }}
+              title="Resetovať filtre"
+            >
+              <FilterX className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Reset</span>
+            </Button>
+          </div>
+
+          <div className="hidden lg:flex items-center gap-2 shrink-0">
+            <Button type="button" size="sm" variant="ghost" onClick={handleJumpToday}>
+              Today
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={handleJumpWeek}>
+              This Week
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={handleJumpMonth}>
+              This Month
+            </Button>
+          </div>
         </div>
       </div>
 
       <div
-        className="bg-card rounded-xl border border-border p-2 sm:p-4 flex flex-col min-h-0 max-w-full overflow-x-hidden calendar-page-shell"
+        className="bg-card rounded-xl border border-border p-1.5 sm:p-4 pb-24 md:pb-4 flex flex-col min-h-0 max-w-full overflow-x-hidden calendar-page-shell"
         style={{ ["--calendar-shell-offset" as string]: compactActionMenu ? "110px" : "150px" }}
       >
         <BookingCalendar

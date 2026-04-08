@@ -23,6 +23,8 @@ export interface BookingCalendarContextValue {
   businessHours?: any; // Business opening hours
   resources?: any[]; // List of resources (employees) for columns
   pixelsPerHour: number;
+  zoomLevel: "compact" | "normal" | "detail";
+  setZoomLevel: (value: "compact" | "normal" | "detail") => void;
 }
 
 

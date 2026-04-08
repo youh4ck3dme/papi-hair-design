@@ -119,7 +119,7 @@ export function CalendarBodyDayContent({
             <div
               key={hour}
               className={cn(
-                "relative h-32 border-b border-border/50 group transition-colors",
+                "relative border-b border-border/50 group transition-colors",
                 selectable && "cursor-pointer booking-calendar-slot",
                 closed && "bg-muted/30 opacity-60"
               )}

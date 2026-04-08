@@ -6,6 +6,7 @@ import { CalendarHeaderDate } from "./header/CalendarHeaderDate";
 import { CalendarHeaderMode } from "./header/CalendarHeaderMode";
 import { CalendarHeaderAdd } from "./header/CalendarHeaderAdd";
 import { CalendarHeaderSearch } from "./header/CalendarHeaderSearch";
+import { CalendarZoomControls } from "./header/CalendarZoomControls";
 import { CalendarBody } from "./body/CalendarBody";
 import { cn } from "@/lib/utils";
 
@@ -53,23 +54,27 @@ export function BookingCalendar({
 
       <div className="flex flex-col h-full min-h-0 booking-calendar">
         <CalendarHeader compact={mode === "month"}>
-          <div
-            className={cn(
-              "grid grid-cols-1 gap-2",
-              mode === "month"
-                ? "grid-cols-[minmax(0,1fr)_auto] items-center lg:grid-cols-[minmax(210px,1fr)_minmax(320px,1.2fr)_auto]"
-                : "lg:grid-cols-[minmax(210px,1fr)_minmax(320px,1.2fr)_auto] lg:items-center",
-            )}
-          >
-            <CalendarHeaderDate />
-            <div className={cn("min-w-0", mode === "month" ? "hidden lg:block" : "block")}>
-              <CalendarHeaderSearch />
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between w-full gap-3">
+            {/* Mobile Row 1 (Date) / Desktop Left */}
+            <div className="flex items-center justify-center lg:justify-start w-full lg:w-auto shrink-0 min-w-0">
+              <CalendarHeaderDate />
             </div>
-            <CalendarHeaderAdd />
+
+            {/* Mobile Row 2 (Search + Add) / Desktop Right */}
+            <div className={cn(
+              "flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0",
+              mode === "month" ? "hidden lg:flex" : "flex flex-1 lg:flex-none justify-end"
+            )}>
+              <div className="flex-1 lg:w-[320px] min-w-0">
+                <CalendarHeaderSearch />
+              </div>
+              <CalendarHeaderAdd className="w-full sm:w-auto shrink-0" />
+            </div>
           </div>
           <CalendarHeaderMode />
         </CalendarHeader>
         <CalendarBody />
+        <CalendarZoomControls />
       </div>
     </BookingCalendarProvider>
   );

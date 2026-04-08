@@ -42,10 +42,10 @@ function makeEvent(partial: Partial<BookingEvent> = {}): BookingEvent {
 }
 
 function renderWithProvider(ui: ReactNode, opts: ProviderOpts = {}) {
-  const setDate = opts.setDate ?? vi.fn();
-  const setMode = opts.setMode ?? vi.fn();
-  const onSelectSlot = opts.onSelectSlot ?? vi.fn();
-  const onSelectEvent = opts.onSelectEvent ?? vi.fn();
+  const setDate = (opts.setDate ?? vi.fn()) as ReturnType<typeof vi.fn>;
+  const setMode = (opts.setMode ?? vi.fn()) as ReturnType<typeof vi.fn>;
+  const onSelectSlot = (opts.onSelectSlot ?? vi.fn()) as ReturnType<typeof vi.fn>;
+  const onSelectEvent = (opts.onSelectEvent ?? vi.fn()) as ReturnType<typeof vi.fn>;
 
   const date = opts.date ?? new Date(2026, 0, 15, 12, 0);
   const mode = opts.mode ?? "day";
@@ -347,7 +347,7 @@ describe("booking-calendar components", () => {
   });
 
   it("renders hour margin labels", () => {
-    render(<CalendarBodyMargin />);
+    renderWithProvider(<CalendarBodyMargin />);
     expect(screen.getByText(`${CALENDAR_START_HOUR}:00`)).toBeInTheDocument();
     expect(screen.getByText(`${CALENDAR_END_HOUR - 1}:00`)).toBeInTheDocument();
   });

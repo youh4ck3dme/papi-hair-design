@@ -22,8 +22,13 @@ export function CalendarHeaderDate() {
   };
 
   return (
-    <div className="flex items-center gap-2 min-w-0">
-      <Button variant="outline" size="icon" className="h-8 w-8 shrink-0 hover:bg-gold/10 hover:border-gold/50 hover:text-gold" onClick={handleBack}>
+    <div className="flex items-center gap-1.5 min-w-0">
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-9 w-9 md:h-8 md:w-8 shrink-0 hover:bg-gold/10 hover:border-gold/50 hover:text-gold"
+        onClick={handleBack}
+      >
         <ChevronLeft className="h-4 w-4" />
       </Button>
       <span
@@ -34,7 +39,12 @@ export function CalendarHeaderDate() {
       >
         {format(date, isMonthMode ? "LLLL yyyy" : "d. MMMM yyyy", { locale: sk })}
       </span>
-      <Button variant="outline" size="icon" className="h-8 w-8 shrink-0 hover:bg-gold/10 hover:border-gold/50 hover:text-gold" onClick={handleForward}>
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-9 w-9 md:h-8 md:w-8 shrink-0 hover:bg-gold/10 hover:border-gold/50 hover:text-gold"
+        onClick={handleForward}
+      >
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>

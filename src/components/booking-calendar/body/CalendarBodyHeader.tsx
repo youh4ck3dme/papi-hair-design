@@ -1,6 +1,7 @@
 import { format, isSameDay } from "date-fns";
 import { sk } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { CALENDAR_HEADER_HEIGHT } from "../calendar-types";
 
 interface Props {
   date: Date;
@@ -13,7 +14,10 @@ export function CalendarBodyHeader({ date, onlyDay = false, resourceName }: Prop
   const isToday = isSameDay(date, new Date());
 
   return (
-    <div className="flex items-center justify-center gap-1 py-2 w-full sticky top-0 bg-background z-10 border-b border-border">
+    <div 
+      className="flex items-center justify-center gap-1 w-full sticky top-0 bg-background z-10 border-b border-border"
+      style={{ height: CALENDAR_HEADER_HEIGHT }}
+    >
       <span
         className={cn(
           "text-xs font-medium",

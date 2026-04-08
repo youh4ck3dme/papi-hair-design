@@ -18,6 +18,7 @@ export const PIXELS_PER_HOUR = 128;
 
 export const CALENDAR_START_HOUR = 3;
 export const CALENDAR_END_HOUR = 23;
+export const CALENDAR_HEADER_HEIGHT = 44;
 export const HOURS = Array.from(
   { length: CALENDAR_END_HOUR - CALENDAR_START_HOUR },
   (_, i) => CALENDAR_START_HOUR + i

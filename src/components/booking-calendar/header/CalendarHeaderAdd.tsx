@@ -5,7 +5,7 @@ import { useBookingCalendarContext } from "../calendar-context";
 import { CALENDAR_START_HOUR } from "../calendar-types";
 import { cn } from "@/lib/utils";
 
-export function CalendarHeaderAdd() {
+export function CalendarHeaderAdd({ className }: { className?: string }) {
   const { date, mode, onSelectSlot, selectable } = useBookingCalendarContext();
   const showMonthFloatingAction = mode === "month";
 
@@ -25,8 +25,9 @@ export function CalendarHeaderAdd() {
         size="sm"
         onClick={handleAdd}
         className={cn(
-          "w-full sm:w-auto bg-gold text-gold-foreground hover:bg-gold/90 border-0 focus-visible:ring-gold",
+          "w-full bg-gold text-gold-foreground hover:bg-gold/90 border-0 focus-visible:ring-gold",
           showMonthFloatingAction && "hidden sm:inline-flex",
+          className
         )}
         aria-label="Pridať novú rezerváciu na vybraný deň"
       >
