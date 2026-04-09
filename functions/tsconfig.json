@@ -12,6 +12,8 @@
         ],
         "esModuleInterop": true,
         "skipLibCheck": true,
+        "strict": true,
+        "forceConsistentCasingInFileNames": true,
         "baseUrl": ".",
         "paths": {
             "~/*": [

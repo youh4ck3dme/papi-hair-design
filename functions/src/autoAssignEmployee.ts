@@ -116,7 +116,7 @@ export async function listEligibleEmployees(
   });
 
   return employeesSnap.docs
-    .map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as BookableEmployee) }))
+    .map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Omit<BookableEmployee, "id">) }))
     .filter((employee) => {
       if (!allowAdminAsProvider && employee.profile_id) {
         const role = membershipByProfileId.get(employee.profile_id);

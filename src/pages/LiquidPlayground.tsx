@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LogoIcon } from "@/components/LogoIcon";
+import logoIcon from "@/assets/logo-icon.webp";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
@@ -73,6 +74,7 @@ interface LandingModule {
   sub: string;
   summary: string;
   Icon: LucideIcon;
+  imageSrc?: string;
 }
 
 function normalizeSearch(value: string) {
@@ -630,28 +632,35 @@ function AnchorRailButton({
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className={`group flex items-center justify-end gap-1.5 rounded-full border px-1.5 py-1.5 transition-all duration-300 sm:gap-2 sm:px-2 sm:py-2 ${
+      className={`group relative flex items-center justify-center rounded-full border transition-all duration-300 ${
         isActive
-          ? "border-primary/35 bg-primary/12 text-primary shadow-[0_14px_32px_-24px_rgba(218,165,32,0.55)]"
+          ? "border-primary/35 bg-primary/12 text-primary shadow-[0_14px_32px_-24px_rgba(218,165,32,0.55)] scale-110"
           : "border-white/8 bg-black/55 text-white/55 hover:border-primary/20 hover:bg-black/70 hover:text-white"
-      } ${isExpanded ? "w-[114px] sm:w-[146px]" : "w-9 sm:w-11"}`}
+      } h-9 w-9 sm:h-11 sm:w-11`}
       aria-label={module.label}
     >
+      {module.imageSrc
+        ? <img src={module.imageSrc} alt={module.label} className="h-5 w-5 rounded-full object-cover sm:h-6 sm:w-6" />
+        : (
+          <span
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors duration-300 sm:h-8 sm:w-8 ${
+              isActive
+                ? "border-primary/35 bg-primary/16 text-primary"
+                : "border-white/8 bg-white/[0.03] text-white/70"
+            }`}
+          >
+            <module.Icon className="h-3 w-3 sm:h-4 sm:w-4" />
+          </span>
+        )
+      }
+
+      {/* Absolute label to prevent layout shift */}
       <span
-        className={`overflow-hidden whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.18em] transition-all duration-300 sm:text-[10px] sm:tracking-[0.22em] ${
-          isExpanded ? "max-w-[70px] opacity-100 sm:max-w-[88px]" : "max-w-0 opacity-0"
-        }`}
+        className={`pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-black/80 px-2 py-1 text-[8px] font-bold uppercase tracking-[0.15em] text-white/80 backdrop-blur-md transition-all duration-200 sm:text-[9px] ${
+          isExpanded ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"
+        } hidden sm:block`}
       >
         {module.label}
-      </span>
-      <span
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors duration-300 sm:h-8 sm:w-8 ${
-          isActive
-            ? "border-primary/35 bg-primary/16 text-primary"
-            : "border-white/8 bg-white/[0.03] text-white/70"
-        }`}
-      >
-        <module.Icon className="h-3 w-3 sm:h-4 sm:w-4" />
       </span>
     </button>
   );
@@ -679,6 +688,7 @@ export default function LiquidPlayground() {
   const [activeSectionId, setActiveSectionId] = useState<LandingModule["id"]>("brand");
   const [expandedNavId, setExpandedNavId] = useState<LandingModule["id"] | null>(null);
   const [desktopLikeLayout, setDesktopLikeLayout] = useState<boolean>(() => isDesktopLikeViewport());
+  const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const sectionRefs = useRef<Partial<Record<LandingModule["id"], HTMLElement | null>>>({});
@@ -746,9 +756,18 @@ export default function LiquidPlayground() {
 
   useEffect(() => {
     const updateLayoutMode = () => setDesktopLikeLayout(isDesktopLikeViewport());
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+
     updateLayoutMode();
+    handleScroll();
+
     window.addEventListener("resize", updateLayoutMode);
-    return () => window.removeEventListener("resize", updateLayoutMode);
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("resize", updateLayoutMode);
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -791,31 +810,57 @@ export default function LiquidPlayground() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(218,165,32,0.12),transparent_32%),radial-gradient(circle_at_85%_18%,rgba(255,255,255,0.06),transparent_20%),radial-gradient(circle_at_bottom,rgba(218,165,32,0.07),transparent_30%)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black via-black/65 to-transparent" />
 
-      <div
-        className="fixed left-4 top-4 z-50 flex items-center gap-1 rounded-full border border-white/8 bg-black/55 px-2 py-1.5 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.95)] backdrop-blur-xl safe-left safe-top"
-        style={{ top: "max(0.9rem, env(safe-area-inset-top))" }}
+      <header
+        className={`fixed z-50 transition-all duration-500 ${
+          scrolled || !desktopLikeLayout
+            ? "top-3 left-1/2 w-[94%] -translate-x-1/2 rounded-[2rem] border border-white/10 bg-black/80 py-2 backdrop-blur-2xl shadow-2xl lg:top-0 lg:w-full lg:translate-x-0 lg:rounded-none lg:bg-black/80 lg:py-2.5"
+            : "top-0 left-0 w-full bg-transparent py-6 border-transparent lg:py-4"
+        }`}
       >
-        <LanguageToggle />
-      </div>
+        <div className="mx-auto grid max-w-[96rem] grid-cols-[1fr_auto_1fr] items-center px-4 sm:px-6 lg:px-8">
+          {/* Left: spacer */}
+          <div />
 
-      <nav
-        className="fixed left-3 top-1/2 z-40 flex -translate-y-1/2 flex-col gap-2 rounded-[24px] border border-white/8 bg-black/36 p-1.5 shadow-[0_18px_50px_-34px_rgba(0,0,0,0.95)] backdrop-blur-xl safe-left sm:left-4"
-        aria-label="Sekcie"
-      >
-        {cards.map((card) => (
-          <AnchorRailButton
-            key={card.id}
-            module={card}
-            isActive={activeSectionId === card.id}
-            isExpanded={expandedNavId === card.id}
-            onClick={() => scrollToSection(card.id)}
-            onMouseEnter={() => setExpandedNavId(card.id)}
-            onMouseLeave={() => setExpandedNavId(null)}
-          />
-        ))}
-      </nav>
+          {/* Center: Navigation */}
+          <div className="flex justify-center">
+            <nav
+              className="flex items-center gap-1 sm:gap-3 lg:gap-6 rounded-full border border-white/5 bg-white/[0.03] p-1 backdrop-blur-md"
+              aria-label="Sekcie"
+            >
+              {cards.map((card) => (
+                <AnchorRailButton
+                  key={card.id}
+                  module={card}
+                  isActive={activeSectionId === card.id}
+                  isExpanded={expandedNavId === card.id}
+                  onClick={() => scrollToSection(card.id)}
+                  onMouseEnter={() => setExpandedNavId(card.id)}
+                  onMouseLeave={() => setExpandedNavId(null)}
+                />
+              ))}
+            </nav>
+          </div>
 
-      <main className="relative mx-auto flex w-full max-w-none flex-col gap-4 px-0 pb-20 pt-[max(5rem,calc(env(safe-area-inset-top)+4.5rem))] sm:px-2 sm:pt-24 lg:max-w-[96rem] lg:px-8">
+          {/* Right: Actions */}
+          <div className="flex items-center justify-end gap-1.5 sm:gap-4">
+            <div className="hidden sm:block">
+              <LanguageToggle />
+            </div>
+            <button
+              onClick={() => navigate("/booking")}
+              aria-label={t("liquid.reserveBtn")}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/5 transition-all hover:bg-white/10 active:scale-90"
+            >
+              <Calendar className="text-[#b0b8c1]" style={{ width: 10, height: 10 }} />
+            </button>
+            <div className="sm:hidden">
+              <LanguageToggle />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="relative mx-auto flex w-full max-w-none flex-col gap-4 px-0 pb-20 pt-28 sm:px-2 sm:pt-36 lg:max-w-[96rem] lg:px-8">
         <div className="space-y-3 sm:space-y-4 lg:space-y-5">
           {cards.map((card) => (
             <div

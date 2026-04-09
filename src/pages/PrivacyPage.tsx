@@ -1,55 +1,120 @@
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-export default function PrivacyPage() {
+export default function PrivacyPolicy() {
+  const navigate = useNavigate();
+
   return (
-    <div className="min-h-screen min-h-[100dvh] safe-x safe-y bg-background text-foreground">
-      <div className="container max-w-3xl py-8 px-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Zásady ochrany osobných údajov</CardTitle>
-            <p className="text-sm text-muted-foreground">PAPI Hair Design · booking.papihairdesign.sk</p>
-          </CardHeader>
-          <CardContent className="prose prose-sm dark:prose-invert max-w-none space-y-4">
-            <section>
-              <h2 className="text-lg font-semibold mt-4">1. Správca údajov</h2>
-              <p>Správcom osobných údajov je PAPI Hair Design (ďalej „my“). Kontakt: prostredníctvom webu booking.papihairdesign.sk alebo e-mailom privacy@booking.papihairdesign.sk.</p>
-            </section>
-            <section>
-              <h2 className="text-lg font-semibold mt-4">2. Aké údaje zbierame</h2>
-              <p>Pri rezervácii a prihlásení môžeme spracovávať: meno, e-mail, telefón, údaje o objednávkach a preferenciách. Pri prihlásení cez Google/Apple používame údaje poskytnuté týmto poskytovateľom (e-mail, meno) v rozsahu ich súhlasu.</p>
-            </section>
-            <section>
-              <h2 className="text-lg font-semibold mt-4">3. Účel a právny základ</h2>
-              <p>Údaje používame na poskytovanie rezervačnej služby, komunikáciu a v súlade so zákonnou povinnosťou. Spracovanie pre rezervácie je založené na plnení zmluvy alebo oprávnenom záujme; marketing len so súhlasom.</p>
-            </section>
-            <section>
-              <h2 className="text-lg font-semibold mt-4">4. Súbory cookie a audit súhlasu</h2>
-              <p>Používame nevyhnutné cookies na fungovanie stránky a prihlásenia. Voliteľne analytické a marketingové cookies podľa vášho výberu v lište súhlasu s cookies. Zmeny súhlasu ukladajú aj minimálny server-side auditný záznam (kategórie, akcia, čas, hash IP), bez ukladania raw IP adresy.</p>
-            </section>
-            <section>
-              <h2 className="text-lg font-semibold mt-4">5. Zdieľanie a spracovatelia</h2>
-              <p>Údaje môžu byť spracované technickými spracovateľmi (hosting, autentifikácia). Rezervačný systém a prihlásenie využívajú služby Firebase; prihlásenie cez Google/Apple podlieha ich zásadám. Nepredávame údaje tretím stranám na marketing.</p>
-            </section>
-            <section>
-              <h2 className="text-lg font-semibold mt-4">6. Doba uchovávania</h2>
-              <p>Údaje uchovávame po dobu potrebnú na plnenie zmluvy a zákonné povinnosti; po tej dobe sú anonymizované alebo vymazané.</p>
-            </section>
-            <section>
-              <h2 className="text-lg font-semibold mt-4">7. Vaše práva (GDPR minimum runtime)</h2>
-              <p>Máte právo na prístup, opravu, vymazanie, obmedzenie spracovania a sťažnosť u dozorného úradu. Aplikačne sú dostupné minimum endpointy <code>/gdpr/status</code>, <code>/gdpr/export</code> a <code>/gdpr/delete</code>.</p>
-              <p>Export a delete fungujú ako request/ack flow (accepted alebo pending review), nie ako okamžitý synchronný export alebo okamžité deštruktívne vymazanie.</p>
-            </section>
-            <section>
-              <h2 className="text-lg font-semibold mt-4">8. Zmeny</h2>
-              <p>Zásady môžeme aktualizovať; zmeny zverejníme na tejto stránke s uvedením dátumu.</p>
-            </section>
-            <p className="text-muted-foreground text-sm mt-6">Posledná aktualizácia: február 2026.</p>
-          </CardContent>
-        </Card>
-        <p className="mt-6 text-center">
-          <Link to="/" className="text-primary underline hover:no-underline">Späť na úvod</Link>
-        </p>
+    <div className="min-h-screen bg-white py-20 px-4 font-sans selection:bg-black selection:text-white">
+      <div className="max-w-3xl mx-auto">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 font-black uppercase text-sm hover:text-red-600 transition-colors mb-12 min-h-[44px]"
+        >
+          <ArrowLeft size={16} /> Späť
+        </button>
+
+        <h1 className="text-4xl md:text-6xl font-black uppercase mb-8 leading-none">
+          Ochrana <span className="text-red-600">súkromia</span>
+        </h1>
+
+        <div className="border-l-4 border-black pl-4 mb-8 font-bold text-sm text-gray-500 uppercase">
+          Posledná aktualizácia: 9. apríl 2026
+        </div>
+
+        <div className="space-y-8 font-bold text-gray-800 leading-relaxed">
+          <section>
+            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">1. Úvod</h2>
+            <p>
+              H4CK3D Enterprise ("my", "nás", "naše") prevádzkuje webovú aplikáciu H4CK3D Enterprise
+              ("Služba"). Táto stránka vás informuje o našich zásadách týkajúcich sa zhromažďovania,
+              používania a zverejňovania osobných údajov pri používaní našej Služby.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">2. Zhromažďované údaje</h2>
+            <p className="mb-4">Pri používaní Služby môžeme zhromažďovať nasledujúce údaje:</p>
+            <ul className="space-y-2 ml-4">
+              <li className="flex items-start gap-3">
+                <span className="w-2 h-2 bg-red-600 mt-2 flex-shrink-0" />
+                <span><strong>E-mailová adresa</strong> — pre účely autentifikácie a komunikácie.</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-2 h-2 bg-red-600 mt-2 flex-shrink-0" />
+                <span><strong>Platobné údaje</strong> — spracovávané cez Stripe. Neuchovávame čísla kariet.</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-2 h-2 bg-red-600 mt-2 flex-shrink-0" />
+                <span><strong>Údaje o používaní</strong> — konverzácie s AI, nahrané súbory, logy relácií.</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-2 h-2 bg-red-600 mt-2 flex-shrink-0" />
+                <span><strong>Technické údaje</strong> — IP adresa, typ prehliadača, zariadenie.</span>
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">3. Tretie strany</h2>
+            <p className="mb-4">Na zabezpečenie našej Služby používame nasledujúcich poskytovateľov:</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="border-4 border-black p-4">
+                <div className="font-black uppercase text-sm mb-1">Supabase</div>
+                <div className="text-xs text-gray-500">Autentifikácia & Databáza</div>
+              </div>
+              <div className="border-4 border-black p-4">
+                <div className="font-black uppercase text-sm mb-1">Stripe</div>
+                <div className="text-xs text-gray-500">Spracovanie platieb</div>
+              </div>
+              <div className="border-4 border-black p-4">
+                <div className="font-black uppercase text-sm mb-1">OpenAI</div>
+                <div className="text-xs text-gray-500">AI spracovanie</div>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">4. Cookies</h2>
+            <p>
+              Používame nevyhnutné cookies na udržanie vašej prihlásenia relácie. Nepoužívame
+              reklamné ani sledovacie cookies tretích strán.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">5. Vaše práva (GDPR)</h2>
+            <p className="mb-4">Ako užívateľ máte právo na:</p>
+            <ul className="space-y-2 ml-4">
+              <li className="flex items-start gap-3">
+                <span className="w-2 h-2 bg-yellow-400 mt-2 flex-shrink-0" />
+                <span>Prístup k vašim osobným údajom</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-2 h-2 bg-yellow-400 mt-2 flex-shrink-0" />
+                <span>Opravu nepresných údajov</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-2 h-2 bg-yellow-400 mt-2 flex-shrink-0" />
+                <span>Vymazanie vašich údajov ("právo byť zabudnutý")</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-2 h-2 bg-yellow-400 mt-2 flex-shrink-0" />
+                <span>Export údajov v strojovo čitateľnom formáte</span>
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">6. Kontakt</h2>
+            <p>
+              Pre akékoľvek otázky ohľadom ochrany súkromia nás kontaktujte na:
+            </p>
+            <div className="mt-4 border-4 border-black bg-yellow-400 p-6 font-black text-lg">
+              support@h4ck3d.enterprise
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );

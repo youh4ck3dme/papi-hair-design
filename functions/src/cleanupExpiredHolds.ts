@@ -14,7 +14,7 @@ export const cleanupExpiredHolds = onSchedule("every 15 minutes", async () => {
       .limit(BATCH_LIMIT)
       .get();
 
-    if (snap.empty) return null;
+    if (snap.empty) return;
 
     const batch = db.batch();
     snap.docs.forEach((doc) => {

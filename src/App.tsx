@@ -39,6 +39,10 @@ const SalonLoginPage = lazy(() => import("./pages/SalonLoginPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const BootstrapPage = lazy(() => import("./pages/BootstrapPage"));
 
+// H4CK3D Enterprise Components
+const PricingPage = lazy(() => import("./pages/Pricing"));
+const InstallPrompt = lazy(() => import("@/components/InstallPrompt"));
+
 const LazyFallback = () => (
   <div className="min-h-screen flex items-center justify-center">
     <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -96,6 +100,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true, v7_fetcherPersist: true }}>
+            <InstallPrompt />
             <CookieConsent />
             <AuthProvider>
               <Suspense fallback={<LazyFallback />}>
@@ -103,6 +108,7 @@ const App = () => {
                   <Route path="/" element={<LiquidPlayground />} />
                   <Route path="/demo" element={<DemoPage />} />
                   <Route path="/booking" element={<BookingPage />} />
+                  <Route path="/pricing" element={<PricingPage />} />
                   <Route
                     path="/papihairsalon2026"
                     element={salonLoginEnabled ? <SalonLoginPage /> : <Navigate to="/auth" replace />}

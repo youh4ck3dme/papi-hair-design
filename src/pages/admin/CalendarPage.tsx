@@ -14,6 +14,7 @@ import {
   limit,
   Timestamp
 } from "firebase/firestore";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { BookingCalendar, statusToColor, type BookingCalendarEvent, type BookingCalendarMode, type SlotInfo } from "@/components/booking-calendar";
 
 import { useBusiness } from "@/hooks/useBusiness";
@@ -776,18 +777,70 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="space-y-2 md:space-y-3 h-full max-w-full overflow-x-hidden calendar-page-root">
-      <div className="rounded-xl border border-border bg-card/40 p-1.5 md:p-3 flex flex-col gap-2 md:gap-3">
-        {/* Row 1: Title & Actions (mobile: includes theme toggle + 3-dot menu) */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg md:text-2xl font-bold text-foreground">Kalendár</h1>
-          <div className="flex items-center gap-1.5 md:gap-2">
-            {loading && <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin text-muted-foreground" />}
-            <div className="md:hidden"><ThemeToggle /></div>
+    <div className="space-y-1 md:space-y-2 h-full max-w-full overflow-x-hidden calendar-page-root">
+      <div className="rounded-xl border border-border bg-card/40 p-1 md:p-2 flex flex-col gap-1.5 md:gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <SidebarTrigger className="h-9 w-9 min-h-[44px] min-w-[44px] md:min-h-9 md:min-w-9 flex items-center justify-center shrink-0 border border-border bg-background hover:bg-accent" />
+            
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar flex-1 max-w-full">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-9 min-h-[44px] w-[140px] md:w-[160px] shrink-0 bg-background/50">
+                  <SelectValue placeholder="Všetky stavy" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((statusOption) => (
+                    <SelectItem key={statusOption.id} value={statusOption.id}>
+                      {statusOption.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+                <SelectTrigger className="h-9 min-h-[44px] w-[140px] md:w-[160px] shrink-0 bg-background/50">
+                  <SelectValue placeholder="Všetci" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Všetci zamestnanci</SelectItem>
+                  {availableEmployees.map((employee: any) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 min-h-[44px] min-w-[44px] shrink-0 bg-background/50"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setEmployeeFilter("all");
+                }}
+                title="Resetovať filtre"
+              >
+                <FilterX className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground mr-1" />}
+            <div className="hidden sm:block"><ThemeToggle /></div>
+            
+            <div className="hidden lg:flex items-center gap-1 mr-1">
+              <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={handleJumpToday}>Today</Button>
+              <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={handleJumpWeek}>Week</Button>
+              <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={handleJumpMonth}>Month</Button>
+            </div>
+
             {compactActionMenu ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="outline" size="icon" className="h-9 w-9" aria-label="Export a tlač">
+                  <Button type="button" variant="outline" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px]" aria-label="Export a tlač">
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -801,82 +854,24 @@ export default function CalendarPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <>
-                <Button type="button" variant="outline" size="sm" onClick={handleExportCsv} disabled={exportRows.length === 0}>
-                  <Download className="mr-2 h-4 w-4" />
-                  CSV
+              <div className="flex items-center gap-1">
+                <Button type="button" variant="outline" size="sm" className="h-8 md:h-9" onClick={handleExportCsv} disabled={exportRows.length === 0}>
+                  <Download className="md:mr-2 h-4 w-4" />
+                  <span className="hidden md:inline">CSV</span>
                 </Button>
-                <Button type="button" variant="outline" size="sm" onClick={handlePrintDay} disabled={exportRows.length === 0}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  PDF / Tlač
+                <Button type="button" variant="outline" size="sm" className="h-8 md:h-9" onClick={handlePrintDay} disabled={exportRows.length === 0}>
+                  <Printer className="md:mr-2 h-4 w-4" />
+                  <span className="hidden md:inline">Tlač</span>
                 </Button>
-              </>
+              </div>
             )}
-          </div>
-        </div>
-
-        {/* Row 2: Filters & Desktop Navigation */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center overflow-x-auto pb-1 sm:pb-0 lg:flex-1 max-w-full">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9 min-h-[44px] w-full shrink-0">
-                <SelectValue placeholder="Všetky stavy" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((statusOption) => (
-                  <SelectItem key={statusOption.id} value={statusOption.id}>
-                    {statusOption.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-              <SelectTrigger className="h-9 min-h-[44px] w-full shrink-0">
-                <SelectValue placeholder="Všetci zamestnanci" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Všetci zamestnanci</SelectItem>
-                {availableEmployees.map((employee: any) => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    {employee.display_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="h-9 min-h-[44px] w-[44px] md:w-auto px-0 md:px-3 shrink-0"
-              onClick={() => {
-                setStatusFilter("all");
-                setEmployeeFilter("all");
-              }}
-              title="Resetovať filtre"
-            >
-              <FilterX className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">Reset</span>
-            </Button>
-          </div>
-
-          <div className="hidden lg:flex items-center gap-2 shrink-0">
-            <Button type="button" size="sm" variant="ghost" onClick={handleJumpToday}>
-              Today
-            </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={handleJumpWeek}>
-              This Week
-            </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={handleJumpMonth}>
-              This Month
-            </Button>
           </div>
         </div>
       </div>
 
       <div
         className="bg-card rounded-xl border border-border p-1.5 sm:p-4 pb-24 md:pb-4 flex flex-col min-h-0 max-w-full overflow-x-hidden calendar-page-shell"
-        style={{ ["--calendar-shell-offset" as string]: compactActionMenu ? "110px" : "150px" }}
+        style={{ ["--calendar-shell-offset" as string]: compactActionMenu ? "60px" : "90px" }}
       >
         <BookingCalendar
           events={bookingCalendarEvents}
@@ -985,207 +980,229 @@ export default function CalendarPage() {
       </Dialog>
 
       <Sheet open={detailModal} onOpenChange={setDetailModal}>
-        <SheetContent side="right" className="w-full overflow-y-auto border-l border-primary/10 bg-background/98 px-5 py-5 sm:max-w-xl">
-          <SheetHeader>
+        <SheetContent side="right" className="w-full border-l border-white/8 bg-[#0a0a0a]/95 backdrop-blur-2xl px-0 py-0 sm:max-w-md flex flex-col overflow-hidden [&>button]:text-white/40 [&>button]:hover:text-white">
+          <SheetHeader className="sr-only">
             <SheetTitle>Detail rezervácie</SheetTitle>
-            <SheetDescription>
-              Skontrolujte údaje rezervácie a podľa potreby upravte jej stav.
-            </SheetDescription>
+            <SheetDescription>Detaily vybranej rezervácie</SheetDescription>
           </SheetHeader>
           {selectedEvent && (
-            <div className="space-y-5 pt-5">
-              <div className="rounded-2xl border border-primary/10 bg-card/50 p-4 shadow-sm">
+            <>
+              {/* ── Header ── */}
+              <div className="px-5 pt-5 pb-4 border-b border-white/8 shrink-0">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">Klient</p>
-                    <p className="mt-1 text-lg font-semibold text-foreground">
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/30 mb-1">Detail rezervácie</p>
+                    <h2 className="text-base font-bold text-white truncate">
                       {selectedEvent.resource?.customer_name ?? selectedEvent.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
+                    </h2>
+                    <p className="text-xs text-white/40 mt-0.5 truncate">
                       {selectedEvent.resource?.service_name ?? "Služba"}
                     </p>
                   </div>
-                  <Badge className="border-0 bg-secondary text-secondary-foreground">
-                    {ADMIN_BOOKING_STATUS_LABELS[selectedEvent.status as keyof typeof ADMIN_BOOKING_STATUS_LABELS] ?? selectedEvent.status}
-                  </Badge>
+                  {(() => {
+                    const sc: Record<string, { label: string; cls: string }> = {
+                      confirmed: { label: "Potvrdená", cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/25 shadow-[0_0_10px_rgba(52,211,153,0.25)]" },
+                      pending:   { label: "Čakajúca",  cls: "text-amber-400  bg-amber-500/10  border-amber-500/25  shadow-[0_0_10px_rgba(251,191,36,0.25)]"  },
+                      cancelled: { label: "Zrušená",   cls: "text-red-400    bg-red-500/10    border-red-500/25    shadow-[0_0_10px_rgba(248,113,113,0.25)]" },
+                      completed: { label: "Dokončená", cls: "text-white/40   bg-white/5       border-white/10" },
+                      no_show:   { label: "No-show",   cls: "text-orange-400 bg-orange-500/10 border-orange-500/25 shadow-[0_0_10px_rgba(251,146,60,0.25)]"  },
+                    };
+                    const s = sc[selectedEvent.status] ?? sc.pending;
+                    return (
+                      <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest ${s.cls}`}>
+                        {s.label}
+                      </span>
+                    );
+                  })()}
                 </div>
-              </div>
-              <div className="grid gap-3 rounded-2xl border border-border/80 bg-card/50 p-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Meno</p>
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <User className="h-4 w-4 text-primary" />
-                    <span>{selectedEvent.resource?.customer_name ?? selectedEvent.title}</span>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">E-mail</p>
-                  <div className="flex items-center gap-2 text-sm text-foreground">
-                    <Mail className="h-4 w-4 text-primary" />
-                    <span className="break-all">{selectedEvent.resource?.customer_email ?? "—"}</span>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Telefón</p>
-                  <div className="flex items-center gap-2 text-sm text-foreground">
-                    <Phone className="h-4 w-4 text-primary" />
-                    <span>{selectedEvent.resource?.customer_phone ?? "—"}</span>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Termín</p>
-                  <div className="flex items-center gap-2 text-sm text-foreground">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <span>{fmtDate(selectedEvent.start, "d. M. yyyy HH:mm")} – {fmtDate(selectedEvent.end, "HH:mm")}</span>
-                  </div>
-                </div>
-              </div>
-              <Badge className="text-xs border-0 bg-secondary text-secondary-foreground">
-                {ADMIN_BOOKING_STATUS_LABELS[selectedEvent.status as keyof typeof ADMIN_BOOKING_STATUS_LABELS] ?? selectedEvent.status}
-              </Badge>
-              {isOwnerOrAdmin && (
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <Button size="sm" variant="outline" onClick={() => openQuickAction("move")} disabled={updatingStatus || quickActionSaving}>
-                    <MoveRight className="mr-1 h-3.5 w-3.5" /> Presunúť
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => openQuickAction("duplicate")} disabled={updatingStatus || quickActionSaving}>
-                    <CopyPlus className="mr-1 h-3.5 w-3.5" /> Duplikovať
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => openQuickAction("block")} disabled={updatingStatus || quickActionSaving}>
-                    <Lock className="mr-1 h-3.5 w-3.5" /> Blokovať
-                  </Button>
-                </div>
-              )}
-              {isOwnerOrAdmin && selectedEvent.resource?.event_type === "time_block" && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full border-rose-500/30 text-rose-500 hover:text-rose-500"
-                  onClick={handleDeleteBlock}
-                  disabled={quickActionSaving}
-                >
-                  <Trash2 className="mr-1 h-3.5 w-3.5" /> Odstrániť blok
-                </Button>
-              )}
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-2 text-sm">
-                  <LogoIcon size="sm" className="w-4 h-4 flex-shrink-0" />
-                  <span>
-                    {selectedEvent.resource?.service_name && selectedEvent.resource?.employee_name
-                      ? `${selectedEvent.resource.service_name} · ${selectedEvent.resource.employee_name}`
-                      : selectedEvent.title}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span>{fmtDate(selectedEvent.start, "d. M. yyyy HH:mm")} – {fmtDate(selectedEvent.end, "HH:mm")}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="font-semibold uppercase tracking-[0.2em]">Ref:</span>
-                  <span className="font-mono text-sm text-foreground" title={selectedEvent.id}>{selectedEvent.id}</span>
+                {/* REF row */}
+                <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/25">Ref</span>
+                  <span className="font-mono text-[10px] text-white/40 truncate flex-1 min-w-0">{selectedEvent.id}</span>
                   <button
                     type="button"
                     onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(selectedEvent.id);
-                        setCopyLabel("Skopírované");
-                        scheduleCopyLabelReset();
-                      } catch {
-                        setCopyLabel("Kópia zlyhala");
-                        scheduleCopyLabelReset();
-                      }
+                      try { await navigator.clipboard.writeText(selectedEvent.id); setCopyLabel("Skopírované"); } catch { setCopyLabel("Kópia zlyhala"); }
+                      scheduleCopyLabelReset();
                     }}
-                    className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+                    className="shrink-0 flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-white/35 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-colors"
                   >
-                    <Copy className="w-3.5 h-3.5" /> {copyLabel}
+                    <Copy className="w-2.5 h-2.5" /> {copyLabel}
                   </button>
                   <a
                     href={`/dashboard/history?ref=${encodeURIComponent(selectedEvent.id)}`}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                    className="shrink-0 flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-[#D4AF37]/60 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-colors"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" /> História
+                    <ExternalLink className="w-2.5 h-2.5" /> História
                   </a>
                 </div>
               </div>
-              <div className="rounded-2xl border border-border/80 bg-card/50 p-4">
-                <div className="flex items-center justify-between gap-3">
+
+              {/* ── Scrollable body ── */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+
+                {/* Client info grid */}
+                <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4 grid grid-cols-2 gap-x-4 gap-y-3">
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">História klienta</p>
-                    <p className="mt-1 text-2xl font-semibold text-foreground">
-                      {loadingHistory ? "…" : customerHistory.length}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Rezervácie priradené k tomuto klientovi</p>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/30 mb-1.5">Meno</p>
+                    <div className="flex items-center gap-1.5 text-sm font-medium text-white">
+                      <User className="h-3.5 w-3.5 text-[#D4AF37] shrink-0" />
+                      <span className="truncate">{selectedEvent.resource?.customer_name ?? selectedEvent.title}</span>
+                    </div>
                   </div>
-                  <a
-                    href={`/dashboard/history?ref=${encodeURIComponent(selectedEvent.id)}`}
-                    className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary transition-colors hover:border-primary/40 hover:bg-primary/10"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    História
-                  </a>
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/30 mb-1.5">Telefón</p>
+                    <div className="flex items-center gap-1.5 text-sm text-white">
+                      <Phone className="h-3.5 w-3.5 text-[#D4AF37] shrink-0" />
+                      <span>{selectedEvent.resource?.customer_phone ?? "—"}</span>
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/30 mb-1.5">E-mail</p>
+                    <div className="flex items-center gap-1.5 text-sm text-white">
+                      <Mail className="h-3.5 w-3.5 text-[#D4AF37] shrink-0" />
+                      <span className="break-all">{selectedEvent.resource?.customer_email ?? "—"}</span>
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/30 mb-1.5">Termín</p>
+                    <div className="flex items-center gap-1.5 text-sm text-white">
+                      <Clock className="h-3.5 w-3.5 text-[#D4AF37] shrink-0" />
+                      <span>{fmtDate(selectedEvent.start, "d. M. yyyy HH:mm")} – {fmtDate(selectedEvent.end, "HH:mm")}</span>
+                    </div>
+                  </div>
                 </div>
-                {customerHistory.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    {customerHistory.slice(0, 4).map((historyItem) => (
-                      <div key={historyItem.id} className="flex items-center justify-between gap-3 rounded-xl bg-muted/35 px-3 py-2 text-sm">
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-foreground">{historyItem.service_name ?? "Služba"}</p>
-                          <p className="text-xs text-muted-foreground">{historyItem.start_at ? fmtDate(new Date(historyItem.start_at), "d. M. yyyy HH:mm") : "—"}</p>
-                        </div>
-                        <Badge variant="secondary" className="shrink-0 text-[10px] uppercase">
-                          {ADMIN_BOOKING_STATUS_LABELS[historyItem.status as keyof typeof ADMIN_BOOKING_STATUS_LABELS] ?? historyItem.status}
-                        </Badge>
-                      </div>
+
+                {/* Service badge */}
+                <div className="rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 flex items-center gap-3">
+                  <LogoIcon size="sm" className="w-7 h-7 shrink-0 opacity-60" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {selectedEvent.resource?.service_name ?? selectedEvent.title}
+                    </p>
+                    <p className="text-xs text-white/35 truncate">{selectedEvent.resource?.employee_name ?? ""}</p>
+                  </div>
+                </div>
+
+                {/* Secondary icon actions */}
+                {isOwnerOrAdmin && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { action: "move",      Icon: MoveRight, label: "Presunúť"   },
+                      { action: "duplicate", Icon: CopyPlus,  label: "Duplikovať" },
+                      { action: "block",     Icon: Lock,      label: "Blokovať"   },
+                    ].map(({ action, Icon, label }) => (
+                      <button
+                        key={action}
+                        onClick={() => openQuickAction(action as "move" | "duplicate" | "block")}
+                        disabled={updatingStatus || quickActionSaving}
+                        className="flex flex-col items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] py-3 text-white/50 hover:text-[#D4AF37] hover:border-[#D4AF37]/20 hover:bg-[#D4AF37]/5 transition-all disabled:opacity-30"
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span className="text-[9px] font-semibold uppercase tracking-wider">{label}</span>
+                      </button>
                     ))}
                   </div>
                 )}
-              </div>
-              <div className="space-y-3 pt-2 border-t border-border">
-                <div className="space-y-1">
-                  <Label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Poznámka</Label>
+
+                {isOwnerOrAdmin && selectedEvent.resource?.event_type === "time_block" && (
+                  <button
+                    onClick={handleDeleteBlock}
+                    disabled={quickActionSaving}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 py-2.5 text-sm font-semibold text-rose-400 hover:bg-rose-500/10 transition-all disabled:opacity-40"
+                  >
+                    <Trash2 className="h-4 w-4" /> Odstrániť blok
+                  </button>
+                )}
+
+                {/* History — compact scrollable */}
+                <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/30">História klienta</p>
+                    <a
+                      href={`/dashboard/history?ref=${encodeURIComponent(selectedEvent.id)}`}
+                      className="text-[9px] font-semibold text-[#D4AF37]/60 hover:text-[#D4AF37] flex items-center gap-1 transition-colors"
+                    >
+                      <ExternalLink className="w-3 h-3" /> Všetky
+                    </a>
+                  </div>
+                  {loadingHistory ? (
+                    <p className="text-xs text-white/25 py-1">Načítava sa…</p>
+                  ) : customerHistory.length === 0 ? (
+                    <p className="text-xs text-white/25 py-1">Žiadne záznamy</p>
+                  ) : (
+                    <div className="space-y-1 max-h-40 overflow-y-auto pr-0.5">
+                      {customerHistory.map((hi) => {
+                        const dot: Record<string, string> = {
+                          confirmed: "bg-emerald-400", completed: "bg-white/25",
+                          cancelled: "bg-red-400", pending: "bg-amber-400", no_show: "bg-orange-400",
+                        };
+                        return (
+                          <div key={hi.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5 transition-colors">
+                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot[hi.status] ?? "bg-white/20"}`} />
+                            <span className="flex-1 min-w-0 truncate text-xs text-white/65">{hi.service_name ?? "Služba"}</span>
+                            <span className="shrink-0 text-[10px] text-white/25">{hi.start_at ? fmtDate(new Date(hi.start_at), "d. M. yyyy") : "—"}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="mt-2 text-[9px] text-white/20">{!loadingHistory && `${customerHistory.length} rezervácií`}</p>
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/30">Poznámka</p>
                   <textarea
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#D4AF37]/40 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.08)] transition-all resize-none"
                     rows={3}
                     value={noteText}
                     onChange={(e) => setNoteText(e.target.value)}
-                    placeholder="Krátka interná poznámka k rezervácii"
+                    placeholder="Interná poznámka k rezervácii…"
                   />
-                  <div className="flex justify-end">
-                    <Button size="sm" variant="outline" disabled={updatingStatus} onClick={handleSaveNote}>
-                      {updatingStatus && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Uložiť poznámku
-                    </Button>
-                  </div>
                 </div>
-                {isOwnerOrAdmin && (
-                <div className="grid gap-2 pt-1 sm:grid-cols-2">
-                  {canAdminConfirmBooking(selectedEvent.status) && (
-                    <Button size="sm" className="flex-1" onClick={() => handleStatusChange("confirmed")} disabled={updatingStatus}>
-                      <Check className="w-3.5 h-3.5 mr-1" /> Potvrdiť
-                    </Button>
-                  )}
-                  {canAdminCompleteBooking(selectedEvent.status) && (
-                    <>
-                      <Button size="sm" variant="secondary" className="flex-1" onClick={() => handleStatusChange("completed")} disabled={updatingStatus}>
-                        <Check className="w-3.5 h-3.5 mr-1" /> Dokončiť
-                      </Button>
-                    </>
-                  )}
-                  {canAdminMarkNoShow(selectedEvent.status) && (
-                    <>
-                      <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleStatusChange("no_show")} disabled={updatingStatus}>
-                        <X className="w-3.5 h-3.5 mr-1" /> No-show
-                      </Button>
-                    </>
-                  )}
-                  {canAdminCancelBooking(selectedEvent.status) && (
-                    <Button size="sm" variant="outline" className="flex-1 text-rose-700 hover:text-rose-700" onClick={() => handleStatusChange("cancelled")} disabled={updatingStatus}>
-                      <X className="w-3.5 h-3.5 mr-1" /> Zrušiť
-                    </Button>
-                  )}
-                </div>
-                )}
               </div>
-            </div>
+
+              {/* ── Footer ── */}
+              <div className="border-t border-white/8 px-5 py-4 space-y-2.5 shrink-0 bg-[#0d0d0d]/80">
+                {isOwnerOrAdmin && (
+                  <div className="grid gap-2 grid-cols-2">
+                    {canAdminConfirmBooking(selectedEvent.status) && (
+                      <button onClick={() => handleStatusChange("confirmed")} disabled={updatingStatus}
+                        className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/12 border border-emerald-500/22 py-2.5 text-sm font-semibold text-emerald-400 hover:bg-emerald-500/22 transition-all disabled:opacity-40">
+                        <Check className="h-3.5 w-3.5" /> Potvrdiť
+                      </button>
+                    )}
+                    {canAdminCompleteBooking(selectedEvent.status) && (
+                      <button onClick={() => handleStatusChange("completed")} disabled={updatingStatus}
+                        className="flex items-center justify-center gap-1.5 rounded-xl bg-white/6 border border-white/10 py-2.5 text-sm font-semibold text-white/60 hover:bg-white/10 transition-all disabled:opacity-40">
+                        <Check className="h-3.5 w-3.5" /> Dokončiť
+                      </button>
+                    )}
+                    {canAdminMarkNoShow(selectedEvent.status) && (
+                      <button onClick={() => handleStatusChange("no_show")} disabled={updatingStatus}
+                        className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-500/10 border border-orange-500/20 py-2.5 text-sm font-semibold text-orange-400 hover:bg-orange-500/20 transition-all disabled:opacity-40">
+                        <X className="h-3.5 w-3.5" /> No-show
+                      </button>
+                    )}
+                    {canAdminCancelBooking(selectedEvent.status) && (
+                      <button onClick={() => handleStatusChange("cancelled")} disabled={updatingStatus}
+                        className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-500/8 border border-rose-500/18 py-2.5 text-sm font-semibold text-rose-400 hover:bg-rose-500/16 transition-all disabled:opacity-40">
+                        <X className="h-3.5 w-3.5" /> Zrušiť
+                      </button>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={handleSaveNote}
+                  disabled={updatingStatus}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-[#D4AF37]/18 bg-[#D4AF37]/6 py-2.5 text-sm font-semibold text-[#D4AF37]/70 hover:bg-[#D4AF37]/12 hover:text-[#D4AF37] transition-all disabled:opacity-40"
+                >
+                  {updatingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Uložiť poznámku
+                </button>
+              </div>
+            </>
           )}
         </SheetContent>
       </Sheet>

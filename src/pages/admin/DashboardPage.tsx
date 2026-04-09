@@ -237,10 +237,10 @@ export default function DashboardPage() {
   };
 
   const statCards = [
-    { title: "Dnes", value: stats.today, icon: Calendar, color: "text-gold", bg: "bg-gold/10" },
-    { title: "Celkovo rezervácií", value: stats.total, icon: TrendingUp, color: "text-gold", bg: "bg-gold/10" },
-    { title: "Zamestnanci", value: stats.employees, icon: Users, color: "text-gold", bg: "bg-gold/10" },
-    { title: "Služby", value: stats.services, icon: Briefcase, color: "text-gold", bg: "bg-gold/10" },
+    { title: "Dnes", value: stats.today, icon: Calendar, color: "text-red-600", bg: "bg-red-500/10" },
+    { title: "Celkovo", value: stats.total, icon: TrendingUp, color: "text-red-600", bg: "bg-red-500/10" },
+    { title: "Tím", value: stats.employees, icon: Users, color: "text-red-600", bg: "bg-red-500/10" },
+    { title: "Arsenal", value: stats.services, icon: Briefcase, color: "text-red-600", bg: "bg-red-500/10" },
   ];
 
   return (
@@ -289,29 +289,29 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-4">
-        <div className="font-semibold text-sm text-muted-foreground uppercase tracking-[0.3em]">Štatistiky</div>
+      <div className="flex items-center justify-between gap-4 border-b-4 border-black pb-2">
+        <div className="font-black text-sm text-black uppercase tracking-[0.3em]">System Telemetry</div>
         <button
           type="button"
           onClick={loadStats}
           disabled={loading}
-          className="text-xs font-semibold text-primary hover:underline disabled:opacity-40"
+          className="text-xs font-black uppercase text-red-600 hover:underline disabled:opacity-40"
         >
-          {loading ? "Načítavam..." : "Obnoviť"}
+          {loading ? "Načítavam..." : "Re-Sync"}
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-0 border-4 border-black">
         {statCards.map((card) => (
-          <Card key={card.title} className="border-border">
-            <CardContent className="p-5">
+          <Card key={card.title} className="rounded-none border-0 border-r-4 last:border-r-0 border-black shadow-none bg-white hover:bg-red-50 transition-colors">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{card.title}</p>
-                  <p className="text-3xl font-bold text-foreground mt-1">{card.value}</p>
+                  <p className="text-[10px] text-black font-black uppercase tracking-widest">{card.title}</p>
+                  <p className="text-4xl font-black text-black mt-1 leading-none">{card.value}</p>
                 </div>
-                <div className={`w-10 h-10 rounded-lg ${card.bg} flex items-center justify-center`}>
-                  <card.icon className={`w-5 h-5 ${card.color}`} />
+                <div className={`w-12 h-12 border-4 border-black ${card.bg} flex items-center justify-center`}>
+                  <card.icon className={`w-6 h-6 ${card.color}`} strokeWidth={3} />
                 </div>
               </div>
             </CardContent>

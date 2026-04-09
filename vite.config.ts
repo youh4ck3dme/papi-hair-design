@@ -19,6 +19,8 @@ export default defineConfig(({ mode }) => {
             'vendor-motion': ['framer-motion'],
             'vendor-charts': ['recharts'],
             'vendor-ui': ['sonner', 'lucide-react', 'class-variance-authority', 'tailwind-merge'],
+            'vendor-supabase': ['@supabase/supabase-js'],
+            'vendor-markdown': ['react-markdown', 'react-syntax-highlighter'],
           },
         },
       },
@@ -71,7 +73,14 @@ export default defineConfig(({ mode }) => {
 
       VitePWA({
         registerType: "autoUpdate",
-        includeAssets: ["favicon.ico", "placeholder.svg", "pwa-icon-192.png", "pwa-icon-512.png"],
+        includeAssets: [
+          "favicon.ico",
+          "apple-touch-icon.png",
+          "android-chrome-192x192.png",
+          "android-chrome-512x512.png",
+          "safari-pinned-tab.svg",
+        ],
+        manifest: false, // use existing site.webmanifest
         workbox: {
           skipWaiting: true,
           clientsClaim: true,
@@ -88,24 +97,34 @@ export default defineConfig(({ mode }) => {
                 expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
               },
             },
+            {
+              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "google-fonts-cache",
+                expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "gstatic-fonts-cache",
+                expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              urlPattern: /\/functions\/v1\/.*/i,
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "api-cache",
+                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
+                networkTimeoutSeconds: 10,
+              },
+            },
           ],
-        },
-        manifest: {
-          name: "PAPI HAIR DESIGN – Booking",
-          short_name: "PHD Booking",
-          description: "Moderný a rýchly rezervačný systém pre PAPI HAIR DESIGN",
-          start_url: "/booking",
-          display: "standalone",
-          orientation: "portrait",
-          background_color: "#0b0b0b",
-          theme_color: "#0b0b0b",
-          categories: ["business", "lifestyle"],
-          icons: [
-            { src: "/pwa-icon-192.png", sizes: "192x192", type: "image/png" },
-            { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png" },
-            { src: "/pwa-icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-          ],
-          screenshots: [],
         },
       }),
     ].filter(Boolean),
