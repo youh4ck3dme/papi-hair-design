@@ -130,6 +130,7 @@ export function AdminSidebar() {
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { loading: onboardingLoading } = useOnboarding();
+  const { role } = useBusiness();
 
   if (onboardingLoading) {
     return (
@@ -140,7 +141,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   }
 
   const isCalendarPage = location.pathname === "/admin/calendar";
-  const { role } = useBusiness();
   const navItems = allNavItems.filter((item) => Boolean(role) && item.roles.includes(role));
 
   return (
