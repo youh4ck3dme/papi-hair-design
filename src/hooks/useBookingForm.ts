@@ -134,9 +134,13 @@ export function useBookingForm(
             return;
         }
 
-        const stillValid = selectedEmployeeId && filteredEmployees.some((employee) => employee.id === selectedEmployeeId);
+        if (!selectedEmployeeId) {
+            return;
+        }
+
+        const stillValid = filteredEmployees.some((employee) => employee.id === selectedEmployeeId);
         if (!stillValid) {
-            setSelectedEmployeeId(filteredEmployees[0].id);
+            setSelectedEmployeeId(null);
         }
     }, [selectedServiceId, filteredEmployees, selectedEmployeeId]);
 

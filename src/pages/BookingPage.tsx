@@ -139,6 +139,11 @@ export default function BookingPage() {
   }, [selectedEmployeeId]);
 
   useEffect(() => {
+    if (selectedEmployeeId) return;
+    setSelectedTime(null);
+  }, [selectedEmployeeId, setSelectedTime]);
+
+  useEffect(() => {
     if (!selectedTime) return;
     if (typeof window !== "undefined" && window.innerWidth >= 768) return;
 
@@ -251,42 +256,51 @@ export default function BookingPage() {
           />
 
           {selectedServiceId && (
-            <div className="lg:grid lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:items-start lg:gap-6">
+            <div
+              className={
+                selectedEmployeeId
+                  ? "lg:grid lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:items-start lg:gap-6"
+                  : undefined
+              }
+            >
               <div className="space-y-1">
                 <div ref={employeeSectionRef}>
                   <EmployeeSelection
                     employees={filteredEmployees}
+                    isLoading={initialLoading}
                     selectedEmployeeId={selectedEmployeeId}
                     setSelectedEmployeeId={setSelectedEmployeeId}
                   />
                 </div>
               </div>
 
-              <div ref={dateTimeSectionRef}>
-                <DateTimeSelection
-                  calendarMonth={calendarMonth}
-                  setCalendarMonth={setCalendarMonth}
-                  dateLocale={dateLocale}
-                  firstDayOffset={firstDayOffset}
-                  daysInMonth={daysInMonth}
-                  today={today}
-                  maxDays={maxDays}
-                  selectedDate={selectedDate}
-                  setSelectedDate={setSelectedDate}
-                  selectedFullDate={selectedFullDate}
-                  setSelectedTime={setSelectedTime}
-                  isBusinessOpenOnDay={isBusinessOpenOnDay}
-                  loadingSlots={loadingSlots}
-                  availabilityStatus={availabilityStatus}
-                  availableSlots={availableSlots}
-                  selectedTime={selectedTime}
-                  timeGroups={timeGroups}
-                />
-              </div>
+              {selectedEmployeeId && (
+                <div ref={dateTimeSectionRef}>
+                  <DateTimeSelection
+                    calendarMonth={calendarMonth}
+                    setCalendarMonth={setCalendarMonth}
+                    dateLocale={dateLocale}
+                    firstDayOffset={firstDayOffset}
+                    daysInMonth={daysInMonth}
+                    today={today}
+                    maxDays={maxDays}
+                    selectedDate={selectedDate}
+                    setSelectedDate={setSelectedDate}
+                    selectedFullDate={selectedFullDate}
+                    setSelectedTime={setSelectedTime}
+                    isBusinessOpenOnDay={isBusinessOpenOnDay}
+                    loadingSlots={loadingSlots}
+                    availabilityStatus={availabilityStatus}
+                    availableSlots={availableSlots}
+                    selectedTime={selectedTime}
+                    timeGroups={timeGroups}
+                  />
+                </div>
+              )}
             </div>
           )}
 
-          {selectedTime && (
+          {selectedEmployeeId && selectedTime && (
             <div ref={contactSectionRef} className="lg:mx-auto lg:max-w-3xl">
               <ContactConfirmation
                 formData={formData}

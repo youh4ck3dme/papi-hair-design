@@ -90,7 +90,7 @@ describe("useBookingForm", () => {
     });
   });
 
-  it("auto-selects the first eligible employee after service selection", async () => {
+  it("does not auto-select employee after service selection", async () => {
     const services = [makeService()];
     const employees = [
       makeEmployee({ id: "emp-1", display_name: "Papi" }),
@@ -111,7 +111,7 @@ describe("useBookingForm", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.selectedEmployeeId).toBe("emp-1");
+      expect(result.current.selectedEmployeeId).toBeNull();
     });
   });
 
@@ -125,6 +125,7 @@ describe("useBookingForm", () => {
 
     act(() => {
       result.current.setSelectedServiceId("svc-1");
+      result.current.setSelectedEmployeeId("emp-1");
     });
 
     await waitFor(() => {
@@ -153,14 +154,10 @@ describe("useBookingForm", () => {
 
     act(() => {
       result.current.setSelectedServiceId("svc-1");
-    });
-
-    await waitFor(() => {
-      expect(result.current.selectedEmployeeId).toBe("emp-1");
+      result.current.setSelectedEmployeeId("emp-2");
     });
 
     act(() => {
-      result.current.setSelectedEmployeeId("emp-2");
       result.current.setFormData({
         meno: "Test",
         priezvisko: "User",
@@ -195,5 +192,22 @@ describe("useBookingForm", () => {
     expect(mockConfirmBooking).toHaveBeenCalledTimes(1);
     expect(mockGetRecaptchaToken).toHaveBeenCalledTimes(2);
     expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("keeps stylist unselected even when exactly one employee is available", async () => {
+    const services = [makeService()];
+    const employees = [makeEmployee({ id: "emp-only", display_name: "Only One" })];
+
+    const { result } = renderHook(() =>
+      useBookingForm(services, employees, baseBusiness, {}, memberships)
+    );
+
+    act(() => {
+      result.current.setSelectedServiceId("svc-1");
+    });
+
+    await waitFor(() => {
+      expect(result.current.selectedEmployeeId).toBeNull();
+    });
   });
 });

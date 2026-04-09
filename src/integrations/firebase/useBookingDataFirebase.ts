@@ -23,6 +23,73 @@ export interface BusinessData {
     revision?: number;
 }
 
+function normalizePhotoUrl(value: unknown): string | null {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+}
+
+function resolveProfilePhotoUrl(profileData: Record<string, unknown> | undefined): string | null {
+    if (!profileData) return null;
+    return (
+        normalizePhotoUrl(profileData.avatar_url) ??
+        normalizePhotoUrl(profileData.photo_url) ??
+        normalizePhotoUrl(profileData.profile_photo_url)
+    );
+}
+
+async function enrichEmployeesWithProfilePhoto(employees: EmployeeRow[]): Promise<EmployeeRow[]> {
+    const profileIds = [...new Set(
+        employees
+            .filter((employee) => !normalizePhotoUrl(employee.photo_url))
+            .map((employee) => employee.profile_id)
+            .filter((profileId): profileId is string => typeof profileId === "string" && profileId.trim().length > 0)
+    )];
+
+    if (profileIds.length === 0) {
+        return employees;
+    }
+
+    const profilePhotoById = new Map<string, string>();
+
+    await Promise.all(profileIds.map(async (profileId) => {
+        try {
+            const profileSnap = await getDoc(doc(db, "profiles", profileId));
+            if (!profileSnap.exists()) return;
+
+            const profileData = profileSnap.data() as Record<string, unknown> | undefined;
+            const profilePhotoUrl = resolveProfilePhotoUrl(profileData);
+            if (profilePhotoUrl) {
+                profilePhotoById.set(profileId, profilePhotoUrl);
+            }
+        } catch {
+            // Profile photo lookup is best-effort for public booking.
+        }
+    }));
+
+    if (profilePhotoById.size === 0) {
+        return employees;
+    }
+
+    return employees.map((employee) => {
+        if (normalizePhotoUrl(employee.photo_url)) {
+            return employee;
+        }
+
+        const profileId = employee.profile_id;
+        if (!profileId) {
+            return employee;
+        }
+
+        const profilePhotoUrl = profilePhotoById.get(profileId);
+        if (!profilePhotoUrl) {
+            return employee;
+        }
+
+        return { ...employee, photo_url: profilePhotoUrl };
+    });
+}
+
 export function useBookingDataFirebase() {
     const [services, setServices] = useState<ServiceRow[]>([]);
     const [employees, setEmployees] = useState<EmployeeRow[]>([]);
@@ -82,11 +149,10 @@ export function useBookingDataFirebase() {
                                 return (a.name_sk ?? "").localeCompare(b.name_sk ?? "", "sk");
                             })
                     );
-                    setEmployees(
-                        (snap.employees ?? [])
-                            .map((d: any) => ({ ...d, id: d.id } as EmployeeRow))
-                            .sort((a: any, b: any) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"))
-                    );
+                    const snapshotEmployees = (snap.employees ?? [])
+                        .map((d: any) => ({ ...d, id: d.id } as EmployeeRow))
+                        .sort((a: any, b: any) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"));
+                    setEmployees(await enrichEmployeesWithProfilePhoto(snapshotEmployees));
                     setBusinessHourEntries(
                         (snap.business_hours ?? [])
                             .map((h: any) => ({
@@ -169,11 +235,10 @@ export function useBookingDataFirebase() {
                                 return (a.name_sk ?? "").localeCompare(b.name_sk ?? "", "sk");
                             })
                     );
-                    setEmployees(
-                        empSnap.docs
-                            .map(d => ({ ...d.data(), id: d.id } as EmployeeRow))
-                            .sort((a, b) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"))
-                    );
+                    const liveEmployees = empSnap.docs
+                        .map(d => ({ ...d.data(), id: d.id } as EmployeeRow))
+                        .sort((a, b) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"));
+                    setEmployees(await enrichEmployeesWithProfilePhoto(liveEmployees));
 
                     setBusinessHourEntries(
                         bhSnap.docs
