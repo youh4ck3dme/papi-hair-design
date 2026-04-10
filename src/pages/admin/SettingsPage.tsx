@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { db, functions, storage } from "@/integrations/firebase/config";
-import { doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc, Timestamp } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useAuth } from "@/contexts/AuthContext";
@@ -235,7 +235,13 @@ export default function SettingsPage() {
       const url = await getDownloadURL(storageRef);
       setProfileForm((prev) => ({ ...prev, avatar_url: url }));
       setCropImageSrc(null);
-      toast.success("Fotka pripravená, nezabudnite uložiť profil");
+      // Auto-save avatar immediately so it doesn't disappear on navigation
+      await setDoc(doc(db, "profiles", profile.id), {
+        avatar_url: url,
+        updated_at: new Date().toISOString(),
+      }, { merge: true });
+      await refreshProfile();
+      toast.success("Profilová fotka uložená");
     } catch (err) {
       if (isBlockedByClientError(err)) {
         warnBlockedByClientOnce((message) => toast.warning(message));

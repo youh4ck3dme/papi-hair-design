@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   LayoutDashboard, Calendar, BookOpen, Users, Briefcase, UserCheck,
-  Settings, LogOut, ChevronRight, Monitor,
+  Settings, LogOut, ChevronRight, Monitor, Camera,
 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
 import { toast } from "sonner";
@@ -17,6 +18,11 @@ import { Loader2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LiquidGlassNav, type LiquidGlassNavItem } from "@/components/LiquidGlassNav";
 import { cn } from "@/lib/utils";
+import { db, storage } from "@/integrations/firebase/config";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { doc, setDoc } from "firebase/firestore";
+import { compressProfileImage, readFileAsDataUrl, validateProfileImageFile } from "@/lib/profileImage";
+import { AvatarCropper } from "@/components/admin/AvatarCropper";
 
 const allNavItems = [
   { title: "Prehľad", url: "/admin", icon: LayoutDashboard, roles: ["owner", "admin", "employee"] },
@@ -31,11 +37,15 @@ const allNavItems = [
 ];
 
 export function AdminSidebar() {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, refreshProfile } = useAuth();
   const { role } = useBusiness();
   const navigate = useNavigate();
   const location = useLocation();
   const { isMobile, setOpenMobile } = useSidebar();
+
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
 
   const navItems = allNavItems.filter((item) => Boolean(role) && item.roles.includes(role));
   const liquidItems: LiquidGlassNavItem[] = navItems.map((item) => ({
@@ -60,6 +70,35 @@ export function AdminSidebar() {
   const initials = profile?.full_name
     ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "?";
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const err = validateProfileImageFile(file);
+    if (err) { toast.error(err); return; }
+    void readFileAsDataUrl(file).then(setCropImageSrc).catch(() => toast.error("Fotku sa nepodarilo načítať"));
+  };
+
+  const handleAvatarCropConfirm = async (croppedBlob: Blob) => {
+    if (!profile) return;
+    setUploadingAvatar(true);
+    try {
+      const compressed = await compressProfileImage(croppedBlob);
+      const fileName = `profiles/${profile.id}/${Date.now()}.jpg`;
+      const sRef = storageRef(storage, fileName);
+      await uploadBytes(sRef, compressed, { contentType: "image/jpeg", cacheControl: "public,max-age=31536000,immutable" });
+      const url = await getDownloadURL(sRef);
+      await setDoc(doc(db, "profiles", profile.id), { avatar_url: url, updated_at: new Date().toISOString() }, { merge: true });
+      await refreshProfile();
+      setCropImageSrc(null);
+      toast.success("Profilová fotka uložená");
+    } catch {
+      toast.error("Chyba pri nahrávaní fotky");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   return (
     <Sidebar className="border-r-0">
@@ -86,11 +125,43 @@ export function AdminSidebar() {
       </SidebarContent>
 
         <div className="mt-auto border-t border-sidebar-border p-4">
+          {/* Avatar crop dialog */}
+          {cropImageSrc && (
+            <AvatarCropper
+              imageSrc={cropImageSrc}
+              onConfirm={handleAvatarCropConfirm}
+              onCancel={() => setCropImageSrc(null)}
+            />
+          )}
+          <input
+            ref={avatarFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarFileChange}
+          />
+
           <div className="flex items-center gap-3 mb-3">
-            <Avatar className="w-8 h-8">
-              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="Profilová fotka" />}
-              <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-xs">{initials}</AvatarFallback>
-            </Avatar>
+            {/* Clickable avatar */}
+            <button
+              type="button"
+              onClick={() => avatarFileRef.current?.click()}
+              className="relative group flex-shrink-0"
+              title="Zmeniť fotku"
+              disabled={uploadingAvatar}
+            >
+              <Avatar className="w-9 h-9">
+                {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="Profilová fotka" />}
+                <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-xs">{initials}</AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                {uploadingAvatar
+                  ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                  : <Camera className="w-3.5 h-3.5 text-white" />
+                }
+              </div>
+            </button>
+
             <div className="flex-1 overflow-hidden">
               <p className="text-xs font-medium text-sidebar-foreground truncate">{profile?.full_name ?? "Používateľ"}</p>
               <p className="text-xs text-sidebar-foreground/50 truncate">{profile?.email}</p>
