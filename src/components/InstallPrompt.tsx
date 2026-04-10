@@ -56,7 +56,7 @@ export default function InstallPrompt() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", damping: 25 }}
-          className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:w-[400px] z-[9999] bg-black text-white border-4 border-white p-5 shadow-[8px_8px_0px_0px_rgba(220,38,38,1)]"
+          className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:w-[400px] z-[9999] bg-black text-white border-4 border-white p-5 shadow-[8px_8px_0px_0px_rgba(255,215,0,1)]"
         >
           <button
             onClick={handleDismiss}
@@ -67,9 +67,9 @@ export default function InstallPrompt() {
           </button>
 
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-red-600 border-2 border-white flex items-center justify-center flex-shrink-0">
-              <Download size={24} />
-            </div>
+              <div className="w-12 h-12 bg-amber-500 border-2 border-white flex items-center justify-center flex-shrink-0">
+                <Download size={24} />
+              </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-black text-sm uppercase tracking-wide mb-1">
                 Nainštalovať Papi Hair Design
@@ -79,7 +79,7 @@ export default function InstallPrompt() {
               </p>
               <button
                 onClick={handleInstall}
-                className="w-full py-3 bg-red-600 text-white font-black uppercase text-sm tracking-widest border-2 border-white hover:bg-white hover:text-black transition-all active:translate-y-0.5 min-h-[44px]"
+                className="w-full py-3 bg-amber-500 text-black font-black uppercase text-sm tracking-widest border-2 border-white hover:bg-white hover:text-black transition-all active:translate-y-0.5 min-h-[44px]"
               >
                 Inštalovať
               </button>
