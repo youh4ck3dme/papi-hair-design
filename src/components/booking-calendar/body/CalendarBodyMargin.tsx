@@ -22,7 +22,7 @@ export function CalendarBodyMargin({ className }: { className?: string }) {
         {HOURS.map((hour) => (
           <div key={hour} className="relative first:mt-0" style={{ height: pixelsPerHour }}>
             {hour !== 0 && (
-              <span className="absolute text-xs text-muted-foreground -top-2.5 left-2">
+              <span className="absolute text-xs text-muted-foreground top-1 left-2">
                 {format(new Date().setHours(hour, 0, 0, 0), "H", { locale: sk })}
                 :00
               </span>

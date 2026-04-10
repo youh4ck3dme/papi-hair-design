@@ -94,32 +94,27 @@ export function EmployeeSelection({
                 key={employee.id}
                 type="button"
                 onClick={() => setSelectedEmployeeId(employee.id)}
-                className={`h-full min-h-[150px] rounded-2xl border p-3 text-left transition-all duration-200 ${
+                className={`h-full min-h-[150px] rounded-2xl border p-3 flex flex-col items-center justify-center text-center transition-all duration-200 ${
                   isSelected
-                    ? "border-primary bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/30"
-                    : "border-border/70 bg-card hover:border-primary/50"
+                    ? "border-[#C9A84C] bg-black shadow-[0_0_20px_rgba(201,168,76,0.35)] ring-1 ring-[#C9A84C]/50 scale-[1.02]"
+                    : "border-[#C0C0C0]/20 bg-black hover:border-[#C9A84C]/40 hover:shadow-[0_0_12px_rgba(201,168,76,0.15)]"
                 }`}
                 aria-pressed={isSelected}
                 data-testid={`employee-card-${employee.id}`}
               >
-                <div className="mb-3 flex items-center gap-3">
-                  <img
-                    src={avatarSrc}
-                    alt={displayName}
-                    className="h-14 w-14 rounded-full border border-border/60 object-cover"
-                    loading="lazy"
-                    onError={(event) => {
-                      if (imageLoadErrorByEmployeeId[employee.id]) return;
-                      if (event.currentTarget.getAttribute("src") === PLACEHOLDER_AVATAR_SRC) return;
-                      setImageLoadErrorByEmployeeId((current) => ({ ...current, [employee.id]: true }));
-                    }}
-                  />
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {t("booking.employeeRole")}
-                  </span>
-                </div>
-                <p className="line-clamp-2 text-sm font-semibold text-foreground">{displayName}</p>
-                <p className={`mt-1 text-xs font-medium ${isSelected ? "text-primary" : "text-muted-foreground"}`}>
+                <img
+                  src={avatarSrc}
+                  alt={displayName}
+                  className="h-14 w-14 rounded-full border border-border/60 object-cover mb-3"
+                  loading="lazy"
+                  onError={(event) => {
+                    if (imageLoadErrorByEmployeeId[employee.id]) return;
+                    if (event.currentTarget.getAttribute("src") === PLACEHOLDER_AVATAR_SRC) return;
+                    setImageLoadErrorByEmployeeId((current) => ({ ...current, [employee.id]: true }));
+                  }}
+                />
+                <p className="line-clamp-2 text-sm font-black uppercase tracking-wide text-foreground">{displayName}</p>
+                <p className={`mt-1 text-xs font-semibold ${isSelected ? "text-[#C9A84C]" : "text-white/40"}`}>
                   {isSelected
                     ? t("booking.selected", { defaultValue: "Vybraný" })
                     : t("booking.tapToSelect", { defaultValue: "Klikni pre výber" })}

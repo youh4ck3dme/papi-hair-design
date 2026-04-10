@@ -199,11 +199,25 @@ export default function BookingPage() {
 
   return (
     <div
-      className="min-h-[100dvh] bg-background text-foreground transition-colors duration-300 safe-x"
+      className="min-h-[100dvh] bg-black text-foreground transition-colors duration-300 safe-x"
       data-testid="booking-page"
     >
       <div className="mx-auto w-full max-w-md overflow-x-hidden shadow-2xl lg:max-w-6xl lg:shadow-none">
         <BookingHeader isDark={isDark} setTheme={setTheme} />
+
+        {/* Gold progress bar */}
+        {(() => {
+          const steps = [category, selectedServiceId, selectedEmployeeId, selectedTime].filter(Boolean).length;
+          const pct = (steps / 4) * 100;
+          return steps > 0 ? (
+            <div className="h-0.5 w-full bg-white/5">
+              <div
+                className="h-full bg-[#C9A84C] transition-all duration-500 ease-out"
+                style={{ width: `${pct}%`, boxShadow: "0 0 6px rgba(201,168,76,0.7)" }}
+              />
+            </div>
+          ) : null;
+        })()}
 
         {selectedService && (
           <div className="px-4 pt-4 lg:px-6">

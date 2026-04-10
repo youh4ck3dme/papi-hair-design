@@ -980,7 +980,7 @@ export default function CalendarPage() {
       </Dialog>
 
       <Sheet open={detailModal} onOpenChange={setDetailModal}>
-        <SheetContent side="right" className="w-full border-l border-white/8 bg-[#0a0a0a]/95 backdrop-blur-2xl px-0 py-0 sm:max-w-md flex flex-col overflow-hidden [&>button]:text-white/40 [&>button]:hover:text-white">
+        <SheetContent side="right" className="w-full border-l border-[#C0C0C0]/12 bg-black px-0 py-0 sm:max-w-md flex flex-col overflow-hidden [&>button]:text-white/40 [&>button]:hover:text-[#D4AF37]">
           <SheetHeader className="sr-only">
             <SheetTitle>Detail rezervácie</SheetTitle>
             <SheetDescription>Detaily vybranej rezervácie</SheetDescription>
@@ -988,7 +988,7 @@ export default function CalendarPage() {
           {selectedEvent && (
             <>
               {/* ── Header ── */}
-              <div className="px-5 pt-5 pb-4 border-b border-white/8 shrink-0">
+              <div className="px-5 pt-5 pb-4 border-b border-[#C0C0C0]/12 shrink-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/30 mb-1">Detail rezervácie</p>
@@ -1042,7 +1042,7 @@ export default function CalendarPage() {
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
 
                 {/* Client info grid */}
-                <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4 grid grid-cols-2 gap-x-4 gap-y-3">
+                <div className="rounded-xl border border-[#C0C0C0]/18 bg-white/[0.02] p-4 grid grid-cols-2 gap-x-4 gap-y-3">
                   <div>
                     <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/30 mb-1.5">Meno</p>
                     <div className="flex items-center gap-1.5 text-sm font-medium text-white">
@@ -1074,7 +1074,7 @@ export default function CalendarPage() {
                 </div>
 
                 {/* Service badge */}
-                <div className="rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 flex items-center gap-3">
+                <div className="rounded-xl border border-[#C0C0C0]/18 bg-white/[0.02] px-4 py-3 flex items-center gap-3">
                   <LogoIcon size="sm" className="w-7 h-7 shrink-0 opacity-60" />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-white truncate">
@@ -1096,7 +1096,7 @@ export default function CalendarPage() {
                         key={action}
                         onClick={() => openQuickAction(action as "move" | "duplicate" | "block")}
                         disabled={updatingStatus || quickActionSaving}
-                        className="flex flex-col items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] py-3 text-white/50 hover:text-[#D4AF37] hover:border-[#D4AF37]/20 hover:bg-[#D4AF37]/5 transition-all disabled:opacity-30"
+                        className="flex flex-col items-center gap-1.5 rounded-xl border border-[#C0C0C0]/18 bg-white/[0.02] py-3 text-white/50 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 hover:bg-[#D4AF37]/5 transition-all disabled:opacity-30"
                       >
                         <Icon className="h-4 w-4" />
                         <span className="text-[9px] font-semibold uppercase tracking-wider">{label}</span>
@@ -1116,7 +1116,7 @@ export default function CalendarPage() {
                 )}
 
                 {/* History — compact scrollable */}
-                <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
+                <div className="rounded-xl border border-[#C0C0C0]/18 bg-white/[0.02] p-4">
                   <div className="flex items-center justify-between mb-2.5">
                     <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/30">História klienta</p>
                     <a
@@ -1164,7 +1164,7 @@ export default function CalendarPage() {
               </div>
 
               {/* ── Footer ── */}
-              <div className="border-t border-white/8 px-5 py-4 space-y-2.5 shrink-0 bg-[#0d0d0d]/80">
+              <div className="border-t border-[#C0C0C0]/12 px-5 py-4 space-y-2.5 shrink-0 bg-black">
                 {isOwnerOrAdmin && (
                   <div className="grid gap-2 grid-cols-2">
                     {canAdminConfirmBooking(selectedEvent.status) && (

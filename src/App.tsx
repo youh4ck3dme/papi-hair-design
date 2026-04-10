@@ -9,6 +9,7 @@ import { ThemeProvider } from "next-themes";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { lazy, Suspense, useState, useEffect } from "react";
+import { usePageAnalytics } from "@/hooks/usePageAnalytics";
 import { Loader2 } from "lucide-react";
 
 const AdminLayout = lazy(() => import("@/components/AdminLayout").then(m => ({ default: m.AdminLayout })));
@@ -39,7 +40,7 @@ const SalonLoginPage = lazy(() => import("./pages/SalonLoginPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const BootstrapPage = lazy(() => import("./pages/BootstrapPage"));
 
-// H4CK3D Enterprise Components
+// Papi Hair Design Components
 const PricingPage = lazy(() => import("./pages/Pricing"));
 const InstallPrompt = lazy(() => import("@/components/InstallPrompt"));
 
@@ -85,6 +86,11 @@ function useSpeedInsightsEnabled() {
   return enabled;
 }
 
+function AnalyticsTracker() {
+  usePageAnalytics();
+  return null;
+}
+
 const App = () => {
   useCanonicalHostRedirect();
   const speedInsightsEnabled = useSpeedInsightsEnabled();
@@ -103,6 +109,7 @@ const App = () => {
             <InstallPrompt />
             <CookieConsent />
             <AuthProvider>
+              <AnalyticsTracker />
               <Suspense fallback={<LazyFallback />}>
                 <Routes>
                   <Route path="/" element={<LiquidPlayground />} />

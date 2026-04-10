@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { ConflictResolutionDialog } from "@/components/ConflictResolutionDialog";
 import {
@@ -66,6 +67,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function ReceptionPage() {
   const { businessId, isEmployee } = useBusiness();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [day, setDay] = useState(dayISO());
   const [items, setItems] = useState<OfflineAppointment[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -267,6 +269,19 @@ export default function ReceptionPage() {
   return (
     <div className="min-h-screen bg-background p-4 max-w-2xl mx-auto space-y-4" data-testid="reception-page">
       <OfflineBanner onConflictsClick={() => setShowConflicts(true)} />
+
+      {/* Back button for logged-in staff */}
+      {user && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Späť
+        </Button>
+      )}
 
       {/* Date navigation */}
       <div className="flex items-center justify-between">

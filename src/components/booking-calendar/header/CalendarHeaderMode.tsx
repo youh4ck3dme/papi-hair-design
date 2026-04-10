@@ -23,20 +23,31 @@ export function CalendarHeaderMode() {
       type="single"
       value={mode}
       onValueChange={(v) => v && setMode(v as BookingCalendarMode)}
-      className="w-full rounded-lg border border-border overflow-hidden bg-muted/30"
+      className="w-full rounded-lg border border-border overflow-hidden bg-muted/30 p-0.5 gap-0.5"
     >
-      {CALENDAR_MODES.map((m) => (
-        <ToggleGroupItem
-          key={m}
-          value={m}
-          className="flex-1 rounded-none border-0 data-[state=on]:bg-gold data-[state=on]:text-gold-foreground data-[state=on]:font-medium"
-        >
-          <span className="flex items-center gap-1.5">
-            {MODE_ICONS[m]}
-            {MODE_LABELS[m]}
-          </span>
-        </ToggleGroupItem>
-      ))}
+      {CALENDAR_MODES.map((m) => {
+        const isActive = mode === m;
+        return (
+          <ToggleGroupItem
+            key={m}
+            value={m}
+            className={[
+              "flex-1 rounded-md border-0 transition-all duration-200 relative overflow-hidden",
+              isActive
+                ? "bg-[#D4AF37] text-black font-bold shadow-[0_0_12px_rgba(212,175,55,0.5)] scale-[1.03]"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+            ].join(" ")}
+          >
+            {isActive && (
+              <span className="absolute inset-0 animate-pulse bg-[#D4AF37]/20 rounded-md pointer-events-none" />
+            )}
+            <span className="flex items-center gap-1.5 relative z-10">
+              {MODE_ICONS[m]}
+              {MODE_LABELS[m]}
+            </span>
+          </ToggleGroupItem>
+        );
+      })}
     </ToggleGroup>
   );
 }

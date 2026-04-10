@@ -1,16 +1,16 @@
 {
-	"name": "H4CK3D Enterprise — AI Workspace",
-	"short_name": "H4CK3D",
-	"description": "Brutálny AI workspace pre vývojárov. Monetizujte svoje nápady rýchlosťou svetla.",
-	"start_url": "/",
+	"name": "Papi Hair Design",
+	"short_name": "Papi Hair",
+	"description": "Online rezervácie v Papi Hair Design kaderníctve.",
+	"start_url": "/booking",
 	"scope": "/",
 	"display": "standalone",
 	"orientation": "any",
 	"background_color": "#000000",
-	"theme_color": "#dc2626",
+	"theme_color": "#C9A84C",
 	"lang": "sk",
 	"dir": "ltr",
-	"categories": ["developer-tools", "productivity", "business"],
+	"categories": ["lifestyle", "business"],
 	"prefer_related_applications": false,
 	"icons": [
 		{ "src": "/android-chrome-36x36.png", "sizes": "36x36", "type": "image/png", "purpose": "any" },
@@ -29,15 +29,9 @@
 	],
 	"shortcuts": [
 		{
-			"name": "Dashboard",
-			"short_name": "Dashboard",
-			"url": "/dashboard",
-			"icons": [{ "src": "/android-chrome-96x96.png", "sizes": "96x96" }]
-		},
-		{
-			"name": "Cenník",
-			"short_name": "Pricing",
-			"url": "/pricing",
+			"name": "Rezervácia",
+			"short_name": "Booking",
+			"url": "/booking",
 			"icons": [{ "src": "/android-chrome-96x96.png", "sizes": "96x96" }]
 		}
 	]

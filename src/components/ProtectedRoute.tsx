@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
-import { isAdminAllowlisted } from "@/lib/adminAllowlist";
+import { isAdminAllowlisted, isEmployeeAllowlisted } from "@/lib/adminAllowlist";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -20,6 +20,7 @@ export default function ProtectedRoute({ children, requireAdmin = false, allowed
   const { pathname } = useLocation();
   const userRoles = new Set(memberships.map((m) => m.role));
   const isAllowlistedAdmin = isAdminAllowlisted(user?.email);
+  const isAllowlistedEmployee = isEmployeeAllowlisted(user?.email);
   const hasAdminRole = userRoles.has("owner") || userRoles.has("admin");
   const requestsAdminPrivileges =
     requireAdmin || !!allowedRoles?.some((role) => role === "owner" || role === "admin");
@@ -51,8 +52,9 @@ export default function ProtectedRoute({ children, requireAdmin = false, allowed
 
   if (allowedRoles?.length) {
     const hasAllowedRole = allowedRoles.some((role) => userRoles.has(role));
+    const allowedByEmployeeList = allowedRoles.includes("employee") && isAllowlistedEmployee;
 
-    if (!hasAllowedRole) {
+    if (!hasAllowedRole && !allowedByEmployeeList) {
       return <Navigate to={resolveFallbackByRole(userRoles)} replace />;
     }
   }

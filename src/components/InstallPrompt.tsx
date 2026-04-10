@@ -72,7 +72,7 @@ export default function InstallPrompt() {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-black text-sm uppercase tracking-wide mb-1">
-                Nainštalovať H4CK3D
+                Nainštalovať Papi Hair Design
               </h3>
               <p className="text-xs text-white/70 font-bold mb-3">
                 Pridajte si aplikáciu na plochu pre rýchlejší prístup a offline režim.

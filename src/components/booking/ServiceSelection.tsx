@@ -49,7 +49,9 @@ export function ServiceSelection({
             } />
 
             {/* Category Toggle */}
-            <div className="relative flex gap-0 rounded-full overflow-hidden border border-border bg-muted/40 p-1.5">
+            <div className="neon-laser-border">
+            <div className="neon-inner">
+            <div className="relative flex gap-0 rounded-full bg-muted/40 p-1.5">
                 {(["damske", "panske"] as const).map((cat) => {
                     const isActive = category === cat && expandedCategory === cat;
                     const Icon = cat === "damske" ? Sparkles : User2;
@@ -83,6 +85,8 @@ export function ServiceSelection({
                     );
                 })}
             </div>
+            </div>
+            </div>
 
             {/* Subcategory chips */}
             {isCategoryExpanded && subcategories.length > 0 && (
@@ -93,8 +97,8 @@ export function ServiceSelection({
                             onClick={() => { setSubcategory(sub); setSelectedServiceId(null); }}
                             aria-pressed={subcategory === sub}
                             className={`min-h-[44px] rounded-full border px-4 py-2.5 text-sm font-semibold uppercase tracking-wider transition-all duration-200 ${subcategory === sub
-                                ? "border-primary bg-primary/10 text-primary shadow-sm shadow-primary/20"
-                                : "border-border/60 text-muted-foreground bg-card hover:border-primary/40 hover:text-foreground"
+                                ? "border-[#C9A84C] bg-[#C9A84C]/10 text-[#C9A84C] shadow-sm shadow-[#C9A84C]/20"
+                                : "border-[#C0C0C0]/18 text-white/50 bg-black hover:border-[#C9A84C]/40 hover:text-white"
                                 }`}
                         >
                             {sub}
@@ -116,21 +120,21 @@ export function ServiceSelection({
                                     key={srv.id}
                                     onClick={() => setSelectedServiceId(srv.id)}
                                     className={`w-full text-left border rounded-2xl p-4 flex items-center gap-4 cursor-pointer transition-all duration-200 group ${isSelected
-                                        ? "border-primary bg-primary/5 shadow-sm shadow-primary/10"
-                                        : "border-border/70 bg-card hover:border-primary/40 hover:shadow-sm"
+                                        ? "border-[#C9A84C] bg-black shadow-[0_0_20px_rgba(201,168,76,0.3)] ring-1 ring-[#C9A84C]/40"
+                                        : "border-[#C0C0C0]/18 bg-black hover:border-[#C9A84C]/40 hover:shadow-[0_0_10px_rgba(201,168,76,0.12)]"
                                         }`}
                                 >
                                     <RadioIcon selected={isSelected} />
                                     <div className="flex flex-col flex-1 min-w-0">
-                                        <span className={`font-semibold text-sm transition-colors ${isSelected ? "text-primary" : "text-foreground group-hover:text-foreground"}`}>
+                                        <span className={`font-black text-sm uppercase tracking-wide transition-colors ${isSelected ? "text-[#C9A84C]" : "text-white group-hover:text-white"}`}>
                                             {srv.name_sk}
                                         </span>
-                                        <span className="mt-0.5 text-sm text-muted-foreground">
+                                        <span className="mt-0.5 text-xs text-white/40">
                                             {srv.duration_minutes} min
                                         </span>
                                     </div>
                                     {srv.price != null && (
-                                        <div className={`flex-shrink-0 rounded-full px-3 py-1.5 text-sm font-bold transition-all ${isSelected ? "bg-primary text-primary-foreground dark:text-background" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"}`}>
+                                        <div className={`flex-shrink-0 rounded-full px-3 py-1.5 text-sm font-black transition-all ${isSelected ? "bg-[#C9A84C] text-black" : "bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/30 group-hover:bg-[#C9A84C]/20"}`}>
                                             {srv.price} €
                                         </div>
                                     )}

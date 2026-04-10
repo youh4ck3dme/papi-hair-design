@@ -248,5 +248,12 @@ service cloud.firestore {
     match /_ratelimits/{document=**} {
       allow read, write: if false;  // Server-only
     }
+
+    // Page analytics — zapis len prihlaseny pouzivatel, citanie len owner/admin
+    match /page_views/{docId} {
+      allow create: if isSignedIn();
+      allow read:   if isSignedIn();
+      allow update, delete: if false;
+    }
   }
 }

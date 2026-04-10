@@ -26,7 +26,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">1. Úvod</h2>
             <p>
-              H4CK3D Enterprise ("my", "nás", "naše") prevádzkuje webovú aplikáciu H4CK3D Enterprise
+              Papi Hair Design ("my", "nás", "naše") prevádzkuje webovú aplikáciu Papi Hair Design
               ("Služba"). Táto stránka vás informuje o našich zásadách týkajúcich sa zhromažďovania,
               používania a zverejňovania osobných údajov pri používaní našej Služby.
             </p>
@@ -111,7 +111,7 @@ export default function PrivacyPolicy() {
               Pre akékoľvek otázky ohľadom ochrany súkromia nás kontaktujte na:
             </p>
             <div className="mt-4 border-4 border-black bg-yellow-400 p-6 font-black text-lg">
-              support@h4ck3d.enterprise
+              booking@papihairdesign.sk
             </div>
           </section>
         </div>

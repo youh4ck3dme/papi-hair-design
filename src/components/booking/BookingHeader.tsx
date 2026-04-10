@@ -1,6 +1,7 @@
 import { LanguageToggle } from "@/components/LanguageToggle";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, ChevronLeft } from "lucide-react";
 import { GoldText } from "./BookingUI";
+import { useNavigate } from "react-router-dom";
 
 interface BookingHeaderProps {
     isDark: boolean;
@@ -8,6 +9,7 @@ interface BookingHeaderProps {
 }
 
 export function BookingHeader({ isDark, setTheme }: BookingHeaderProps) {
+    const navigate = useNavigate();
     return (
         <header
             className="sticky top-0 z-50 safe-x flex flex-col border-b border-border/60 bg-background/95 backdrop-blur-md pt-[env(safe-area-inset-top)]"
@@ -19,17 +21,17 @@ export function BookingHeader({ isDark, setTheme }: BookingHeaderProps) {
             />
             <div className="flex items-center justify-between px-4 py-3.5 sm:px-5">
                 <div className="flex items-center gap-2.5">
-                    <img
-                        src="/favicon.png"
-                        alt="PAPI HAIR DESIGN"
-                        className="w-6 h-6 object-contain shrink-0"
-                    />
-                    <div className="flex flex-col leading-none">
-                        <span className="text-[14px] font-bold tracking-widest uppercase font-serif sm:text-[15px]">
-                            PAPI <GoldText>HAIR</GoldText> DESIGN
-                        </span>
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">papihairdesign.sk</span>
-                    </div>
+                    <button
+                        onClick={() => navigate(-1)}
+                        aria-label="Späť"
+                        className="flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-card transition-all hover:border-primary/50 hover:bg-primary/5 active:scale-90 shrink-0"
+                    >
+                        <ChevronLeft size={18} className="text-foreground/70" />
+                    </button>
+                    <img src="/favicon.png" alt="PAPI HAIR DESIGN" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                    <span className="text-[14px] font-bold tracking-widest uppercase font-serif sm:text-[15px]">
+                        PAPI <GoldText>HAIR</GoldText> DESIGN
+                    </span>
                 </div>
                 <div className="flex items-center gap-3">
                     <LanguageToggle />

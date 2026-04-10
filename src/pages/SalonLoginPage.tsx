@@ -32,7 +32,7 @@ const PROFILES = [
   },
   {
     id: "miska",
-    label: "Miska",
+    label: "Miška",
     role: "Stylistka",
     email: import.meta.env.VITE_MISKA_EMAIL ?? "",
     color: "#C89B67",
@@ -42,7 +42,7 @@ const PROFILES = [
   },
   {
     id: "mato",
-    label: "Mato",
+    label: "Maťo",
     role: "Barber",
     email: import.meta.env.VITE_MATO_EMAIL ?? "",
     color: "#B98444",
@@ -270,11 +270,11 @@ export default function SalonLoginPage() {
     try {
       await signInWithEmailAndPassword(auth, profile.email, password);
       toast.success(t("salonLogin.toastWelcome", { name: profile.label }));
-      navigate("/admin/calendar");
+      navigate(profile.id === "papi" ? "/admin/calendar" : "/admin/my");
     } catch (error) {
       if (auth.currentUser) {
         toast.success(t("salonLogin.toastWelcome", { name: profile.label }));
-        navigate("/admin/calendar");
+        navigate(profile.id === "papi" ? "/admin/calendar" : "/admin/my");
         return;
       }
 

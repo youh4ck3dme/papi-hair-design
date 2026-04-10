@@ -26,10 +26,10 @@ export function CalendarHeaderDate() {
       <Button
         variant="outline"
         size="icon"
-        className="h-9 w-9 md:h-8 md:w-8 shrink-0 hover:bg-gold/10 hover:border-gold/50 hover:text-gold"
+        className="h-7 w-7 md:h-6 md:w-6 shrink-0 hover:bg-gold/10 hover:border-gold/50 hover:text-gold"
         onClick={handleBack}
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="h-3 w-3" />
       </Button>
       <span
         className={cn(
@@ -42,10 +42,10 @@ export function CalendarHeaderDate() {
       <Button
         variant="outline"
         size="icon"
-        className="h-9 w-9 md:h-8 md:w-8 shrink-0 hover:bg-gold/10 hover:border-gold/50 hover:text-gold"
+        className="h-7 w-7 md:h-6 md:w-6 shrink-0 hover:bg-gold/10 hover:border-gold/50 hover:text-gold"
         onClick={handleForward}
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h-3 w-3" />
       </Button>
     </div>
   );

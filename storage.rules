@@ -19,6 +19,13 @@ service firebase.storage {
       allow delete: if isSignedIn() && request.auth.uid == profileId;
     }
 
+    // Employee photos are public — shown on booking page without login.
+    match /employees/{businessId}/{fileName} {
+      allow read: if true;
+      allow create, update: if isSignedIn() && isImageUpload();
+      allow delete: if isSignedIn();
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

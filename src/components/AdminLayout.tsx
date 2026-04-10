@@ -65,16 +65,15 @@ export function AdminSidebar() {
     <Sidebar className="border-r-0">
       <div className="border-b border-sidebar-border px-4 py-4">
         <div className="flex items-center gap-2 rounded-2xl border border-white/15 bg-black px-3 py-2.5 backdrop-blur-xl">
-        <LogoIcon size="sm" color="#dc2626" />
-        <div className="overflow-hidden uppercase tracking-tighter">
-          <p className="text-sm font-black text-white truncate">H4CK3D ENTERPRISE</p>
-          <p className="text-[10px] font-bold text-red-600 capitalize leading-none">{role ?? "AI AGENT"}</p>
+        <LogoIcon size="sm" color="#C9A84C" />
+        <div className="overflow-hidden flex flex-col items-center w-full">
+          <p className="text-sm font-black text-white truncate uppercase tracking-tighter">PAPI HAIR DESIGN</p>
+          <p className="text-[16px] text-amber-400 leading-none text-center" style={{ fontFamily: "'Great Vibes', cursive" }}>Booking</p>
         </div>
         </div>
       </div>
 
       <SidebarContent className="px-3 py-3">
-        <p className="px-1 pb-2 text-xs uppercase tracking-[0.2em] text-sidebar-foreground/45">Navigácia</p>
         <LiquidGlassNav
           items={liquidItems}
           activeId={activeItemId}
@@ -128,9 +127,69 @@ export function AdminSidebar() {
   );
 }
 
+function AdminInnerLayout({ children }: { children: React.ReactNode }) {
+  const { role } = useBusiness();
+  const location = useLocation();
+  const { setOpenMobile } = useSidebar();
+
+  const isCalendarPage = location.pathname === "/admin/calendar";
+  const navItems = allNavItems.filter((item) => Boolean(role) && item.roles.includes(role));
+
+  return (
+    <div className="min-h-[100dvh] flex flex-col w-full max-w-full bg-background" data-testid="admin-layout">
+      <div className="flex-1 flex w-full max-w-full overflow-hidden">
+        <AdminSidebar />
+        <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden">
+          {!isCalendarPage && (
+            <header className="h-10 md:h-12 flex items-center border-b border-border/70 px-2 md:px-4 safe-x bg-background/80 backdrop-blur-xl sticky top-0 z-10 pt-[env(safe-area-inset-top)]">
+              <SidebarTrigger className="mr-2 md:mr-3 min-h-touch min-w-touch flex items-center justify-center" />
+              <div className="flex-1 min-w-0 font-black uppercase text-xs tracking-widest text-muted-foreground">
+                {navItems.find(n => n.url === location.pathname)?.title ?? "PAPI HAIR DESIGN"}
+              </div>
+              <div className="hidden md:block"><ThemeToggle /></div>
+            </header>
+          )}
+          <main className={`flex-1 overflow-auto max-w-full safe-x ${isCalendarPage ? "p-1.5 sm:p-3" : "p-4 sm:p-6"} ${!isCalendarPage ? "pb-24 lg:pb-6" : ""}`}>
+            {children}
+          </main>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t-4 border-white bg-black px-6 pb-safe pt-2">
+        <div className="flex items-center justify-between gap-2">
+          {navItems.slice(0, 4).map((item) => {
+            const isActive = location.pathname === item.url;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.url}
+                to={item.url}
+                className={cn(
+                  "flex flex-col items-center gap-1 p-2 transition-all active:scale-95",
+                  isActive ? "text-amber-500" : "text-white"
+                )}
+              >
+                <Icon className={cn("w-6 h-6", isActive && "stroke-[3px]")} />
+                <span className="text-[10px] font-black uppercase tracking-tighter">{item.title}</span>
+              </Link>
+            );
+          })}
+          <button
+            onClick={() => setOpenMobile(true)}
+            className="flex flex-col items-center gap-1 p-2 text-white"
+          >
+            <Settings className="w-6 h-6" />
+            <span className="text-[10px] font-black uppercase tracking-tighter">Viac</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+  );
+}
+
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { loading: onboardingLoading } = useOnboarding();
-  const { role } = useBusiness();
 
   if (onboardingLoading) {
     return (
@@ -140,60 +199,9 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const isCalendarPage = location.pathname === "/admin/calendar";
-  const navItems = allNavItems.filter((item) => Boolean(role) && item.roles.includes(role));
-
   return (
     <SidebarProvider>
-      <div className="min-h-[100dvh] flex flex-col w-full max-w-full bg-background" data-testid="admin-layout">
-        <div className="flex-1 flex w-full max-w-full overflow-hidden">
-          <AdminSidebar />
-          <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden">
-            {!isCalendarPage && (
-              <header className="h-10 md:h-12 flex items-center border-b border-border/70 px-2 md:px-4 safe-x bg-background/80 backdrop-blur-xl sticky top-0 z-10 pt-[env(safe-area-inset-top)]">
-                <SidebarTrigger className="mr-2 md:mr-3 min-h-touch min-w-touch flex items-center justify-center" />
-                <div className="flex-1 min-w-0 font-black uppercase text-xs tracking-widest text-muted-foreground">
-                  {navItems.find(n => n.url === location.pathname)?.title ?? "H4CK3D"}
-                </div>
-                <div className="hidden md:block"><ThemeToggle /></div>
-              </header>
-            )}
-            <main className={`flex-1 overflow-auto max-w-full safe-x ${isCalendarPage ? "p-1.5 sm:p-3" : "p-4 sm:p-6"} ${!isCalendarPage ? "pb-24 lg:pb-6" : ""}`}>
-              {children}
-            </main>
-          </div>
-        </div>
-
-        {/* Mobile Bottom Navigation - H4CK3D Style */}
-        <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t-4 border-black bg-white px-6 pb-safe pt-2">
-            <div className="flex items-center justify-between gap-2">
-                {navItems.slice(0, 4).map((item) => {
-                    const isActive = location.pathname === item.url;
-                    const Icon = item.icon;
-                    return (
-                        <Link 
-                            key={item.url} 
-                            to={item.url}
-                            className={cn(
-                                "flex flex-col items-center gap-1 p-2 transition-all active:scale-95",
-                                isActive ? "text-red-600" : "text-black"
-                            )}
-                        >
-                            <Icon className={cn("w-6 h-6", isActive && "stroke-[3px]")} />
-                            <span className="text-[10px] font-black uppercase tracking-tighter">{item.title}</span>
-                        </Link>
-                    )
-                })}
-                <button 
-                  onClick={() => toast.info("Full menu available in sidebar (top left)")}
-                  className="flex flex-col items-center gap-1 p-2 text-black"
-                >
-                    <Settings className="w-6 h-6" />
-                    <span className="text-[10px] font-black uppercase tracking-tighter">Viac</span>
-                </button>
-            </div>
-        </nav>
-      </div>
+      <AdminInnerLayout>{children}</AdminInnerLayout>
     </SidebarProvider>
   );
 }

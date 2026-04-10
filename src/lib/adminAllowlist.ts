@@ -23,3 +23,15 @@ export const ADMIN_EMAIL_ALLOWLIST = readAdminAllowlistFromEnv();
 export function isAdminAllowlisted(email: string | null | undefined): boolean {
   return ADMIN_EMAIL_ALLOWLIST.has(normalizeEmail(email));
 }
+
+function readEmployeeAllowlistFromEnv(): Set<string> {
+  const miskaEmail = normalizeEmail(import.meta.env.VITE_MISKA_EMAIL as string | undefined);
+  const matoEmail = normalizeEmail(import.meta.env.VITE_MATO_EMAIL as string | undefined);
+  return new Set<string>([miskaEmail, matoEmail].filter((e) => e.length > 0));
+}
+
+export const EMPLOYEE_EMAIL_ALLOWLIST = readEmployeeAllowlistFromEnv();
+
+export function isEmployeeAllowlisted(email: string | null | undefined): boolean {
+  return EMPLOYEE_EMAIL_ALLOWLIST.has(normalizeEmail(email));
+}

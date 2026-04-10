@@ -27,7 +27,7 @@ export default function TermsOfService() {
             <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">1. Všeobecné ustanovenia</h2>
             <p>
               Tieto obchodné podmienky upravujú práva a povinnosti medzi prevádzkovateľom
-              služby H4CK3D Enterprise ("Poskytovateľ") a osobou využívajúcou službu ("Používateľ").
+              služby Papi Hair Design ("Poskytovateľ") a osobou využívajúcou službu ("Používateľ").
               Používaním Služby vyjadrujete súhlas s týmito podmienkami.
             </p>
           </section>
@@ -35,7 +35,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">2. Popis služby</h2>
             <p>
-              H4CK3D Enterprise je AI-poháňaný pracovný priestor pre vývojárov, ktorý poskytuje
+              Papi Hair Design je AI-poháňaný pracovný priestor pre vývojárov, ktorý poskytuje
               nástroje pre generovanie kódu, analýzu, a ďalšie produktívne funkcie.
               Služba je dostupná vo verziách Free, Pro a Enterprise.
             </p>
@@ -97,7 +97,7 @@ export default function TermsOfService() {
             <p>
               Všetok kód a obsah vygenerovaný pomocou Služby patrí Používateľovi.
               Poskytovateľ si nečiní žiadne nároky na vygenerovaný obsah.
-              Značka H4CK3D Enterprise a súvisiace vizuálne prvky sú vlastníctvom Poskytovateľa.
+              Značka Papi Hair Design a súvisiace vizuálne prvky sú vlastníctvom Poskytovateľa.
             </p>
           </section>
 
@@ -115,7 +115,7 @@ export default function TermsOfService() {
               S otázkami sa obráťte na:
             </p>
             <div className="mt-4 border-4 border-black bg-yellow-400 p-6 font-black text-lg">
-              support@h4ck3d.enterprise
+              booking@papihairdesign.sk
             </div>
           </section>
         </div>

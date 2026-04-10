@@ -38,7 +38,7 @@ export function CalendarZoomControls() {
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none safe-bottom">
+    <div className="fixed bottom-[80px] lg:bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
       <div className="flex items-center gap-1 p-1.5 rounded-full bg-background/80 backdrop-blur-xl border border-primary/20 shadow-2xl pointer-events-auto">
         <Button
           variant="ghost"
