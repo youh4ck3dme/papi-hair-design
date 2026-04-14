@@ -36,11 +36,11 @@ import {
 } from "@/lib/firebaseClientErrors";
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  pending: { label: ADMIN_BOOKING_STATUS_LABELS.pending, className: "bg-amber-100 text-amber-800" },
-  confirmed: { label: ADMIN_BOOKING_STATUS_LABELS.confirmed, className: "bg-green-100 text-green-800" },
-  cancelled: { label: ADMIN_BOOKING_STATUS_LABELS.cancelled, className: "bg-red-100 text-red-800" },
-  completed: { label: ADMIN_BOOKING_STATUS_LABELS.completed, className: "bg-slate-100 text-slate-700" },
-  no_show: { label: ADMIN_BOOKING_STATUS_LABELS.no_show, className: "bg-rose-100 text-rose-800" },
+  pending: { label: ADMIN_BOOKING_STATUS_LABELS.pending, className: "border border-amber-500/30 bg-amber-500/12 text-amber-300" },
+  confirmed: { label: ADMIN_BOOKING_STATUS_LABELS.confirmed, className: "border border-emerald-500/30 bg-emerald-500/12 text-emerald-300" },
+  cancelled: { label: ADMIN_BOOKING_STATUS_LABELS.cancelled, className: "border border-red-500/30 bg-red-500/12 text-red-300" },
+  completed: { label: ADMIN_BOOKING_STATUS_LABELS.completed, className: "border border-slate-400/30 bg-slate-400/12 text-slate-200" },
+  no_show: { label: ADMIN_BOOKING_STATUS_LABELS.no_show, className: "border border-rose-500/30 bg-rose-500/12 text-rose-300" },
 };
 
 interface AppointmentCardRow {
@@ -237,33 +237,38 @@ export default function DashboardPage() {
   };
 
   const statCards = [
-    { title: "Dnes", value: stats.today, icon: Calendar, color: "text-red-600", bg: "bg-red-500/10" },
-    { title: "Celkovo", value: stats.total, icon: TrendingUp, color: "text-red-600", bg: "bg-red-500/10" },
-    { title: "Tím", value: stats.employees, icon: Users, color: "text-red-600", bg: "bg-red-500/10" },
-    { title: "Arsenal", value: stats.services, icon: Briefcase, color: "text-red-600", bg: "bg-red-500/10" },
+    { title: "Dnes", value: stats.today, icon: Calendar, accent: "border-primary/45 bg-primary/14 text-primary" },
+    { title: "Celkovo", value: stats.total, icon: TrendingUp, accent: "border-sky-500/40 bg-sky-500/12 text-sky-300" },
+    { title: "Tím", value: stats.employees, icon: Users, accent: "border-violet-500/40 bg-violet-500/12 text-violet-300" },
+    { title: "Arsenal", value: stats.services, icon: Briefcase, accent: "border-rose-500/40 bg-rose-500/12 text-rose-300" },
   ];
 
   return (
-    <div className="space-y-6" data-testid="dashboard">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Prehľad</h1>
-        <p className="text-muted-foreground text-sm">{format(new Date(), "EEEE, d. MMMM yyyy", { locale: sk })}</p>
+    <div className="space-y-6 lg:space-y-7" data-testid="dashboard">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-foreground">Prehľad</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{format(new Date(), "EEEE, d. MMMM yyyy", { locale: sk })}</p>
+        </div>
+        <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-primary">
+          Admin Dashboard
+        </div>
       </div>
 
       <div className="flex justify-end">
         <Button
           type="button"
           onClick={() => setNewBookingOpen(true)}
-          className="rounded-full bg-primary px-4 text-primary-foreground shadow-[0_16px_40px_-24px_rgba(0,0,0,0.45)]"
+          className="rounded-full border border-primary/45 bg-[linear-gradient(180deg,rgba(218,165,32,0.22),rgba(218,165,32,0.09))] px-5 text-primary shadow-[0_16px_40px_-24px_rgba(218,165,32,0.45)] hover:bg-[linear-gradient(180deg,rgba(218,165,32,0.3),rgba(218,165,32,0.12))]"
         >
           <Plus className="mr-2 h-4 w-4" />
           {t("admin.newBooking")}
         </Button>
       </div>
 
-      <div
-        className="relative overflow-hidden rounded-3xl border border-primary/20 bg-card/80 px-5 py-5 shadow-[0_20px_60px_-40px_rgba(0,0,0,0.5)] backdrop-blur-sm"
-      >
+      <div className="relative overflow-hidden rounded-3xl border border-primary/25 bg-[linear-gradient(130deg,rgba(11,11,11,0.92),rgba(22,22,22,0.86))] px-5 py-5 shadow-[0_30px_80px_-55px_rgba(0,0,0,0.75)] backdrop-blur-sm">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-primary/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-44 w-44 rounded-full bg-primary/8 blur-3xl" />
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-full bg-primary/10 text-primary">
             <History className="w-5 h-5" />
@@ -285,33 +290,38 @@ export default function DashboardPage() {
             <History className="w-4 h-4" />
             Otvoriť anonymnú históriu
           </a>
-          <span className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">Magic link + fallback</span>
+          <span className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+            Magic link + fallback
+          </span>
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-4 border-b-4 border-black pb-2">
-        <div className="font-black text-sm text-black uppercase tracking-[0.3em]">System Telemetry</div>
+      <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] px-4 py-3">
+        <div className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">System Telemetry</div>
         <button
           type="button"
           onClick={loadStats}
           disabled={loading}
-          className="text-xs font-black uppercase text-red-600 hover:underline disabled:opacity-40"
+          className="text-xs font-semibold uppercase tracking-[0.2em] text-primary transition hover:text-primary/80 disabled:opacity-40"
         >
-          {loading ? "Načítavam..." : "Re-Sync"}
+          {loading ? "Načítavam..." : "Obnoviť"}
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-0 border-4 border-black">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {statCards.map((card) => (
-          <Card key={card.title} className="rounded-none border-0 border-r-4 last:border-r-0 border-black shadow-none bg-white hover:bg-red-50 transition-colors">
-            <CardContent className="p-6">
+          <Card
+            key={card.title}
+            className="group rounded-2xl border border-border/65 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012))] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/45"
+          >
+            <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] text-black font-black uppercase tracking-widest">{card.title}</p>
-                  <p className="text-4xl font-black text-black mt-1 leading-none">{card.value}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{card.title}</p>
+                  <p className="mt-1 text-4xl font-black leading-none text-foreground">{card.value}</p>
                 </div>
-                <div className={`w-12 h-12 border-4 border-black ${card.bg} flex items-center justify-center`}>
-                  <card.icon className={`w-6 h-6 ${card.color}`} strokeWidth={3} />
+                <div className={`flex h-12 w-12 items-center justify-center rounded-xl border ${card.accent}`}>
+                  <card.icon className="h-6 w-6" strokeWidth={2.5} />
                 </div>
               </div>
             </CardContent>
@@ -319,7 +329,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <Card className="border-border">
+      <Card className="border-border/70 bg-card/85 backdrop-blur-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Clock className="w-4 h-4 text-primary" />
@@ -327,7 +337,7 @@ export default function DashboardPage() {
           </CardTitle>
         </CardHeader>
         {error && (
-          <CardContent className="rounded-b-2xl border-t border-primary/10 bg-rose-50/70 text-rose-700">
+          <CardContent className="rounded-b-2xl border-t border-rose-500/30 bg-rose-500/12 text-rose-300">
             {error}
           </CardContent>
         )}
@@ -342,9 +352,9 @@ export default function DashboardPage() {
               {todayAppointments.map((appointment) => {
                 const status = STATUS_LABELS[appointment.status] ?? STATUS_LABELS.pending;
                 return (
-                  <div key={appointment.id} className="rounded-lg bg-muted/40 p-3 transition-colors hover:bg-muted/70">
+                  <div key={appointment.id} className="rounded-xl border border-border/50 bg-background/35 p-3 transition-all hover:border-primary/25 hover:bg-background/60">
                     <div className="flex items-start gap-3">
-                      <div className="text-sm font-mono font-semibold text-foreground w-12 flex-shrink-0">
+                      <div className="flex h-8 w-14 flex-shrink-0 items-center justify-center rounded-lg border border-border/40 bg-background/60 text-sm font-mono font-semibold text-foreground">
                       {appointment.start_at ? format(new Date(appointment.start_at), "HH:mm") : "—"}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -369,7 +379,7 @@ export default function DashboardPage() {
                           </div>
                         )}
                       </div>
-                      <Badge className={`text-xs ${status.className} border-0`}>{status.label}</Badge>
+                      <Badge className={`text-xs font-semibold ${status.className}`}>{status.label}</Badge>
                     </div>
                   </div>
                 );
