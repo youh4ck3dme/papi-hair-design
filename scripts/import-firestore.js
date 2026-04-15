@@ -19,6 +19,7 @@ const COLLECTIONS = [
     'memberships',
     'businesses',
     'services',
+    'service_subcategories',
     'employees',
     'employee_services',
     'appointments'
@@ -29,7 +30,7 @@ async function clearCollection(collectionName) {
     for (;;) {
         const snap = await col.limit(400).get();
         if (snap.empty) break;
-        const batch = db.batch();
+        let batch = db.batch();
         snap.docs.forEach((d) => batch.delete(d.ref));
         await batch.commit();
     }
@@ -71,7 +72,7 @@ async function migrate() {
             // Clean data for Firestore (remove undefined, fix dates if any)
             const cleanItem = { ...item };
 
-            // Convert typical Supabase timestamp strings to JS Dates (Firestore will handle as Timestamp)
+            // Convert typical legacy timestamp strings to JS Dates (Firestore will handle as Timestamp)
             ['created_at', 'updated_at', 'start_at', 'end_at'].forEach(key => {
                 if (cleanItem[key] && typeof cleanItem[key] === 'string') {
                     cleanItem[key] = admin.firestore.Timestamp.fromDate(new Date(cleanItem[key]));

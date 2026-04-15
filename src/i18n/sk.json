@@ -55,6 +55,7 @@
   "booking": {
     "step1": "Vyberte kategóriu",
     "step2": "Vyberte službu",
+    "subcategoryTitle": "Vyberte podkategóriu",
     "step3": "Vyberte kaderníka",
     "employeeRole": "Pracovník",
     "step4": "Vyberte dátum",

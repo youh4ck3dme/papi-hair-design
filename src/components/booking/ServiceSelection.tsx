@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { Sparkles, User2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { GoldText, StepHeader, RadioIcon } from "./BookingUI";
+import { StepHeader, RadioIcon } from "./BookingUI";
 import { ServiceRow } from "./types";
+import type { ServiceSubcategoryOption } from "@/lib/serviceSubcategories";
 
 interface ServiceSelectionProps {
     category: "damske" | "panske" | null;
     setCategory: (cat: "damske" | "panske") => void;
     subcategory: string | null;
     setSubcategory: (sub: string | null) => void;
-    subcategories: string[];
+    subcategoryOptions: ServiceSubcategoryOption[];
+    showSubcategoryStep: boolean;
     filteredServices: ServiceRow[];
     selectedServiceId: string | null;
     setSelectedServiceId: (id: string | null) => void;
@@ -22,7 +24,8 @@ export function ServiceSelection({
     setCategory,
     subcategory,
     setSubcategory,
-    subcategories,
+    subcategoryOptions,
+    showSubcategoryStep,
     filteredServices,
     selectedServiceId,
     setSelectedServiceId,
@@ -88,27 +91,38 @@ export function ServiceSelection({
             </div>
             </div>
 
-            {/* Subcategory chips */}
-            {isCategoryExpanded && subcategories.length > 0 && (
-                <div className="mt-5 flex flex-wrap gap-2">
-                    {subcategories.map((sub) => (
-                        <button
-                            key={sub}
-                            onClick={() => { setSubcategory(sub); setSelectedServiceId(null); }}
-                            aria-pressed={subcategory === sub}
-                            className={`min-h-[44px] rounded-full border px-4 py-2.5 text-sm font-semibold uppercase tracking-wider transition-all duration-200 ${subcategory === sub
-                                ? "border-[#C9A84C] bg-[#C9A84C]/10 text-[#C9A84C] shadow-sm shadow-[#C9A84C]/20"
-                                : "border-[#C0C0C0]/18 text-white/50 bg-black hover:border-[#C9A84C]/40 hover:text-white"
-                                }`}
-                        >
-                            {sub}
-                        </button>
-                    ))}
+            {isCategoryExpanded && showSubcategoryStep && (
+                <div className="mt-6 space-y-3">
+                    <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/45">
+                        {t("booking.subcategoryTitle")}
+                    </p>
+                    <div className="space-y-3">
+                        {subcategoryOptions.map((option) => {
+                            const isSelected = subcategory === option.key;
+                            return (
+                                <button
+                                    key={option.key}
+                                    type="button"
+                                    onClick={() => {
+                                        setSubcategory(option.key);
+                                        setSelectedServiceId(null);
+                                    }}
+                                    aria-pressed={isSelected}
+                                    className={`w-full min-h-[52px] rounded-[28px] border px-5 py-3 text-center text-base font-semibold uppercase tracking-[0.14em] transition-all duration-200 ${isSelected
+                                        ? "border-[#C9A84C] bg-[#C9A84C] text-black shadow-[0_0_24px_rgba(201,168,76,0.35)]"
+                                        : "border-white/12 bg-white/[0.02] text-white/75 hover:border-[#C9A84C]/40 hover:text-white"
+                                        }`}
+                                >
+                                    <span>{option.name_sk}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 
             {/* Step 2: Service picker */}
-            {isCategoryExpanded && (subcategory || subcategories.length === 0) && filteredServices.length > 0 && (
+            {isCategoryExpanded && (!showSubcategoryStep || subcategory != null) && filteredServices.length > 0 && (
                 <div className="animate-fade-in">
                     <StepHeader num="2" title={t("booking.step2")} />
                     <div className="flex flex-col gap-3" aria-live="polite">
@@ -145,7 +159,7 @@ export function ServiceSelection({
                 </div>
             )}
 
-            {isCategoryExpanded && (subcategory || subcategories.length === 0) && filteredServices.length === 0 && (
+            {isCategoryExpanded && (!showSubcategoryStep || subcategory != null) && filteredServices.length === 0 && (
                 <p className="mt-4 text-sm text-muted-foreground" data-testid="booking-no-services">
                     {t("booking.noServicesInSelection")}
                 </p>

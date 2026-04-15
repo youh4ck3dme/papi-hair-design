@@ -19,7 +19,6 @@ export default defineConfig(({ mode }) => {
             'vendor-motion': ['framer-motion'],
             'vendor-charts': ['recharts'],
             'vendor-ui': ['sonner', 'lucide-react', 'class-variance-authority', 'tailwind-merge'],
-            'vendor-supabase': ['@supabase/supabase-js'],
             'vendor-markdown': ['react-markdown', 'react-syntax-highlighter'],
           },
         },

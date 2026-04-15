@@ -26,6 +26,7 @@
     "test:admin": "node ./node_modules/@playwright/test/cli.js test e2e/admin-calendar.spec.ts --config=e2e/playwright.config.ts",
     "test:booking-mobile-live": "node scripts/booking-mobile-audit-live.mjs",
     "test:calendar-mobile-live": "node scripts/calendar-mobile-audit-live.mjs",
+    "backfill:service-subcategories": "node ./node_modules/tsx/dist/cli.mjs ./scripts/backfill-service-subcategories.ts",
     "budget": "node scripts/budget-check.mjs",
     "lockin:check": "node scripts/lockin-check.mjs"
   },
