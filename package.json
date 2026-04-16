@@ -23,6 +23,7 @@
     "test:watch": "node ./node_modules/vitest/vitest.mjs",
     "test:responsive": "node ./node_modules/@playwright/test/cli.js test --config=e2e/playwright.config.ts",
     "test:smoke:admin-services-booking": "node ./node_modules/@playwright/test/cli.js test e2e/admin-services-booking-smoke.spec.ts --config=e2e/playwright.config.ts",
+    "test:e2e:service-audit": "node ./node_modules/@playwright/test/cli.js test e2e/admin-service-subcategory-audit.spec.ts --config=e2e/playwright.config.ts",
     "test:responsive:preview": "npm run build && node ./node_modules/@playwright/test/cli.js test --config=e2e/playwright.config.preview.ts",
     "test:admin": "node ./node_modules/@playwright/test/cli.js test e2e/admin-calendar.spec.ts --config=e2e/playwright.config.ts",
     "test:booking-mobile-live": "node scripts/booking-mobile-audit-live.mjs",

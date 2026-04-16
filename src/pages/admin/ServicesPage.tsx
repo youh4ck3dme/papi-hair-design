@@ -696,6 +696,7 @@ export default function ServicesPage() {
             variant="outline"
             onClick={() => openCreateSubcategory()}
             className="border-primary/20"
+            data-testid="create-subcategory-button"
           >
             <Plus className="mr-2 h-4 w-4" /> Pridať podkategóriu
           </Button>
@@ -789,6 +790,11 @@ export default function ServicesPage() {
                       <div
                         key={group.option.key}
                         className="rounded-3xl border border-primary/10 bg-card/30 p-5 backdrop-blur-xl"
+                        data-testid={
+                          linkedSubcategory
+                            ? `service-subcategory-group-${linkedSubcategory.id}`
+                            : undefined
+                        }
                       >
                         <div className="flex flex-col gap-3 border-b border-primary/10 pb-4 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
@@ -835,6 +841,7 @@ export default function ServicesPage() {
                                 variant="ghost"
                                 className="rounded-xl"
                                 disabled={!canMoveSubcategoryUp}
+                                data-testid={`subcategory-move-up-${linkedSubcategory.id}`}
                                 onClick={() =>
                                   void handleMoveSubcategory(
                                     linkedSubcategory.id,
@@ -850,6 +857,7 @@ export default function ServicesPage() {
                                 variant="ghost"
                                 className="rounded-xl"
                                 disabled={!canMoveSubcategoryDown}
+                                data-testid={`subcategory-move-down-${linkedSubcategory.id}`}
                                 onClick={() =>
                                   void handleMoveSubcategory(
                                     linkedSubcategory.id,
@@ -864,6 +872,7 @@ export default function ServicesPage() {
                                 size="sm"
                                 variant="ghost"
                                 className="rounded-xl"
+                                data-testid={`subcategory-edit-${linkedSubcategory.id}`}
                                 onClick={() => openEditSubcategory(linkedSubcategory)}
                               >
                                 <Pencil className="mr-1.5 h-3.5 w-3.5" /> Upraviť
@@ -872,6 +881,7 @@ export default function ServicesPage() {
                                 size="sm"
                                 variant="ghost"
                                 className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                data-testid={`subcategory-delete-${linkedSubcategory.id}`}
                                 onClick={() => void handleDeleteSubcategory(linkedSubcategory)}
                               >
                                 <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Zmazať
@@ -1124,6 +1134,7 @@ export default function ServicesPage() {
               </Label>
               <Input
                 id="subcategory-name"
+                data-testid="subcategory-name-input"
                 className="border-primary/10 bg-background/50 focus:border-primary/40 focus:ring-primary/10"
                 value={subcategoryForm.name_sk}
                 onChange={(event) =>
@@ -1173,6 +1184,7 @@ export default function ServicesPage() {
                 </p>
               </div>
               <Switch
+                aria-label="subcategory-active-toggle"
                 checked={subcategoryForm.is_active}
                 onCheckedChange={(checked) =>
                   setSubcategoryForm((previous) => ({ ...previous, is_active: checked }))
@@ -1193,6 +1205,7 @@ export default function ServicesPage() {
             <Button
               onClick={() => void handleSaveSubcategory()}
               disabled={savingSubcategory}
+              data-testid="subcategory-save-button"
               className="rounded-xl px-8 font-bold shadow-lg shadow-primary/20"
             >
               {savingSubcategory ? (
