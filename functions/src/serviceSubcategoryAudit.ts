@@ -116,7 +116,7 @@ export function buildServiceSubcategoryAuditEntry(
   };
 }
 
-export const onServiceSubcategoryAuditWrite = onDocumentWrittenWithAuthContext(
+export const onServiceSubcategoryAuditEvent = onDocumentWrittenWithAuthContext(
   { region: "europe-west1", document: "service_subcategories/{subcategoryId}" },
   async (event) => {
     const db = getFirestore();
