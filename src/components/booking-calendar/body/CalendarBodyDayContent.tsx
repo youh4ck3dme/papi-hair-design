@@ -1,11 +1,14 @@
 import { addMinutes, startOfDay } from "date-fns";
 import { isSameDay } from "date-fns";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useBookingCalendarContext } from "../calendar-context";
 import { BookingCalendarEvent } from "../BookingCalendarEvent";
 import { CalendarBodyHeader } from "./CalendarBodyHeader";
 import { HOURS } from "../calendar-types";
+
+const SLOT_LONG_PRESS_MS = 450;
+const SLOT_TOUCH_MOVE_TOLERANCE = 12;
 
 interface CalendarBodyDayContentProps {
   date: Date;
@@ -21,6 +24,9 @@ export function CalendarBodyDayContent({
   showHeader = true,
 }: CalendarBodyDayContentProps) {
   const { filteredEvents, onSelectSlot, selectable, businessHours, pixelsPerHour } = useBookingCalendarContext();
+  const longPressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const dayEvents = useMemo(
     () =>
       filteredEvents.filter((e) => {
@@ -78,13 +84,29 @@ export function CalendarBodyDayContent({
     return { start, end: addMinutes(start, 30) };
   };
 
-  const handleSlotClick = (hour: number, e: React.MouseEvent<HTMLDivElement>) => {
-    if (!selectable || !onSelectSlot) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const y = e.clientY - rect.top;
+  useEffect(() => () => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  }, []);
 
-    // Keep the chosen time stable even near borders/overlays.
-    // We only snap inside the clicked hour to :00 or :30.
+  const clearLongPressTimer = () => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  };
+
+  const buildSlotSelection = (
+    hour: number,
+    clientY: number,
+    target: HTMLDivElement,
+    intent: "book" | "block",
+  ) => {
+    const rect = target.getBoundingClientRect();
+    const y = clientY - rect.top;
+
     const minutesIntoHour = Math.max(0, Math.min(59.999, (y / rect.height) * 60));
     const snappedMinutes = minutesIntoHour >= 30 ? 30 : 0;
     const totalMinutes = hour * 60 + snappedMinutes;
@@ -94,7 +116,24 @@ export function CalendarBodyDayContent({
       Math.floor(totalMinutes / 30) * 30
     );
     const end = addMinutes(start, 30);
-    onSelectSlot({ start, end });
+
+    return {
+      start,
+      end,
+      resourceId,
+      resourceName,
+      intent,
+    };
+  };
+
+  const handleSlotClick = (hour: number, e: React.MouseEvent<HTMLDivElement>) => {
+    if (!selectable || !onSelectSlot) return;
+    if (longPressTriggeredRef.current) {
+      longPressTriggeredRef.current = false;
+      return;
+    }
+
+    onSelectSlot(buildSlotSelection(hour, e.clientY, e.currentTarget, "book"));
   };
 
   const handleSlotKeyDown = (
@@ -105,7 +144,43 @@ export function CalendarBodyDayContent({
     if (e.key !== "Enter" && e.key !== " ") return;
     e.preventDefault();
     const { start, end } = getSlotRange(hour);
-    onSelectSlot({ start, end });
+    onSelectSlot({ start, end, resourceId, resourceName, intent: "book" });
+  };
+
+  const handleTouchStart = (hour: number, e: React.TouchEvent<HTMLDivElement>) => {
+    if (!selectable || !onSelectSlot || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    longPressTriggeredRef.current = false;
+    clearLongPressTimer();
+
+    const target = e.currentTarget;
+    longPressTimeoutRef.current = setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      onSelectSlot(buildSlotSelection(hour, touch.clientY, target, "block"));
+      longPressTimeoutRef.current = null;
+    }, SLOT_LONG_PRESS_MS);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchStartRef.current || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+    const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+    if (deltaX > SLOT_TOUCH_MOVE_TOLERANCE || deltaY > SLOT_TOUCH_MOVE_TOLERANCE) {
+      clearLongPressTimer();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    clearLongPressTimer();
+    touchStartRef.current = null;
+  };
+
+  const handleTouchCancel = () => {
+    clearLongPressTimer();
+    touchStartRef.current = null;
+    longPressTriggeredRef.current = false;
   };
 
   return (
@@ -128,6 +203,10 @@ export function CalendarBodyDayContent({
                 selectable && onSelectSlot && handleSlotClick(hour, e)
               }
               onKeyDown={(e) => handleSlotKeyDown(hour, e)}
+              onTouchStart={(e) => handleTouchStart(hour, e)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchCancel}
               role={selectable ? "button" : undefined}
               tabIndex={selectable ? 0 : undefined}
               aria-label={

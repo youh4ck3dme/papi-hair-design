@@ -23,7 +23,9 @@
         "twilio": "^5.2.0"
     },
     "devDependencies": {
+        "@types/luxon": "^3.7.1",
         "firebase-functions-test": "^3.4.1",
+        "luxon": "^3.7.2",
         "typescript": "^5.0.0",
         "vitest": "^4.0.18"
     },
