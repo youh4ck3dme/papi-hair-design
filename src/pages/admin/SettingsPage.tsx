@@ -1,10 +1,23 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { db, functions, storage } from "@/integrations/firebase/config";
-import { doc, getDoc, updateDoc, setDoc, Timestamp } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  setDoc,
+  Timestamp,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +31,13 @@ import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound, Camera, Trash2
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
 import type { FirebaseError } from "firebase/app";
 import { compressProfileImage, readFileAsDataUrl, validateProfileImageBlob, validateProfileImageFile } from "@/lib/profileImage";
+import {
+  buildObservabilityAlerts,
+  getAlertBadgeClasses,
+  getObservabilityHealthLabel,
+  getObservabilityHealthTone,
+  getObservabilityToneClasses,
+} from "@/lib/adminObservability";
 import {
   getFirebaseErrorCode,
   getFirebaseErrorMessage,
@@ -85,6 +105,7 @@ export default function SettingsPage() {
   const [snapshotInfo, setSnapshotInfo] = useState<any>(null);
   const [snapshotHealth, setSnapshotHealth] = useState<any>(null);
   const [bookingFunnelHealth, setBookingFunnelHealth] = useState<any>(null);
+  const [snapshotRebuildEvents, setSnapshotRebuildEvents] = useState<any[]>([]);
   const [licenseKey, setLicenseKey] = useState("");
   const [licenseState, setLicenseState] = useState<"idle" | "checking" | "ok" | "error">("idle");
   const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
@@ -146,15 +167,24 @@ export default function SettingsPage() {
 
   const loadObservability = useCallback(async () => {
     try {
-      const [snap, health, funnel] = await Promise.all([
+      const [snap, health, funnel, rebuildEventsSnap] = await Promise.all([
         getDoc(doc(db, "public_snapshots", businessId)),
         getDoc(doc(db, "ops_health", `snapshot_${businessId}`)),
         getDoc(doc(db, "ops_health", `booking_funnel_${businessId}`)),
+        getDocs(
+          query(
+            collection(db, "snapshot_rebuild_events"),
+            where("business_id", "==", businessId),
+            orderBy("created_at", "desc"),
+            limit(8),
+          ),
+        ),
       ]);
 
-      if (snap.exists()) setSnapshotInfo({ id: snap.id, ...snap.data() });
-      if (health.exists()) setSnapshotHealth({ id: health.id, ...health.data() });
-      if (funnel.exists()) setBookingFunnelHealth({ id: funnel.id, ...funnel.data() });
+      setSnapshotInfo(snap.exists() ? { id: snap.id, ...snap.data() } : null);
+      setSnapshotHealth(health.exists() ? { id: health.id, ...health.data() } : null);
+      setBookingFunnelHealth(funnel.exists() ? { id: funnel.id, ...funnel.data() } : null);
+      setSnapshotRebuildEvents(rebuildEventsSnap.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
     } catch (err) {
       console.error("Error loading snapshot observability:", err);
     }
@@ -414,6 +444,17 @@ export default function SettingsPage() {
           .filter(([, value]) => typeof value === "number")
           .sort((a, b) => Number(b[1]) - Number(a[1]))
       : [];
+  const observabilityAlerts = useMemo(
+    () => buildObservabilityAlerts(snapshotInfo, snapshotHealth, bookingFunnelHealth),
+    [bookingFunnelHealth, snapshotHealth, snapshotInfo],
+  );
+  const observabilityTone = useMemo(
+    () => getObservabilityHealthTone(observabilityAlerts),
+    [observabilityAlerts],
+  );
+  const observabilityLabel = getObservabilityHealthLabel(observabilityTone);
+  const latestSnapshotTimestamp =
+    snapshotHealth?.last_success_at ?? snapshotHealth?.updated_at ?? snapshotInfo?.updated_at ?? null;
 
   return (
     <div className="space-y-6 max-w-4xl animate-in fade-in duration-500">
@@ -639,79 +680,214 @@ export default function SettingsPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="pt-6 space-y-3 text-sm text-muted-foreground">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <div className="text-xs uppercase tracking-widest">Revision</div>
-                  <div className="font-semibold text-foreground">{snapshotInfo?.revision ?? "—"}</div>
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-widest">Updated</div>
-                  <div className="font-semibold text-foreground">
-                    {snapshotInfo?.updated_at ? new Date(snapshotInfo.updated_at).toLocaleString() : "—"}
+            <CardContent className="pt-6 space-y-5 text-sm text-muted-foreground">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div className={`rounded-2xl border p-4 ${getObservabilityToneClasses(observabilityTone)}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-widest">Prevádzkový stav</div>
+                      <div className="mt-1 text-lg font-semibold text-foreground">{observabilityLabel}</div>
+                    </div>
+                    <Badge variant="outline" className={getObservabilityToneClasses(observabilityTone)}>
+                      {observabilityAlerts.length === 0 ? "0 alertov" : `${observabilityAlerts.length} alertov`}
+                    </Badge>
                   </div>
+                  <p className="mt-3 text-xs">
+                    {observabilityAlerts.length === 0
+                      ? "Snapshot aj booking funnel vyzerajú zdravo."
+                      : "Nižšie sú presné warning/error signály, ktoré treba sledovať."}
+                  </p>
                 </div>
-                <div>
-                  <div className="text-xs uppercase tracking-widest">Status</div>
-                  <div className="font-semibold text-foreground">{snapshotInfo?.status ?? "—"}</div>
-                </div>
-              </div>
-              {snapshotHealth && (
-                <div className="space-y-3 rounded-2xl border border-primary/10 bg-background/40 p-4 text-xs text-muted-foreground">
-                  <div>
-                    Health: {snapshotHealth.status ?? "unknown"}
-                    {snapshotHealth.error ? ` • ${snapshotHealth.error}` : ""}
-                    {snapshotHealth.updated_at ? ` • ${new Date(snapshotHealth.updated_at).toLocaleString()}` : ""}
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+
+                <div className="rounded-2xl border border-primary/10 bg-background/40 p-4">
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground">Snapshot pipeline</div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">{snapshotHealth?.status ?? snapshotInfo?.status ?? "—"}</div>
+                  <div className="mt-3 space-y-1 text-xs text-muted-foreground">
                     <div>
-                      <div className="uppercase tracking-widest">Source</div>
-                      <div className="font-semibold text-foreground">{snapshotHealth.last_trigger_source ?? "—"}</div>
+                      Posledný úspech:{" "}
+                      <span className="font-semibold text-foreground">
+                        {latestSnapshotTimestamp ? new Date(latestSnapshotTimestamp).toLocaleString() : "—"}
+                      </span>
                     </div>
                     <div>
-                      <div className="uppercase tracking-widest">Duration</div>
-                      <div className="font-semibold text-foreground">
-                        {typeof snapshotHealth.duration_ms === "number" ? `${snapshotHealth.duration_ms} ms` : "—"}
-                      </div>
+                      Trigger source:{" "}
+                      <span className="font-semibold text-foreground">{snapshotHealth?.last_trigger_source ?? "—"}</span>
                     </div>
                     <div>
-                      <div className="uppercase tracking-widest">Služby</div>
-                      <div className="font-semibold text-foreground">{snapshotHealth.service_count ?? "—"}</div>
-                    </div>
-                    <div>
-                      <div className="uppercase tracking-widest">Podkategórie</div>
-                      <div className="font-semibold text-foreground">{snapshotHealth.subcategory_count ?? "—"}</div>
+                      Duration:{" "}
+                      <span className="font-semibold text-foreground">
+                        {typeof snapshotHealth?.duration_ms === "number" ? `${snapshotHealth.duration_ms} ms` : "—"}
+                      </span>
                     </div>
                   </div>
                 </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Snapshot sa rebuilduje aj automaticky pri zmenách dát (biznis, služby, zamestnanci, hodiny, výnimky).
-              </p>
-              <div className="rounded-2xl border border-primary/10 bg-background/40 p-4">
-                <div className="mb-3">
+
+                <div className="rounded-2xl border border-primary/10 bg-background/40 p-4">
                   <div className="text-xs uppercase tracking-widest text-muted-foreground">Booking funnel</div>
-                  <div className="text-sm font-semibold text-foreground">
+                  <div className="mt-1 text-lg font-semibold text-foreground">
                     {bookingFunnelHealth?.last_event_name ?? "Zatiaľ bez eventov"}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {bookingFunnelHealth?.last_event_at
-                      ? new Date(bookingFunnelHealth.last_event_at).toLocaleString()
-                      : "Žiadne dáta"}
+                  <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                    <div>
+                      Posledný event:{" "}
+                      <span className="font-semibold text-foreground">
+                        {bookingFunnelHealth?.last_event_at
+                          ? new Date(bookingFunnelHealth.last_event_at).toLocaleString()
+                          : "—"}
+                      </span>
+                    </div>
+                    <div>
+                      Celkom eventov:{" "}
+                      <span className="font-semibold text-foreground">{bookingFunnelHealth?.total_events ?? 0}</span>
+                    </div>
+                    <div>
+                      Snapshot revision:{" "}
+                      <span className="font-semibold text-foreground">{snapshotInfo?.revision ?? "—"}</span>
+                    </div>
                   </div>
                 </div>
-                {funnelCounters.length > 0 ? (
+              </div>
+
+              <div className="rounded-2xl border border-primary/10 bg-background/40 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground">Alerty</div>
+                    <div className="text-sm font-semibold text-foreground">Automatické vyhodnotenie zdravia systému</div>
+                  </div>
+                  <Button variant="outline" onClick={() => void loadObservability()} disabled={snapshotLoading}>
+                    Obnoviť dáta
+                  </Button>
+                </div>
+                {observabilityAlerts.length > 0 ? (
+                  <div className="space-y-3">
+                    {observabilityAlerts.map((alert) => (
+                      <div
+                        key={`${alert.severity}-${alert.title}`}
+                        className="rounded-xl border border-primary/10 bg-card/40 px-4 py-3"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className={getAlertBadgeClasses(alert.severity)}>
+                            {alert.severity}
+                          </Badge>
+                          <div className="font-semibold text-foreground">{alert.title}</div>
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">{alert.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
+                    Žiadne warningy ani chyby. Snapshot a booking funnel vyzerajú zdravo.
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="rounded-2xl border border-primary/10 bg-background/40 p-4">
+                  <div className="mb-3">
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground">Snapshot metriky</div>
+                    <div className="text-sm font-semibold text-foreground">Aktuálny výrez dát pre booking frontend</div>
+                  </div>
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                    {funnelCounters.slice(0, 6).map(([key, value]) => (
-                      <div key={key} className="rounded-xl border border-primary/5 bg-card/40 px-3 py-2">
-                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{key}</div>
-                        <div className="text-sm font-semibold text-foreground">{String(value)}</div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest">Status</div>
+                      <div className="font-semibold text-foreground">{snapshotInfo?.status ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest">Služby</div>
+                      <div className="font-semibold text-foreground">{snapshotHealth?.service_count ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest">Podkategórie</div>
+                      <div className="font-semibold text-foreground">{snapshotHealth?.subcategory_count ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest">Zamestnanci</div>
+                      <div className="font-semibold text-foreground">{snapshotHealth?.employee_count ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest">Business hours</div>
+                      <div className="font-semibold text-foreground">{snapshotHealth?.business_hours_count ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest">Výnimky</div>
+                      <div className="font-semibold text-foreground">{snapshotHealth?.date_override_count ?? "—"}</div>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Snapshot sa rebuilduje automaticky pri zmenách v business, službách, podkategóriách, zamestnancoch a hodinách.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-primary/10 bg-background/40 p-4">
+                  <div className="mb-3">
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground">Booking funnel</div>
+                    <div className="text-sm font-semibold text-foreground">Posledné počítadlá vo verejnom booking flow</div>
+                  </div>
+                  {funnelCounters.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                      {funnelCounters.slice(0, 6).map(([key, value]) => (
+                        <div key={key} className="rounded-xl border border-primary/5 bg-card/40 px-3 py-2">
+                          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{key}</div>
+                          <div className="text-sm font-semibold text-foreground">{String(value)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Booking funnel eventy sa začnú zobrazovať po prvých interakciách zákazníkov vo verejnom bookingu.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-primary/10 bg-background/40 p-4" data-testid="snapshot-rebuild-events">
+                <div className="mb-3">
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground">História rebuildov</div>
+                  <div className="text-sm font-semibold text-foreground">Posledné eventy zo `snapshot_rebuild_events`</div>
+                </div>
+                {snapshotRebuildEvents.length > 0 ? (
+                  <div className="space-y-3">
+                    {snapshotRebuildEvents.map((event) => (
+                      <div key={event.id} className="rounded-xl border border-primary/5 bg-card/40 px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className={getObservabilityToneClasses(
+                              event.status === "failed" ? "error" : "healthy",
+                            )}
+                          >
+                            {event.status ?? "unknown"}
+                          </Badge>
+                          <div className="font-semibold text-foreground">
+                            {event.created_at ? new Date(event.created_at).toLocaleString() : "Neznámy čas"}
+                          </div>
+                        </div>
+                        <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-muted-foreground md:grid-cols-4">
+                          <div>
+                            Source: <span className="font-semibold text-foreground">{event.last_trigger_source ?? "—"}</span>
+                          </div>
+                          <div>
+                            Duration:{" "}
+                            <span className="font-semibold text-foreground">
+                              {typeof event.duration_ms === "number" ? `${event.duration_ms} ms` : "—"}
+                            </span>
+                          </div>
+                          <div>
+                            Služby: <span className="font-semibold text-foreground">{event.service_count ?? "—"}</span>
+                          </div>
+                          <div>
+                            Podkategórie:{" "}
+                            <span className="font-semibold text-foreground">{event.subcategory_count ?? "—"}</span>
+                          </div>
+                        </div>
+                        {event.error ? <p className="mt-2 text-xs text-red-500">{event.error}</p> : null}
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Booking funnel eventy sa začnú zobrazovať po prvých interakciách zákazníkov vo verejnom bookingu.
+                    Zatiaľ nie sú dostupné žiadne rebuild eventy pre túto firmu.
                   </p>
                 )}
               </div>

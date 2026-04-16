@@ -29,6 +29,7 @@ const toastMocks = vi.hoisted(() => ({
 
 const firestoreMocks = vi.hoisted(() => ({
   getDoc: vi.fn(),
+  getDocs: vi.fn(),
   updateDoc: vi.fn(),
 }));
 
@@ -134,13 +135,25 @@ vi.mock("firebase/firestore", async () => {
 
   return {
     ...actual,
+    collection: (_db: unknown, collectionName: string) => ({
+      __collection: collectionName,
+      constraints: [],
+    }),
     doc: (_db: unknown, collectionName: string, id: string) => ({
       __collection: collectionName,
       id,
     }),
+    getDocs: firestoreMocks.getDocs,
     getDoc: firestoreMocks.getDoc,
+    limit: (value: number) => ({ type: "limit", value }),
+    orderBy: (field: string, direction: string) => ({ type: "orderBy", field, direction }),
+    query: (base: any, ...constraints: any[]) => ({
+      __collection: base?.__collection ?? "unknown",
+      constraints: [...(base?.constraints ?? []), ...constraints],
+    }),
     updateDoc: firestoreMocks.updateDoc,
     Timestamp,
+    where: (field: string, op: string, value: unknown) => ({ type: "where", field, op, value }),
   };
 });
 
@@ -159,6 +172,7 @@ describe("SettingsPage", () => {
     toastMocks.error.mockReset();
     toastMocks.warning.mockReset();
     firestoreMocks.getDoc.mockReset();
+    firestoreMocks.getDocs.mockReset();
     firestoreMocks.updateDoc.mockReset();
     functionMocks.saveSmtpConfig.mockReset();
     functionMocks.rebuildPublicSnapshot.mockReset();
@@ -202,7 +216,82 @@ describe("SettingsPage", () => {
         });
       }
 
+      if (docRef.__collection === "public_snapshots") {
+        return makeDocSnapshot({
+          id: docRef.id,
+          revision: 123456,
+          updated_at: "2026-04-16T10:00:00.000Z",
+          status: "ready",
+        });
+      }
+
+      if (docRef.__collection === "ops_health" && docRef.id === "snapshot_biz-1") {
+        return makeDocSnapshot({
+          id: docRef.id,
+          status: "ready",
+          updated_at: "2026-04-12T10:00:00.000Z",
+          last_success_at: "2026-04-12T10:00:00.000Z",
+          duration_ms: 6200,
+          service_count: 33,
+          subcategory_count: 14,
+          employee_count: 3,
+          business_hours_count: 7,
+          date_override_count: 1,
+          last_trigger_source: "services",
+        });
+      }
+
+      if (docRef.__collection === "ops_health" && docRef.id === "booking_funnel_biz-1") {
+        return makeDocSnapshot({
+          id: docRef.id,
+          total_events: 12,
+          last_event_name: "service_selected",
+          last_event_at: "2026-04-16T09:58:00.000Z",
+          counters: {
+            booking_started: 6,
+            category_selected: 4,
+            service_selected: 2,
+          },
+        });
+      }
+
       return makeDocSnapshot(undefined);
+    });
+
+    firestoreMocks.getDocs.mockImplementation(async (queryRef: { __collection: string }) => {
+      if (queryRef.__collection === "snapshot_rebuild_events") {
+        return {
+          docs: [
+            {
+              id: "evt-1",
+              data: () => ({
+                business_id: "biz-1",
+                created_at: "2026-04-16T09:57:00.000Z",
+                status: "failed",
+                error: "Test failure",
+                last_trigger_source: "services",
+                duration_ms: 7100,
+                service_count: 33,
+                subcategory_count: 14,
+              }),
+            },
+            {
+              id: "evt-2",
+              data: () => ({
+                business_id: "biz-1",
+                created_at: "2026-04-16T09:40:00.000Z",
+                status: "ready",
+                last_trigger_source: "service_subcategories",
+                duration_ms: 180,
+                service_count: 33,
+                subcategory_count: 14,
+              }),
+            },
+          ],
+        };
+      }
+
+      return { docs: [] };
     });
   });
 
@@ -213,6 +302,17 @@ describe("SettingsPage", () => {
     expect(screen.getByDisplayValue("+421900111222")).toBeInTheDocument();
     expect(await screen.findByDisplayValue("PAPI HAIR DESIGN")).toBeInTheDocument();
     expect(screen.getByDisplayValue("smtp.m1.websupport.sk")).toBeInTheDocument();
+  });
+
+  it("renders observability warnings and rebuild history", async () => {
+    render(<SettingsPage />);
+
+    expect(await screen.findByText("Vyžaduje pozornosť")).toBeInTheDocument();
+    expect(screen.getByText("Snapshot je starý")).toBeInTheDocument();
+    expect(screen.getByText("Snapshot rebuild je pomalý")).toBeInTheDocument();
+    expect(screen.getByText("História rebuildov")).toBeInTheDocument();
+    expect(screen.getByText("Test failure")).toBeInTheDocument();
+    expect(screen.getByTestId("snapshot-rebuild-events")).toBeInTheDocument();
   });
 
   it("saves the profile and refreshes auth data", async () => {
