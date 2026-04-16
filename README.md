@@ -60,7 +60,7 @@ React 18 + Vite 7 + TypeScript
     └── Cloud Functions            — Business logika, emaily, sync
 ```
 
-> Supabase bol kompletne odstránený (PR #1). Všetok backend bežia cez Firebase.
+> Backend a runtime vrstva bežia cez Firebase.
 
 ### Tok dát
 
