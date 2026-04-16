@@ -156,6 +156,21 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    match /service_subcategory_audit/{auditId} {
+      allow read: if resource.data.business_id is string && isOwnerOrAdmin(resource.data.business_id);
+      allow create, update, delete: if false;
+    }
+
+    match /snapshot_rebuild_events/{eventId} {
+      allow read: if resource.data.business_id is string && isOwnerOrAdmin(resource.data.business_id);
+      allow create, update, delete: if false;
+    }
+
+    match /booking_funnel_events/{eventId} {
+      allow read: if resource.data.business_id is string && isOwnerOrAdmin(resource.data.business_id);
+      allow create, update, delete: if false;
+    }
+
     match /customers/{customerId} {
       allow read: if resource.data.business_id is string && isStaff(resource.data.business_id);
       allow create: if request.resource.data.business_id is string &&

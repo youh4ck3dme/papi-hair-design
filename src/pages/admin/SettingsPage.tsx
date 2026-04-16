@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { db, functions, storage } from "@/integrations/firebase/config";
 import { doc, getDoc, updateDoc, setDoc, Timestamp } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
@@ -84,6 +84,7 @@ export default function SettingsPage() {
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [snapshotInfo, setSnapshotInfo] = useState<any>(null);
   const [snapshotHealth, setSnapshotHealth] = useState<any>(null);
+  const [bookingFunnelHealth, setBookingFunnelHealth] = useState<any>(null);
   const [licenseKey, setLicenseKey] = useState("");
   const [licenseState, setLicenseState] = useState<"idle" | "checking" | "ok" | "error">("idle");
   const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
@@ -143,19 +144,25 @@ export default function SettingsPage() {
     loadBusiness();
   }, [businessId]);
 
-  useEffect(() => {
-    const loadSnapshot = async () => {
-      try {
-        const snap = await getDoc(doc(db, "public_snapshots", businessId));
-        if (snap.exists()) setSnapshotInfo({ id: snap.id, ...snap.data() });
-        const health = await getDoc(doc(db, "ops_health", `snapshot_${businessId}`));
-        if (health.exists()) setSnapshotHealth({ id: health.id, ...health.data() });
-      } catch (err) {
-        console.error("Error loading snapshot:", err);
-      }
-    };
-    loadSnapshot();
+  const loadObservability = useCallback(async () => {
+    try {
+      const [snap, health, funnel] = await Promise.all([
+        getDoc(doc(db, "public_snapshots", businessId)),
+        getDoc(doc(db, "ops_health", `snapshot_${businessId}`)),
+        getDoc(doc(db, "ops_health", `booking_funnel_${businessId}`)),
+      ]);
+
+      if (snap.exists()) setSnapshotInfo({ id: snap.id, ...snap.data() });
+      if (health.exists()) setSnapshotHealth({ id: health.id, ...health.data() });
+      if (funnel.exists()) setBookingFunnelHealth({ id: funnel.id, ...funnel.data() });
+    } catch (err) {
+      console.error("Error loading snapshot observability:", err);
+    }
   }, [businessId]);
+
+  useEffect(() => {
+    void loadObservability();
+  }, [loadObservability]);
 
   const saveProfile = async () => {
     if (!profile) return;
@@ -336,8 +343,7 @@ export default function SettingsPage() {
       const { data } = await fn({ business_id: businessId });
       if (data?.success) {
         toast.success("Snapshot rebuild spustený");
-        const snap = await getDoc(doc(db, "public_snapshots", businessId));
-        if (snap.exists()) setSnapshotInfo({ id: snap.id, ...snap.data() });
+        await loadObservability();
       } else {
         toast.error("Snapshot rebuild zlyhal");
       }
@@ -402,6 +408,12 @@ export default function SettingsPage() {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+  const funnelCounters =
+    bookingFunnelHealth?.counters && typeof bookingFunnelHealth.counters === "object"
+      ? Object.entries(bookingFunnelHealth.counters as Record<string, unknown>)
+          .filter(([, value]) => typeof value === "number")
+          .sort((a, b) => Number(b[1]) - Number(a[1]))
+      : [];
 
   return (
     <div className="space-y-6 max-w-4xl animate-in fade-in duration-500">
@@ -645,15 +657,64 @@ export default function SettingsPage() {
                 </div>
               </div>
               {snapshotHealth && (
-                <div className="text-xs text-muted-foreground">
-                  Health: {snapshotHealth.status ?? "unknown"}
-                  {snapshotHealth.error ? ` • ${snapshotHealth.error}` : ""}
-                  {snapshotHealth.updated_at ? ` • ${new Date(snapshotHealth.updated_at).toLocaleString()}` : ""}
+                <div className="space-y-3 rounded-2xl border border-primary/10 bg-background/40 p-4 text-xs text-muted-foreground">
+                  <div>
+                    Health: {snapshotHealth.status ?? "unknown"}
+                    {snapshotHealth.error ? ` • ${snapshotHealth.error}` : ""}
+                    {snapshotHealth.updated_at ? ` • ${new Date(snapshotHealth.updated_at).toLocaleString()}` : ""}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <div>
+                      <div className="uppercase tracking-widest">Source</div>
+                      <div className="font-semibold text-foreground">{snapshotHealth.last_trigger_source ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="uppercase tracking-widest">Duration</div>
+                      <div className="font-semibold text-foreground">
+                        {typeof snapshotHealth.duration_ms === "number" ? `${snapshotHealth.duration_ms} ms` : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="uppercase tracking-widest">Služby</div>
+                      <div className="font-semibold text-foreground">{snapshotHealth.service_count ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="uppercase tracking-widest">Podkategórie</div>
+                      <div className="font-semibold text-foreground">{snapshotHealth.subcategory_count ?? "—"}</div>
+                    </div>
+                  </div>
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
                 Snapshot sa rebuilduje aj automaticky pri zmenách dát (biznis, služby, zamestnanci, hodiny, výnimky).
               </p>
+              <div className="rounded-2xl border border-primary/10 bg-background/40 p-4">
+                <div className="mb-3">
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground">Booking funnel</div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {bookingFunnelHealth?.last_event_name ?? "Zatiaľ bez eventov"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {bookingFunnelHealth?.last_event_at
+                      ? new Date(bookingFunnelHealth.last_event_at).toLocaleString()
+                      : "Žiadne dáta"}
+                  </div>
+                </div>
+                {funnelCounters.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                    {funnelCounters.slice(0, 6).map(([key, value]) => (
+                      <div key={key} className="rounded-xl border border-primary/5 bg-card/40 px-3 py-2">
+                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{key}</div>
+                        <div className="text-sm font-semibold text-foreground">{String(value)}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Booking funnel eventy sa začnú zobrazovať po prvých interakciách zákazníkov vo verejnom bookingu.
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

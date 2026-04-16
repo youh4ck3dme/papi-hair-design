@@ -7,6 +7,7 @@ import { contactSchema, ServiceRow, EmployeeRow, BookingResult, MembershipRow } 
 import { createBookingHold } from "@/integrations/firebase/createBookingHold";
 import { confirmBooking } from "@/integrations/firebase/confirmBooking";
 import { getRecaptchaToken } from "@/integrations/firebase/recaptcha";
+import { recordBookingFunnelEvent } from "@/integrations/firebase/recordBookingFunnelEvent";
 import {
     buildServiceSubcategoryOptions,
     filterServicesBySubcategoryOption,
@@ -181,19 +182,67 @@ export function useBookingForm(
     }, []);
 
     const handleSubmit = async (selectedTime: string | null, availableSlots: Date[], selectedEmployeeId?: string | null) => {
+        if (businessId) {
+            void recordBookingFunnelEvent({
+                business_id: businessId,
+                event_name: "contact_submit_started",
+                category,
+                subcategory: selectedSubcategoryOption?.name_sk ?? null,
+                service_id: selectedServiceId,
+                employee_id: selectedEmployeeId ?? null,
+                slot_at: selectedTime ?? null,
+            });
+        }
+
         if (!formData.gdpr) {
+            if (businessId) {
+                void recordBookingFunnelEvent({
+                    business_id: businessId,
+                    event_name: "contact_validation_failed",
+                    category,
+                    subcategory: selectedSubcategoryOption?.name_sk ?? null,
+                    service_id: selectedServiceId,
+                    employee_id: selectedEmployeeId ?? null,
+                    slot_at: selectedTime ?? null,
+                    error_code: "missing_gdpr",
+                });
+            }
             toast.error(t("booking.toastGdprRequired"));
             return;
         }
 
         const result = contactSchema.safeParse(formData);
         if (!result.success) {
+            if (businessId) {
+                void recordBookingFunnelEvent({
+                    business_id: businessId,
+                    event_name: "contact_validation_failed",
+                    category,
+                    subcategory: selectedSubcategoryOption?.name_sk ?? null,
+                    service_id: selectedServiceId,
+                    employee_id: selectedEmployeeId ?? null,
+                    slot_at: selectedTime ?? null,
+                    error_code: result.error.errors[0]?.path?.[0]?.toString() ?? "contact_schema",
+                });
+            }
             const errs: Record<string, string> = {};
             result.error.errors.forEach((e) => { if (e.path[0]) errs[e.path[0] as string] = e.message; });
             setContactErrors(errs);
             return;
         }
         if (!formData.terms) {
+            if (businessId) {
+                void recordBookingFunnelEvent({
+                    business_id: businessId,
+                    event_name: "contact_validation_failed",
+                    category,
+                    subcategory: selectedSubcategoryOption?.name_sk ?? null,
+                    service_id: selectedServiceId,
+                    employee_id: selectedEmployeeId ?? null,
+                    slot_at: selectedTime ?? null,
+                    error_code: "missing_terms",
+                });
+            }
             toast.error(t("booking.toastTermsRequired"));
             return;
         }
@@ -202,6 +251,18 @@ export function useBookingForm(
 
         const slotDate = availableSlots.find((s) => format(s, "HH:mm") === selectedTime);
         if (!slotDate) {
+            if (businessId) {
+                void recordBookingFunnelEvent({
+                    business_id: businessId,
+                    event_name: "booking_hold_failed",
+                    category,
+                    subcategory: selectedSubcategoryOption?.name_sk ?? null,
+                    service_id: selectedServiceId,
+                    employee_id: selectedEmployeeId ?? null,
+                    slot_at: selectedTime ?? null,
+                    error_code: "slot_missing",
+                });
+            }
             toast.error(t("booking.toastSlotTaken"));
             setSubmitting(false);
             return;
@@ -209,6 +270,18 @@ export function useBookingForm(
 
         try {
             if (!selectedServiceId) {
+                if (businessId) {
+                    void recordBookingFunnelEvent({
+                        business_id: businessId,
+                        event_name: "booking_hold_failed",
+                        category,
+                        subcategory: selectedSubcategoryOption?.name_sk ?? null,
+                        service_id: null,
+                        employee_id: selectedEmployeeId ?? null,
+                        slot_at: selectedTime ?? null,
+                        error_code: "missing_service",
+                    });
+                }
                 setSubmitting(false);
                 return;
             }
@@ -234,6 +307,16 @@ export function useBookingForm(
             });
 
             if (!hold.success || !hold.appointment_id) {
+                void recordBookingFunnelEvent({
+                    business_id: businessId,
+                    event_name: "booking_hold_failed",
+                    category,
+                    subcategory: selectedSubcategoryOption?.name_sk ?? null,
+                    service_id: selectedServiceId,
+                    employee_id: selectedEmployeeId ?? null,
+                    slot_at: slotDate.toISOString(),
+                    error_code: hold.error ?? "booking_hold_failed",
+                });
                 toast.error(hold.error || t("booking.toastServerError"));
                 setSubmitting(false);
                 return;
@@ -249,6 +332,16 @@ export function useBookingForm(
             });
 
             if (!confirm.success) {
+                void recordBookingFunnelEvent({
+                    business_id: businessId,
+                    event_name: "booking_confirm_failed",
+                    category,
+                    subcategory: selectedSubcategoryOption?.name_sk ?? null,
+                    service_id: selectedServiceId,
+                    employee_id: selectedEmployeeId ?? null,
+                    slot_at: slotDate.toISOString(),
+                    error_code: confirm.error ?? "booking_confirm_failed",
+                });
                 toast.error(confirm.error || t("booking.toastServerError"));
                 setSubmitting(false);
                 return;
@@ -266,6 +359,18 @@ export function useBookingForm(
             setBookingDone(true);
             toast.success(t("booking.toastSuccess"));
         } catch {
+            if (businessId) {
+                void recordBookingFunnelEvent({
+                    business_id: businessId,
+                    event_name: "booking_confirm_failed",
+                    category,
+                    subcategory: selectedSubcategoryOption?.name_sk ?? null,
+                    service_id: selectedServiceId,
+                    employee_id: selectedEmployeeId ?? null,
+                    slot_at: slotDate.toISOString(),
+                    error_code: "exception",
+                });
+            }
             toast.error(t("booking.toastServerError"));
         }
         setSubmitting(false);

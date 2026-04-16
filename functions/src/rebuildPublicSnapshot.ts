@@ -1,8 +1,8 @@
 import * as functions from "firebase-functions/v2";
 import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, CallableRequest } from "firebase-functions/v2/https";
-import { onDocumentWritten } from "firebase-functions/v2/firestore";
-import { buildAndWriteSnapshot } from "./publicSnapshotBuilder.js";
+import { onDocumentWrittenWithAuthContext } from "firebase-functions/v2/firestore";
+import { buildAndWriteSnapshot, writeSnapshotFailure, type SnapshotBuildContext } from "./publicSnapshotBuilder.js";
 
 interface RebuildSnapshotInput {
   business_id: string;
@@ -55,56 +55,105 @@ export const rebuildPublicSnapshot = functions.https.onCall(
 async function rebuildFromChange(
   before: FirebaseFirestore.DocumentSnapshot | undefined,
   after: FirebaseFirestore.DocumentSnapshot | undefined,
-  businessIdParam?: string
+  context: SnapshotBuildContext = {},
+  businessIdParam?: string,
 ) {
   const db = getFirestore();
   const businessId = resolveBusinessId(before, after, businessIdParam);
   if (!businessId) return;
   try {
-    await buildAndWriteSnapshot(db, businessId);
+    await buildAndWriteSnapshot(db, businessId, context);
   } catch (err: any) {
-    await db.collection("ops_health").doc(`snapshot_${businessId}`).set({
-      kind: "public_snapshot",
-      business_id: businessId,
-      status: "failed",
-      updated_at: new Date().toISOString(),
-      error: err?.message ?? "unknown error",
-    });
+    await writeSnapshotFailure(db, businessId, err, context);
     console.error("Snapshot rebuild failed", businessId, err);
   }
 }
 
-export const onBusinessWrite = onDocumentWritten(
+export const onBusinessWrite = onDocumentWrittenWithAuthContext(
   { region: "europe-west1", document: "businesses/{businessId}" },
-  async (event) => rebuildFromChange(event.data?.before, event.data?.after, event.params.businessId)
+  async (event) =>
+    rebuildFromChange(
+      event.data?.before,
+      event.data?.after,
+      {
+        source: "businesses",
+        trigger_document: event.document,
+        trigger_event_id: event.id,
+        trigger_auth_type: event.authType,
+        trigger_auth_id: event.authId ?? null,
+      },
+      event.params.businessId,
+    ),
 );
 
-export const onServiceWrite = onDocumentWritten(
+export const onServiceWrite = onDocumentWrittenWithAuthContext(
   { region: "europe-west1", document: "services/{serviceId}" },
-  async (event) => rebuildFromChange(event.data?.before, event.data?.after)
+  async (event) =>
+    rebuildFromChange(event.data?.before, event.data?.after, {
+      source: "services",
+      trigger_document: event.document,
+      trigger_event_id: event.id,
+      trigger_auth_type: event.authType,
+      trigger_auth_id: event.authId ?? null,
+    }),
 );
 
-export const onServiceSubcategoryWrite = onDocumentWritten(
+export const onServiceSubcategoryWrite = onDocumentWrittenWithAuthContext(
   { region: "europe-west1", document: "service_subcategories/{subcategoryId}" },
-  async (event) => rebuildFromChange(event.data?.before, event.data?.after)
+  async (event) =>
+    rebuildFromChange(event.data?.before, event.data?.after, {
+      source: "service_subcategories",
+      trigger_document: event.document,
+      trigger_event_id: event.id,
+      trigger_auth_type: event.authType,
+      trigger_auth_id: event.authId ?? null,
+    }),
 );
 
-export const onEmployeeWrite = onDocumentWritten(
+export const onEmployeeWrite = onDocumentWrittenWithAuthContext(
   { region: "europe-west1", document: "employees/{employeeId}" },
-  async (event) => rebuildFromChange(event.data?.before, event.data?.after)
+  async (event) =>
+    rebuildFromChange(event.data?.before, event.data?.after, {
+      source: "employees",
+      trigger_document: event.document,
+      trigger_event_id: event.id,
+      trigger_auth_type: event.authType,
+      trigger_auth_id: event.authId ?? null,
+    }),
 );
 
-export const onBusinessHoursWrite = onDocumentWritten(
+export const onBusinessHoursWrite = onDocumentWrittenWithAuthContext(
   { region: "europe-west1", document: "business_hours/{docId}" },
-  async (event) => rebuildFromChange(event.data?.before, event.data?.after)
+  async (event) =>
+    rebuildFromChange(event.data?.before, event.data?.after, {
+      source: "business_hours",
+      trigger_document: event.document,
+      trigger_event_id: event.id,
+      trigger_auth_type: event.authType,
+      trigger_auth_id: event.authId ?? null,
+    }),
 );
 
-export const onDateOverrideWrite = onDocumentWritten(
+export const onDateOverrideWrite = onDocumentWrittenWithAuthContext(
   { region: "europe-west1", document: "business_date_overrides/{docId}" },
-  async (event) => rebuildFromChange(event.data?.before, event.data?.after)
+  async (event) =>
+    rebuildFromChange(event.data?.before, event.data?.after, {
+      source: "business_date_overrides",
+      trigger_document: event.document,
+      trigger_event_id: event.id,
+      trigger_auth_type: event.authType,
+      trigger_auth_id: event.authId ?? null,
+    }),
 );
 
-export const onEmployeeServiceWrite = onDocumentWritten(
+export const onEmployeeServiceWrite = onDocumentWrittenWithAuthContext(
   { region: "europe-west1", document: "employee_services/{docId}" },
-  async (event) => rebuildFromChange(event.data?.before, event.data?.after)
+  async (event) =>
+    rebuildFromChange(event.data?.before, event.data?.after, {
+      source: "employee_services",
+      trigger_document: event.document,
+      trigger_event_id: event.id,
+      trigger_auth_type: event.authType,
+      trigger_auth_id: event.authId ?? null,
+    }),
 );
