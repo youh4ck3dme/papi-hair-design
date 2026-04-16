@@ -78,8 +78,7 @@ function useSpeedInsightsEnabled() {
       typeof globalThis.window !== "undefined"
         ? globalThis.window.location.hostname
         : "";
-    const isVercel =
-      host.endsWith(".vercel.app") || import.meta.env.VITE_VERCEL === "true";
+    const isVercel = host.endsWith(".vercel.app");
     setEnabled(!!isVercel);
   }, []);
   return enabled;
