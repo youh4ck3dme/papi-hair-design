@@ -6,9 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { ThemeProvider } from "next-themes";
-import { SpeedInsights } from "@vercel/speed-insights/react";
 
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect, type ComponentType } from "react";
 import { usePageAnalytics } from "@/hooks/usePageAnalytics";
 import { Loader2 } from "lucide-react";
 
@@ -84,6 +83,36 @@ function useSpeedInsightsEnabled() {
     setEnabled(!!isVercel);
   }, []);
   return enabled;
+}
+
+function VercelSpeedInsights({ enabled }: { enabled: boolean }) {
+  const [SpeedInsightsComponent, setSpeedInsightsComponent] = useState<ComponentType | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setSpeedInsightsComponent(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void import("@vercel/speed-insights/react")
+      .then((mod) => {
+        if (!cancelled) {
+          setSpeedInsightsComponent(() => mod.SpeedInsights);
+        }
+      })
+      .catch((error) => {
+        console.warn("Speed Insights disabled: failed to load Vercel-only module", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  if (!enabled || !SpeedInsightsComponent) return null;
+  return <SpeedInsightsComponent />;
 }
 
 function AnalyticsTracker() {
@@ -215,7 +244,7 @@ const App = () => {
               </Suspense>
             </AuthProvider>
           </BrowserRouter>
-          {speedInsightsEnabled && <SpeedInsights />}
+          <VercelSpeedInsights enabled={speedInsightsEnabled} />
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>
