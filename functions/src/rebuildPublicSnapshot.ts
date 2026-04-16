@@ -1,7 +1,7 @@
 import * as functions from "firebase-functions/v2";
 import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, CallableRequest } from "firebase-functions/v2/https";
-import { onDocumentWrittenWithAuthContext } from "firebase-functions/v2/firestore";
+import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { buildAndWriteSnapshot, writeSnapshotFailure, type SnapshotBuildContext } from "./publicSnapshotBuilder.js";
 
 interface RebuildSnapshotInput {
@@ -69,7 +69,7 @@ async function rebuildFromChange(
   }
 }
 
-export const onBusinessWrite = onDocumentWrittenWithAuthContext(
+export const onBusinessWrite = onDocumentWritten(
   { region: "europe-west1", document: "businesses/{businessId}" },
   async (event) =>
     rebuildFromChange(
@@ -79,81 +79,67 @@ export const onBusinessWrite = onDocumentWrittenWithAuthContext(
         source: "businesses",
         trigger_document: event.document,
         trigger_event_id: event.id,
-        trigger_auth_type: event.authType,
-        trigger_auth_id: event.authId ?? null,
       },
       event.params.businessId,
     ),
 );
 
-export const onServiceWrite = onDocumentWrittenWithAuthContext(
+export const onServiceWrite = onDocumentWritten(
   { region: "europe-west1", document: "services/{serviceId}" },
   async (event) =>
     rebuildFromChange(event.data?.before, event.data?.after, {
       source: "services",
       trigger_document: event.document,
       trigger_event_id: event.id,
-      trigger_auth_type: event.authType,
-      trigger_auth_id: event.authId ?? null,
     }),
 );
 
-export const onServiceSubcategoryWrite = onDocumentWrittenWithAuthContext(
+export const onServiceSubcategoryWrite = onDocumentWritten(
   { region: "europe-west1", document: "service_subcategories/{subcategoryId}" },
   async (event) =>
     rebuildFromChange(event.data?.before, event.data?.after, {
       source: "service_subcategories",
       trigger_document: event.document,
       trigger_event_id: event.id,
-      trigger_auth_type: event.authType,
-      trigger_auth_id: event.authId ?? null,
     }),
 );
 
-export const onEmployeeWrite = onDocumentWrittenWithAuthContext(
+export const onEmployeeWrite = onDocumentWritten(
   { region: "europe-west1", document: "employees/{employeeId}" },
   async (event) =>
     rebuildFromChange(event.data?.before, event.data?.after, {
       source: "employees",
       trigger_document: event.document,
       trigger_event_id: event.id,
-      trigger_auth_type: event.authType,
-      trigger_auth_id: event.authId ?? null,
     }),
 );
 
-export const onBusinessHoursWrite = onDocumentWrittenWithAuthContext(
+export const onBusinessHoursWrite = onDocumentWritten(
   { region: "europe-west1", document: "business_hours/{docId}" },
   async (event) =>
     rebuildFromChange(event.data?.before, event.data?.after, {
       source: "business_hours",
       trigger_document: event.document,
       trigger_event_id: event.id,
-      trigger_auth_type: event.authType,
-      trigger_auth_id: event.authId ?? null,
     }),
 );
 
-export const onDateOverrideWrite = onDocumentWrittenWithAuthContext(
+export const onDateOverrideWrite = onDocumentWritten(
   { region: "europe-west1", document: "business_date_overrides/{docId}" },
   async (event) =>
     rebuildFromChange(event.data?.before, event.data?.after, {
       source: "business_date_overrides",
       trigger_document: event.document,
       trigger_event_id: event.id,
-      trigger_auth_type: event.authType,
-      trigger_auth_id: event.authId ?? null,
     }),
 );
 
-export const onEmployeeServiceWrite = onDocumentWrittenWithAuthContext(
+export const onEmployeeServiceWrite = onDocumentWritten(
   { region: "europe-west1", document: "employee_services/{docId}" },
   async (event) =>
     rebuildFromChange(event.data?.before, event.data?.after, {
       source: "employee_services",
       trigger_document: event.document,
       trigger_event_id: event.id,
-      trigger_auth_type: event.authType,
-      trigger_auth_id: event.authId ?? null,
     }),
 );

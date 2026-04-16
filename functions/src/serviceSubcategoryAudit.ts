@@ -1,5 +1,5 @@
 import { getFirestore } from "firebase-admin/firestore";
-import { onDocumentWrittenWithAuthContext } from "firebase-functions/v2/firestore";
+import { onDocumentWritten } from "firebase-functions/v2/firestore";
 
 type AuditAction = "create" | "update" | "delete" | "reorder";
 
@@ -116,7 +116,7 @@ export function buildServiceSubcategoryAuditEntry(
   };
 }
 
-export const onServiceSubcategoryAuditEvent = onDocumentWrittenWithAuthContext(
+export const onServiceSubcategoryAuditEvent = onDocumentWritten(
   { region: "europe-west1", document: "service_subcategories/{subcategoryId}" },
   async (event) => {
     const db = getFirestore();
@@ -128,8 +128,8 @@ export const onServiceSubcategoryAuditEvent = onDocumentWrittenWithAuthContext(
 
     await db.collection("service_subcategory_audit").add({
       ...auditEntry,
-      actor_auth_type: event.authType,
-      actor_auth_id: event.authId ?? null,
+      actor_auth_type: null,
+      actor_auth_id: null,
       trigger_event_id: event.id,
       created_at: new Date().toISOString(),
     });
