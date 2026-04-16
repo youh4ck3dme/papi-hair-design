@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  fromCalendarWallClockDateToUtcIso,
   formatTimeRangeFromUtc,
+  getBusinessDayUtcRange,
   normalizeAppointmentEvent,
   parseApiDateToUtc,
+  toCalendarWallClockDate,
 } from "@/lib/calendarEventUtils";
 
 describe("calendarEventUtils", () => {
@@ -38,5 +41,32 @@ describe("calendarEventUtils", () => {
     expect(normalized.displayTitle).toBe("Neznámy klient • Bez názvu služby");
     expect(normalized.employeeName).toBe("Nepriradený zamestnanec");
     expect(normalized.displayTimeRange).toBe("10:00 - 10:25");
+  });
+
+  it("converts stored UTC ISO to a stable business wall-clock date", () => {
+    const localDate = toCalendarWallClockDate("2026-01-15T11:00:00.000Z", "Europe/Bratislava");
+
+    expect(localDate.getFullYear()).toBe(2026);
+    expect(localDate.getMonth()).toBe(0);
+    expect(localDate.getDate()).toBe(15);
+    expect(localDate.getHours()).toBe(12);
+    expect(localDate.getMinutes()).toBe(0);
+  });
+
+  it("serializes a wall-clock date back to UTC in the business timezone", () => {
+    const selectedSlot = new Date(2026, 0, 15, 12, 0, 0, 0);
+
+    expect(fromCalendarWallClockDateToUtcIso(selectedSlot, "Europe/Bratislava")).toBe(
+      "2026-01-15T11:00:00.000Z",
+    );
+  });
+
+  it("computes UTC day boundaries for the business timezone", () => {
+    const range = getBusinessDayUtcRange(new Date(2026, 0, 15, 12, 0, 0, 0), "Europe/Bratislava");
+
+    expect(range).toEqual({
+      startUtc: "2026-01-14T23:00:00.000Z",
+      endUtc: "2026-01-15T23:00:00.000Z",
+    });
   });
 });

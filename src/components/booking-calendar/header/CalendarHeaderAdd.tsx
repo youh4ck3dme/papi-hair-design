@@ -14,7 +14,7 @@ export function CalendarHeaderAdd({ className }: { className?: string }) {
     const start = startOfDay(date);
     start.setHours(CALENDAR_START_HOUR, 0, 0, 0);
     const end = addMinutes(start, 30);
-    onSelectSlot({ start, end });
+    onSelectSlot({ start, end, intent: "book" });
   };
 
   if (!selectable) return null;
