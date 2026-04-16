@@ -681,7 +681,7 @@ export default function ServicesPage() {
   };
 
   return (
-    <div className="animate-in fade-in space-y-6 duration-500">
+    <div className="animate-in fade-in space-y-6 duration-500" data-testid="admin-services-page">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-3xl font-bold tracking-tight text-transparent">

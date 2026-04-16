@@ -61,6 +61,7 @@ export function ServiceSelection({
                     return (
                         <button
                             key={cat}
+                            data-testid={`booking-category-${cat}`}
                             onClick={() => {
                                 if (category === cat && expandedCategory === cat) {
                                     setExpandedCategory(null);
@@ -103,6 +104,7 @@ export function ServiceSelection({
                                 <button
                                     key={option.key}
                                     type="button"
+                                    data-testid={`booking-subcategory-${option.key}`}
                                     onClick={() => {
                                         setSubcategory(option.key);
                                         setSelectedServiceId(null);
@@ -132,6 +134,7 @@ export function ServiceSelection({
                                 <button
                                     type="button"
                                     key={srv.id}
+                                    data-testid={`booking-service-${srv.id}`}
                                     onClick={() => setSelectedServiceId(srv.id)}
                                     className={`w-full text-left border rounded-2xl p-4 flex items-center gap-4 cursor-pointer transition-all duration-200 group ${isSelected
                                         ? "border-[#C9A84C] bg-black shadow-[0_0_20px_rgba(201,168,76,0.3)] ring-1 ring-[#C9A84C]/40"
