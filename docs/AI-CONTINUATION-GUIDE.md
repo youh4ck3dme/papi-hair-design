@@ -180,10 +180,9 @@ Auth: Firebase Auth (Email + Google)
 ## 🔗 Resources
 
 **Documentation:**
-- `docs/CURRENT_PROJECT_STATE.md` – Project snapshot
-- `docs/ARCHITECTURE.md` – Technical details
-- `docs/DEVELOPMENT-SETUP.md` – Dev environment
-- `docs/MIGRATION-FIREBASE.md` – Supabase → Firebase history
+- `README.md` – Project snapshot
+- `docs/TARGET-ARCHITECTURE-GAP-ANALYSIS.md` – Technical details
+- `docs/POST-RELEASE-SMOKE-CHECKLIST.md` – Release verification
 
 **Config Files:**
 - `firebase.json` – Hosting + Functions config

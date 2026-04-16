@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { EmployeeRow, MembershipRow, ServiceRow } from "@/components/booking/types";
+import type { ServiceSubcategoryRow } from "@/lib/serviceSubcategories";
 import { useBookingForm } from "./useBookingForm";
 
 const mockUseAuth = vi.fn();
@@ -67,6 +68,7 @@ const baseBusiness = {
 };
 
 const memberships: MembershipRow[] = [];
+const serviceSubcategories: ServiceSubcategoryRow[] = [];
 
 describe("useBookingForm", () => {
   beforeEach(() => {
@@ -101,7 +103,7 @@ describe("useBookingForm", () => {
     };
 
     const { result } = renderHook(() =>
-      useBookingForm(services, employees, baseBusiness, employeeServiceMap, memberships)
+      useBookingForm(services, serviceSubcategories, employees, baseBusiness, employeeServiceMap, memberships)
     );
 
     expect(result.current.selectedEmployeeId).toBeNull();
@@ -120,7 +122,7 @@ describe("useBookingForm", () => {
     const employees = [makeEmployee({ id: "emp-1" })];
 
     const { result } = renderHook(() =>
-      useBookingForm(services, employees, baseBusiness, {}, memberships)
+      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
     );
 
     act(() => {
@@ -149,7 +151,7 @@ describe("useBookingForm", () => {
     ];
 
     const { result } = renderHook(() =>
-      useBookingForm(services, employees, baseBusiness, {}, memberships)
+      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
     );
 
     act(() => {
@@ -199,7 +201,7 @@ describe("useBookingForm", () => {
     const employees = [makeEmployee({ id: "emp-only", display_name: "Only One" })];
 
     const { result } = renderHook(() =>
-      useBookingForm(services, employees, baseBusiness, {}, memberships)
+      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
     );
 
     act(() => {
@@ -209,5 +211,33 @@ describe("useBookingForm", () => {
     await waitFor(() => {
       expect(result.current.selectedEmployeeId).toBeNull();
     });
+  });
+
+  it("auto-selects the only available managed subcategory and filters services by it", async () => {
+    const services = [
+      makeService({ id: "svc-1", name_sk: "Dámsky strih", subcategory: "Strih", subcategory_id: "sub-1" }),
+    ];
+    const subcategories: ServiceSubcategoryRow[] = [
+      {
+        id: "sub-1",
+        business_id: "biz-1",
+        category: "damske",
+        name_sk: "Strih",
+        slug: "strih",
+        sort_order: 100,
+        is_active: true,
+      },
+    ];
+
+    const { result } = renderHook(() =>
+      useBookingForm(services, subcategories, [], baseBusiness, {}, memberships)
+    );
+
+    await waitFor(() => {
+      expect(result.current.subcategoryOptions).toHaveLength(1);
+      expect(result.current.subcategory).toBe("subcategory:sub-1");
+    });
+
+    expect(result.current.filteredServices.map((service) => service.id)).toEqual(["svc-1"]);
   });
 });

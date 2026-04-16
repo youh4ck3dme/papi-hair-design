@@ -1,22 +1,18 @@
 import { ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export default function TermsOfService() {
-  const navigate = useNavigate();
-
   return (
     <div className="min-h-screen bg-white py-20 px-4 font-sans selection:bg-black selection:text-white">
       <div className="max-w-3xl mx-auto">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 font-black uppercase text-sm hover:text-red-600 transition-colors mb-12 min-h-[44px]"
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 font-black uppercase text-sm hover:text-red-600 transition-colors mb-12 min-h-[44px]"
         >
-          <ArrowLeft size={16} /> Späť
-        </button>
+          <ArrowLeft size={16} /> Späť na úvod
+        </Link>
 
-        <h1 className="text-4xl md:text-6xl font-black uppercase mb-8 leading-none">
-          Obchodné <span className="text-red-600">podmienky</span>
-        </h1>
+        <h1 className="text-4xl md:text-6xl font-black uppercase mb-8 leading-none">Zmluvné podmienky</h1>
 
         <div className="border-l-4 border-black pl-4 mb-8 font-bold text-sm text-gray-500 uppercase">
           Posledná aktualizácia: 9. apríl 2026
@@ -117,6 +113,13 @@ export default function TermsOfService() {
             <div className="mt-4 border-4 border-black bg-yellow-400 p-6 font-black text-lg">
               booking@papihairdesign.sk
             </div>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">9. Súvisiace dokumenty</h2>
+            <Link to="/privacy" className="inline-flex min-h-[44px] items-center font-black uppercase text-sm underline decoration-2 underline-offset-4 hover:text-red-600 transition-colors">
+              Zásady ochrany osobných údajov
+            </Link>
           </section>
         </div>
       </div>

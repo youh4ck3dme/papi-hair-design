@@ -5,6 +5,7 @@ import BookingPage from "./BookingPage";
 const bookingDataState = vi.hoisted(() => ({
   value: {
     services: [],
+    serviceSubcategories: [],
     employees: [],
     business: { id: "biz-1", name: "PHD" },
     businessHourEntries: [],
@@ -42,7 +43,8 @@ const bookingFormState = vi.hoisted(() => ({
     submitting: false,
     bookingDone: false,
     bookingResult: null,
-    subcategories: [],
+    subcategoryOptions: [],
+    showSubcategoryStep: false,
     filteredServices: [],
     selectedService: {
       id: "svc-1",
@@ -177,4 +179,3 @@ describe("BookingPage stylist step flow", () => {
     expect(screen.getByTestId("date-time-selection")).toBeInTheDocument();
   });
 });
-

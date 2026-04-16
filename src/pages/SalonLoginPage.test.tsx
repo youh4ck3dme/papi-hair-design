@@ -36,8 +36,8 @@ describe("SalonLoginPage", () => {
   it("renders all three staff profile cards", async () => {
     await renderPage();
     expect(screen.getByText("Papi")).toBeInTheDocument();
-    expect(screen.getByText("Miska")).toBeInTheDocument();
-    expect(screen.getByText("Mato")).toBeInTheDocument();
+    expect(screen.getByText("Miška")).toBeInTheDocument();
+    expect(screen.getByText("Maťo")).toBeInTheDocument();
   });
 
   it("renders role labels for each profile", async () => {

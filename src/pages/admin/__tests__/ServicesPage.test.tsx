@@ -16,12 +16,12 @@ const firestoreMocks = vi.hoisted(() => ({
   addDoc: vi.fn(),
   updateDoc: vi.fn(),
   deleteDoc: vi.fn(),
+  writeBatch: vi.fn(),
 }));
-
-const sortServicesByCanonicalOrderMock = vi.hoisted(() => vi.fn((items: any[]) => items));
 
 const fixtures = vi.hoisted(() => ({
   services: [] as any[],
+  serviceSubcategories: [] as any[],
   appointmentsForDelete: [] as any[],
 }));
 
@@ -31,10 +31,6 @@ vi.mock("@/hooks/useBusiness", () => ({
 
 vi.mock("sonner", () => ({
   toast: toastMocks,
-}));
-
-vi.mock("@/lib/priceListOrder", () => ({
-  sortServicesByCanonicalOrder: sortServicesByCanonicalOrderMock,
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
@@ -81,6 +77,7 @@ vi.mock("firebase/firestore", async () => {
     addDoc: firestoreMocks.addDoc,
     updateDoc: firestoreMocks.updateDoc,
     deleteDoc: firestoreMocks.deleteDoc,
+    writeBatch: firestoreMocks.writeBatch,
   };
 });
 
@@ -106,7 +103,7 @@ describe("ServicesPage", () => {
     firestoreMocks.addDoc.mockReset();
     firestoreMocks.updateDoc.mockReset();
     firestoreMocks.deleteDoc.mockReset();
-    sortServicesByCanonicalOrderMock.mockClear();
+    firestoreMocks.writeBatch.mockReset();
 
     businessState.value = { businessId: "biz-1" };
 
@@ -118,6 +115,7 @@ describe("ServicesPage", () => {
         buffer_minutes: 5,
         price: 18,
         is_active: true,
+        business_id: "biz-1",
         category: "panske",
         description_sk: "Klasický strih",
       },
@@ -128,10 +126,12 @@ describe("ServicesPage", () => {
         buffer_minutes: 0,
         price: 45,
         is_active: false,
+        business_id: "biz-1",
         category: "damske",
         description_sk: null,
       },
     ];
+    fixtures.serviceSubcategories = [];
     fixtures.appointmentsForDelete = [];
 
     vi.stubGlobal("confirm", vi.fn(() => true));
@@ -139,6 +139,7 @@ describe("ServicesPage", () => {
     firestoreMocks.getDocs.mockImplementation(async (input: any) => {
       const collectionName = input?.__collection;
       if (collectionName === "services") return makeSnapshot(fixtures.services);
+      if (collectionName === "service_subcategories") return makeSnapshot(fixtures.serviceSubcategories);
       if (collectionName === "appointments") return makeSnapshot(fixtures.appointmentsForDelete);
       return makeSnapshot([]);
     });
@@ -150,6 +151,37 @@ describe("ServicesPage", () => {
     firestoreMocks.updateDoc.mockResolvedValue(undefined);
     firestoreMocks.deleteDoc.mockImplementation(async (target: any) => {
       fixtures.services = fixtures.services.filter((service) => service.id !== target?.id);
+    });
+    firestoreMocks.writeBatch.mockImplementation(() => {
+      const operations: Array<() => void> = [];
+      return {
+        update: (target: any, payload: any) => {
+          operations.push(() => {
+            if (target?.__collection === "services") {
+              fixtures.services = fixtures.services.map((service) =>
+                service.id === target.id ? { ...service, ...payload } : service,
+              );
+            }
+            if (target?.__collection === "service_subcategories") {
+              fixtures.serviceSubcategories = fixtures.serviceSubcategories.map((subcategory) =>
+                subcategory.id === target.id ? { ...subcategory, ...payload } : subcategory,
+              );
+            }
+          });
+        },
+        delete: (target: any) => {
+          operations.push(() => {
+            if (target?.__collection === "service_subcategories") {
+              fixtures.serviceSubcategories = fixtures.serviceSubcategories.filter(
+                (subcategory) => subcategory.id !== target.id,
+              );
+            }
+          });
+        },
+        commit: async () => {
+          operations.forEach((operation) => operation());
+        },
+      };
     });
   });
 
@@ -179,6 +211,24 @@ describe("ServicesPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Pridať službu/i }));
     expect(screen.getByText("Pridať novú službu")).toBeInTheDocument();
+  });
+
+  it("renders managed subcategory groups when definitions exist", async () => {
+    fixtures.serviceSubcategories = [
+      {
+        id: "sub-1",
+        business_id: "biz-1",
+        category: "damske",
+        name_sk: "Balayage",
+        slug: "balayage",
+        sort_order: 100,
+        is_active: true,
+      },
+    ];
+
+    render(<ServicesPage />);
+
+    expect(await screen.findByText("Balayage")).toBeInTheDocument();
   });
 
   it("opens create dialog from empty state CTA", async () => {
@@ -314,9 +364,11 @@ describe("ServicesPage", () => {
     await waitFor(() => expect(toastMocks.error).toHaveBeenCalledWith("Odstránenie zlyhalo"));
   });
 
-  it("calls canonical sort helper on load", async () => {
+  it("opens create subcategory dialog from top action", async () => {
     render(<ServicesPage />);
     await screen.findByText("Služby");
-    expect(sortServicesByCanonicalOrderMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: /Pridať podkategóriu/i }));
+    expect(screen.getByRole("heading", { name: "Pridať podkategóriu" })).toBeInTheDocument();
   });
 });

@@ -4,7 +4,7 @@ import { logger } from "firebase-functions";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { requireAuth, requireMembership } from "./guards";
-import { buildAndWriteSnapshot } from "./rebuildPublicSnapshot";
+import { buildAndWriteSnapshot } from "./publicSnapshotBuilder";
 
 interface EnforceSalonRolesData {
   business_id?: string;

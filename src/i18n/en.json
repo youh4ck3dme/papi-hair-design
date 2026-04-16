@@ -55,6 +55,7 @@
   "booking": {
     "step1": "Select category",
     "step2": "Select service",
+    "subcategoryTitle": "Select subcategory",
     "step3": "Select stylist",
     "employeeRole": "Stylist",
     "step4": "Select date",

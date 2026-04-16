@@ -2,11 +2,23 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ServiceSelection } from "./ServiceSelection";
 import type { ServiceRow } from "./types";
+import type { ServiceSubcategoryOption } from "@/lib/serviceSubcategories";
 
 vi.mock("@/components/booking/BookingUI", () => ({
   GoldText: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-  StepHeader: ({ num, title }: { num: string; title: string }) => (
-    <div data-testid={`step-header-${num}`}>{title}</div>
+  StepHeader: ({
+    num,
+    title,
+    extra,
+  }: {
+    num: string;
+    title: string;
+    extra?: React.ReactNode;
+  }) => (
+    <div data-testid={`step-header-${num}`}>
+      <span>{title}</span>
+      {extra}
+    </div>
   ),
   RadioIcon: ({ selected }: { selected: boolean }) => (
     <span data-testid="radio-icon" data-selected={selected} />
@@ -32,7 +44,8 @@ const defaultProps = {
   setCategory: vi.fn(),
   subcategory: null as string | null,
   setSubcategory: vi.fn(),
-  subcategories: [] as string[],
+  subcategoryOptions: [] as ServiceSubcategoryOption[],
+  showSubcategoryStep: false,
   filteredServices: [] as ServiceRow[],
   selectedServiceId: null as string | null,
   setSelectedServiceId: vi.fn(),
@@ -67,6 +80,32 @@ describe("ServiceSelection", () => {
     expect(setCategory).toHaveBeenCalledWith("panske");
   });
 
+  it("renders subcategory buttons when the category contains grouped services", () => {
+    render(
+      <ServiceSelection
+        {...defaultProps}
+        category="damske"
+        showSubcategoryStep
+        subcategoryOptions={[
+          {
+            key: "subcategory:strih",
+            id: "sub-1",
+            category: "damske",
+            name_sk: "Strih",
+            slug: "strih",
+            sort_order: 100,
+            isFallback: false,
+            isUncategorized: false,
+            serviceCount: 1,
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /dámske/i }));
+    expect(screen.getByRole("button", { name: "Strih" })).toBeInTheDocument();
+  });
+
   it("shows service list when category is expanded and services exist", () => {
     const services = [
       makeService({ id: "svc-1", name_sk: "Dámsky strih", duration_minutes: 45 }),
@@ -79,6 +118,7 @@ describe("ServiceSelection", () => {
         filteredServices={services}
       />
     );
+    fireEvent.click(screen.getByRole("button", { name: /dámske/i }));
     expect(screen.getByText("Dámsky strih")).toBeInTheDocument();
     expect(screen.getByText("Farbenie")).toBeInTheDocument();
   });
@@ -94,6 +134,7 @@ describe("ServiceSelection", () => {
         setSelectedServiceId={setSelectedServiceId}
       />
     );
+    fireEvent.click(screen.getByRole("button", { name: /dámske/i }));
     fireEvent.click(screen.getByText("Dámsky strih"));
     expect(setSelectedServiceId).toHaveBeenCalledWith("svc-1");
   });

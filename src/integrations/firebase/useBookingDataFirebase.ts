@@ -12,6 +12,10 @@ import { auth, db } from "./config";
 import { ServiceRow, EmployeeRow, MembershipRow } from "@/components/booking/types";
 import { type BusinessHourEntry, type DateOverrideEntry } from "@/lib/availability";
 import { DEFAULT_BUSINESS_ID, withBusinessIdFallbacks } from "@/lib/businessIds";
+import {
+    sortServiceSubcategories,
+    type ServiceSubcategoryRow,
+} from "@/lib/serviceSubcategories";
 
 export interface BusinessData {
     id: string;
@@ -92,6 +96,7 @@ async function enrichEmployeesWithProfilePhoto(employees: EmployeeRow[]): Promis
 
 export function useBookingDataFirebase() {
     const [services, setServices] = useState<ServiceRow[]>([]);
+    const [serviceSubcategories, setServiceSubcategories] = useState<ServiceSubcategoryRow[]>([]);
     const [employees, setEmployees] = useState<EmployeeRow[]>([]);
     const [business, setBusiness] = useState<BusinessData | null>(null);
     const [businessHourEntries, setBusinessHourEntries] = useState<BusinessHourEntry[]>([]);
@@ -149,6 +154,12 @@ export function useBookingDataFirebase() {
                                 return (a.name_sk ?? "").localeCompare(b.name_sk ?? "", "sk");
                             })
                     );
+                    const snapshotSubcategories = Array.isArray(snap.service_subcategories)
+                        ? sortServiceSubcategories(
+                            (snap.service_subcategories ?? []).map((d: any) => ({ ...d, id: d.id } as ServiceSubcategoryRow)),
+                        )
+                        : [];
+                    setServiceSubcategories(snapshotSubcategories);
                     const snapshotEmployees = (snap.employees ?? [])
                         .map((d: any) => ({ ...d, id: d.id } as EmployeeRow))
                         .sort((a: any, b: any) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"));
@@ -174,6 +185,22 @@ export function useBookingDataFirebase() {
                         }))
                     );
                     setEmployeeServiceMap(snap.employee_service_map ?? {});
+
+                    if (snapshotSubcategories.length === 0) {
+                        try {
+                            const liveSubcategoriesSnap = await getDocs(query(
+                                collection(db, "service_subcategories"),
+                                where("business_id", "==", activeBusinessId),
+                                where("is_active", "==", true),
+                            ));
+
+                            setServiceSubcategories(sortServiceSubcategories(
+                                liveSubcategoriesSnap.docs.map((d) => ({ ...d.data(), id: d.id } as ServiceSubcategoryRow)),
+                            ));
+                        } catch (subcategoryError) {
+                            console.warn("useBookingDataFirebase: live service subcategories unavailable", subcategoryError);
+                        }
+                    }
                 } else {
                     // Fallback to live collections
                     let businessSnap = null;
@@ -190,10 +217,15 @@ export function useBookingDataFirebase() {
                         businessSnap = await getDoc(doc(db, "businesses", activeBusinessId));
                     }
 
-                    const [bizSnap, svcSnap, empSnap, bhSnap, bdoSnap] = await Promise.all([
+                    const [bizSnap, svcSnap, subcategorySnap, empSnap, bhSnap, bdoSnap] = await Promise.all([
                         Promise.resolve(businessSnap),
                         getDocs(query(
                             collection(db, "services"),
+                            where("business_id", "==", activeBusinessId),
+                            where("is_active", "==", true)
+                        )),
+                        getDocs(query(
+                            collection(db, "service_subcategories"),
                             where("business_id", "==", activeBusinessId),
                             where("is_active", "==", true)
                         )),
@@ -235,6 +267,9 @@ export function useBookingDataFirebase() {
                                 return (a.name_sk ?? "").localeCompare(b.name_sk ?? "", "sk");
                             })
                     );
+                    setServiceSubcategories(sortServiceSubcategories(
+                        subcategorySnap.docs.map(d => ({ ...d.data(), id: d.id } as ServiceSubcategoryRow)),
+                    ));
                     const liveEmployees = empSnap.docs
                         .map(d => ({ ...d.data(), id: d.id } as EmployeeRow))
                         .sort((a, b) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"));
@@ -302,6 +337,7 @@ export function useBookingDataFirebase() {
 
     return {
         services,
+        serviceSubcategories,
         employees,
         business,
         businessHourEntries,

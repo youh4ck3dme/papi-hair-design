@@ -1,22 +1,18 @@
 import { ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export default function PrivacyPolicy() {
-  const navigate = useNavigate();
-
   return (
     <div className="min-h-screen bg-white py-20 px-4 font-sans selection:bg-black selection:text-white">
       <div className="max-w-3xl mx-auto">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 font-black uppercase text-sm hover:text-red-600 transition-colors mb-12 min-h-[44px]"
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 font-black uppercase text-sm hover:text-red-600 transition-colors mb-12 min-h-[44px]"
         >
-          <ArrowLeft size={16} /> Späť
-        </button>
+          <ArrowLeft size={16} /> Späť na úvod
+        </Link>
 
-        <h1 className="text-4xl md:text-6xl font-black uppercase mb-8 leading-none">
-          Ochrana <span className="text-red-600">súkromia</span>
-        </h1>
+        <h1 className="text-4xl md:text-6xl font-black uppercase mb-8 leading-none">Zásady ochrany osobných údajov</h1>
 
         <div className="border-l-4 border-black pl-4 mb-8 font-bold text-sm text-gray-500 uppercase">
           Posledná aktualizácia: 9. apríl 2026
@@ -60,8 +56,8 @@ export default function PrivacyPolicy() {
             <p className="mb-4">Na zabezpečenie našej Služby používame nasledujúcich poskytovateľov:</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="border-4 border-black p-4">
-                <div className="font-black uppercase text-sm mb-1">Supabase</div>
-                <div className="text-xs text-gray-500">Autentifikácia & Databáza</div>
+                <div className="font-black uppercase text-sm mb-1">Firebase</div>
+                <div className="text-xs text-gray-500">Autentifikácia, databáza a cloud funkcie</div>
               </div>
               <div className="border-4 border-black p-4">
                 <div className="font-black uppercase text-sm mb-1">Stripe</div>
@@ -103,6 +99,10 @@ export default function PrivacyPolicy() {
                 <span>Export údajov v strojovo čitateľnom formáte</span>
               </li>
             </ul>
+            <div className="mt-4 rounded-xl border-2 border-black bg-gray-50 p-4 text-xs font-mono text-gray-700">
+              <div>GDPR export endpoint: /gdpr/export</div>
+              <div>GDPR delete endpoint: /gdpr/delete</div>
+            </div>
           </section>
 
           <section>

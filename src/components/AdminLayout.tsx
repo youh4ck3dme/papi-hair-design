@@ -190,7 +190,7 @@ export function AdminSidebar() {
               Zásady ochrany osobných údajov
             </Link>
             <Link to="/terms" className="hover:text-sidebar-foreground/80">
-              Obchodné podmienky
+              Zmluvné podmienky
             </Link>
           </div>
         </div>

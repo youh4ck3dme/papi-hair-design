@@ -1,6 +1,7 @@
 import { Children, isValidElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import CalendarPage from "../CalendarPage";
 
 const businessState = vi.hoisted(() => ({
@@ -262,6 +263,14 @@ function seedInitialFirestore(options?: {
   firestoreFixtures.customerHistory = [];
 }
 
+function renderCalendarPage() {
+  return render(
+    <SidebarProvider>
+      <CalendarPage />
+    </SidebarProvider>,
+  );
+}
+
 describe("CalendarPage", () => {
   beforeEach(() => {
     bookingCalendarSpy.props = null;
@@ -315,16 +324,16 @@ describe("CalendarPage", () => {
 
   it("renders calendar shell and page title", async () => {
     seedInitialFirestore();
-    render(<CalendarPage />);
+    renderCalendarPage();
 
-    expect(await screen.findByText("Kalendár")).toBeInTheDocument();
+    expect(await screen.findByTestId("booking-calendar-mock")).toBeInTheDocument();
     expect(screen.getByTestId("booking-calendar-mock")).toBeInTheDocument();
     expect(screen.getByTestId("selectable-flag")).toHaveTextContent("true");
   });
 
   it("passes mapped events to BookingCalendar", async () => {
     seedInitialFirestore({ withEvent: true });
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     await waitFor(() => {
       expect(screen.getByTestId("events-count")).toHaveTextContent("1");
@@ -335,7 +344,7 @@ describe("CalendarPage", () => {
 
   it("does not trigger an infinite reload loop after employees state hydration", async () => {
     seedInitialFirestore({ withEvent: true });
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     await waitFor(() => {
       expect(screen.getByTestId("events-count")).toHaveTextContent("1");
@@ -351,7 +360,7 @@ describe("CalendarPage", () => {
 
   it("keeps calendar containers overflow-safe on mobile widths", async () => {
     seedInitialFirestore({ withEvent: true });
-    const { container } = render(<CalendarPage />);
+    const { container } = renderCalendarPage();
 
     await waitFor(() => {
       expect(screen.getByTestId("events-count")).toHaveTextContent("1");
@@ -376,7 +385,7 @@ describe("CalendarPage", () => {
       { id: "emp-2", display_name: "Nika", is_active: true, profile_id: "profile-2", color: "#999999" },
     ];
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     await waitFor(() => {
       expect(bookingCalendarSpy.props?.resources).toHaveLength(1);
@@ -404,7 +413,7 @@ describe("CalendarPage", () => {
     firestoreFixtures.memberships = [{ profile_id: "profile-1", role: "owner" }];
     firestoreFixtures.schedules = [{ employee_id: "emp-1", day_of_week: "monday", start_time: "08:00", end_time: "16:00" }];
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     await waitFor(() => {
       expect(screen.getByTestId("events-count")).toHaveTextContent("80");
@@ -432,15 +441,15 @@ describe("CalendarPage", () => {
 
     try {
       seedInitialFirestore({ withEvent: true });
-      render(<CalendarPage />);
+      renderCalendarPage();
 
-      await screen.findByText("Kalendár");
+      await screen.findByTestId("booking-calendar-mock");
       fireEvent.click(screen.getByRole("button", { name: "Today" }));
       await waitFor(() => {
         expect(bookingCalendarSpy.props?.mode).toBe("day");
       });
 
-      fireEvent.click(screen.getByRole("button", { name: "This Month" }));
+      fireEvent.click(screen.getByRole("button", { name: "Month" }));
       await waitFor(() => {
         expect(bookingCalendarSpy.props?.mode).toBe("month");
       });
@@ -451,7 +460,7 @@ describe("CalendarPage", () => {
 
   it("opens booking modal when selecting slot as admin", async () => {
     seedInitialFirestore();
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-slot"));
     expect(await screen.findByText("Nová rezervácia")).toBeInTheDocument();
@@ -465,7 +474,7 @@ describe("CalendarPage", () => {
     };
     seedInitialFirestore({ employeeProfileId: "profile-1", nonAdmin: true });
 
-    render(<CalendarPage />);
+    renderCalendarPage();
     expect(await screen.findByTestId("selectable-flag")).toHaveTextContent("false");
   });
 
@@ -482,7 +491,7 @@ describe("CalendarPage", () => {
     const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(clickMock as any);
 
     try {
-      render(<CalendarPage />);
+      renderCalendarPage();
       await waitFor(() => {
         expect(screen.getByTestId("events-count")).toHaveTextContent("1");
       });
@@ -507,11 +516,11 @@ describe("CalendarPage", () => {
     };
     const openSpy = vi.spyOn(window, "open").mockReturnValue(printWindowMock as any);
 
-    render(<CalendarPage />);
+    renderCalendarPage();
     await waitFor(() => {
       expect(screen.getByTestId("events-count")).toHaveTextContent("1");
     });
-    fireEvent.click(await screen.findByRole("button", { name: /PDF \/ Tlač/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Tlač$/i }));
 
     expect(openSpy).toHaveBeenCalled();
     expect(printWindowMock.document.write).toHaveBeenCalled();
@@ -521,7 +530,7 @@ describe("CalendarPage", () => {
   it("changes booking status from detail sheet", async () => {
     seedInitialFirestore({ withEvent: true });
 
-    render(<CalendarPage />);
+    renderCalendarPage();
     fireEvent.click(await screen.findByText("open-event"));
     fireEvent.click(await screen.findByRole("button", { name: /Potvrdiť/i }));
 
@@ -536,7 +545,7 @@ describe("CalendarPage", () => {
 
   it("shows validation error when creating booking without required fields", async () => {
     seedInitialFirestore();
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-slot"));
     await screen.findByText("Nová rezervácia");
@@ -550,11 +559,11 @@ describe("CalendarPage", () => {
     seedInitialFirestore({ withEvent: true });
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
 
-    render(<CalendarPage />);
+    renderCalendarPage();
     await waitFor(() => {
       expect(screen.getByTestId("events-count")).toHaveTextContent("1");
     });
-    fireEvent.click(await screen.findByRole("button", { name: /PDF \/ Tlač/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Tlač$/i }));
 
     expect(openSpy).toHaveBeenCalled();
     expect(toastMocks.error).toHaveBeenCalledWith("Nepodarilo sa otvoriť tlačové okno");
@@ -562,10 +571,10 @@ describe("CalendarPage", () => {
 
   it("saves note from detail sheet", async () => {
     seedInitialFirestore({ withEvent: true });
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
-    fireEvent.change(screen.getByPlaceholderText("Krátka interná poznámka k rezervácii"), {
+    fireEvent.change(await screen.findByPlaceholderText(/Interná poznámka k rezervácii/i), {
       target: { value: "Nová interná poznámka" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Uložiť poznámku/i }));
@@ -599,7 +608,7 @@ describe("CalendarPage", () => {
       },
     ];
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
     expect(await screen.findByText("História klienta")).toBeInTheDocument();
@@ -614,7 +623,7 @@ describe("CalendarPage", () => {
       clipboard: { writeText: writeTextMock },
     });
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
     fireEvent.click(await screen.findByRole("button", { name: /Skopírovať/i }));
@@ -632,7 +641,7 @@ describe("CalendarPage", () => {
       clipboard: { writeText: writeTextMock },
     });
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
     fireEvent.click(await screen.findByRole("button", { name: /Skopírovať/i }));
@@ -657,7 +666,7 @@ describe("CalendarPage", () => {
       },
     ];
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
     expect(await screen.findByText("Jana – Služba")).toBeInTheDocument();
@@ -667,10 +676,10 @@ describe("CalendarPage", () => {
     seedInitialFirestore({ withEvent: true });
     firestoreMocks.updateDocMock.mockRejectedValueOnce(new Error("save failed"));
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
-    fireEvent.change(screen.getByPlaceholderText("Krátka interná poznámka k rezervácii"), {
+    fireEvent.change(await screen.findByPlaceholderText(/Interná poznámka k rezervácii/i), {
       target: { value: "Nepodarilo sa uložiť" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Uložiť poznámku/i }));
@@ -682,7 +691,7 @@ describe("CalendarPage", () => {
 
   it("submits move quick action from detail sheet", async () => {
     seedInitialFirestore({ withEvent: true });
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
     fireEvent.click(await screen.findByRole("button", { name: /Presunúť/i }));

@@ -97,6 +97,17 @@ service cloud.firestore {
         isOwnerOrAdmin(resource.data.business_id);
     }
 
+    match /service_subcategories/{subcategoryId} {
+      allow read: if isSignedIn();
+      allow create: if request.resource.data.business_id is string &&
+        isOwnerOrAdmin(request.resource.data.business_id);
+      allow update: if resource.data.business_id is string &&
+        request.resource.data.business_id == resource.data.business_id &&
+        isOwnerOrAdmin(resource.data.business_id);
+      allow delete: if resource.data.business_id is string &&
+        isOwnerOrAdmin(resource.data.business_id);
+    }
+
     match /employees/{employeeId} {
       allow read: if isSignedIn();
       allow create: if request.resource.data.business_id is string &&

@@ -13,6 +13,7 @@ const COLLECTIONS = [
     "memberships",
     "businesses",
     "services",
+    "service_subcategories",
     "employees",
     "employee_services",
     "appointments"
