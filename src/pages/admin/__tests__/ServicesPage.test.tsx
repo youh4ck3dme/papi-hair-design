@@ -22,7 +22,9 @@ const firestoreMocks = vi.hoisted(() => ({
 const fixtures = vi.hoisted(() => ({
   services: [] as any[],
   serviceSubcategories: [] as any[],
+  serviceSubcategoryAudit: [] as any[],
   appointmentsForDelete: [] as any[],
+  failAuditQuery: false,
 }));
 
 vi.mock("@/hooks/useBusiness", () => ({
@@ -132,7 +134,9 @@ describe("ServicesPage", () => {
       },
     ];
     fixtures.serviceSubcategories = [];
+    fixtures.serviceSubcategoryAudit = [];
     fixtures.appointmentsForDelete = [];
+    fixtures.failAuditQuery = false;
 
     vi.stubGlobal("confirm", vi.fn(() => true));
 
@@ -140,6 +144,12 @@ describe("ServicesPage", () => {
       const collectionName = input?.__collection;
       if (collectionName === "services") return makeSnapshot(fixtures.services);
       if (collectionName === "service_subcategories") return makeSnapshot(fixtures.serviceSubcategories);
+      if (collectionName === "service_subcategory_audit") {
+        if (fixtures.failAuditQuery) {
+          throw new Error("audit failed");
+        }
+        return makeSnapshot(fixtures.serviceSubcategoryAudit);
+      }
       if (collectionName === "appointments") return makeSnapshot(fixtures.appointmentsForDelete);
       return makeSnapshot([]);
     });
@@ -229,6 +239,97 @@ describe("ServicesPage", () => {
     render(<ServicesPage />);
 
     expect(await screen.findByText("Balayage")).toBeInTheDocument();
+  });
+
+  it("renders audit history and lets the user filter it", async () => {
+    const now = new Date();
+    const recent = now.toISOString();
+    const stale = new Date(now.getTime() - 40 * 24 * 60 * 60 * 1000).toISOString();
+
+    fixtures.serviceSubcategoryAudit = [
+      {
+        id: "audit-1",
+        business_id: "biz-1",
+        subcategory_id: "sub-1",
+        action: "create",
+        changed_fields: ["name_sk", "category"],
+        actor_auth_type: null,
+        actor_auth_id: null,
+        created_at: stale,
+        after: {
+          id: "sub-1",
+          business_id: "biz-1",
+          category: "damske",
+          name_sk: "Balayage",
+          slug: "balayage",
+          sort_order: 100,
+          is_active: true,
+        },
+      },
+      {
+        id: "audit-2",
+        business_id: "biz-1",
+        subcategory_id: "sub-2",
+        action: "reorder",
+        changed_fields: ["sort_order"],
+        actor_auth_type: null,
+        actor_auth_id: null,
+        created_at: recent,
+        before: {
+          id: "sub-2",
+          business_id: "biz-1",
+          category: "panske",
+          name_sk: "Brada",
+          slug: "brada",
+          sort_order: 100,
+          is_active: true,
+        },
+        after: {
+          id: "sub-2",
+          business_id: "biz-1",
+          category: "panske",
+          name_sk: "Brada",
+          slug: "brada",
+          sort_order: 200,
+          is_active: true,
+        },
+      },
+    ];
+
+    render(<ServicesPage />);
+
+    expect(await screen.findByTestId("service-subcategory-audit-history")).toBeInTheDocument();
+    expect(screen.getByText("Balayage")).toBeInTheDocument();
+    expect(screen.getByText("Brada")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("audit-action-filter-reorder"));
+    expect(screen.queryByText("Balayage")).not.toBeInTheDocument();
+    expect(screen.getByText("Brada")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("audit-action-filter-all"));
+    fireEvent.change(screen.getByTestId("audit-search-input"), { target: { value: "bala" } });
+    expect(screen.getByText("Balayage")).toBeInTheDocument();
+    expect(screen.queryByText("Brada")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId("audit-search-input"), { target: { value: "" } });
+    fireEvent.click(screen.getByTestId("audit-window-filter-24h"));
+    expect(screen.queryByText("Balayage")).not.toBeInTheDocument();
+    expect(screen.getByText("Brada")).toBeInTheDocument();
+  });
+
+  it("shows audit warning without breaking the services catalog", async () => {
+    fixtures.failAuditQuery = true;
+
+    render(<ServicesPage />);
+
+    expect(await screen.findByText("Služby")).toBeInTheDocument();
+    expect(screen.getByText("Pánsky strih")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Históriu zmien sa nepodarilo načítať. Katalóg služieb však funguje ďalej.",
+      ),
+    ).toBeInTheDocument();
+    expect(toastMocks.error).not.toHaveBeenCalledWith("Nepodarilo sa načítať katalóg služieb");
   });
 
   it("opens create dialog from empty state CTA", async () => {
