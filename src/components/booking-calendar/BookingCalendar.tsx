@@ -5,6 +5,7 @@ import { CalendarHeader } from "./header/CalendarHeader";
 import { CalendarHeaderDate } from "./header/CalendarHeaderDate";
 import { CalendarHeaderMode } from "./header/CalendarHeaderMode";
 import { CalendarHeaderAdd } from "./header/CalendarHeaderAdd";
+import { CalendarHeaderSearch } from "./header/CalendarHeaderSearch";
 import { CalendarZoomControls } from "./header/CalendarZoomControls";
 import { CalendarBody } from "./body/CalendarBody";
 import { cn } from "@/lib/utils";
@@ -62,9 +63,10 @@ export function BookingCalendar({
             {/* Mobile Row 2 (Search + Add) / Desktop Right */}
             <div className={cn(
               "flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0",
-              mode === "month" ? "hidden lg:flex" : "flex flex-1 lg:flex-none justify-end"
+              mode === "month" ? "flex lg:flex-1" : "flex flex-1 lg:flex-none justify-end"
             )}>
-<CalendarHeaderAdd className="w-full sm:w-auto shrink-0" />
+              <CalendarHeaderSearch className="flex-1" />
+              <CalendarHeaderAdd className="w-full sm:w-auto shrink-0" />
             </div>
           </div>
           <CalendarHeaderMode />
