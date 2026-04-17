@@ -46,7 +46,7 @@ const DAY_LABELS_SK: Record<string, string> = {
   monday: "Po",
   tuesday: "Ut",
   wednesday: "St",
-  thursday: "St",
+  thursday: "Št",
   friday: "Pi",
   saturday: "So",
   sunday: "Ne",
@@ -178,7 +178,7 @@ function BrandContent({
   };
   const quickFacts = [
     { label: t("liquid.cardTime"), value: openingSummary },
-    { label: t("liquid.cardPrices"), value: cheapestPrice != null ? `od ${cheapestPrice.toFixed(0)}EUR` : "-" },
+    { label: t("liquid.cardPrices"), value: cheapestPrice != null ? `od ${cheapestPrice.toFixed(0)} €` : "-" },
     { label: t("liquid.cardReserve"), value: "24/7 online" },
     { label: t("liquid.cardDetails"), value: phoneNumber },
   ];
@@ -191,14 +191,14 @@ function BrandContent({
           : "justify-center gap-8 px-4"
       }`}
     >
-      <div className={isHero ? "grid w-full items-center gap-8 xl:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)] xl:gap-10" : "contents"}>
-        <div className={`flex flex-col items-center ${isHero ? "w-full xl:items-start xl:text-left" : ""}`}>
+      <div className={isHero ? "flex w-full flex-col items-center gap-8" : "contents"}>
+        <div className="flex w-full flex-col items-center">
           <div className="relative group">
             <LogoIcon size="lg" className="relative z-10" />
             <div className="absolute inset-0 scale-150 rounded-full bg-primary/20 blur-2xl transition-all duration-700 group-hover:bg-primary/30" />
           </div>
 
-          <div className={isHero ? "max-w-[34rem] space-y-2 sm:space-y-3 xl:max-w-[42rem]" : "space-y-3"}>
+          <div className={isHero ? "max-w-[42rem] space-y-2 sm:space-y-3" : "space-y-3"}>
             <h1 className={`bg-gradient-to-b from-white via-white to-white/60 bg-clip-text font-bold uppercase leading-tight text-transparent ${
               isHero
                 ? "text-[2.4rem] tracking-[0.06em] sm:text-6xl sm:tracking-[0.2em] xl:text-7xl"
@@ -209,9 +209,9 @@ function BrandContent({
             <h2 className={`font-light uppercase text-primary ${isHero ? "-mt-0.5 text-base tracking-[0.22em] sm:-mt-2 sm:text-3xl sm:tracking-[0.4em] xl:text-[2rem]" : "-mt-2 text-2xl tracking-[0.4em] sm:text-3xl"}`}>
               DESIGN
             </h2>
-            <div className={`h-px w-24 bg-gradient-to-r from-transparent via-primary to-transparent ${isHero ? "mx-auto mt-4 sm:mt-6 xl:mx-0" : "mx-auto mt-6"}`} />
+            <div className={`h-px w-24 bg-gradient-to-r from-transparent via-primary to-transparent ${isHero ? "mx-auto mt-4 sm:mt-6" : "mx-auto mt-6"}`} />
             <p className={`uppercase text-white/50 ${isHero ? "mt-3 text-[11px] tracking-[0.24em] sm:mt-4 sm:text-xs sm:tracking-[0.3em]" : "mt-4 text-xs tracking-[0.3em]"}`}>
-              est. 2018 · Kosice
+              est. 2018 · Košice
             </p>
             <p className={`font-medium italic text-amber-200/80 ${isHero ? "mt-1.5 text-[13px] leading-6 tracking-[0.02em] sm:mt-2 sm:text-sm sm:tracking-wide xl:max-w-[32rem]" : "mt-2 text-sm tracking-wide"}`}>
               {t("liquid.brandTagline")}
@@ -228,7 +228,7 @@ function BrandContent({
           )}
 
           {isHero && (
-            <div className="mx-auto mt-5 flex w-full max-w-sm flex-col items-center justify-center gap-3 xl:mx-0 xl:max-w-md xl:items-start">
+            <div className="mx-auto mt-5 flex w-full max-w-sm flex-col items-center justify-center gap-3 sm:max-w-md">
               <Button
                 size="lg"
                 className="h-12 w-full rounded-xl bg-gradient-to-r from-primary via-[#ffd700] to-primary font-bold uppercase tracking-widest text-black shadow-[0_10px_30px_-10px_rgba(218,165,32,0.5)] transition-transform hover:scale-[1.02] sm:h-14"
@@ -250,16 +250,16 @@ function BrandContent({
           )}
         </div>
 
-        <div className={isHero ? "grid w-full max-w-[38rem] grid-cols-2 gap-3 min-[360px]:gap-3.5 sm:gap-4 xl:ml-auto xl:max-w-none xl:grid-cols-1 xl:gap-4" : "grid w-full max-w-md grid-cols-2 gap-3"}>
+        <div className={isHero ? "grid w-full max-w-[38rem] grid-cols-2 gap-3 min-[360px]:gap-3.5 sm:gap-4 lg:max-w-[42rem]" : "grid w-full max-w-md grid-cols-2 gap-3"}>
           {quickFacts.map((fact) => (
             <div
               key={fact.label}
-              className={isHero ? "rounded-xl border border-white/10 bg-black/30 p-3 text-left min-[360px]:min-h-[70px] min-[360px]:rounded-2xl min-[360px]:p-[0.95rem] sm:p-[1.15rem] xl:min-h-[88px]" : "rounded-xl border border-white/10 bg-black/30 p-3 text-left"}
+              className={isHero ? "rounded-xl border border-white/10 bg-black/30 p-3 text-left min-[360px]:min-h-[70px] min-[360px]:rounded-2xl min-[360px]:p-[0.95rem] sm:min-h-[88px] sm:p-[1.15rem]" : "rounded-xl border border-white/10 bg-black/30 p-3 text-left"}
             >
               <p className={isHero ? "text-[10px] uppercase tracking-widest text-white/50 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em] sm:text-xs" : "text-[10px] uppercase tracking-widest text-white/50"}>
                 {fact.label}
               </p>
-              <p className={isHero ? "mt-1 text-xs font-semibold text-white min-[360px]:mt-1.5 min-[360px]:text-sm min-[360px]:leading-snug sm:text-[15px] xl:text-base" : "mt-1 text-xs font-semibold text-white"}>
+              <p className={isHero ? "mt-1 text-xs font-semibold text-white min-[360px]:mt-1.5 min-[360px]:text-sm min-[360px]:leading-snug sm:text-[15px] lg:text-base" : "mt-1 text-xs font-semibold text-white"}>
                 {fact.value}
               </p>
             </div>
@@ -404,11 +404,11 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
     <div className="space-y-8 px-2 pb-10">
       <div className="space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">
-          Cennik kadernictvo Kosice
+          Cenník kaderníctvo Košice
         </h2>
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
-          Prehlad cien nasich premiovych sluzieb pre damy a panov v PAPI HAIR
-          DESIGN Kosice.
+          Prehľad cien našich prémiových služieb pre dámy a pánov v PAPI HAIR
+          DESIGN Košice.
         </p>
       </div>
 
@@ -435,7 +435,7 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
                   <div className="mx-4 mb-1 flex-1 border-b border-dotted border-white/5" />
                   <span className="font-bold tracking-widest text-white tabular-nums">
                     {service.price != null
-                      ? `${Number(service.price).toFixed(0)}EUR`
+                      ? `${Number(service.price).toFixed(0)} €`
                       : "-"}
                   </span>
                 </div>
@@ -447,11 +447,11 @@ function PricesContent({ services }: { services: ServiceItem[] }) {
 
       <div className="space-y-4 border-t border-white/10 pt-8">
         <p className="mx-auto max-w-md text-center text-xs italic leading-relaxed text-white/70">
-          "V nasom kadernictve v Kosiciach verime, ze kvalita sluzieb a spokojnost
-          klientov je dolezitejsia ako najnizsie ceny. Preto pouzivame vyhradne
-          premiove produkty Gold Haircare a venujeme dostatok casu kazdej sluzbe
-          pre dokonaly vysledok. Nase ceny odrazaju profesionalny pristup,
-          skusenosti nasich kadernikov a kvalitu materialov."
+          "V našom kaderníctve v Košiciach veríme, že kvalita služieb a spokojnosť
+          klientov je dôležitejšia ako najnižšie ceny. Preto používame výhradne
+          prémiové produkty Gold Haircare a venujeme dostatok času každej službe
+          pre dokonalý výsledok. Naše ceny odrážajú profesionálny prístup,
+          skúsenosti našich kaderníkov a kvalitu materiálov."
         </p>
         <p className="text-center text-[10px] uppercase tracking-widest text-muted-foreground opacity-40">
           {t("liquid.priceNote")}
@@ -604,7 +604,7 @@ function ContactContent() {
           Tr. SNP 61A
         </h3>
         <p className="mt-1 text-sm font-medium tracking-wider text-white/50">
-          Spolocensky pavilon, Kosice
+          Spoločenský pavilón, Košice
         </p>
       </div>
     </div>
@@ -739,7 +739,7 @@ export default function LiquidPlayground() {
         nextOpening={nextOpening}
         info={info}
         navigate={navigate}
-        variant={desktopLikeLayout ? "hero" : "section"}
+        variant="hero"
       />
     ),
     hours: (
