@@ -50,6 +50,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import type { ServiceRow } from "@/components/booking/types";
 import {
   BOOKING_MAIN_CATEGORIES,
@@ -62,10 +63,38 @@ import {
   type ServiceSubcategoryGroup,
   type ServiceSubcategoryRow,
 } from "@/lib/serviceSubcategories";
+import {
+  formatServiceSubcategoryAuditField,
+  getServiceSubcategoryAuditActionLabel,
+  normalizeServiceSubcategoryAudit,
+  resolveServiceSubcategoryAuditName,
+  sortServiceSubcategoryAudit,
+  type ServiceSubcategoryAuditAction,
+  type ServiceSubcategoryAuditRow,
+} from "@/lib/serviceSubcategoryAudit";
 
 const UNASSIGNED_SUBCATEGORY_VALUE = "__none__";
 const UNASSIGNED_SUBCATEGORY_LABEL = "Bez podkategórie";
 const SORT_STEP = 100;
+const AUDIT_FETCH_LIMIT = 100;
+
+type AuditActionFilter = ServiceSubcategoryAuditAction | "all";
+type AuditWindowFilter = "all" | "24h" | "7d" | "30d";
+
+const AUDIT_ACTION_FILTERS: Array<{ value: AuditActionFilter; label: string }> = [
+  { value: "all", label: "Všetko" },
+  { value: "create", label: getServiceSubcategoryAuditActionLabel("create") },
+  { value: "update", label: getServiceSubcategoryAuditActionLabel("update") },
+  { value: "reorder", label: getServiceSubcategoryAuditActionLabel("reorder") },
+  { value: "delete", label: getServiceSubcategoryAuditActionLabel("delete") },
+];
+
+const AUDIT_WINDOW_FILTERS: Array<{ value: AuditWindowFilter; label: string }> = [
+  { value: "all", label: "Celé obdobie" },
+  { value: "24h", label: "24 hod." },
+  { value: "7d", label: "7 dní" },
+  { value: "30d", label: "30 dní" },
+];
 
 const serviceSchema = z.object({
   name_sk: z.string().min(2, "Názov musí mať aspoň 2 znaky"),
@@ -155,6 +184,77 @@ function getCategoryLabel(category: BookingMainCategory) {
   return BOOKING_MAIN_CATEGORIES.find((option) => option.id === category)?.label ?? category;
 }
 
+function formatAuditTimestamp(value: string | null) {
+  if (!value) return "Čas neznámy";
+
+  const timestamp = new Date(value);
+  if (Number.isNaN(timestamp.getTime())) return "Čas neznámy";
+
+  return new Intl.DateTimeFormat("sk-SK", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(timestamp);
+}
+
+function getAuditActorLabel(entry: ServiceSubcategoryAuditRow) {
+  if (entry.actor_auth_id) {
+    return `${entry.actor_auth_type ?? "auth"}:${entry.actor_auth_id}`;
+  }
+
+  return "Systémový trigger";
+}
+
+function getAuditSummary(entry: ServiceSubcategoryAuditRow) {
+  const category = entry.after?.category ?? entry.before?.category;
+  const categoryLabel =
+    category === "damske" || category === "panske" ? getCategoryLabel(category) : null;
+
+  switch (entry.action) {
+    case "create":
+      return categoryLabel
+        ? `Podkategória bola vytvorená v sekcii ${categoryLabel.toLowerCase()}.`
+        : "Podkategória bola vytvorená.";
+    case "delete":
+      return "Podkategória bola odstránená z katalógu a auditne zaznamenaná.";
+    case "reorder":
+      return `Poradie sa zmenilo z ${entry.before?.sort_order ?? "?"} na ${
+        entry.after?.sort_order ?? "?"
+      }.`;
+    case "update":
+    default:
+      return entry.changed_fields.length > 0
+        ? `Zmenené polia: ${entry.changed_fields
+            .map((field) => formatServiceSubcategoryAuditField(field))
+            .join(", ")}.`
+        : "Podkategória bola aktualizovaná.";
+  }
+}
+
+function isAuditEntryInsideWindow(entry: ServiceSubcategoryAuditRow, window: AuditWindowFilter) {
+  if (window === "all") return true;
+  if (!entry.created_at) return false;
+
+  const timestamp = new Date(entry.created_at);
+  if (Number.isNaN(timestamp.getTime())) return false;
+
+  const now = Date.now();
+  const ageMs = now - timestamp.getTime();
+
+  switch (window) {
+    case "24h":
+      return ageMs <= 24 * 60 * 60 * 1000;
+    case "7d":
+      return ageMs <= 7 * 24 * 60 * 60 * 1000;
+    case "30d":
+      return ageMs <= 30 * 24 * 60 * 60 * 1000;
+    default:
+      return true;
+  }
+}
+
 function getServiceTargetSortOrder(
   services: ServiceRow[],
   category: BookingMainCategory,
@@ -199,7 +299,10 @@ export default function ServicesPage() {
   const { businessId } = useBusiness();
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [serviceSubcategories, setServiceSubcategories] = useState<ServiceSubcategoryRow[]>([]);
+  const [auditEntries, setAuditEntries] = useState<ServiceSubcategoryAuditRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [subcategoryDialogOpen, setSubcategoryDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<ServiceRow | null>(null);
@@ -210,27 +313,70 @@ export default function ServicesPage() {
   const [subcategoryErrors, setSubcategoryErrors] = useState<Record<string, string>>({});
   const [savingService, setSavingService] = useState(false);
   const [savingSubcategory, setSavingSubcategory] = useState(false);
+  const [auditActionFilter, setAuditActionFilter] = useState<AuditActionFilter>("all");
+  const [auditWindowFilter, setAuditWindowFilter] = useState<AuditWindowFilter>("all");
+  const [auditSearch, setAuditSearch] = useState("");
 
   const load = async () => {
-    if (!businessId) return;
+    if (!businessId) {
+      setServices([]);
+      setServiceSubcategories([]);
+      setAuditEntries([]);
+      setLoading(false);
+      setAuditLoading(false);
+      setAuditError(null);
+      return;
+    }
+
     setLoading(true);
+    setAuditLoading(true);
+    setAuditError(null);
+
     try {
-      const [servicesSnap, subcategoriesSnap] = await Promise.all([
-        getDocs(query(collection(db, "services"), where("business_id", "==", businessId))),
+      const [catalogResult, auditResult] = await Promise.allSettled([
+        Promise.all([
+          getDocs(query(collection(db, "services"), where("business_id", "==", businessId))),
+          getDocs(
+            query(collection(db, "service_subcategories"), where("business_id", "==", businessId)),
+          ),
+        ]),
         getDocs(
-          query(collection(db, "service_subcategories"), where("business_id", "==", businessId)),
+          query(
+            collection(db, "service_subcategory_audit"),
+            where("business_id", "==", businessId),
+            limit(AUDIT_FETCH_LIMIT),
+          ),
         ),
       ]);
+
+      if (catalogResult.status !== "fulfilled") {
+        throw catalogResult.reason;
+      }
+
+      const [servicesSnap, subcategoriesSnap] = catalogResult.value;
 
       setServices(servicesSnap.docs.map(normalizeService));
       setServiceSubcategories(
         sortServiceSubcategories(subcategoriesSnap.docs.map(normalizeServiceSubcategory)),
       );
+
+      if (auditResult.status === "fulfilled") {
+        setAuditEntries(
+          sortServiceSubcategoryAudit(
+            auditResult.value.docs.map(normalizeServiceSubcategoryAudit),
+          ),
+        );
+      } else {
+        console.error("ServicesPage: error loading service subcategory audit", auditResult.reason);
+        setAuditEntries([]);
+        setAuditError("Históriu zmien sa nepodarilo načítať. Katalóg služieb však funguje ďalej.");
+      }
     } catch (error) {
       console.error("ServicesPage: error loading services", error);
       toast.error("Nepodarilo sa načítať katalóg služieb");
     } finally {
       setLoading(false);
+      setAuditLoading(false);
     }
   };
 
@@ -260,6 +406,37 @@ export default function ServicesPage() {
       ),
     [serviceSubcategories, serviceForm.category],
   );
+
+  const filteredAuditEntries = useMemo(() => {
+    const normalizedSearch = auditSearch.trim().toLowerCase();
+
+    return auditEntries.filter((entry) => {
+      if (auditActionFilter !== "all" && entry.action !== auditActionFilter) {
+        return false;
+      }
+
+      if (!isAuditEntryInsideWindow(entry, auditWindowFilter)) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const searchableText = [
+        resolveServiceSubcategoryAuditName(entry),
+        entry.before?.name_sk,
+        entry.after?.name_sk,
+        entry.before?.slug,
+        entry.after?.slug,
+      ]
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(normalizedSearch);
+    });
+  }, [auditActionFilter, auditEntries, auditSearch, auditWindowFilter]);
 
   const openCreateService = () => {
     setEditingService(null);
@@ -680,33 +857,94 @@ export default function ServicesPage() {
     );
   };
 
+  const renderAuditEntry = (entry: ServiceSubcategoryAuditRow) => {
+    const subcategoryName = resolveServiceSubcategoryAuditName(entry);
+
+    return (
+      <article
+        key={entry.id}
+        className="rounded-3xl border border-primary/10 bg-card/40 p-5 backdrop-blur-xl"
+        data-testid={`service-subcategory-audit-${entry.id}`}
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant="outline"
+                className={cn(
+                  "border-primary/20 bg-primary/5 text-primary",
+                  entry.action === "delete" &&
+                    "border-destructive/20 bg-destructive/10 text-destructive",
+                  entry.action === "reorder" &&
+                    "border-amber-500/20 bg-amber-500/10 text-amber-600",
+                )}
+              >
+                {getServiceSubcategoryAuditActionLabel(entry.action)}
+              </Badge>
+              <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                {formatAuditTimestamp(entry.created_at)}
+              </span>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-foreground">{subcategoryName}</h3>
+              <p className="text-sm text-muted-foreground">{getAuditSummary(entry)}</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-primary/10 bg-background/60 px-4 py-3 text-xs text-muted-foreground">
+            <p className="font-semibold uppercase tracking-[0.2em] text-foreground/70">Zdroj</p>
+            <p className="mt-1">{getAuditActorLabel(entry)}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {entry.changed_fields.length > 0 ? (
+            entry.changed_fields.map((field) => (
+              <Badge
+                key={`${entry.id}-${field}`}
+                variant="secondary"
+                className="rounded-full bg-muted/70 text-xs font-medium text-foreground/80"
+              >
+                {formatServiceSubcategoryAuditField(field)}
+              </Badge>
+            ))
+          ) : (
+            <Badge
+              variant="secondary"
+              className="rounded-full bg-muted/70 text-xs font-medium text-foreground/80"
+            >
+              Bez detailných zmien
+            </Badge>
+          )}
+        </div>
+      </article>
+    );
+  };
+
   return (
-    <div className="animate-in fade-in space-y-6 duration-500">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-3xl font-bold tracking-tight text-transparent">
-            Služby
-          </h1>
-          <p className="text-muted-foreground">
-            Katalóg služieb, podkategórie a ich poradie v bookingu.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={() => openCreateSubcategory()}
-            className="border-primary/20"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Pridať podkategóriu
-          </Button>
-          <Button
-            onClick={openCreateService}
-            className="shadow-lg shadow-primary/20 transition-transform hover:scale-105"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Pridať službu
-          </Button>
-        </div>
-      </div>
+    <div className="animate-in fade-in space-y-8 duration-500" data-testid="admin-services-page">
+      <AdminPageHeader
+        title="Služby"
+        description="Katalóg služieb, podkategórie a ich poradie v bookingu."
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => openCreateSubcategory()}
+              className="border-primary/20 bg-background/70"
+              data-testid="create-subcategory-button"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Pridať podkategóriu
+            </Button>
+            <Button
+              onClick={openCreateService}
+              className="shadow-lg shadow-primary/20 transition-transform hover:scale-[1.02]"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Pridať službu
+            </Button>
+          </>
+        }
+      />
 
       {loading ? (
         <div className="flex flex-col items-center justify-center gap-3 py-20">
@@ -789,6 +1027,11 @@ export default function ServicesPage() {
                       <div
                         key={group.option.key}
                         className="rounded-3xl border border-primary/10 bg-card/30 p-5 backdrop-blur-xl"
+                        data-testid={
+                          linkedSubcategory
+                            ? `service-subcategory-group-${linkedSubcategory.id}`
+                            : undefined
+                        }
                       >
                         <div className="flex flex-col gap-3 border-b border-primary/10 pb-4 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
@@ -835,6 +1078,7 @@ export default function ServicesPage() {
                                 variant="ghost"
                                 className="rounded-xl"
                                 disabled={!canMoveSubcategoryUp}
+                                data-testid={`subcategory-move-up-${linkedSubcategory.id}`}
                                 onClick={() =>
                                   void handleMoveSubcategory(
                                     linkedSubcategory.id,
@@ -850,6 +1094,7 @@ export default function ServicesPage() {
                                 variant="ghost"
                                 className="rounded-xl"
                                 disabled={!canMoveSubcategoryDown}
+                                data-testid={`subcategory-move-down-${linkedSubcategory.id}`}
                                 onClick={() =>
                                   void handleMoveSubcategory(
                                     linkedSubcategory.id,
@@ -864,6 +1109,7 @@ export default function ServicesPage() {
                                 size="sm"
                                 variant="ghost"
                                 className="rounded-xl"
+                                data-testid={`subcategory-edit-${linkedSubcategory.id}`}
                                 onClick={() => openEditSubcategory(linkedSubcategory)}
                               >
                                 <Pencil className="mr-1.5 h-3.5 w-3.5" /> Upraviť
@@ -872,6 +1118,7 @@ export default function ServicesPage() {
                                 size="sm"
                                 variant="ghost"
                                 className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                data-testid={`subcategory-delete-${linkedSubcategory.id}`}
                                 onClick={() => void handleDeleteSubcategory(linkedSubcategory)}
                               >
                                 <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Zmazať
@@ -898,6 +1145,150 @@ export default function ServicesPage() {
           })}
         </div>
       )}
+
+      <section
+        className="rounded-[2rem] border border-primary/10 bg-card/30 p-6 backdrop-blur-xl"
+        data-testid="service-subcategory-audit-history"
+      >
+        <div className="flex flex-col gap-4 border-b border-primary/10 pb-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-bold text-foreground">História zmien podkategórií</h2>
+              <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">
+                {filteredAuditEntries.length}/{auditEntries.length}
+              </Badge>
+            </div>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Auditný prehľad create, update, reorder a delete operácií nad
+              `service_subcategories`. Katalóg služieb ostáva funkčný aj keď auditná
+              história dočasne zlyhá.
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="self-start rounded-xl border-primary/20"
+            onClick={() => void load()}
+            disabled={loading || auditLoading}
+          >
+            {auditLoading ? (
+              <>
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Obnovujem
+              </>
+            ) : (
+              "Obnoviť históriu"
+            )}
+          </Button>
+        </div>
+
+        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 rounded-3xl border border-primary/10 bg-background/40 p-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap gap-2">
+                {AUDIT_ACTION_FILTERS.map((filter) => (
+                  <Button
+                    key={filter.value}
+                    type="button"
+                    size="sm"
+                    variant={auditActionFilter === filter.value ? "default" : "ghost"}
+                    className="rounded-full"
+                    data-testid={`audit-action-filter-${filter.value}`}
+                    onClick={() => setAuditActionFilter(filter.value)}
+                  >
+                    {filter.label}
+                  </Button>
+                ))}
+              </div>
+
+              <Input
+                value={auditSearch}
+                onChange={(event) => setAuditSearch(event.target.value)}
+                placeholder="Filtrovať podľa názvu podkategórie..."
+                className="w-full max-w-sm border-primary/10 bg-background/60 lg:w-80"
+                data-testid="audit-search-input"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {AUDIT_WINDOW_FILTERS.map((filter) => (
+                <Button
+                  key={filter.value}
+                  type="button"
+                  size="sm"
+                  variant={auditWindowFilter === filter.value ? "secondary" : "ghost"}
+                  className="rounded-full"
+                  data-testid={`audit-window-filter-${filter.value}`}
+                  onClick={() => setAuditWindowFilter(filter.value)}
+                >
+                  {filter.label}
+                </Button>
+              ))}
+            </div>
+
+            {auditLoading ? (
+              <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-primary/20 bg-background/30 px-6 py-12 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+                <p className="text-sm text-muted-foreground">Načítavam auditnú históriu...</p>
+              </div>
+            ) : auditError ? (
+              <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-700">
+                {auditError}
+              </div>
+            ) : filteredAuditEntries.length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-primary/20 bg-background/30 px-6 py-12 text-center">
+                <p className="text-base font-semibold text-foreground">
+                  Auditná história zatiaľ neobsahuje záznamy pre aktuálny filter.
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Skúste rozšíriť časové okno alebo resetovať filtre.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredAuditEntries.slice(0, 24).map((entry) => renderAuditEntry(entry))}
+              </div>
+            )}
+          </div>
+
+          <aside className="space-y-4">
+            <div className="rounded-3xl border border-primary/10 bg-background/40 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                Rýchly súhrn
+              </p>
+              <div className="mt-4 space-y-3">
+                {AUDIT_ACTION_FILTERS.filter((filter) => filter.value !== "all").map((filter) => {
+                  const count = auditEntries.filter((entry) => entry.action === filter.value).length;
+
+                  return (
+                    <div
+                      key={`summary-${filter.value}`}
+                      className="flex items-center justify-between rounded-2xl border border-primary/10 bg-card/40 px-4 py-3"
+                    >
+                      <span className="text-sm font-medium text-foreground">{filter.label}</span>
+                      <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">
+                        {count}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-primary/10 bg-background/40 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                Poznámka
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                Aktuálne audit zapisuje systémový Firestore trigger. Keď neskôr doplníme
+                explicitný actor context, táto sekcia začne ukazovať aj konkrétneho
+                používateľa alebo službu, ktorá zmenu vykonala.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </section>
 
       <Dialog open={serviceDialogOpen} onOpenChange={setServiceDialogOpen}>
         <DialogContent className="max-w-xl border-primary/20 bg-card/95 shadow-2xl backdrop-blur-2xl">
@@ -1124,6 +1515,7 @@ export default function ServicesPage() {
               </Label>
               <Input
                 id="subcategory-name"
+                data-testid="subcategory-name-input"
                 className="border-primary/10 bg-background/50 focus:border-primary/40 focus:ring-primary/10"
                 value={subcategoryForm.name_sk}
                 onChange={(event) =>
@@ -1173,6 +1565,7 @@ export default function ServicesPage() {
                 </p>
               </div>
               <Switch
+                aria-label="subcategory-active-toggle"
                 checked={subcategoryForm.is_active}
                 onCheckedChange={(checked) =>
                   setSubcategoryForm((previous) => ({ ...previous, is_active: checked }))
@@ -1193,6 +1586,7 @@ export default function ServicesPage() {
             <Button
               onClick={() => void handleSaveSubcategory()}
               disabled={savingSubcategory}
+              data-testid="subcategory-save-button"
               className="rounded-xl px-8 font-bold shadow-lg shadow-primary/20"
             >
               {savingSubcategory ? (

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { BookingCalendarEvent, BookingCalendarMode } from "./calendar-types";
 import type { SlotInfo } from "./calendar-context";
 import { BookingCalendarProvider } from "./BookingCalendarProvider";
@@ -5,7 +6,6 @@ import { CalendarHeader } from "./header/CalendarHeader";
 import { CalendarHeaderDate } from "./header/CalendarHeaderDate";
 import { CalendarHeaderMode } from "./header/CalendarHeaderMode";
 import { CalendarHeaderAdd } from "./header/CalendarHeaderAdd";
-import { CalendarHeaderSearch } from "./header/CalendarHeaderSearch";
 import { CalendarZoomControls } from "./header/CalendarZoomControls";
 import { CalendarBody } from "./body/CalendarBody";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ export interface BookingCalendarProps {
   selectable?: boolean;
   businessHours?: any;
   resources?: any[];
+  headerActions?: ReactNode;
 }
 
 
@@ -36,6 +37,7 @@ export function BookingCalendar({
   selectable = false,
   businessHours,
   resources,
+  headerActions,
 }: BookingCalendarProps) {
   return (
     <BookingCalendarProvider
@@ -62,11 +64,9 @@ export function BookingCalendar({
 
             {/* Mobile Row 2 (Search + Add) / Desktop Right */}
             <div className={cn(
-              "flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0",
-              mode === "month" ? "flex lg:flex-1" : "flex flex-1 lg:flex-none justify-end"
+              "flex flex-wrap items-stretch sm:items-center justify-end gap-2 min-w-0 w-full lg:w-auto"
             )}>
-              <CalendarHeaderSearch className="flex-1" />
-              <CalendarHeaderAdd className="w-full sm:w-auto shrink-0" />
+              {headerActions ?? <CalendarHeaderAdd className="w-full sm:w-auto shrink-0" />}
             </div>
           </div>
           <CalendarHeaderMode />

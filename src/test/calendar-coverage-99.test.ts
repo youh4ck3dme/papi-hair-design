@@ -552,7 +552,7 @@ describe("calendar coverage 99", () => {
 
     it("80 CSV contains expected header", () => {
       const csv = buildAdminCalendarCsv([row]);
-      expect(csv.split("\n")[0]).toContain("Referencia;Klient;Email;Telefon");
+      expect(csv.split("\n")[0]).toContain("Referencia;Klient;Email;Telefón");
     });
 
     it("81 CSV contains one data row plus header", () => {
@@ -588,13 +588,13 @@ describe("calendar coverage 99", () => {
 
     it("87 print HTML contains reservation count", () => {
       const html = buildAdminCalendarPrintHtml("Pondelok", [row]);
-      expect(html).toContain("Pocet rezervacii: 1");
+      expect(html).toContain("Počet rezervácií: 1");
     });
 
     it("88 print HTML contains date label and title", () => {
       const html = buildAdminCalendarPrintHtml("Pondelok", [row]);
       expect(html).toContain("Pondelok");
-      expect(html).toContain("FYZIO&FIT - Denny prehlad");
+      expect(html).toContain("PAPI HAIR DESIGN - Denný prehľad");
     });
 
     it("89 print HTML uses placeholders for missing optional values", () => {

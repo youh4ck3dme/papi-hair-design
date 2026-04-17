@@ -1,9 +1,10 @@
-import { act, render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { BookingCalendarProvider } from "./BookingCalendarProvider";
 import { useBookingCalendarContext } from "./calendar-context";
+import type { SlotInfo } from "./calendar-context";
 import type { BookingCalendarEvent as BookingEvent, BookingCalendarMode } from "./calendar-types";
 import { CALENDAR_END_HOUR, CALENDAR_START_HOUR, HOURS } from "./calendar-types";
 import { BookingCalendar } from "./BookingCalendar";
@@ -24,7 +25,7 @@ interface ProviderOpts {
   selectable?: boolean;
   resources?: Array<{ id: string; display_name: string }>;
   businessHours?: unknown;
-  onSelectSlot?: (slot: { start: Date; end: Date }) => void;
+  onSelectSlot?: (slot: SlotInfo) => void;
   onSelectEvent?: (event: BookingEvent) => void;
   setMode?: (mode: BookingCalendarMode) => void;
   setDate?: (date: Date) => void;
@@ -110,8 +111,7 @@ describe("booking-calendar components", () => {
     const date = new Date(2026, 0, 15, 10, 0);
     const { setDate } = renderWithProvider(<CalendarHeaderDate />, { mode: "day", date });
 
-    const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Predchádzajúci deň" }));
 
     expect(setDate).toHaveBeenCalledTimes(1);
     expect((setDate.mock.calls[0][0] as Date).getDate()).toBe(14);
@@ -121,8 +121,7 @@ describe("booking-calendar components", () => {
     const date = new Date(2026, 0, 15, 10, 0);
     const { setDate } = renderWithProvider(<CalendarHeaderDate />, { mode: "week", date });
 
-    const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Ďalší týždeň" }));
 
     expect(setDate).toHaveBeenCalledTimes(1);
     expect((setDate.mock.calls[0][0] as Date).getDate()).toBe(22);
@@ -132,11 +131,67 @@ describe("booking-calendar components", () => {
     const date = new Date(2026, 0, 15, 10, 0);
     const { setDate } = renderWithProvider(<CalendarHeaderDate />, { mode: "month", date });
 
-    const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Ďalší mesiac" }));
 
     expect(setDate).toHaveBeenCalledTimes(1);
     expect((setDate.mock.calls[0][0] as Date).getMonth()).toBe(1);
+  });
+
+  it("opens quick date picker dialog from date label click", () => {
+    renderWithProvider(<CalendarHeaderDate />, {
+      mode: "week",
+      date: new Date(2026, 1, 20, 10, 0),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Vybrať dátum v kalendári" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText("20. februára 2026")).toBeInTheDocument();
+    expect(within(dialog).getAllByText("február 2026").length).toBeGreaterThan(0);
+  });
+
+  it("navigates months inside quick date picker", () => {
+    renderWithProvider(<CalendarHeaderDate />, {
+      mode: "week",
+      date: new Date(2026, 1, 20, 10, 0),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Vybrať dátum v kalendári" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getAllByText("február 2026").length).toBeGreaterThan(0);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Ďalší mesiac" }));
+    expect(within(dialog).getAllByText("marec 2026").length).toBeGreaterThan(0);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Predchádzajúci mesiac" }));
+    expect(within(dialog).getAllByText("február 2026").length).toBeGreaterThan(0);
+  });
+
+  it("selects a day from quick date picker and switches to day mode", () => {
+    const setDate = vi.fn();
+    const setMode = vi.fn();
+
+    renderWithProvider(<CalendarHeaderDate />, {
+      mode: "week",
+      date: new Date(2026, 1, 15, 10, 0),
+      setDate,
+      setMode,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Vybrať dátum v kalendári" }));
+
+    const dialog = screen.getByRole("dialog");
+    const dayButton = within(dialog).getAllByText("20", { selector: "button" })[0];
+    fireEvent.click(dayButton);
+
+    expect(setDate).toHaveBeenCalledTimes(1);
+    expect((setDate.mock.calls[0][0] as Date).getFullYear()).toBe(2026);
+    expect((setDate.mock.calls[0][0] as Date).getMonth()).toBe(1);
+    expect((setDate.mock.calls[0][0] as Date).getDate()).toBe(20);
+    expect(setMode).toHaveBeenCalledWith("day");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("hides add button when selectable is false", () => {
@@ -216,10 +271,11 @@ describe("booking-calendar components", () => {
 
     const firstHourSlot = screen.getAllByRole("button", { name: /Vybrať čas okolo/i })[0];
     fireEvent.click(firstHourSlot, { clientY: 110 });
-    const slot = onSelectSlot.mock.calls[0][0] as { start: Date; end: Date };
+    const slot = onSelectSlot.mock.calls[0][0] as SlotInfo;
 
     expect(slot.start.getHours()).toBe(CALENDAR_START_HOUR);
     expect(slot.start.getMinutes()).toBe(0);
+    expect(slot.intent).toBe("book");
     rectSpy.mockRestore();
   });
 
@@ -246,10 +302,11 @@ describe("booking-calendar components", () => {
 
     const firstHourSlot = screen.getAllByRole("button", { name: /Vybrať čas okolo/i })[0];
     fireEvent.click(firstHourSlot, { clientY: 190 });
-    const slot = onSelectSlot.mock.calls[0][0] as { start: Date; end: Date };
+    const slot = onSelectSlot.mock.calls[0][0] as SlotInfo;
 
     expect(slot.start.getHours()).toBe(CALENDAR_START_HOUR);
     expect(slot.start.getMinutes()).toBe(30);
+    expect(slot.intent).toBe("book");
     rectSpy.mockRestore();
   });
 
@@ -262,10 +319,11 @@ describe("booking-calendar components", () => {
 
     const firstHourSlot = screen.getAllByRole("button", { name: /Vybrať čas okolo/i })[0];
     fireEvent.keyDown(firstHourSlot, { key: "Enter" });
-    const slot = onSelectSlot.mock.calls[0][0] as { start: Date; end: Date };
+    const slot = onSelectSlot.mock.calls[0][0] as SlotInfo;
 
     expect(slot.start.getHours()).toBe(CALENDAR_START_HOUR);
     expect(slot.start.getMinutes()).toBe(0);
+    expect(slot.intent).toBe("book");
   });
 
   it("handles Space keyboard for slot selection", () => {
@@ -323,6 +381,149 @@ describe("booking-calendar components", () => {
 
     expect(screen.getByText("Emp 1")).toBeInTheDocument();
     expect(screen.queryByText("Emp 2")).not.toBeInTheDocument();
+  });
+
+  it("passes resource metadata with booking intent when selecting a resource slot", () => {
+    const onSelectSlot = vi.fn();
+    const rectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        width: 100,
+        height: 100,
+        top: 100,
+        left: 0,
+        right: 100,
+        bottom: 200,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+    renderWithProvider(
+      <CalendarBodyDayContent
+        date={new Date(2026, 0, 15)}
+        resourceId="emp-1"
+        resourceName="Marek"
+      />,
+      {
+        selectable: true,
+        onSelectSlot,
+      },
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Vybrať čas okolo/i })[0], {
+      clientY: 110,
+    });
+
+    expect(onSelectSlot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceId: "emp-1",
+        resourceName: "Marek",
+        intent: "book",
+      }),
+    );
+
+    rectSpy.mockRestore();
+  });
+
+  it("opens block intent on long press and suppresses the follow-up click", () => {
+    const onSelectSlot = vi.fn();
+    const rectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        width: 100,
+        height: 100,
+        top: 100,
+        left: 0,
+        right: 100,
+        bottom: 200,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+    vi.useFakeTimers();
+    try {
+      renderWithProvider(
+        <CalendarBodyDayContent
+          date={new Date(2026, 0, 15)}
+          resourceId="emp-1"
+          resourceName="Marek"
+        />,
+        {
+          selectable: true,
+          onSelectSlot,
+        },
+      );
+
+      const slotButton = screen.getAllByRole("button", { name: /Vybrať čas okolo/i })[0];
+      fireEvent.touchStart(slotButton, {
+        touches: [{ clientX: 16, clientY: 112 }],
+      });
+
+      vi.advanceTimersByTime(460);
+
+      expect(onSelectSlot).toHaveBeenCalledTimes(1);
+      expect(onSelectSlot).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resourceId: "emp-1",
+          resourceName: "Marek",
+          intent: "block",
+        }),
+      );
+
+      fireEvent.touchEnd(slotButton, {
+        changedTouches: [{ clientX: 16, clientY: 112 }],
+      });
+      fireEvent.click(slotButton, { clientY: 112 });
+
+      expect(onSelectSlot).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+      rectSpy.mockRestore();
+    }
+  });
+
+  it("cancels long press when the touch moves like a scroll gesture", () => {
+    const onSelectSlot = vi.fn();
+    const rectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        width: 100,
+        height: 100,
+        top: 100,
+        left: 0,
+        right: 100,
+        bottom: 200,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+    vi.useFakeTimers();
+    try {
+      renderWithProvider(<CalendarBodyDayContent date={new Date(2026, 0, 15)} />, {
+        selectable: true,
+        onSelectSlot,
+      });
+
+      const slotButton = screen.getAllByRole("button", { name: /Vybrať čas okolo/i })[0];
+      fireEvent.touchStart(slotButton, {
+        touches: [{ clientX: 20, clientY: 120 }],
+      });
+      fireEvent.touchMove(slotButton, {
+        touches: [{ clientX: 20, clientY: 145 }],
+      });
+
+      vi.advanceTimersByTime(460);
+
+      expect(onSelectSlot).not.toHaveBeenCalled();
+    } finally {
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+      rectSpy.mockRestore();
+    }
   });
 
   it("shows resource name in day header", () => {
@@ -585,8 +786,7 @@ describe("booking-calendar components", () => {
     expect(zn).toBeLessThan(zd);
   });
 
-  it("filters day events using centered calendar search", () => {
-    vi.useFakeTimers();
+  it("renders day events without search filtering controls", () => {
     const date = new Date(2026, 0, 15);
     const events = [
       makeEvent({
@@ -615,20 +815,12 @@ describe("booking-calendar components", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("Hľadať v kalendári"), {
-      target: { value: "2222" },
-    });
-
-    act(() => {
-      vi.advanceTimersByTime(220);
-    });
-
-    expect(screen.queryByText("Anna - Farbenie")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Hľadať v kalendári")).not.toBeInTheDocument();
+    expect(screen.getByText("Anna - Farbenie")).toBeInTheDocument();
     expect(screen.getByText("Mato - Strih")).toBeInTheDocument();
-    vi.useRealTimers();
   });
 
-  it("switches month density to compact and shows +N more earlier", () => {
+  it("keeps month mode functional without compact toggle", () => {
     const date = new Date(2026, 0, 15);
     const events = [
       makeEvent({ id: "m1", start: new Date(2026, 0, 15, 8, 0), end: new Date(2026, 0, 15, 8, 30) }),
@@ -647,9 +839,8 @@ describe("booking-calendar components", () => {
       />,
     );
 
-    expect(screen.queryByText("+2 ďalších")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Compact" }));
-    expect(screen.getByText("+2 ďalších")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Compact" })).not.toBeInTheDocument();
+    expect(screen.getByText("január 2026")).toBeInTheDocument();
   });
 
   it("renders resource columns in day mode when resources are present", () => {

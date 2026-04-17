@@ -36,6 +36,14 @@ export { bootstrapAdminAccess } from "./bootstrapAdminAccess";
 export { enforceSalonRoles } from "./enforceSalonRoles";
 export { createCheckoutSession } from "./createCheckoutSession";
 export { onProfileWriteSyncEmployeePhoto } from "./syncEmployeePhotoFromProfile";
+export { onServiceSubcategoryAuditEvent } from "./serviceSubcategoryAudit";
+export { recordBookingFunnelEvent } from "./recordBookingFunnelEvent";
+export {
+  syncObservabilityAlerts,
+  onPublicSnapshotAlertSync,
+  onOpsHealthAlertSync,
+  refreshObservabilityAlerts,
+} from "./opsAlerts";
 export {
   onBusinessWrite,
   onServiceWrite,

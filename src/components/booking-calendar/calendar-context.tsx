@@ -11,6 +11,9 @@ export type CalendarZoomLevel =
 export interface SlotInfo {
   start: Date;
   end: Date;
+  resourceId?: string;
+  resourceName?: string;
+  intent?: "book" | "block";
 }
 
 export interface BookingCalendarContextValue {

@@ -26,6 +26,13 @@ const rootEl = document.getElementById("root")!;
 
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 
+function isLocalPreviewHost(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return LOCAL_HOSTNAMES.has(window.location.hostname);
+}
+
 function canRegisterServiceWorker(): boolean {
   if (typeof navigator === "undefined" || typeof window === "undefined") {
     return false;
@@ -33,10 +40,22 @@ function canRegisterServiceWorker(): boolean {
   if (!("serviceWorker" in navigator)) {
     return false;
   }
-  if (window.isSecureContext) {
-    return true;
+  if (isLocalPreviewHost()) {
+    return false;
   }
-  return LOCAL_HOSTNAMES.has(window.location.hostname);
+  return window.isSecureContext;
+}
+
+async function cleanupLocalPreviewServiceWorkers() {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    return;
+  }
+  if (!isLocalPreviewHost()) {
+    return;
+  }
+
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  await Promise.all(registrations.map((registration) => registration.unregister()));
 }
 
 function initServiceWorker() {
@@ -88,6 +107,7 @@ function initAnalytics() {
 async function bootstrap() {
   try {
     await ensureStorageAndServiceWorker();
+    await cleanupLocalPreviewServiceWorkers();
   } catch (error) {
     console.error("Failed to validate storage/service-worker preflight:", error);
   }

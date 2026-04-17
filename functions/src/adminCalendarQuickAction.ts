@@ -1,7 +1,13 @@
 import * as functions from "firebase-functions/v2";
 import { type CallableRequest, HttpsError } from "firebase-functions/v2/https";
 import { Timestamp, getFirestore } from "firebase-admin/firestore";
+import { randomUUID } from "node:crypto";
 import { requireAuth, requireMembership, type MembershipRole } from "./guards";
+import {
+  DEFAULT_RECURRENCE_TIMEZONE,
+  type TimeBlockRepeatFrequency,
+  buildTimeBlockOccurrences,
+} from "./timeBlockRecurrence";
 
 type QuickActionType = "move" | "duplicate" | "block" | "delete_block";
 
@@ -15,6 +21,12 @@ interface AdminCalendarQuickActionData {
   start_at?: string;
   end_at?: string;
   reason?: string;
+  all_day?: boolean;
+  repeat?: boolean;
+  repeat_frequency?: TimeBlockRepeatFrequency;
+  repeat_until_date?: string;
+  repeat_interval?: number;
+  timezone?: string;
 }
 
 function toIso(value: unknown): string {
@@ -137,6 +149,22 @@ async function appendCalendarActionAudit(params: {
   });
 }
 
+function stripRecurringSeriesMetadata(row: Record<string, unknown>) {
+  const {
+    series_id: _seriesId,
+    occurrence_index: _occurrenceIndex,
+    repeat: _repeat,
+    repeat_frequency: _repeatFrequency,
+    repeat_until_date: _repeatUntilDate,
+    repeat_interval: _repeatInterval,
+    timezone: _timezone,
+    all_day: _allDay,
+    ...rest
+  } = row;
+
+  return rest;
+}
+
 export const adminCalendarQuickAction = functions.https.onCall(
   { region: "europe-west1" },
   async (request: CallableRequest<AdminCalendarQuickActionData>) => {
@@ -202,31 +230,80 @@ export const adminCalendarQuickAction = functions.https.onCall(
         throw new HttpsError("permission-denied", "Employees can block only their own time");
       }
 
-      await ensureNoCollision({
-        businessId: business_id,
-        employeeId: employeeId,
+      const timezone =
+        typeof request.data.timezone === "string" && request.data.timezone.trim().length > 0
+          ? request.data.timezone.trim()
+          : DEFAULT_RECURRENCE_TIMEZONE;
+      const repeat = request.data.repeat === true;
+      const repeatFrequency = request.data.repeat_frequency;
+      const repeatUntilDate = request.data.repeat_until_date;
+      const repeatInterval = request.data.repeat_interval;
+      const allDay = request.data.all_day === true;
+      const reason = request.data.reason?.trim() || "Blokovaný čas";
+
+      const occurrences = buildTimeBlockOccurrences({
         startAt,
         endAt,
+        timezone,
+        repeat,
+        repeatFrequency,
+        repeatUntilDate,
+        repeatInterval,
       });
 
-      const created = await db.collection("time_blocks").add({
-        business_id,
-        employee_id: employeeId,
-        start_at: startAt,
-        end_at: endAt,
-        reason: request.data.reason?.trim() || "Blokovaný čas",
-        created_by: uid,
-        created_at: Timestamp.now(),
-        updated_at: Timestamp.now(),
+      for (const occurrence of occurrences) {
+        await ensureNoCollision({
+          businessId: business_id,
+          employeeId,
+          startAt: occurrence.startAt,
+          endAt: occurrence.endAt,
+        });
+      }
+
+      const now = Timestamp.now();
+      const timeBlocksRef = db.collection("time_blocks");
+      const batch = db.batch();
+      const seriesId = occurrences.length > 1 ? randomUUID() : null;
+      const createdRefs = occurrences.map(() => timeBlocksRef.doc());
+
+      occurrences.forEach((occurrence, index) => {
+        batch.set(createdRefs[index], {
+          business_id,
+          employee_id: employeeId,
+          start_at: occurrence.startAt,
+          end_at: occurrence.endAt,
+          reason,
+          all_day: allDay,
+          timezone,
+          repeat,
+          repeat_frequency: repeat ? repeatFrequency ?? null : null,
+          repeat_until_date: repeat ? repeatUntilDate ?? null : null,
+          repeat_interval: repeat ? Math.max(1, Math.floor(Number(repeatInterval ?? 1))) : 1,
+          series_id: seriesId,
+          occurrence_index: occurrence.occurrenceIndex,
+          created_by: uid,
+          created_at: now,
+          updated_at: now,
+        });
       });
+
+      await batch.commit();
 
       const payload = {
-        id: created.id,
+        event_ids: createdRefs.map((ref) => ref.id),
+        occurrences_count: createdRefs.length,
+        series_id: seriesId,
         business_id,
         employee_id: employeeId,
-        start_at: startAt,
-        end_at: endAt,
-        reason: request.data.reason?.trim() || "Blokovaný čas",
+        start_at: occurrences[0]?.startAt ?? startAt,
+        end_at: occurrences[0]?.endAt ?? endAt,
+        reason,
+        all_day: allDay,
+        repeat,
+        repeat_frequency: repeat ? repeatFrequency ?? null : null,
+        repeat_until_date: repeat ? repeatUntilDate ?? null : null,
+        repeat_interval: repeat ? Math.max(1, Math.floor(Number(repeatInterval ?? 1))) : 1,
+        timezone,
       };
 
       await appendCalendarActionAudit({
@@ -236,7 +313,7 @@ export const adminCalendarQuickAction = functions.https.onCall(
         action,
         eventType: "time_block",
         sourceEventId: null,
-        targetEventId: created.id,
+        targetEventId: createdRefs[0]?.id ?? null,
         before: null,
         after: payload,
       });
@@ -244,9 +321,12 @@ export const adminCalendarQuickAction = functions.https.onCall(
       return {
         success: true,
         event_type: "time_block" as const,
-        event_id: created.id,
-        start_at: startAt,
-        end_at: endAt,
+        event_id: createdRefs[0]?.id ?? null,
+        event_ids: createdRefs.map((ref) => ref.id),
+        series_id: seriesId,
+        occurrences_count: createdRefs.length,
+        start_at: occurrences[0]?.startAt ?? startAt,
+        end_at: occurrences[0]?.endAt ?? endAt,
       };
     }
 
@@ -434,13 +514,19 @@ export const adminCalendarQuickAction = functions.https.onCall(
     }
 
     const created = await db.collection("time_blocks").add({
-      ...row,
+      ...stripRecurringSeriesMetadata(row),
       start_at: startAt,
       end_at: endAt,
       employee_id: targetEmployeeId,
       created_at: Timestamp.now(),
       updated_at: Timestamp.now(),
       created_by: uid,
+      series_id: null,
+      occurrence_index: 0,
+      repeat: false,
+      repeat_frequency: null,
+      repeat_until_date: null,
+      repeat_interval: 1,
     });
 
     await appendCalendarActionAudit({

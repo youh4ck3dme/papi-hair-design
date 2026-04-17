@@ -17,9 +17,10 @@ import {
     type ServiceSubcategoryRow,
 } from "@/lib/serviceSubcategories";
 import {
-    resolveManagedServiceCategory,
-    resolveManagedServiceSubcategoryForService,
-} from "@/lib/serviceSubcategoryBlueprint";
+    normalizeEmployeePhotoUrl,
+    resolveStaticEmployeePhotoUrl,
+} from "@/lib/employeePhoto";
+import { resolveManagedServiceCategory, resolveManagedServiceSubcategoryForService } from "@/lib/serviceSubcategoryBlueprint";
 
 export interface BusinessData {
     id: string;
@@ -92,25 +93,19 @@ function hydrateServiceTaxonomy(
     });
 }
 
-function normalizePhotoUrl(value: unknown): string | null {
-    if (typeof value !== "string") return null;
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
-}
-
 function resolveProfilePhotoUrl(profileData: Record<string, unknown> | undefined): string | null {
     if (!profileData) return null;
     return (
-        normalizePhotoUrl(profileData.avatar_url) ??
-        normalizePhotoUrl(profileData.photo_url) ??
-        normalizePhotoUrl(profileData.profile_photo_url)
+        normalizeEmployeePhotoUrl(profileData.avatar_url) ??
+        normalizeEmployeePhotoUrl(profileData.photo_url) ??
+        normalizeEmployeePhotoUrl(profileData.profile_photo_url)
     );
 }
 
 async function enrichEmployeesWithProfilePhoto(employees: EmployeeRow[]): Promise<EmployeeRow[]> {
     const profileIds = [...new Set(
         employees
-            .filter((employee) => !normalizePhotoUrl(employee.photo_url))
+            .filter((employee) => !normalizeEmployeePhotoUrl(employee.photo_url))
             .map((employee) => employee.profile_id)
             .filter((profileId): profileId is string => typeof profileId === "string" && profileId.trim().length > 0)
     )];
@@ -141,21 +136,19 @@ async function enrichEmployeesWithProfilePhoto(employees: EmployeeRow[]): Promis
     }
 
     return employees.map((employee) => {
-        if (normalizePhotoUrl(employee.photo_url)) {
+        if (normalizeEmployeePhotoUrl(employee.photo_url)) {
             return employee;
         }
 
         const profileId = employee.profile_id;
-        if (!profileId) {
+        const profilePhotoUrl = profileId ? profilePhotoById.get(profileId) : null;
+        const fallbackPhotoUrl = resolveStaticEmployeePhotoUrl(employee);
+        const resolvedPhotoUrl = profilePhotoUrl ?? fallbackPhotoUrl;
+        if (!resolvedPhotoUrl) {
             return employee;
         }
 
-        const profilePhotoUrl = profilePhotoById.get(profileId);
-        if (!profilePhotoUrl) {
-            return employee;
-        }
-
-        return { ...employee, photo_url: profilePhotoUrl };
+        return { ...employee, photo_url: resolvedPhotoUrl };
     });
 }
 

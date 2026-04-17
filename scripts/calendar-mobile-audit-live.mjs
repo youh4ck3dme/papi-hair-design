@@ -62,7 +62,8 @@ for (const viewport of viewports) {
     }
 
     await page.goto(`${baseURL}/admin/calendar`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-    await page.locator('h1:has-text("Kalendár")').waitFor({ timeout: 30_000 });
+    await page.getByLabel("Vybrať dátum v kalendári").waitFor({ timeout: 30_000 });
+    await page.getByTestId("calendar-header-actions").waitFor({ timeout: 30_000 });
 
     const dayView = page.getByRole("radio", { name: /^Deň$/ }).first();
     if (await dayView.isVisible().catch(() => false)) {

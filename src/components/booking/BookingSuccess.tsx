@@ -41,7 +41,7 @@ export function BookingSuccess({
         if (!appointmentStart || !appointmentEnd) return;
 
         const ics = buildIcsContent({
-            title: `FYZIO&FIT - ${selectedService?.name_sk ?? t("booking.confirmTitle")}`,
+            title: `PAPI HAIR DESIGN - ${selectedService?.name_sk ?? t("booking.confirmTitle")}`,
             description: t("booking.calendarDescription", {
                 service: selectedService?.name_sk ?? t("booking.confirmTitle"),
             }),
@@ -54,14 +54,14 @@ export function BookingSuccess({
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = "fyzio-fit-booking.ics";
+        link.download = "papi-hair-design-booking.ics";
         link.click();
         URL.revokeObjectURL(url);
     };
 
     const googleCalendarHref = appointmentStart && appointmentEnd
         ? buildGoogleCalendarUrl({
-            title: `FYZIO&FIT - ${selectedService?.name_sk ?? t("booking.confirmTitle")}`,
+            title: `PAPI HAIR DESIGN - ${selectedService?.name_sk ?? t("booking.confirmTitle")}`,
             description: t("booking.calendarDescription", {
                 service: selectedService?.name_sk ?? t("booking.confirmTitle"),
             }),

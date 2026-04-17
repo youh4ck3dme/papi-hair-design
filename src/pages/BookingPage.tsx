@@ -17,6 +17,7 @@ import { getEffectiveIntervals, type BusinessHours } from "@/lib/availability";
 import { useBookingData } from "@/hooks/useBookingData";
 import { useAvailability } from "@/hooks/useAvailability";
 import { useBookingForm } from "@/hooks/useBookingForm";
+import { recordBookingFunnelEvent } from "@/integrations/firebase/recordBookingFunnelEvent";
 
 export default function BookingPage() {
   const { i18n } = useTranslation();
@@ -64,6 +65,7 @@ export default function BookingPage() {
     handleConsentChange,
     handleSubmit
   } = useBookingForm(services, serviceSubcategories, employees, business, employeeServiceMap, memberships);
+  const businessId = typeof business?.id === "string" ? business.id : "";
 
   const selectedAvailabilityEmployees = useMemo(() => {
     if (!selectedEmployeeId) return filteredEmployees;
@@ -121,6 +123,117 @@ export default function BookingPage() {
       cursor = addDays(cursor, 1);
     }
   }, [selectedServiceId, selectedDate, today, maxDays, isBusinessOpenOnDay, setCalendarMonth, setSelectedDate]);
+
+  useEffect(() => {
+    if (!businessId) return;
+    void recordBookingFunnelEvent({
+      business_id: businessId,
+      event_name: "booking_started",
+      category,
+      dedupe_key: `booking_started:${businessId}`,
+    });
+  }, [businessId, category]);
+
+  useEffect(() => {
+    if (!businessId || !category) return;
+    void recordBookingFunnelEvent({
+      business_id: businessId,
+      event_name: "category_selected",
+      category,
+      dedupe_key: `category_selected:${businessId}:${category}`,
+    });
+  }, [businessId, category]);
+
+  useEffect(() => {
+    if (!businessId || !subcategory) return;
+    const selectedSubcategoryName =
+      subcategoryOptions.find((option) => option.key === subcategory)?.name_sk ?? subcategory;
+
+    void recordBookingFunnelEvent({
+      business_id: businessId,
+      event_name: "subcategory_selected",
+      category,
+      subcategory: selectedSubcategoryName,
+      dedupe_key: `subcategory_selected:${businessId}:${subcategory}`,
+    });
+  }, [businessId, category, subcategory, subcategoryOptions]);
+
+  useEffect(() => {
+    if (!businessId || !selectedServiceId) return;
+    void recordBookingFunnelEvent({
+      business_id: businessId,
+      event_name: "service_selected",
+      category,
+      subcategory:
+        subcategoryOptions.find((option) => option.key === subcategory)?.name_sk ?? subcategory,
+      service_id: selectedServiceId,
+      dedupe_key: `service_selected:${businessId}:${selectedServiceId}`,
+    });
+  }, [businessId, category, selectedServiceId, subcategory, subcategoryOptions]);
+
+  useEffect(() => {
+    if (!businessId || !selectedEmployeeId) return;
+    void recordBookingFunnelEvent({
+      business_id: businessId,
+      event_name: "employee_selected",
+      category,
+      subcategory:
+        subcategoryOptions.find((option) => option.key === subcategory)?.name_sk ?? subcategory,
+      service_id: selectedServiceId,
+      employee_id: selectedEmployeeId,
+      dedupe_key: `employee_selected:${businessId}:${selectedServiceId ?? "none"}:${selectedEmployeeId}`,
+    });
+  }, [businessId, category, selectedEmployeeId, selectedServiceId, subcategory, subcategoryOptions]);
+
+  useEffect(() => {
+    if (!businessId || !selectedTime || !selectedFullDate) return;
+    void recordBookingFunnelEvent({
+      business_id: businessId,
+      event_name: "slot_selected",
+      category,
+      subcategory:
+        subcategoryOptions.find((option) => option.key === subcategory)?.name_sk ?? subcategory,
+      service_id: selectedServiceId,
+      employee_id: selectedEmployeeId,
+      slot_at: selectedFullDate.toISOString(),
+      dedupe_key: `slot_selected:${businessId}:${selectedFullDate.toISOString()}:${selectedTime}`,
+    });
+  }, [
+    businessId,
+    category,
+    selectedEmployeeId,
+    selectedFullDate,
+    selectedServiceId,
+    selectedTime,
+    subcategory,
+    subcategoryOptions,
+  ]);
+
+  useEffect(() => {
+    if (!businessId || !bookingDone) return;
+    void recordBookingFunnelEvent({
+      business_id: businessId,
+      event_name: "booking_confirmed",
+      category,
+      subcategory:
+        subcategoryOptions.find((option) => option.key === subcategory)?.name_sk ?? subcategory,
+      service_id: selectedServiceId,
+      employee_id: selectedEmployeeId,
+      slot_at: selectedFullDate?.toISOString() ?? null,
+      dedupe_key: `booking_confirmed:${businessId}:${bookingResult?.history_reference ?? selectedTime ?? "done"}`,
+    });
+  }, [
+    bookingDone,
+    bookingResult?.history_reference,
+    businessId,
+    category,
+    selectedEmployeeId,
+    selectedFullDate,
+    selectedServiceId,
+    selectedTime,
+    subcategory,
+    subcategoryOptions,
+  ]);
 
   useEffect(() => {
     if (!selectedServiceId) return;
@@ -222,8 +335,8 @@ export default function BookingPage() {
         })()}
 
         {selectedService && (
-          <div className="px-4 pt-4 lg:px-6">
-            <div className="grid gap-3 rounded-2xl border border-primary/15 bg-[linear-gradient(180deg,rgba(218,165,32,0.09),rgba(218,165,32,0.03))] p-4 lg:grid-cols-3">
+          <div className="px-4 pt-5 lg:px-6">
+            <div className="grid gap-3 rounded-3xl border border-primary/15 bg-[linear-gradient(180deg,rgba(218,165,32,0.09),rgba(218,165,32,0.03))] p-4 shadow-[0_14px_34px_rgba(0,0,0,0.18)] lg:grid-cols-3">
               <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
                   {i18n.language === "en" ? "Service" : "Služba"}
@@ -254,7 +367,7 @@ export default function BookingPage() {
           </div>
         )}
 
-        <div className="pb-24 lg:px-2 lg:pb-12">
+        <div className="pb-24 pt-1 lg:px-2 lg:pb-12">
           <ServiceSelection
             category={category}
             setCategory={setCategory}
@@ -280,7 +393,7 @@ export default function BookingPage() {
                   : undefined
               }
             >
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <div ref={employeeSectionRef}>
                   <EmployeeSelection
                     employees={filteredEmployees}
@@ -318,7 +431,7 @@ export default function BookingPage() {
           )}
 
           {selectedEmployeeId && selectedTime && (
-            <div ref={contactSectionRef} className="lg:mx-auto lg:max-w-3xl">
+            <div ref={contactSectionRef} className="pt-2 lg:mx-auto lg:max-w-3xl">
               <ContactConfirmation
                 formData={formData}
                 setFormData={setFormData}

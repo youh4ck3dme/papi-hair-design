@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { addMinutes, startOfDay, addDays, startOfMonth, startOfWeek, format as fmtDate } from "date-fns";
+import { addMinutes, startOfDay, format as fmtDate } from "date-fns";
 import { sk } from "date-fns/locale";
 import { auth, db } from "@/integrations/firebase/config";
 import {
@@ -29,12 +29,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer, MoreVertical, FilterX, MoveRight, CopyPlus, Lock, Trash2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
-import { adminCalendarQuickAction } from "@/integrations/firebase/adminCalendarQuickAction";
+import {
+  adminCalendarQuickAction,
+  type AdminCalendarRepeatFrequency,
+} from "@/integrations/firebase/adminCalendarQuickAction";
 import { toCallableErrorMessage } from "@/integrations/firebase/callableError";
 import {
   ADMIN_BOOKING_STATUS_LABELS,
@@ -49,6 +54,12 @@ import {
   isIgnorableBlockedFirestoreError,
   warnBlockedByClientOnce,
 } from "@/lib/firebaseClientErrors";
+import {
+  DEFAULT_BUSINESS_TIMEZONE,
+  fromCalendarWallClockDateToUtcIso,
+  getBusinessDayUtcRange,
+  toCalendarWallClockDate,
+} from "@/lib/calendarEventUtils";
 
 interface CalEvent {
   id: string; title: string; start: Date; end: Date; status: string; resource: any;
@@ -59,6 +70,33 @@ interface CustomerHistoryItem {
   start_at: string;
   status: string;
   service_name: string | null;
+}
+
+const TOOLBAR_ACTION_START_HOUR = 8;
+const TOOLBAR_ACTION_DURATION_MINUTES = 30;
+const DEFAULT_BLOCK_REASON = "Blokovaný čas";
+
+const BLOCK_REPEAT_OPTIONS: Array<{
+  value: AdminCalendarRepeatFrequency;
+  label: string;
+}> = [
+  { value: "hourly", label: "Každú hodinu" },
+  { value: "daily", label: "Každý deň" },
+  { value: "weekly", label: "Každý týždeň" },
+  { value: "monthly", label: "Každý mesiac" },
+  { value: "yearly", label: "Každý rok" },
+];
+
+interface BlockDialogState {
+  employeeId: string;
+  reason: string;
+  startDate: string;
+  startTime: string;
+  endTime: string;
+  allDay: boolean;
+  repeat: boolean;
+  repeatFrequency: AdminCalendarRepeatFrequency;
+  repeatUntilDate: string;
 }
 
 export default function CalendarPage() {
@@ -96,16 +134,32 @@ export default function CalendarPage() {
   const [employeeFilter, setEmployeeFilter] = useState<string>("all");
   const [compactActionMenu, setCompactActionMenu] = useState(false);
   const [quickActionOpen, setQuickActionOpen] = useState(false);
-  const [quickActionType, setQuickActionType] = useState<"move" | "duplicate" | "block">("move");
+  const [quickActionType, setQuickActionType] = useState<"move" | "duplicate">("move");
   const [quickActionStartAt, setQuickActionStartAt] = useState("");
   const [quickActionEndAt, setQuickActionEndAt] = useState("");
   const [quickActionEmployeeId, setQuickActionEmployeeId] = useState("");
-  const [quickActionReason, setQuickActionReason] = useState("Blokovaný čas");
   const [quickActionSaving, setQuickActionSaving] = useState(false);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [blockDialogSaving, setBlockDialogSaving] = useState(false);
+  const [blockDialogState, setBlockDialogState] = useState<BlockDialogState>({
+    employeeId: "",
+    reason: DEFAULT_BLOCK_REASON,
+    startDate: "",
+    startTime: "08:00",
+    endTime: "08:30",
+    allDay: false,
+    repeat: false,
+    repeatFrequency: "daily",
+    repeatUntilDate: "",
+  });
   const eventsRequestRef = useRef(0);
   const copyLabelResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filtersStorageKey = `admin-calendar-filters:${businessId}`;
+  const calendarTimezone =
+    typeof business?.timezone === "string" && business.timezone.trim().length > 0
+      ? business.timezone
+      : DEFAULT_BUSINESS_TIMEZONE;
 
   const scheduleCopyLabelReset = useCallback(() => {
     if (copyLabelResetTimeoutRef.current) {
@@ -170,11 +224,15 @@ export default function CalendarPage() {
 
       const appointmentEvents: CalEvent[] = apptsSnap.docs.map((doc) => {
         const a = doc.data();
+        const rawStart =
+          a.start_at instanceof Timestamp ? a.start_at.toDate().toISOString() : String(a.start_at ?? "");
+        const rawEnd =
+          a.end_at instanceof Timestamp ? a.end_at.toDate().toISOString() : String(a.end_at ?? "");
         return {
           id: doc.id,
           title: `${a.customer_name ?? "Zákazník"} – ${a.service_name ?? "Služba"}`,
-          start: a.start_at instanceof Timestamp ? a.start_at.toDate() : new Date(a.start_at),
-          end: a.end_at instanceof Timestamp ? a.end_at.toDate() : new Date(a.end_at),
+          start: toCalendarWallClockDate(rawStart, calendarTimezone),
+          end: toCalendarWallClockDate(rawEnd, calendarTimezone),
           status: a.status,
           resource: { ...a, id: doc.id },
         };
@@ -186,11 +244,15 @@ export default function CalendarPage() {
           typeof row.employee_name === "string" ? row.employee_name : null;
         const employeeColor =
           typeof row.employee_color === "string" ? row.employee_color : null;
+        const rawStart =
+          row.start_at instanceof Timestamp ? row.start_at.toDate().toISOString() : String(row.start_at ?? "");
+        const rawEnd =
+          row.end_at instanceof Timestamp ? row.end_at.toDate().toISOString() : String(row.end_at ?? "");
         return {
           id: docSnap.id,
           title: `Blok: ${typeof row.reason === "string" ? row.reason : "Blokovaný čas"}`,
-          start: row.start_at instanceof Timestamp ? row.start_at.toDate() : new Date(String(row.start_at)),
-          end: row.end_at instanceof Timestamp ? row.end_at.toDate() : new Date(String(row.end_at)),
+          start: toCalendarWallClockDate(rawStart, calendarTimezone),
+          end: toCalendarWallClockDate(rawEnd, calendarTimezone),
           status: "blocked",
           resource: {
             ...row,
@@ -217,7 +279,7 @@ export default function CalendarPage() {
         setLoading(false);
       }
     }
-  }, [businessId, isOwnerOrAdmin]);
+  }, [businessId, calendarTimezone, isOwnerOrAdmin]);
 
 
   useEffect(() => {
@@ -364,20 +426,29 @@ export default function CalendarPage() {
     [activeMembership?.profile_id, availableEmployees, employeeFilter, isOwnerOrAdmin],
   );
 
+  const actionableEmployees = useMemo(
+    () => (visibleResources.length > 0 ? visibleResources : availableEmployees),
+    [availableEmployees, visibleResources],
+  );
+
+  const actionableEmployeeIds = useMemo(
+    () => new Set(actionableEmployees.map((employee: any) => employee.id)),
+    [actionableEmployees],
+  );
+
 
   const loadAvailableSlots = useCallback(async (slotDate: Date, employeeId: string, serviceId: string) => {
     const service = services.find((s) => s.id === serviceId);
     if (!service || !employeeId || !business) return;
 
-    const dayStart = startOfDay(slotDate);
-    const dayEnd = addDays(dayStart, 1);
+    const { startUtc, endUtc } = getBusinessDayUtcRange(slotDate, calendarTimezone);
 
     try {
       const apptsSnap = await getDocs(query(
         collection(db, "appointments"),
         where("employee_id", "==", employeeId),
-        where("start_at", ">=", dayStart.toISOString()),
-        where("start_at", "<", dayEnd.toISOString())
+        where("start_at", ">=", startUtc),
+        where("start_at", "<", endUtc)
       ));
 
       const existing: ExistingAppointment[] = apptsSnap.docs
@@ -385,13 +456,19 @@ export default function CalendarPage() {
         .filter((appointment) => appointment.status !== "cancelled")
         .map((appointment) => ({
           start_at:
-            appointment.start_at instanceof Timestamp
-              ? appointment.start_at.toDate().toISOString()
-              : appointment.start_at,
+            toCalendarWallClockDate(
+              appointment.start_at instanceof Timestamp
+                ? appointment.start_at.toDate().toISOString()
+                : String(appointment.start_at ?? ""),
+              calendarTimezone,
+            ).toISOString(),
           end_at:
-            appointment.end_at instanceof Timestamp
-              ? appointment.end_at.toDate().toISOString()
-              : appointment.end_at,
+            toCalendarWallClockDate(
+              appointment.end_at instanceof Timestamp
+                ? appointment.end_at.toDate().toISOString()
+                : String(appointment.end_at ?? ""),
+              calendarTimezone,
+            ).toISOString(),
         }));
 
       const slots = generateSlots({
@@ -409,7 +486,7 @@ export default function CalendarPage() {
     } catch (err) {
       console.error("Error loading slots:", err);
     }
-  }, [services, business, schedules]);
+  }, [calendarTimezone, services, business, schedules]);
 
   useEffect(() => {
     if (bookForm.service_id && bookForm.employee_id && selectedSlot) {
@@ -428,12 +505,23 @@ export default function CalendarPage() {
   };
 
   const handleSelectSlot = (slot: SlotInfo) => {
-    if (!isOwnerOrAdmin) return;
+    if (slot.intent === "block") {
+      openBlockDialog({
+        start: slot.start,
+        end: slot.end,
+        employeeId: slot.resourceId,
+      });
+      return;
+    }
+
     setSelectedSlot(slot);
     setCustomStartTime(fmtDate(slot.start, "HH:mm"));
     setBookForm({
       service_id: "",
-      employee_id: "",
+      employee_id:
+        typeof slot.resourceId === "string" && actionableEmployeeIds.has(slot.resourceId)
+          ? slot.resourceId
+          : "",
       start_at: slot.start.toISOString()
     });
     setAvailableSlots([]);
@@ -459,7 +547,75 @@ export default function CalendarPage() {
     return `${input.getFullYear()}-${pad(input.getMonth() + 1)}-${pad(input.getDate())}T${pad(input.getHours())}:${pad(input.getMinutes())}`;
   };
 
-  const openQuickAction = (action: "move" | "duplicate" | "block") => {
+  const toInputDate = (input: Date) => fmtDate(input, "yyyy-MM-dd");
+  const toInputTime = (input: Date) => fmtDate(input, "HH:mm");
+
+  const mergeLocalDateAndTime = useCallback((dateValue: string, timeValue: string) => {
+    if (!dateValue || !timeValue) return null;
+    const [year, month, day] = dateValue.split("-").map(Number);
+    const [hours, minutes] = timeValue.split(":").map(Number);
+
+    if ([year, month, day, hours, minutes].some((value) => Number.isNaN(value))) {
+      return null;
+    }
+
+    return new Date(year, month - 1, day, hours, minutes, 0, 0);
+  }, []);
+
+  const openBlockDialog = useCallback(
+    (params: {
+      start: Date;
+      end: Date;
+      employeeId?: string;
+      reason?: string;
+      allDay?: boolean;
+    }) => {
+      const fallbackEmployeeId =
+        params.employeeId ||
+        actionableEmployees[0]?.id ||
+        visibleResources[0]?.id ||
+        availableEmployees[0]?.id ||
+        "";
+
+      if (!fallbackEmployeeId) {
+        toast.error("Nie je dostupný žiadny zamestnanec pre blokáciu.");
+        return;
+      }
+
+      setBlockDialogState({
+        employeeId: fallbackEmployeeId,
+        reason: params.reason?.trim() || DEFAULT_BLOCK_REASON,
+        startDate: toInputDate(params.start),
+        startTime: toInputTime(params.start),
+        endTime: toInputTime(params.end),
+        allDay: params.allDay === true,
+        repeat: false,
+        repeatFrequency: "daily",
+        repeatUntilDate: toInputDate(params.start),
+      });
+      setBlockDialogOpen(true);
+    },
+    [actionableEmployees, availableEmployees, visibleResources],
+  );
+
+  const buildToolbarActionSlot = useCallback((baseDate: Date) => {
+    const start = startOfDay(baseDate);
+    start.setHours(TOOLBAR_ACTION_START_HOUR, 0, 0, 0);
+    const end = addMinutes(start, TOOLBAR_ACTION_DURATION_MINUTES);
+    return { start, end };
+  }, []);
+
+  const handleToolbarCreateBooking = useCallback(() => {
+    const slot = buildToolbarActionSlot(date);
+    handleSelectSlot(slot);
+  }, [buildToolbarActionSlot, date]);
+
+  const handleToolbarBlock = useCallback(() => {
+    const slot = buildToolbarActionSlot(date);
+    openBlockDialog({ start: slot.start, end: slot.end });
+  }, [buildToolbarActionSlot, date, openBlockDialog]);
+
+  const openQuickAction = (action: "move" | "duplicate") => {
     if (!selectedEvent) return;
     const employeeId =
       typeof selectedEvent.resource?.employee_id === "string" ? selectedEvent.resource.employee_id : "";
@@ -470,11 +626,6 @@ export default function CalendarPage() {
     setQuickActionEmployeeId(employeeId);
     setQuickActionStartAt(startAt);
     setQuickActionEndAt(endAt);
-    setQuickActionReason(
-      typeof selectedEvent.resource?.reason === "string"
-        ? selectedEvent.resource.reason
-        : "Blokovaný čas",
-    );
     setQuickActionOpen(true);
   };
 
@@ -550,6 +701,14 @@ export default function CalendarPage() {
     [date, filteredEvents],
   );
 
+  const canManageSelectedEvent = useMemo(() => {
+    if (!selectedEvent) return false;
+    if (isOwnerOrAdmin) return true;
+    const employeeId =
+      typeof selectedEvent.resource?.employee_id === "string" ? selectedEvent.resource.employee_id : null;
+    return employeeId ? actionableEmployeeIds.has(employeeId) : false;
+  }, [actionableEmployeeIds, isOwnerOrAdmin, selectedEvent]);
+
   const exportRows = useMemo(
     () =>
       selectedDayEvents.map((event) => ({
@@ -602,18 +761,6 @@ export default function CalendarPage() {
     setView("day");
   }, []);
 
-  const handleJumpWeek = useCallback(() => {
-    const now = new Date();
-    setDate(startOfWeek(now, { weekStartsOn: 1 }));
-    setView("week");
-  }, []);
-
-  const handleJumpMonth = useCallback(() => {
-    const now = new Date();
-    setDate(startOfMonth(now));
-    setView("month");
-  }, []);
-
 
   const handleBook = async () => {
     if (!bookForm.service_id || !bookForm.employee_id || !bookForm.start_at) { toast.error("Vyplňte všetky polia"); return; }
@@ -632,6 +779,8 @@ export default function CalendarPage() {
       const duration = (service?.duration_minutes ?? 30) + (service?.buffer_minutes ?? 0);
       const start = new Date(bookForm.start_at);
       const end = addMinutes(start, duration);
+      const startAtUtc = fromCalendarWallClockDateToUtcIso(start, calendarTimezone);
+      const endAtUtc = fromCalendarWallClockDateToUtcIso(end, calendarTimezone);
 
       const walkinEmail = `walkin-${Date.now()}@internal`;
 
@@ -645,8 +794,8 @@ export default function CalendarPage() {
         employee_color: employee?.color ?? null,
         service_id: bookForm.service_id,
         service_name: service?.name_sk ?? "?",
-        start_at: start.toISOString(),
-        end_at: end.toISOString(),
+        start_at: startAtUtc,
+        end_at: endAtUtc,
         status: "confirmed",
         created_at: new Date().toISOString()
       });
@@ -713,6 +862,94 @@ export default function CalendarPage() {
     }
   };
 
+  const blockDialogValidationError = useMemo(() => {
+    if (!blockDialogState.employeeId) {
+      return "Vyberte pracovníka.";
+    }
+    if (!blockDialogState.reason.trim()) {
+      return "Zadajte názov blokácie.";
+    }
+    if (!blockDialogState.startDate) {
+      return "Vyberte dátum blokácie.";
+    }
+    if (blockDialogState.repeat && !blockDialogState.repeatUntilDate) {
+      return "Vyberte dátum ukončenia opakovania.";
+    }
+    if (blockDialogState.repeat && blockDialogState.repeatUntilDate < blockDialogState.startDate) {
+      return "Opakovanie nemôže končiť pred prvým dňom blokácie.";
+    }
+    if (blockDialogState.allDay) {
+      return null;
+    }
+
+    const start = mergeLocalDateAndTime(blockDialogState.startDate, blockDialogState.startTime);
+    const end = mergeLocalDateAndTime(blockDialogState.startDate, blockDialogState.endTime);
+    if (!start || !end) {
+      return "Vyplňte platný čas od aj do.";
+    }
+    if (end <= start) {
+      return "Čas do musí byť neskôr ako čas od.";
+    }
+
+    return null;
+  }, [blockDialogState, mergeLocalDateAndTime]);
+
+  const handleCreateBlock = async () => {
+    if (blockDialogValidationError) {
+      toast.error(blockDialogValidationError);
+      return;
+    }
+
+    let startAtUtc: string;
+    let endAtUtc: string;
+
+    if (blockDialogState.allDay) {
+      const blockDate = mergeLocalDateAndTime(blockDialogState.startDate, "00:00");
+      if (!blockDate) {
+        toast.error("Neplatný dátum blokácie.");
+        return;
+      }
+      const dayRange = getBusinessDayUtcRange(blockDate, calendarTimezone);
+      startAtUtc = dayRange.startUtc;
+      endAtUtc = dayRange.endUtc;
+    } else {
+      const start = mergeLocalDateAndTime(blockDialogState.startDate, blockDialogState.startTime);
+      const end = mergeLocalDateAndTime(blockDialogState.startDate, blockDialogState.endTime);
+      if (!start || !end) {
+        toast.error("Vyplňte platný čas od aj do.");
+        return;
+      }
+      startAtUtc = fromCalendarWallClockDateToUtcIso(start, calendarTimezone);
+      endAtUtc = fromCalendarWallClockDateToUtcIso(end, calendarTimezone);
+    }
+
+    setBlockDialogSaving(true);
+    try {
+      await adminCalendarQuickAction({
+        business_id: businessId,
+        action: "block",
+        employee_id: blockDialogState.employeeId,
+        start_at: startAtUtc,
+        end_at: endAtUtc,
+        reason: blockDialogState.reason.trim(),
+        all_day: blockDialogState.allDay,
+        repeat: blockDialogState.repeat,
+        repeat_frequency: blockDialogState.repeat ? blockDialogState.repeatFrequency : undefined,
+        repeat_until_date: blockDialogState.repeat ? blockDialogState.repeatUntilDate : undefined,
+        timezone: calendarTimezone,
+      });
+      toast.success("Blokovaný čas bol uložený");
+      setBlockDialogOpen(false);
+      setDetailModal(false);
+      await loadEvents();
+    } catch (error) {
+      console.error("CalendarPage: create block failed", error);
+      toast.error(toCallableErrorMessage(error, "Nepodarilo sa uložiť blokáciu"));
+    } finally {
+      setBlockDialogSaving(false);
+    }
+  };
+
   const handleRunQuickAction = async () => {
     if (!selectedEvent) return;
     if (!quickActionStartAt || !quickActionEndAt) {
@@ -721,22 +958,20 @@ export default function CalendarPage() {
     }
 
     const eventType =
-      selectedEvent.resource?.event_type === "time_block" ? "time_block" : "appointment";
+      selectedEvent?.resource?.event_type === "time_block" ? "time_block" : "appointment";
     const payload: Record<string, unknown> = {
       business_id: businessId,
       action: quickActionType,
-      event_type: eventType,
-      start_at: new Date(quickActionStartAt).toISOString(),
-      end_at: new Date(quickActionEndAt).toISOString(),
-      employee_id: quickActionEmployeeId || selectedEvent.resource?.employee_id,
+      start_at: fromCalendarWallClockDateToUtcIso(new Date(quickActionStartAt), calendarTimezone),
+      end_at: fromCalendarWallClockDateToUtcIso(new Date(quickActionEndAt), calendarTimezone),
+      employee_id: quickActionEmployeeId || selectedEvent?.resource?.employee_id,
     };
+
+    payload.event_type = eventType;
     if (eventType === "time_block") {
       payload.time_block_id = selectedEvent.id;
     } else {
       payload.appointment_id = selectedEvent.id;
-    }
-    if (quickActionType === "block") {
-      payload.reason = quickActionReason.trim() || "Blokovaný čas";
     }
 
     setQuickActionSaving(true);
@@ -777,7 +1012,12 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="space-y-1 md:space-y-2 h-full max-w-full overflow-x-hidden calendar-page-root">
+    <div className="space-y-4 h-full max-w-full overflow-x-hidden calendar-page-root">
+      <AdminPageHeader
+        title="Kalendár"
+        description="Prehľad rezervácií, blokácií a rýchlych akcií pre celý tím."
+      />
+
       <div className="rounded-xl border border-border bg-card/40 p-1 md:p-2 flex flex-col gap-1.5 md:gap-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -831,12 +1071,6 @@ export default function CalendarPage() {
             {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground mr-1" />}
             <div className="hidden sm:block"><ThemeToggle /></div>
             
-            <div className="hidden lg:flex items-center gap-1 mr-1">
-              <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={handleJumpToday}>Today</Button>
-              <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={handleJumpWeek}>Week</Button>
-              <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={handleJumpMonth}>Month</Button>
-            </div>
-
             {compactActionMenu ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -884,6 +1118,39 @@ export default function CalendarPage() {
           selectable={isOwnerOrAdmin}
           businessHours={{ hours: openingHours, overrides }}
           resources={visibleResources}
+          headerActions={(
+            <div
+              className="flex w-full flex-wrap items-stretch justify-end gap-2 rounded-2xl border border-white/8 bg-background/55 p-1.5 shadow-sm"
+              data-testid="calendar-header-actions"
+            >
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="min-h-[42px] min-w-0 flex-1 border-white/10 bg-background/75 sm:flex-none"
+                onClick={handleJumpToday}
+              >
+                Dnes
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="min-h-[42px] min-w-0 flex-1 border-white/10 bg-background/75 sm:flex-none"
+                onClick={handleToolbarBlock}
+              >
+                Blokácia
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="min-h-[42px] min-w-0 flex-1 bg-gold text-gold-foreground shadow-[0_12px_28px_rgba(201,168,76,0.2)] hover:bg-gold/90 sm:flex-none"
+                onClick={handleToolbarCreateBooking}
+              >
+                Nová rezervácia
+              </Button>
+            </div>
+          )}
         />
       </div>
 
@@ -931,7 +1198,7 @@ export default function CalendarPage() {
                 }
               >
                 <SelectTrigger><SelectValue placeholder="Vyberte zamestnanca" /></SelectTrigger>
-                <SelectContent>{availableEmployees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.display_name}</SelectItem>)}</SelectContent>
+                <SelectContent>{actionableEmployees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.display_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             {selectedSlot && (
@@ -1085,7 +1352,7 @@ export default function CalendarPage() {
                 </div>
 
                 {/* Secondary icon actions */}
-                {isOwnerOrAdmin && (
+                {canManageSelectedEvent && (
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { action: "move",      Icon: MoveRight, label: "Presunúť"   },
@@ -1094,8 +1361,26 @@ export default function CalendarPage() {
                     ].map(({ action, Icon, label }) => (
                       <button
                         key={action}
-                        onClick={() => openQuickAction(action as "move" | "duplicate" | "block")}
-                        disabled={updatingStatus || quickActionSaving}
+                        onClick={() => {
+                          if (action === "block") {
+                            openBlockDialog({
+                              start: selectedEvent.start,
+                              end: selectedEvent.end,
+                              employeeId:
+                                typeof selectedEvent.resource?.employee_id === "string"
+                                  ? selectedEvent.resource.employee_id
+                                  : "",
+                              reason:
+                                typeof selectedEvent.resource?.reason === "string"
+                                  ? selectedEvent.resource.reason
+                                  : DEFAULT_BLOCK_REASON,
+                              allDay: selectedEvent.resource?.all_day === true,
+                            });
+                            return;
+                          }
+                          openQuickAction(action as "move" | "duplicate");
+                        }}
+                        disabled={updatingStatus || quickActionSaving || blockDialogSaving}
                         className="flex flex-col items-center gap-1.5 rounded-xl border border-[#C0C0C0]/18 bg-white/[0.02] py-3 text-white/50 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 hover:bg-[#D4AF37]/5 transition-all disabled:opacity-30"
                       >
                         <Icon className="h-4 w-4" />
@@ -1105,10 +1390,10 @@ export default function CalendarPage() {
                   </div>
                 )}
 
-                {isOwnerOrAdmin && selectedEvent.resource?.event_type === "time_block" && (
+                {canManageSelectedEvent && selectedEvent.resource?.event_type === "time_block" && (
                   <button
                     onClick={handleDeleteBlock}
-                    disabled={quickActionSaving}
+                    disabled={quickActionSaving || blockDialogSaving}
                     className="w-full flex items-center justify-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 py-2.5 text-sm font-semibold text-rose-400 hover:bg-rose-500/10 transition-all disabled:opacity-40"
                   >
                     <Trash2 className="h-4 w-4" /> Odstrániť blok
@@ -1213,7 +1498,6 @@ export default function CalendarPage() {
             <DialogTitle>
               {quickActionType === "move" && "Presun termínu"}
               {quickActionType === "duplicate" && "Duplikácia termínu"}
-              {quickActionType === "block" && "Blokovať čas"}
             </DialogTitle>
             <DialogDescription>
               Vyberte cieľový čas a zamestnanca. Systém automaticky overí kolízie.
@@ -1225,7 +1509,7 @@ export default function CalendarPage() {
               <Select value={quickActionEmployeeId} onValueChange={setQuickActionEmployeeId}>
                 <SelectTrigger><SelectValue placeholder="Vyberte zamestnanca" /></SelectTrigger>
                 <SelectContent>
-                  {availableEmployees.map((employee: any) => (
+                  {actionableEmployees.map((employee: any) => (
                     <SelectItem key={employee.id} value={employee.id}>{employee.display_name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1239,17 +1523,222 @@ export default function CalendarPage() {
               <Label>Do</Label>
               <Input type="datetime-local" step={900} value={quickActionEndAt} onChange={(event) => setQuickActionEndAt(event.target.value)} />
             </div>
-            {quickActionType === "block" && (
-              <div className="space-y-1.5">
-                <Label>Dôvod blokácie</Label>
-                <Input value={quickActionReason} onChange={(event) => setQuickActionReason(event.target.value)} />
-              </div>
-            )}
           </div>
           <div className="flex gap-2 pt-1">
             <Button variant="outline" className="flex-1" onClick={() => setQuickActionOpen(false)}>Zrušiť</Button>
             <Button className="flex-1" onClick={handleRunQuickAction} disabled={quickActionSaving}>
               {quickActionSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Uložiť
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+        <DialogContent className="max-w-md overflow-hidden rounded-[30px] border-border/70 bg-background/95 p-0 shadow-[0_24px_60px_rgba(0,0,0,0.34)] sm:max-w-lg">
+          <DialogHeader className="border-b border-gold/20 bg-[linear-gradient(180deg,rgba(201,168,76,0.18),rgba(201,168,76,0.06))] px-6 py-5 text-left">
+            <DialogTitle className="text-2xl font-black tracking-tight">Pridať blokovaný čas</DialogTitle>
+            <DialogDescription className="max-w-md text-sm text-muted-foreground">
+              Zablokujte konkrétny čas alebo vytvorte opakovanú sériu. Kolízie sa overia ešte pred uložením.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 px-5 py-5 sm:px-6">
+            <div className="space-y-1.5">
+              <Label htmlFor="block-reason">Názov blokovania</Label>
+              <Input
+                id="block-reason"
+                value={blockDialogState.reason}
+                onChange={(event) =>
+                  setBlockDialogState((current) => ({ ...current, reason: event.target.value }))
+                }
+                placeholder="Pauza / Dovolenka / Interné školenie"
+              />
+              <p className="text-xs text-muted-foreground">
+                Tento názov sa zobrazí priamo v kalendári ako popis blokácie.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+              <div className="space-y-1.5">
+                <Label>Vyberte pracovníka / položku</Label>
+                <Select
+                  value={blockDialogState.employeeId}
+                  onValueChange={(value) =>
+                    setBlockDialogState((current) => ({ ...current, employeeId: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Vyberte pracovníka" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {actionableEmployees.map((employee: any) => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.display_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="block-date">Dátum od</Label>
+                <Input
+                  id="block-date"
+                  type="date"
+                  value={blockDialogState.startDate}
+                  onChange={(event) =>
+                    setBlockDialogState((current) => ({
+                      ...current,
+                      startDate: event.target.value,
+                      repeatUntilDate:
+                        current.repeat && current.repeatUntilDate < event.target.value
+                          ? event.target.value
+                          : current.repeatUntilDate,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/20 p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="block-repeat" className="text-sm font-medium">
+                    Opakovať blokáciu
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Vytvorí sériu blokácií s rovnakým nastavením až do zvoleného dátumu.
+                  </p>
+                </div>
+                <Checkbox
+                  id="block-repeat"
+                  checked={blockDialogState.repeat}
+                  onCheckedChange={(checked) =>
+                    setBlockDialogState((current) => ({
+                      ...current,
+                      repeat: checked === true,
+                      repeatUntilDate: checked === true ? current.repeatUntilDate || current.startDate : current.startDate,
+                    }))
+                  }
+                />
+              </div>
+
+              {blockDialogState.repeat && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Opakovanie</Label>
+                    <Select
+                      value={blockDialogState.repeatFrequency}
+                      onValueChange={(value) =>
+                        setBlockDialogState((current) => ({
+                          ...current,
+                          repeatFrequency: value as AdminCalendarRepeatFrequency,
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte frekvenciu" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BLOCK_REPEAT_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="block-repeat-until">Opakovať do</Label>
+                    <Input
+                      id="block-repeat-until"
+                      type="date"
+                      value={blockDialogState.repeatUntilDate}
+                      min={blockDialogState.startDate || undefined}
+                      onChange={(event) =>
+                        setBlockDialogState((current) => ({
+                          ...current,
+                          repeatUntilDate: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="block-all-day" className="text-sm font-medium">
+                    Blokovať celý deň
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Preskočí výber času a uzamkne celý pracovný deň.
+                  </p>
+                </div>
+                <Checkbox
+                  id="block-all-day"
+                  checked={blockDialogState.allDay}
+                  onCheckedChange={(checked) =>
+                    setBlockDialogState((current) => ({
+                      ...current,
+                      allDay: checked === true,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            {!blockDialogState.allDay && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5 rounded-2xl border border-border/60 bg-background/70 p-3 shadow-sm">
+                  <Label htmlFor="block-start-time">Čas od</Label>
+                  <Input
+                    id="block-start-time"
+                    type="time"
+                    step={900}
+                    value={blockDialogState.startTime}
+                    onChange={(event) =>
+                      setBlockDialogState((current) => ({
+                        ...current,
+                        startTime: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1.5 rounded-2xl border border-border/60 bg-background/70 p-3 shadow-sm">
+                  <Label htmlFor="block-end-time">Čas do</Label>
+                  <Input
+                    id="block-end-time"
+                    type="time"
+                    step={900}
+                    value={blockDialogState.endTime}
+                    onChange={(event) =>
+                      setBlockDialogState((current) => ({
+                        ...current,
+                        endTime: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
+            {blockDialogValidationError && (
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3">
+                <p className="text-sm font-medium text-destructive">{blockDialogValidationError}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 border-t border-border/60 px-5 py-4 sm:px-6">
+            <Button variant="outline" className="min-h-[44px] flex-1" onClick={() => setBlockDialogOpen(false)}>
+              Zrušiť
+            </Button>
+            <Button className="min-h-[44px] flex-1" onClick={handleCreateBlock} disabled={blockDialogSaving}>
+              {blockDialogSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Uložiť
             </Button>
           </div>
