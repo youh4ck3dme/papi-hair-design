@@ -48,7 +48,10 @@ function applyGtagConsent(prefs: Omit<CookiePrefs, "timestamp">) {
 function getConsentSubjectId() {
   const existing = localStorage.getItem(CONSENT_SUBJECT_KEY);
   if (existing) return existing;
-  const next = crypto.randomUUID();
+  const next =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
   localStorage.setItem(CONSENT_SUBJECT_KEY, next);
   return next;
 }
