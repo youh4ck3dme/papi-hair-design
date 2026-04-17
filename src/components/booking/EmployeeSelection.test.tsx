@@ -49,6 +49,24 @@ describe("EmployeeSelection", () => {
     expect(images[2]).toHaveAttribute("src", expect.stringContaining("zora.jpg"));
   });
 
+  it("uses bundled public photos for known staff when booking data has no photo url", () => {
+    render(
+      <EmployeeSelection
+        employees={[
+          makeEmployee({ id: "emp-papi", display_name: "Papi" }),
+          makeEmployee({ id: "emp-miska", display_name: "Miska" }),
+          makeEmployee({ id: "emp-mato", display_name: "Mato" }),
+        ]}
+        selectedEmployeeId={null}
+        setSelectedEmployeeId={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("img", { name: "Papi" })).toHaveAttribute("src", expect.stringContaining("/papi.webp"));
+    expect(screen.getByRole("img", { name: "Miska" })).toHaveAttribute("src", expect.stringContaining("/miska.webp"));
+    expect(screen.getByRole("img", { name: "Mato" })).toHaveAttribute("src", expect.stringContaining("/mato.webp"));
+  });
+
   it("falls back to local placeholder when image loading fails", async () => {
     render(
       <EmployeeSelection
@@ -85,4 +103,3 @@ describe("EmployeeSelection", () => {
     expect(screen.getAllByTestId("employee-card-skeleton")).toHaveLength(3);
   });
 });
-
