@@ -38,6 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -807,6 +808,11 @@ export default function MySchedulePage() {
 
   return (
     <div className="space-y-4 h-full">
+      <AdminPageHeader
+        title="Môj rozvrh"
+        description="Vaše rezervácie, blokácie a rýchle akcie na jednom mieste."
+      />
+
       {loading && (
         <div className="flex justify-end">
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
