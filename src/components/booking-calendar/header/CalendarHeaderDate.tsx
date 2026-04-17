@@ -51,15 +51,15 @@ export function CalendarHeaderDate() {
 
   return (
     <>
-      <div className="flex items-center gap-1.5 min-w-0">
+      <div className="flex min-w-0 items-center gap-2">
         <Button
           variant="outline"
           size="icon"
           aria-label={previousLabel}
-          className="h-7 w-7 md:h-6 md:w-6 shrink-0 hover:bg-gold/10 hover:border-gold/50 hover:text-gold"
+          className="h-9 w-9 shrink-0 rounded-xl border-border/70 bg-background/70 shadow-sm hover:border-gold/50 hover:bg-gold/10 hover:text-gold md:h-8 md:w-8"
           onClick={handleBack}
         >
-          <ChevronLeft className="h-3 w-3" />
+          <ChevronLeft className="h-4 w-4 md:h-3.5 md:w-3.5" />
         </Button>
         <Button
           type="button"
@@ -69,7 +69,7 @@ export function CalendarHeaderDate() {
           aria-expanded={pickerOpen}
           aria-label="Vybrať dátum v kalendári"
           className={cn(
-            "h-auto min-w-0 flex-1 px-2 py-1 text-sm font-semibold text-foreground hover:bg-gold/10 hover:text-foreground",
+            "h-auto min-h-[40px] min-w-0 flex-1 rounded-2xl border border-transparent px-3 py-2 text-sm font-semibold text-foreground hover:border-gold/20 hover:bg-gold/10 hover:text-foreground md:min-h-[36px]",
             isMonthMode ? "justify-start text-base md:text-sm" : "justify-center",
           )}
         >
@@ -86,16 +86,16 @@ export function CalendarHeaderDate() {
           variant="outline"
           size="icon"
           aria-label={nextLabel}
-          className="h-7 w-7 md:h-6 md:w-6 shrink-0 hover:bg-gold/10 hover:border-gold/50 hover:text-gold"
+          className="h-9 w-9 shrink-0 rounded-xl border-border/70 bg-background/70 shadow-sm hover:border-gold/50 hover:bg-gold/10 hover:text-gold md:h-8 md:w-8"
           onClick={handleForward}
         >
-          <ChevronRight className="h-3 w-3" />
+          <ChevronRight className="h-4 w-4 md:h-3.5 md:w-3.5" />
         </Button>
       </div>
 
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-        <DialogContent className="max-w-[22rem] gap-0 overflow-hidden rounded-[28px] border-border/70 p-0 sm:max-w-sm">
-          <DialogHeader className="border-b border-gold/20 bg-gold/15 px-5 py-4 text-left">
+        <DialogContent className="max-w-[22rem] gap-0 overflow-hidden rounded-[30px] border-border/70 bg-background/95 p-0 shadow-[0_24px_60px_rgba(0,0,0,0.34)] sm:max-w-md">
+          <DialogHeader className="border-b border-gold/20 bg-[linear-gradient(180deg,rgba(201,168,76,0.18),rgba(201,168,76,0.06))] px-5 py-4 text-left">
             <DialogTitle className="text-2xl font-black tracking-tight text-foreground">
               {format(date, "d. MMMM yyyy", { locale: sk })}
             </DialogTitle>
@@ -104,8 +104,8 @@ export function CalendarHeaderDate() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 p-4">
-            <div className="flex items-center justify-between rounded-2xl bg-muted/40 px-3 py-2">
+          <div className="space-y-4 p-4 sm:p-5">
+            <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-muted/35 px-3 py-2 shadow-sm">
               <Button
                 type="button"
                 variant="ghost"
@@ -141,7 +141,7 @@ export function CalendarHeaderDate() {
               onSelect={handleSelectDay}
               onMonthChange={setPickerMonth}
               weekStartsOn={1}
-              className="mx-auto w-full rounded-2xl border border-border/60 bg-background p-3"
+              className="mx-auto w-full rounded-[24px] border border-border/60 bg-background p-3 shadow-sm"
               classNames={{
                 caption: "hidden",
                 nav: "hidden",
@@ -149,8 +149,8 @@ export function CalendarHeaderDate() {
                 head_row: "grid grid-cols-7 gap-y-1",
                 head_cell: "w-full text-center text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground",
                 row: "grid grid-cols-7 gap-y-1",
-                cell: "flex h-11 w-full items-center justify-center p-0 text-center text-sm",
-                day: "h-11 w-11 rounded-2xl p-0 font-semibold hover:bg-gold/10",
+                cell: "flex h-11 w-full items-center justify-center p-0 text-center text-sm sm:h-12",
+                day: "h-11 w-11 rounded-2xl p-0 font-semibold hover:bg-gold/10 sm:h-12 sm:w-12",
                 day_today: "border border-gold/40 bg-gold/10 text-foreground",
                 day_selected:
                   "bg-gold text-gold-foreground hover:bg-gold/90 focus:bg-gold focus:text-gold-foreground",

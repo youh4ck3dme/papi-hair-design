@@ -1113,12 +1113,15 @@ export default function CalendarPage() {
           businessHours={{ hours: openingHours, overrides }}
           resources={visibleResources}
           headerActions={(
-            <div className="flex w-full flex-wrap items-stretch justify-end gap-2" data-testid="calendar-header-actions">
+            <div
+              className="flex w-full flex-wrap items-stretch justify-end gap-2 rounded-2xl border border-white/8 bg-background/55 p-1.5 shadow-sm"
+              data-testid="calendar-header-actions"
+            >
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                className="min-w-0 flex-1 sm:flex-none"
+                className="min-h-[42px] min-w-0 flex-1 border-white/10 bg-background/75 sm:flex-none"
                 onClick={handleJumpToday}
               >
                 Dnes
@@ -1127,7 +1130,7 @@ export default function CalendarPage() {
                 type="button"
                 size="sm"
                 variant="outline"
-                className="min-w-0 flex-1 sm:flex-none"
+                className="min-h-[42px] min-w-0 flex-1 border-white/10 bg-background/75 sm:flex-none"
                 onClick={handleToolbarBlock}
               >
                 Blokácia
@@ -1135,7 +1138,7 @@ export default function CalendarPage() {
               <Button
                 type="button"
                 size="sm"
-                className="min-w-0 flex-1 bg-gold text-gold-foreground hover:bg-gold/90 sm:flex-none"
+                className="min-h-[42px] min-w-0 flex-1 bg-gold text-gold-foreground shadow-[0_12px_28px_rgba(201,168,76,0.2)] hover:bg-gold/90 sm:flex-none"
                 onClick={handleToolbarCreateBooking}
               >
                 Nová rezervácia
@@ -1526,15 +1529,15 @@ export default function CalendarPage() {
       </Dialog>
 
       <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Pridať blokovaný čas</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-md overflow-hidden rounded-[30px] border-border/70 bg-background/95 p-0 shadow-[0_24px_60px_rgba(0,0,0,0.34)] sm:max-w-lg">
+          <DialogHeader className="border-b border-gold/20 bg-[linear-gradient(180deg,rgba(201,168,76,0.18),rgba(201,168,76,0.06))] px-6 py-5 text-left">
+            <DialogTitle className="text-2xl font-black tracking-tight">Pridať blokovaný čas</DialogTitle>
+            <DialogDescription className="max-w-md text-sm text-muted-foreground">
               Zablokujte konkrétny čas alebo vytvorte opakovanú sériu. Kolízie sa overia ešte pred uložením.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-5 px-5 py-5 sm:px-6">
             <div className="space-y-1.5">
               <Label htmlFor="block-reason">Názov blokovania</Label>
               <Input
@@ -1545,53 +1548,63 @@ export default function CalendarPage() {
                 }
                 placeholder="Pauza / Dovolenka / Interné školenie"
               />
+              <p className="text-xs text-muted-foreground">
+                Tento názov sa zobrazí priamo v kalendári ako popis blokácie.
+              </p>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Vyberte pracovníka / položku</Label>
-              <Select
-                value={blockDialogState.employeeId}
-                onValueChange={(value) =>
-                  setBlockDialogState((current) => ({ ...current, employeeId: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Vyberte pracovníka" />
-                </SelectTrigger>
-                <SelectContent>
-                  {actionableEmployees.map((employee: any) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.display_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+              <div className="space-y-1.5">
+                <Label>Vyberte pracovníka / položku</Label>
+                <Select
+                  value={blockDialogState.employeeId}
+                  onValueChange={(value) =>
+                    setBlockDialogState((current) => ({ ...current, employeeId: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Vyberte pracovníka" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {actionableEmployees.map((employee: any) => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.display_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="block-date">Dátum od</Label>
+                <Input
+                  id="block-date"
+                  type="date"
+                  value={blockDialogState.startDate}
+                  onChange={(event) =>
+                    setBlockDialogState((current) => ({
+                      ...current,
+                      startDate: event.target.value,
+                      repeatUntilDate:
+                        current.repeat && current.repeatUntilDate < event.target.value
+                          ? event.target.value
+                          : current.repeatUntilDate,
+                    }))
+                  }
+                />
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="block-date">Dátum od</Label>
-              <Input
-                id="block-date"
-                type="date"
-                value={blockDialogState.startDate}
-                onChange={(event) =>
-                  setBlockDialogState((current) => ({
-                    ...current,
-                    startDate: event.target.value,
-                    repeatUntilDate:
-                      current.repeat && current.repeatUntilDate < event.target.value
-                        ? event.target.value
-                        : current.repeatUntilDate,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-3">
+            <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/20 p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="block-repeat" className="text-sm font-medium">
-                  Opakovať blokáciu
-                </Label>
+                <div className="space-y-1">
+                  <Label htmlFor="block-repeat" className="text-sm font-medium">
+                    Opakovať blokáciu
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Vytvorí sériu blokácií s rovnakým nastavením až do zvoleného dátumu.
+                  </p>
+                </div>
                 <Checkbox
                   id="block-repeat"
                   checked={blockDialogState.repeat}
@@ -1650,9 +1663,14 @@ export default function CalendarPage() {
               )}
 
               <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="block-all-day" className="text-sm font-medium">
-                  Blokovať celý deň
-                </Label>
+                <div className="space-y-1">
+                  <Label htmlFor="block-all-day" className="text-sm font-medium">
+                    Blokovať celý deň
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Preskočí výber času a uzamkne celý pracovný deň.
+                  </p>
+                </div>
                 <Checkbox
                   id="block-all-day"
                   checked={blockDialogState.allDay}
@@ -1668,7 +1686,7 @@ export default function CalendarPage() {
 
             {!blockDialogState.allDay && (
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 rounded-2xl border border-border/60 bg-background/70 p-3 shadow-sm">
                   <Label htmlFor="block-start-time">Čas od</Label>
                   <Input
                     id="block-start-time"
@@ -1684,7 +1702,7 @@ export default function CalendarPage() {
                   />
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 rounded-2xl border border-border/60 bg-background/70 p-3 shadow-sm">
                   <Label htmlFor="block-end-time">Čas do</Label>
                   <Input
                     id="block-end-time"
@@ -1703,15 +1721,17 @@ export default function CalendarPage() {
             )}
 
             {blockDialogValidationError && (
-              <p className="text-sm font-medium text-destructive">{blockDialogValidationError}</p>
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3">
+                <p className="text-sm font-medium text-destructive">{blockDialogValidationError}</p>
+              </div>
             )}
           </div>
 
-          <div className="flex gap-2 pt-1">
-            <Button variant="outline" className="flex-1" onClick={() => setBlockDialogOpen(false)}>
+          <div className="flex gap-2 border-t border-border/60 px-5 py-4 sm:px-6">
+            <Button variant="outline" className="min-h-[44px] flex-1" onClick={() => setBlockDialogOpen(false)}>
               Zrušiť
             </Button>
-            <Button className="flex-1" onClick={handleCreateBlock} disabled={blockDialogSaving}>
+            <Button className="min-h-[44px] flex-1" onClick={handleCreateBlock} disabled={blockDialogSaving}>
               {blockDialogSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Uložiť
             </Button>
