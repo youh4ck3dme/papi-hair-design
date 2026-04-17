@@ -1,21 +1,30 @@
-name: Deploy Cloud Functions
+name: Firebase Functions Deploy
 
 on:
   push:
-    branches: [main, uprava22-2, papihairstudiobooking]
+    branches: [main]
     paths:
       - 'functions/**'
       - 'firestore.rules'
       - 'firestore.indexes.json'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   npm_config_script_shell: /bin/bash
 
 jobs:
-  deploy:
-    name: Deploy
+  deploy-functions:
+    name: Build and deploy functions + firestore
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    concurrency:
+      group: firebase-functions-live
+      cancel-in-progress: false
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -26,8 +35,16 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_HAIRCHAINGER_MAIN_876665_176E8 }}
+
+      - name: Setup gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
       - name: Install Firebase CLI
-        run: npm install -g firebase-tools
+        run: npm install --global firebase-tools
 
       - name: Install dependencies
         run: cd functions && npm ci
@@ -41,6 +58,6 @@ jobs:
       - name: Deploy to Firebase
         run: |
           firebase deploy \
-            --token "${{ secrets.FIREBASE_TOKEN }}" \
             --project "${{ secrets.VITE_FIREBASE_PROJECT_ID }}" \
-            --only functions,firestore
+            --only functions,firestore \
+            --non-interactive
