@@ -33,13 +33,13 @@ async function selectFirstService(page) {
   const categoryStep = page.getByTestId("booking-step-category");
   await categoryStep.waitFor({ state: "visible", timeout: 15_000 });
 
-  const firstServiceDirect = categoryStep.locator('button:has-text("min")').first();
-  if (await firstServiceDirect.isVisible({ timeout: 1200 }).catch(() => false)) {
+  const firstServiceDirect = categoryStep.locator('[data-testid^="booking-service-"]').first();
+  if (await firstServiceDirect.isVisible({ timeout: 1500 }).catch(() => false)) {
     await firstServiceDirect.click({ force: true });
     return;
   }
 
-  const categoryButtons = categoryStep.locator("div.relative.flex").first().locator("button");
+  const categoryButtons = categoryStep.locator('[data-testid^="booking-category-"]');
   const categoryCount = await categoryButtons.count();
 
   for (let i = 0; i < Math.min(3, categoryCount); i += 1) {
@@ -49,16 +49,16 @@ async function selectFirstService(page) {
     await categoryButton.click({ force: true });
     await page.waitForTimeout(700);
 
-    if (await firstServiceDirect.isVisible({ timeout: 1200 }).catch(() => false)) {
+    if (await firstServiceDirect.isVisible({ timeout: 1500 }).catch(() => false)) {
       await firstServiceDirect.click({ force: true });
       return;
     }
 
-    const firstSubcategory = page.locator('button[class*="uppercase"][class*="tracking-wider"]').first();
+    const firstSubcategory = categoryStep.locator('[data-testid^="booking-subcategory-"]').first();
     if (await firstSubcategory.isVisible({ timeout: 1200 }).catch(() => false)) {
       await firstSubcategory.click({ force: true });
       await page.waitForTimeout(600);
-      if (await firstServiceDirect.isVisible({ timeout: 1200 }).catch(() => false)) {
+      if (await firstServiceDirect.isVisible({ timeout: 1500 }).catch(() => false)) {
         await firstServiceDirect.click({ force: true });
         return;
       }
@@ -109,6 +109,24 @@ async function selectSlot(page) {
   throw new Error("No date with available time slots found");
 }
 
+async function selectFirstEmployee(page) {
+  const employeeStep = page.getByTestId("booking-step-employee");
+  await employeeStep.waitFor({ state: "visible", timeout: 12_000 });
+
+  const employeeButtons = employeeStep.locator('[data-testid^="employee-card-"]');
+  const employeeCount = await employeeButtons.count();
+  if (employeeCount === 0) {
+    throw new Error("Employee step rendered but no employee options are selectable");
+  }
+
+  const firstEmployee = employeeButtons.first();
+  await firstEmployee.scrollIntoViewIfNeeded();
+  await firstEmployee.click({ force: true });
+  await page.waitForTimeout(700);
+
+  return employeeCount;
+}
+
 function hasHorizontalOverflow(metrics) {
   return metrics.docOverflowX > 1 || metrics.bodyOverflowX > 1;
 }
@@ -151,15 +169,7 @@ for (const viewport of viewports) {
 
     await selectFirstService(page);
 
-    const employeeStep = page.getByTestId("booking-step-employee");
-    await employeeStep.waitFor({ state: "visible", timeout: 12_000 });
-
-    const employeeButtons = employeeStep.locator("button");
-    const employeeCount = await employeeButtons.count();
-    if (employeeCount < 1) {
-      throw new Error("Employee step rendered but no employee options are selectable");
-    }
-
+    const employeeCount = await selectFirstEmployee(page);
     await selectSlot(page);
     await page.getByTestId("booking-step-details").waitFor({ state: "visible", timeout: 18_000 });
 

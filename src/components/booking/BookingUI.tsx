@@ -4,7 +4,7 @@ export function GoldText({ children, className = "" }: Readonly<{ children: Reac
 
 export function StepHeader({ num, title, extra }: Readonly<{ num: string; title: string; extra?: React.ReactNode }>) {
     return (
-        <div className="mt-8 mb-5 flex items-center justify-between gap-3">
+        <div className="mb-5 mt-8 flex flex-wrap items-start justify-between gap-3 sm:items-center">
             <div className="flex min-w-0 items-center gap-3.5">
                 <div className="relative flex-shrink-0">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#C9A84C] text-base font-black text-black shadow-[0_0_16px_rgba(201,168,76,0.5)]">
@@ -12,9 +12,11 @@ export function StepHeader({ num, title, extra }: Readonly<{ num: string; title:
                     </div>
                     <div className="absolute inset-0 rounded-full bg-[#C9A84C]/30 blur-md -z-10" />
                 </div>
-                <h2 className="truncate text-base font-black uppercase tracking-widest text-foreground">{title}</h2>
+                <h2 className="truncate text-sm font-black uppercase tracking-[0.24em] text-foreground sm:text-base">
+                    {title}
+                </h2>
             </div>
-            {extra == null ? null : <div className="flex-shrink-0">{extra}</div>}
+            {extra == null ? null : <div className="flex-shrink-0 self-center sm:self-auto">{extra}</div>}
         </div>
     );
 }
