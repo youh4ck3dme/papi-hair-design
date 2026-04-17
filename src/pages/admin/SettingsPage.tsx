@@ -26,6 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { AvatarCropper } from "@/components/admin/AvatarCropper";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { toast } from "sonner";
 import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound, Camera, Trash2 } from "lucide-react";
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
@@ -554,27 +555,25 @@ export default function SettingsPage() {
     snapshotHealth?.last_success_at ?? snapshotHealth?.updated_at ?? snapshotInfo?.updated_at ?? null;
 
   return (
-    <div className="space-y-6 max-w-4xl animate-in fade-in duration-500">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-          Nastavenia
-        </h1>
-        <p className="text-muted-foreground">Správa vašej firmy, profilu a systémových nastavení.</p>
-      </div>
+    <div className="max-w-4xl space-y-8 animate-in fade-in duration-500">
+      <AdminPageHeader
+        title="Nastavenia"
+        description="Správa firmy, profilu, bookingu a systémových nastavení na jednom mieste."
+      />
 
       <Tabs defaultValue={isOwnerOrAdmin ? "general" : "profile"} className="w-full">
-        <TabsList className={`grid w-full h-auto p-1 bg-muted/30 backdrop-blur-md border border-primary/10 rounded-xl mb-6 ${isOwnerOrAdmin ? "grid-cols-2 md:grid-cols-7" : "grid-cols-1"}`}>
+        <TabsList className={`mb-6 grid h-auto w-full rounded-2xl border border-primary/10 bg-card/35 p-1.5 shadow-sm shadow-primary/5 backdrop-blur-xl ${isOwnerOrAdmin ? "grid-cols-2 md:grid-cols-7" : "grid-cols-1"}`}>
           {isOwnerOrAdmin && (
             <>
-              <TabsTrigger value="general" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Všeobecné</TabsTrigger>
-              <TabsTrigger value="booking" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Booking</TabsTrigger>
-              <TabsTrigger value="hours" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Otváracie hodiny</TabsTrigger>
-              <TabsTrigger value="smtp" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">SMTP Email</TabsTrigger>
-              <TabsTrigger value="snapshot" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Snapshot</TabsTrigger>
-              <TabsTrigger value="license" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Licencia</TabsTrigger>
+              <TabsTrigger value="general" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Všeobecné</TabsTrigger>
+              <TabsTrigger value="booking" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Booking</TabsTrigger>
+              <TabsTrigger value="hours" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Otváracie hodiny</TabsTrigger>
+              <TabsTrigger value="smtp" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">SMTP Email</TabsTrigger>
+              <TabsTrigger value="snapshot" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Snapshot</TabsTrigger>
+              <TabsTrigger value="license" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Licencia</TabsTrigger>
             </>
           )}
-          <TabsTrigger value="profile" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Profil</TabsTrigger>
+          <TabsTrigger value="profile" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Profil</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6 mt-0">

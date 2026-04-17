@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer, MoreVertical, FilterX, MoveRight, CopyPlus, Lock, Trash2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
 import {
   adminCalendarQuickAction,
@@ -1011,7 +1012,12 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="space-y-1 md:space-y-2 h-full max-w-full overflow-x-hidden calendar-page-root">
+    <div className="space-y-4 h-full max-w-full overflow-x-hidden calendar-page-root">
+      <AdminPageHeader
+        title="Kalendár"
+        description="Prehľad rezervácií, blokácií a rýchlych akcií pre celý tím."
+      />
+
       <div className="rounded-xl border border-border bg-card/40 p-1 md:p-2 flex flex-col gap-1.5 md:gap-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">

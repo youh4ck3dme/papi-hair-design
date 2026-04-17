@@ -50,6 +50,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import type { ServiceRow } from "@/components/booking/types";
 import {
   BOOKING_MAIN_CATEGORIES,
@@ -921,33 +922,29 @@ export default function ServicesPage() {
   };
 
   return (
-    <div className="animate-in fade-in space-y-6 duration-500" data-testid="admin-services-page">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-3xl font-bold tracking-tight text-transparent">
-            Služby
-          </h1>
-          <p className="text-muted-foreground">
-            Katalóg služieb, podkategórie a ich poradie v bookingu.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={() => openCreateSubcategory()}
-            className="border-primary/20"
-            data-testid="create-subcategory-button"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Pridať podkategóriu
-          </Button>
-          <Button
-            onClick={openCreateService}
-            className="shadow-lg shadow-primary/20 transition-transform hover:scale-105"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Pridať službu
-          </Button>
-        </div>
-      </div>
+    <div className="animate-in fade-in space-y-8 duration-500" data-testid="admin-services-page">
+      <AdminPageHeader
+        title="Služby"
+        description="Katalóg služieb, podkategórie a ich poradie v bookingu."
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => openCreateSubcategory()}
+              className="border-primary/20 bg-background/70"
+              data-testid="create-subcategory-button"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Pridať podkategóriu
+            </Button>
+            <Button
+              onClick={openCreateService}
+              className="shadow-lg shadow-primary/20 transition-transform hover:scale-[1.02]"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Pridať službu
+            </Button>
+          </>
+        }
+      />
 
       {loading ? (
         <div className="flex flex-col items-center justify-center gap-3 py-20">

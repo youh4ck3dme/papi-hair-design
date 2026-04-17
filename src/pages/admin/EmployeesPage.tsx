@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { compressProfileImage, readFileAsDataUrl, validateProfileImageFile } from "@/lib/profileImage";
 
 const DAYS: { key: string; label: string; sm: string }[] = [
@@ -409,18 +410,19 @@ export default function EmployeesPage() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Tím
-          </h1>
-          <p className="text-muted-foreground">Správa zamestnancov a ich pracovných harmonogramov.</p>
-        </div>
-        <Button onClick={openCreate} className="shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
-          <Plus className="w-4 h-4 mr-2" /> Pridať člena tímu
-        </Button>
-      </div>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <AdminPageHeader
+        title="Tím"
+        description="Správa zamestnancov, ich profilov a pracovných harmonogramov."
+        actions={
+          <Button
+            onClick={openCreate}
+            className="shadow-lg shadow-primary/20 transition-transform hover:scale-[1.02]"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Pridať člena tímu
+          </Button>
+        }
+      />
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
