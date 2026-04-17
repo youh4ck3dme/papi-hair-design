@@ -11,13 +11,19 @@ if (ENABLE_ADMIN_E2E && (!ADMIN_EMAIL || !ADMIN_PASSWORD)) {
 async function getCalendarFilterControls(page: Page) {
     const filterBar = page
         .locator("div.rounded-xl.border")
-        .filter({ has: page.getByRole("button", { name: /^Reset$/ }) })
+        .filter({ has: page.getByRole("button", { name: /^(Resetovať filtre|Reset)$/ }) })
         .first();
     const statusTrigger = filterBar.locator('button[role="combobox"]').first();
     const employeeTrigger = filterBar.locator('button[role="combobox"]').nth(1);
-    const resetButton = filterBar.getByRole("button", { name: /^Reset$/ });
+    const resetButton = filterBar.getByRole("button", { name: /^(Resetovať filtre|Reset)$/ });
 
     return { filterBar, statusTrigger, employeeTrigger, resetButton };
+}
+
+async function waitForCalendarShell(page: Page) {
+    await expect(page.getByLabel("Vybrať dátum v kalendári")).toBeVisible({ timeout: 30000 });
+    await expect(page.getByTestId("calendar-header-actions")).toBeVisible({ timeout: 30000 });
+    await expect(page.getByRole("radio", { name: /^Deň$/ }).first()).toBeVisible({ timeout: 30000 });
 }
 
 async function assertCalendarFiltersAndTimeAxis(page: Page, viewportName: "desktop" | "mobile") {
@@ -146,7 +152,7 @@ test.describe("Admin Calendar", () => {
         if (!page.url().includes("/admin/calendar")) {
             await page.goto("/admin/calendar");
         }
-        await expect(page.locator('h1:has-text("Kalendár")')).toBeVisible({ timeout: 30000 });
+        await waitForCalendarShell(page);
     });
 
     test("should render the calendar and switch views", async ({ page }) => {
@@ -154,7 +160,7 @@ test.describe("Admin Calendar", () => {
         const dayToggle = page.getByRole("radio", { name: /^Deň$/ }).first();
         const monthToggle = page.getByRole("radio", { name: /^Mesiac$/ }).first();
 
-        await expect(page.locator('h1:has-text("Kalendár")')).toBeVisible();
+        await waitForCalendarShell(page);
         await expect(weekToggle).toBeVisible();
         await expect(dayToggle).toBeVisible();
         await expect(monthToggle).toBeVisible();
@@ -199,12 +205,12 @@ test.describe("Admin Calendar", () => {
         // Wait for events to load
         await page.waitForTimeout(2000);
 
-        const event = page.locator('.rbc-event').first();
+        const event = page.locator('.booking-calendar-event[role="button"]').first();
         if (await event.isVisible()) {
             await event.click();
 
             // Detail modal should appear
-            await expect(page.locator('text=Detail rezervácie')).toBeVisible({ timeout: 5000 });
+            await expect(page.getByText("Detail rezervácie").first()).toBeVisible({ timeout: 5000 });
 
             // Check for status badge or buttons
             // (Depending on status, buttons like "Potvrdiť", "Zrušiť" etc. should appear)
@@ -214,12 +220,12 @@ test.describe("Admin Calendar", () => {
     test("desktop + mobile visual smoke: filters, dropdowns and 03:00 calendar start", async ({ page }) => {
         await page.setViewportSize({ width: 1366, height: 900 });
         await page.goto("/admin/calendar");
-        await expect(page.locator('h1:has-text("Kalendár")')).toBeVisible({ timeout: 15000 });
+        await waitForCalendarShell(page);
         await assertCalendarFiltersAndTimeAxis(page, "desktop");
 
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto("/admin/calendar");
-        await expect(page.locator('h1:has-text("Kalendár")')).toBeVisible({ timeout: 15000 });
+        await waitForCalendarShell(page);
         await assertCalendarFiltersAndTimeAxis(page, "mobile");
     });
 });
