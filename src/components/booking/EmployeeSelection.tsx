@@ -94,7 +94,7 @@ export function EmployeeSelection({
                 >
                   {isSelected
                     ? t("booking.selected", { defaultValue: "Vybraný" })
-                    : t("booking.tapToSelect", { defaultValue: "Klikni pre výber" })}
+                    : t("booking.tapToSelect", { defaultValue: "Vybrať" })}
                 </p>
               </button>
             );
