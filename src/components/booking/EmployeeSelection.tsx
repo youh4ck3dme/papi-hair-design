@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StepHeader } from "./BookingUI";
 import { EmployeeRow } from "./types";
+import { resolveEmployeePhotoUrl } from "@/lib/employeePhoto";
 
 interface EmployeeSelectionProps {
   employees: EmployeeRow[];
@@ -10,37 +11,7 @@ interface EmployeeSelectionProps {
   setSelectedEmployeeId: (id: string | null) => void;
 }
 
-type EmployeeWithProfileFallback = EmployeeRow & {
-  avatar_url?: string | null;
-  profile_photo_url?: string | null;
-  profile_avatar_url?: string | null;
-  profile?: {
-    avatar_url?: string | null;
-    photo_url?: string | null;
-    profile_photo_url?: string | null;
-  } | null;
-};
-
 const PLACEHOLDER_AVATAR_SRC = "/placeholder.svg";
-
-function normalizePhotoUrl(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function resolveEmployeePhotoUrl(employee: EmployeeRow): string | null {
-  const source = employee as EmployeeWithProfileFallback;
-  return (
-    normalizePhotoUrl(source.photo_url) ??
-    normalizePhotoUrl(source.avatar_url) ??
-    normalizePhotoUrl(source.profile_photo_url) ??
-    normalizePhotoUrl(source.profile_avatar_url) ??
-    normalizePhotoUrl(source.profile?.avatar_url) ??
-    normalizePhotoUrl(source.profile?.photo_url) ??
-    normalizePhotoUrl(source.profile?.profile_photo_url)
-  );
-}
 
 export function EmployeeSelection({
   employees,
