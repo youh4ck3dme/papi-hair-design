@@ -37,6 +37,8 @@ import {
   getObservabilityHealthLabel,
   getObservabilityHealthTone,
   getObservabilityToneClasses,
+  getPersistedObservabilityStatusClasses,
+  getPersistedObservabilityStatusLabel,
 } from "@/lib/adminObservability";
 import {
   getFirebaseErrorCode,
@@ -94,6 +96,24 @@ function maybeWarnBlockedRequest(err: unknown) {
   }
 }
 
+function describeObservabilityLoadError(scope: string, err: unknown): string {
+  const code = getFirebaseErrorCode(err);
+
+  if (code === "failed-precondition") {
+    return `${scope}: query zatiaľ čaká na vytvorenie Firestore indexu.`;
+  }
+
+  if (code === "permission-denied") {
+    return `${scope}: chýbajú oprávnenia na čítanie observability dát.`;
+  }
+
+  if (code === "unavailable") {
+    return `${scope}: Firestore je dočasne nedostupný.`;
+  }
+
+  return `${scope}: nepodarilo sa načítať dáta.`;
+}
+
 export default function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
   const { businessId, isOwner, isOwnerOrAdmin } = useBusiness();
@@ -102,10 +122,14 @@ export default function SettingsPage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [observabilityRefreshing, setObservabilityRefreshing] = useState(false);
+  const [syncingObservabilityAlerts, setSyncingObservabilityAlerts] = useState(false);
   const [snapshotInfo, setSnapshotInfo] = useState<any>(null);
   const [snapshotHealth, setSnapshotHealth] = useState<any>(null);
   const [bookingFunnelHealth, setBookingFunnelHealth] = useState<any>(null);
   const [snapshotRebuildEvents, setSnapshotRebuildEvents] = useState<any[]>([]);
+  const [opsAlerts, setOpsAlerts] = useState<any[]>([]);
+  const [observabilityLoadIssues, setObservabilityLoadIssues] = useState<string[]>([]);
   const [licenseKey, setLicenseKey] = useState("");
   const [licenseState, setLicenseState] = useState<"idle" | "checking" | "ok" | "error">("idle");
   const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
@@ -166,8 +190,9 @@ export default function SettingsPage() {
   }, [businessId]);
 
   const loadObservability = useCallback(async () => {
+    setObservabilityRefreshing(true);
     try {
-      const [snap, health, funnel, rebuildEventsSnap] = await Promise.all([
+      const [snap, health, funnel, rebuildEventsSnap, opsAlertsSnap] = await Promise.allSettled([
         getDoc(doc(db, "public_snapshots", businessId)),
         getDoc(doc(db, "ops_health", `snapshot_${businessId}`)),
         getDoc(doc(db, "ops_health", `booking_funnel_${businessId}`)),
@@ -179,14 +204,56 @@ export default function SettingsPage() {
             limit(8),
           ),
         ),
+        getDocs(
+          query(
+            collection(db, "ops_alerts"),
+            where("business_id", "==", businessId),
+            orderBy("updated_at", "desc"),
+            limit(12),
+          ),
+        ),
       ]);
 
-      setSnapshotInfo(snap.exists() ? { id: snap.id, ...snap.data() } : null);
-      setSnapshotHealth(health.exists() ? { id: health.id, ...health.data() } : null);
-      setBookingFunnelHealth(funnel.exists() ? { id: funnel.id, ...funnel.data() } : null);
-      setSnapshotRebuildEvents(rebuildEventsSnap.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
-    } catch (err) {
-      console.error("Error loading snapshot observability:", err);
+      const issues: string[] = [];
+
+      if (snap.status === "fulfilled") {
+        setSnapshotInfo(snap.value.exists() ? { id: snap.value.id, ...snap.value.data() } : null);
+      } else {
+        issues.push(describeObservabilityLoadError("Public snapshot", snap.reason));
+        console.error("Error loading public snapshot observability:", snap.reason);
+      }
+
+      if (health.status === "fulfilled") {
+        setSnapshotHealth(health.value.exists() ? { id: health.value.id, ...health.value.data() } : null);
+      } else {
+        issues.push(describeObservabilityLoadError("Snapshot health", health.reason));
+        console.error("Error loading snapshot health:", health.reason);
+      }
+
+      if (funnel.status === "fulfilled") {
+        setBookingFunnelHealth(funnel.value.exists() ? { id: funnel.value.id, ...funnel.value.data() } : null);
+      } else {
+        issues.push(describeObservabilityLoadError("Booking funnel health", funnel.reason));
+        console.error("Error loading booking funnel health:", funnel.reason);
+      }
+
+      if (rebuildEventsSnap.status === "fulfilled") {
+        setSnapshotRebuildEvents(rebuildEventsSnap.value.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
+      } else {
+        issues.push(describeObservabilityLoadError("História rebuildov", rebuildEventsSnap.reason));
+        console.error("Error loading snapshot rebuild events:", rebuildEventsSnap.reason);
+      }
+
+      if (opsAlertsSnap.status === "fulfilled") {
+        setOpsAlerts(opsAlertsSnap.value.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
+      } else {
+        issues.push(describeObservabilityLoadError("Alert feed", opsAlertsSnap.reason));
+        console.error("Error loading ops alerts:", opsAlertsSnap.reason);
+      }
+
+      setObservabilityLoadIssues(issues);
+    } finally {
+      setObservabilityRefreshing(false);
     }
   }, [businessId]);
 
@@ -386,6 +453,28 @@ export default function SettingsPage() {
     }
   };
 
+  const syncObservabilityAlertFeed = async () => {
+    setSyncingObservabilityAlerts(true);
+    try {
+      const fn = httpsCallable<any, any>(functions, "syncObservabilityAlerts");
+      const { data } = await fn({ business_id: businessId });
+      if (data?.success) {
+        toast.success(
+          `Alerty synchronizované (${data.active_alerts ?? 0} aktívnych, ${data.resolved_alerts ?? 0} vyriešených)`,
+        );
+        await loadObservability();
+      } else {
+        toast.error("Synchronizácia alertov zlyhala");
+      }
+    } catch (err) {
+      maybeWarnBlockedRequest(err);
+      console.error("Observability alert sync error:", err);
+      toast.error(friendlyError(err, "Synchronizácia alertov zlyhala"));
+    } finally {
+      setSyncingObservabilityAlerts(false);
+    }
+  };
+
   const applyLicense = async () => {
     if (!licenseKey.trim()) {
       setLicenseMessage("Zadajte licenčný kľúč");
@@ -447,6 +536,14 @@ export default function SettingsPage() {
   const observabilityAlerts = useMemo(
     () => buildObservabilityAlerts(snapshotInfo, snapshotHealth, bookingFunnelHealth),
     [bookingFunnelHealth, snapshotHealth, snapshotInfo],
+  );
+  const activeOpsAlerts = useMemo(
+    () => opsAlerts.filter((alert) => alert.status === "active"),
+    [opsAlerts],
+  );
+  const resolvedOpsAlerts = useMemo(
+    () => opsAlerts.filter((alert) => alert.status === "resolved"),
+    [opsAlerts],
   );
   const observabilityTone = useMemo(
     () => getObservabilityHealthTone(observabilityAlerts),
@@ -748,15 +845,37 @@ export default function SettingsPage() {
                 </div>
               </div>
 
+              {observabilityLoadIssues.length > 0 ? (
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+                  <div className="font-semibold text-foreground">Observability dáta sú načítané len čiastočne</div>
+                  <ul className="mt-2 space-y-1 text-xs">
+                    {observabilityLoadIssues.map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
               <div className="rounded-2xl border border-primary/10 bg-background/40 p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <div className="text-xs uppercase tracking-widest text-muted-foreground">Alerty</div>
                     <div className="text-sm font-semibold text-foreground">Automatické vyhodnotenie zdravia systému</div>
                   </div>
-                  <Button variant="outline" onClick={() => void loadObservability()} disabled={snapshotLoading}>
-                    Obnoviť dáta
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={syncObservabilityAlertFeed}
+                      disabled={syncingObservabilityAlerts || !isOwnerOrAdmin}
+                    >
+                      {syncingObservabilityAlerts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Synchronizovať alerty
+                    </Button>
+                    <Button variant="outline" onClick={() => void loadObservability()} disabled={observabilityRefreshing}>
+                      {observabilityRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Obnoviť dáta
+                    </Button>
+                  </div>
                 </div>
                 {observabilityAlerts.length > 0 ? (
                   <div className="space-y-3">
@@ -778,6 +897,88 @@ export default function SettingsPage() {
                 ) : (
                   <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
                     Žiadne warningy ani chyby. Snapshot a booking funnel vyzerajú zdravo.
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-primary/10 bg-background/40 p-4" data-testid="ops-alert-feed">
+                <div className="mb-3">
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground">Server-side alert feed</div>
+                  <div className="text-sm font-semibold text-foreground">
+                    Kanonické alerty synchronizované z `ops_health` a public snapshotu
+                  </div>
+                </div>
+                {opsAlerts.length > 0 ? (
+                  <div className="space-y-4">
+                    {activeOpsAlerts.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="text-xs uppercase tracking-widest text-muted-foreground">Aktívne</div>
+                        {activeOpsAlerts.map((alert) => (
+                          <div key={alert.id} className="rounded-xl border border-primary/10 bg-card/40 px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant="outline" className={getAlertBadgeClasses(alert.severity ?? "warning")}>
+                                {alert.severity ?? "warning"}
+                              </Badge>
+                              <Badge variant="outline" className={getPersistedObservabilityStatusClasses("active")}>
+                                {getPersistedObservabilityStatusLabel("active")}
+                              </Badge>
+                              <div className="font-semibold text-foreground">{alert.title ?? alert.code ?? "Alert"}</div>
+                            </div>
+                            <p className="mt-2 text-xs text-muted-foreground">{alert.description ?? "Bez popisu."}</p>
+                            <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-muted-foreground md:grid-cols-3">
+                              <div>
+                                Zdroj: <span className="font-semibold text-foreground">{alert.source_kind ?? "—"}</span>
+                              </div>
+                              <div>
+                                Prvý výskyt:{" "}
+                                <span className="font-semibold text-foreground">
+                                  {alert.first_detected_at ? new Date(alert.first_detected_at).toLocaleString() : "—"}
+                                </span>
+                              </div>
+                              <div>
+                                Naposledy potvrdené:{" "}
+                                <span className="font-semibold text-foreground">
+                                  {alert.last_detected_at ? new Date(alert.last_detected_at).toLocaleString() : "—"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
+                        Aktívne server-side alerty momentálne neexistujú.
+                      </div>
+                    )}
+
+                    {resolvedOpsAlerts.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="text-xs uppercase tracking-widest text-muted-foreground">Nedávno vyriešené</div>
+                        {resolvedOpsAlerts.slice(0, 4).map((alert) => (
+                          <div key={alert.id} className="rounded-xl border border-primary/5 bg-card/30 px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant="outline" className={getAlertBadgeClasses(alert.severity ?? "warning")}>
+                                {alert.severity ?? "warning"}
+                              </Badge>
+                              <Badge variant="outline" className={getPersistedObservabilityStatusClasses("resolved")}>
+                                {getPersistedObservabilityStatusLabel("resolved")}
+                              </Badge>
+                              <div className="font-semibold text-foreground">{alert.title ?? alert.code ?? "Alert"}</div>
+                            </div>
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              Vyriešené:{" "}
+                              <span className="font-semibold text-foreground">
+                                {alert.resolved_at ? new Date(alert.resolved_at).toLocaleString() : "—"}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-primary/10 bg-card/40 px-4 py-3 text-sm text-muted-foreground">
+                    Server-side alert feed zatiaľ neobsahuje žiadne záznamy pre túto firmu.
                   </div>
                 )}
               </div>

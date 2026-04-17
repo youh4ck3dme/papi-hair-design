@@ -36,6 +36,7 @@ const firestoreMocks = vi.hoisted(() => ({
 const functionMocks = vi.hoisted(() => ({
   saveSmtpConfig: vi.fn(),
   rebuildPublicSnapshot: vi.fn(),
+  syncObservabilityAlerts: vi.fn(),
 }));
 
 const storageMocks = vi.hoisted(() => ({
@@ -109,7 +110,10 @@ vi.mock("@/components/ui/switch", () => ({
 }));
 
 vi.mock("firebase/functions", () => ({
-  httpsCallable: (_functions: unknown, name: "saveSmtpConfig" | "rebuildPublicSnapshot") => functionMocks[name],
+  httpsCallable: (
+    _functions: unknown,
+    name: "saveSmtpConfig" | "rebuildPublicSnapshot" | "syncObservabilityAlerts",
+  ) => functionMocks[name],
 }));
 
 vi.mock("firebase/storage", () => ({
@@ -176,6 +180,7 @@ describe("SettingsPage", () => {
     firestoreMocks.updateDoc.mockReset();
     functionMocks.saveSmtpConfig.mockReset();
     functionMocks.rebuildPublicSnapshot.mockReset();
+    functionMocks.syncObservabilityAlerts.mockReset();
     storageMocks.ref.mockClear();
     storageMocks.uploadBytes.mockReset();
     storageMocks.getDownloadURL.mockReset();
@@ -291,6 +296,43 @@ describe("SettingsPage", () => {
         };
       }
 
+      if (queryRef.__collection === "ops_alerts") {
+        return {
+          docs: [
+            {
+              id: "alert-1",
+              data: () => ({
+                business_id: "biz-1",
+                code: "snapshot_slow",
+                severity: "warning",
+                status: "active",
+                title: "Snapshot rebuild je pomalý",
+                description: "Posledný rebuild trval 7100 ms.",
+                source_kind: "snapshot",
+                first_detected_at: "2026-04-16T09:30:00.000Z",
+                last_detected_at: "2026-04-16T09:57:00.000Z",
+                updated_at: "2026-04-16T09:57:00.000Z",
+              }),
+            },
+            {
+              id: "alert-2",
+              data: () => ({
+                business_id: "biz-1",
+                code: "snapshot_no_subcategories",
+                severity: "warning",
+                status: "resolved",
+                title: "Snapshot nemá podkategórie",
+                description: "Public snapshot neobsahuje service subcategories pre booking výber.",
+                source_kind: "snapshot",
+                first_detected_at: "2026-04-15T09:30:00.000Z",
+                resolved_at: "2026-04-16T08:00:00.000Z",
+                updated_at: "2026-04-16T08:00:00.000Z",
+              }),
+            },
+          ],
+        };
+      }
+
       return { docs: [] };
     });
   });
@@ -309,10 +351,56 @@ describe("SettingsPage", () => {
 
     expect(await screen.findByText("Vyžaduje pozornosť")).toBeInTheDocument();
     expect(screen.getByText("Snapshot je starý")).toBeInTheDocument();
-    expect(screen.getByText("Snapshot rebuild je pomalý")).toBeInTheDocument();
+    expect(screen.getAllByText("Snapshot rebuild je pomalý")).toHaveLength(2);
+    expect(screen.getByText("Server-side alert feed")).toBeInTheDocument();
+    expect(screen.getByText("Aktívny")).toBeInTheDocument();
+    expect(screen.getByText("Vyriešený")).toBeInTheDocument();
     expect(screen.getByText("História rebuildov")).toBeInTheDocument();
     expect(screen.getByText("Test failure")).toBeInTheDocument();
     expect(screen.getByTestId("snapshot-rebuild-events")).toBeInTheDocument();
+    expect(screen.getByTestId("ops-alert-feed")).toBeInTheDocument();
+  });
+
+  it("keeps partial observability data visible when rebuild history query fails", async () => {
+    firestoreMocks.getDocs.mockImplementation(async (queryRef: { __collection: string }) => {
+      if (queryRef.__collection === "snapshot_rebuild_events") {
+        throw Object.assign(new Error("index building"), { code: "failed-precondition" });
+      }
+
+      if (queryRef.__collection === "ops_alerts") {
+        return { docs: [] };
+      }
+
+      return { docs: [] };
+    });
+
+    render(<SettingsPage />);
+
+    expect(await screen.findByText("Vyžaduje pozornosť")).toBeInTheDocument();
+    expect(screen.getByText("Observability dáta sú načítané len čiastočne")).toBeInTheDocument();
+    expect(screen.getByText("História rebuildov: query zatiaľ čaká na vytvorenie Firestore indexu.")).toBeInTheDocument();
+  });
+
+  it("syncs observability alerts through the callable", async () => {
+    functionMocks.syncObservabilityAlerts.mockResolvedValue({
+      data: {
+        success: true,
+        active_alerts: 2,
+        resolved_alerts: 1,
+      },
+    });
+
+    render(<SettingsPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Synchronizovať alerty/i }));
+
+    await waitFor(() => {
+      expect(functionMocks.syncObservabilityAlerts).toHaveBeenCalledWith({
+        business_id: "biz-1",
+      });
+    });
+
+    expect(toastMocks.success).toHaveBeenCalledWith("Alerty synchronizované (2 aktívnych, 1 vyriešených)");
   });
 
   it("saves the profile and refreshes auth data", async () => {

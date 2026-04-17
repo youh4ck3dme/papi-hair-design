@@ -39,6 +39,12 @@ export { onProfileWriteSyncEmployeePhoto } from "./syncEmployeePhotoFromProfile"
 export { onServiceSubcategoryAuditEvent } from "./serviceSubcategoryAudit";
 export { recordBookingFunnelEvent } from "./recordBookingFunnelEvent";
 export {
+  syncObservabilityAlerts,
+  onPublicSnapshotAlertSync,
+  onOpsHealthAlertSync,
+  refreshObservabilityAlerts,
+} from "./opsAlerts";
+export {
   onBusinessWrite,
   onServiceWrite,
   onServiceSubcategoryWrite,

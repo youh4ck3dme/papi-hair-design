@@ -1,5 +1,6 @@
 export type ObservabilityAlertSeverity = "error" | "warning" | "info";
 export type ObservabilityHealthTone = "healthy" | "warning" | "error";
+export type PersistedObservabilityAlertStatus = "active" | "resolved";
 
 export interface SnapshotInfoLike {
   status?: string | null;
@@ -199,4 +200,14 @@ export function getAlertBadgeClasses(severity: ObservabilityAlertSeverity): stri
     default:
       return "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300";
   }
+}
+
+export function getPersistedObservabilityStatusLabel(status: PersistedObservabilityAlertStatus): string {
+  return status === "active" ? "Aktívny" : "Vyriešený";
+}
+
+export function getPersistedObservabilityStatusClasses(status: PersistedObservabilityAlertStatus): string {
+  return status === "active"
+    ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
+    : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
 }

@@ -291,6 +291,20 @@
             ]
         },
         {
+            "collectionGroup": "ops_alerts",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "business_id",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "updated_at",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
             "collectionGroup": "time_blocks",
             "queryScope": "COLLECTION",
             "fields": [
