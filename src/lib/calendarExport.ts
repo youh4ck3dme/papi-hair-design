@@ -41,12 +41,12 @@ export function buildGoogleCalendarUrl(input: CalendarExportInput): string {
 
 export function buildIcsContent(input: CalendarExportInput): string {
   const now = new Date();
-  const uid = `booking-${input.start.getTime()}@fyzioafit.sk`;
+  const uid = `booking-${input.start.getTime()}@papihairdesign.sk`;
 
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//FYZIO&FIT//Booking//SK",
+    "PRODID:-//PAPI HAIR DESIGN//Booking//SK",
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:${uid}`,

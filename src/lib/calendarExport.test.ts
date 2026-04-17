@@ -7,7 +7,7 @@ describe("calendarExport", () => {
 
   it("builds a google calendar deep link", () => {
     const url = buildGoogleCalendarUrl({
-      title: "FYZIO&FIT - Konzultácia",
+      title: "PAPI HAIR DESIGN - Konzultácia",
       location: "Trieda SNP 61, Košice",
       start,
       end,
@@ -15,12 +15,12 @@ describe("calendarExport", () => {
 
     expect(url).toContain("calendar.google.com");
     expect(url).toContain("action=TEMPLATE");
-    expect(url).toContain("FYZIO%26FIT");
+    expect(url).toContain("PAPI+HAIR+DESIGN");
   });
 
   it("builds an ICS payload", () => {
     const ics = buildIcsContent({
-      title: "FYZIO&FIT - Konzultácia",
+      title: "PAPI HAIR DESIGN - Konzultácia",
       description: "Rezervovaný termín",
       location: "Trieda SNP 61, Košice",
       start,
@@ -28,7 +28,8 @@ describe("calendarExport", () => {
     });
 
     expect(ics).toContain("BEGIN:VCALENDAR");
-    expect(ics).toContain("SUMMARY:FYZIO&FIT - Konzultácia");
+    expect(ics).toContain("SUMMARY:PAPI HAIR DESIGN - Konzultácia");
+    expect(ics).toContain("PRODID:-//PAPI HAIR DESIGN//Booking//SK");
     expect(ics).toContain("LOCATION:Trieda SNP 61\\, Košice");
   });
 });

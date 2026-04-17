@@ -25,13 +25,13 @@ export function buildAdminCalendarCsv(rows: AdminCalendarExportRow[]): string {
     "Referencia",
     "Klient",
     "Email",
-    "Telefon",
-    "Sluzba",
-    "Tim",
-    "Zaciatok",
+    "Telefón",
+    "Služba",
+    "Tím",
+    "Začiatok",
     "Koniec",
     "Status",
-    "Poznamka",
+    "Poznámka",
   ];
 
   const body = rows.map((row) => [
@@ -69,7 +69,7 @@ export function buildAdminCalendarPrintHtml(dateLabel: string, rows: AdminCalend
     <html lang="sk">
       <head>
         <meta charset="utf-8" />
-        <title>Denny export - ${dateLabel}</title>
+        <title>Denný export - ${dateLabel}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 24px; color: #18181b; }
           h1 { margin: 0 0 8px; font-size: 24px; }
@@ -81,20 +81,20 @@ export function buildAdminCalendarPrintHtml(dateLabel: string, rows: AdminCalend
         </style>
       </head>
       <body>
-        <h1>FYZIO&FIT - Denny prehlad</h1>
+        <h1>PAPI HAIR DESIGN - Denný prehľad</h1>
         <p>${dateLabel}</p>
-        <div class="meta">Pocet rezervacii: ${rows.length}</div>
+        <div class="meta">Počet rezervácií: ${rows.length}</div>
         <table>
           <thead>
             <tr>
-              <th>Cas</th>
+              <th>Čas</th>
               <th>Klient</th>
-              <th>Sluzba</th>
-              <th>Tim</th>
+              <th>Služba</th>
+              <th>Tím</th>
               <th>Email</th>
-              <th>Telefon</th>
+              <th>Telefón</th>
               <th>Status</th>
-              <th>Poznamka</th>
+              <th>Poznámka</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>

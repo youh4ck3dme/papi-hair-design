@@ -568,7 +568,7 @@ export default function SettingsPage() {
               <TabsTrigger value="general" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Všeobecné</TabsTrigger>
               <TabsTrigger value="booking" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Booking</TabsTrigger>
               <TabsTrigger value="hours" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Otváracie hodiny</TabsTrigger>
-              <TabsTrigger value="smtp" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">SMTP Email</TabsTrigger>
+              <TabsTrigger value="smtp" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">SMTP e-mail</TabsTrigger>
               <TabsTrigger value="snapshot" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Snapshot</TabsTrigger>
               <TabsTrigger value="license" className="rounded-xl py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Licencia</TabsTrigger>
             </>
