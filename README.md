@@ -3,7 +3,7 @@
 Moderný rezervačný systém pre salóny krásy. React 18 PWA + Firebase backend.
 
 > **Repo:** https://github.com/youh4ck3dme/papi-hair-design
-> **Vercel:** https://vercel.com/yyys-projects-639e38fd/papi-hair-design
+> **Deploy authority:** Firebase Hosting (GitHub Actions)
 > **Produkčná doména (primary):** https://booking.papihairdesign.sk
 > **Fallback URL:** https://hairchainger-main-876665-176e8.web.app
 
@@ -15,6 +15,7 @@ Aktualny produkcny stav, hotove bloky a dalsie kroky:
 
 - [docs/GRANDE-FINALE-STATUS-2026-03-11.md](./docs/GRANDE-FINALE-STATUS-2026-03-11.md)
 - [docs/ANALYTICS.md](./docs/ANALYTICS.md)
+- [docs/FIREBASE-DEPLOYMENT-AUTHORITY.md](./docs/FIREBASE-DEPLOYMENT-AUTHORITY.md)
 - [OWNERMANUAL.md](./OWNERMANUAL.md)
 
 `TODO.md` je historicky diagnosticky dokument a nie je uz primarny operativny plan.
@@ -28,7 +29,7 @@ Aktualny produkcny stav, hotove bloky a dalsie kroky:
 - [Rýchly štart](#rýchly-štart)
 - [Premenné prostredia](#premenné-prostredia)
 - [GitHub Secrets – povinné nastaviť](#github-secrets--povinné-nastaviť)
-- [Vercel env premenné](#vercel-env-premenné)
+- [Firebase Deploy Secrets](#firebase-deploy-secrets)
 - [Stránky a routy](#stránky-a-routy)
 - [Firebase Cloud Functions](#firebase-cloud-functions)
 - [Offline podpora](#offline-podpora)
@@ -125,7 +126,7 @@ Skopíruj `.env.example` → `.env` a vyplň hodnoty z Firebase Console:
 VITE_FIREBASE_API_KEY=...
 VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXX
@@ -152,32 +153,19 @@ Bez týchto secrets CI build vždy failuje:
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | získate z Firebase Console |
 | `VITE_FIREBASE_APP_ID` | získate z Firebase Console |
 | `VITE_FIREBASE_MEASUREMENT_ID` | napr. `G-WKF7CKN6MN` |
-| `VITE_FIREBASE_FUNCTIONS_REGION` | napr. `europe-west1` |
-
-Voliteľné (CI krok preskočí ak chýbajú):
-
-| Secret | Popis |
-|--------|-------|
-
+| `FIREBASE_SERVICE_ACCOUNT_HAIRCHAINGER_MAIN_876665_176E8` | JSON service account pre deploy workflows |
+| `VITE_FIREBASE_FUNCTIONS_REGION` | napr. `europe-west1` (voliteľné pre build/test) |
 
 ---
 
-## Vercel env premenné
+## Firebase Deploy Secrets
 
-> **Kde:** https://vercel.com/yyys-projects-639e38fd/papi-hair-design/settings/environment-variables
+Používa sa iba Firebase deploy chain (`.github/workflows/deploy-hosting.yml`, `.github/workflows/firebase-hosting-preview.yml`, `.github/workflows/deploy-functions.yml`).
 
-Nastav rovnaké Firebase hodnoty ako GitHub Secrets plus:
+Dodatočné odporúčané secrets pre backend notifikácie:
 
 | Premenná | Hodnota |
 |----------|---------|
-| `VITE_FIREBASE_API_KEY` | rovnaká hodnota |
-| `VITE_FIREBASE_AUTH_DOMAIN` | rovnaká hodnota |
-| `VITE_FIREBASE_PROJECT_ID` | rovnaká hodnota |
-| `VITE_FIREBASE_STORAGE_BUCKET` | rovnaká hodnota |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | rovnaká hodnota |
-| `VITE_FIREBASE_APP_ID` | rovnaká hodnota |
-| `VITE_FIREBASE_MEASUREMENT_ID` | rovnaká hodnota |
-| `VITE_FIREBASE_FUNCTIONS_REGION` | napr. `europe-west1` |
 | `TWILIO_ACCOUNT_SID` | SID projektu na SMS |
 | `TWILIO_AUTH_TOKEN` | Auth token z Twilio Console |
 | `TWILIO_FROM_NUMBER` | Odosielateľ, napr. `+421900000000` |
@@ -277,23 +265,25 @@ Framework: **Vitest** + `@testing-library/react` + `jsdom`
 
 ## Deploy
 
-### Automatický (GitHub → Vercel)
+### Automatický (GitHub Actions → Firebase Hosting)
 
-Každý push na `main` → automatický deploy na Vercel.
-**Podmienka:** GitHub Secrets musia byť nastavené (pozri sekciu vyššie).
+- PR na `main` → automatický Firebase Hosting preview channel (`Firebase Hosting PR Preview` workflow)
+- Push do `main` → automatický live deploy (`Firebase Hosting Live Deploy` workflow)
+- Zmeny vo `functions/**` na `main` → deploy funkcií + firestore (`Firebase Functions Deploy` workflow)
 
 ### Manuálny
 
 ```sh
 npm run build
-npx vercel --prod
+firebase hosting:channel:deploy preview-manual --project hairchainger-main-876665-176e8
+firebase deploy --only hosting --project hairchainger-main-876665-176e8
 ```
 
 ### Pripojenie vlastnej domény `booking.papihairdesign.sk`
 
-1. Vercel Dashboard → projekt → **Domains** → pridať `booking.papihairdesign.sk`
-2. Vercel ukáže DNS záznamy
-3. Nastaviť u registrátora (Websupport): `CNAME → cname.vercel-dns.com`
+1. Firebase Console → Hosting → **Add custom domain** → `booking.papihairdesign.sk`
+2. Firebase ukáže DNS záznamy
+3. Nastaviť u registrátora (Websupport) podľa Firebase inštrukcie
 4. Počkať na propagáciu (5–30 min)
 
 ---
@@ -393,7 +383,7 @@ npm run preview             # Test prod build locally
 1. Fix critical issues in TODO.md
 2. Run validation checklist
 3. `npm run build && firebase deploy` (all services)
-4. Test in Vercel preview deployment
+4. Test in Firebase Hosting preview channel
 5. Merge to main for auto-production deploy
 
 ---
