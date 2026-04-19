@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Calendar, dateFnsLocalizer, View } from "react-big-calendar";
-import { format, parse, startOfWeek, getDay, parseISO, format as fmtDate } from "date-fns";
+import { format, parse, startOfWeek, getDay, format as fmtDate } from "date-fns";
 import { sk } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "@/styles/big-calendar-overrides.css";
@@ -12,6 +12,10 @@ import {
 import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/contexts/AuthContext";
 import { BUSINESS_TZ } from "@/lib/timezone";
+import {
+  fromCalendarWallClockDateToUtcIso,
+  toCalendarWallClockDate,
+} from "@/lib/calendarEventUtils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -210,29 +214,8 @@ export default function MySchedulePage() {
       const startAt = appointment.start_at ?? new Date().toISOString();
       const endAt = appointment.end_at ?? startAt;
 
-      const startUtc = parseISO(startAt);
-      const endUtc = parseISO(endAt);
-
-      const toLocalTimeParts = (d: Date) =>
-        new Intl.DateTimeFormat("en-US", {
-          timeZone: BUSINESS_TZ, hour: "numeric", minute: "numeric", hour12: false,
-        }).formatToParts(d);
-
-      const startParts = toLocalTimeParts(startUtc);
-      const endParts = toLocalTimeParts(endUtc);
-
-      const startLocal = new Date(startUtc);
-      startLocal.setHours(
-        Number.parseInt(startParts.find(p => p.type === "hour")?.value ?? "0", 10),
-        Number.parseInt(startParts.find(p => p.type === "minute")?.value ?? "0", 10),
-        0, 0,
-      );
-      const endLocal = new Date(endUtc);
-      endLocal.setHours(
-        Number.parseInt(endParts.find(p => p.type === "hour")?.value ?? "0", 10),
-        Number.parseInt(endParts.find(p => p.type === "minute")?.value ?? "0", 10),
-        0, 0,
-      );
+      const startLocal = toCalendarWallClockDate(startAt, BUSINESS_TZ);
+      const endLocal = toCalendarWallClockDate(endAt, BUSINESS_TZ);
 
       eventsList.push({
         id: appointmentDoc.id,
@@ -336,6 +319,8 @@ export default function MySchedulePage() {
     try {
       const start = newApptSlot.start;
       const end = new Date(start.getTime() + service.duration_minutes * 60_000);
+      const startAtUtc = fromCalendarWallClockDateToUtcIso(start, BUSINESS_TZ);
+      const endAtUtc = fromCalendarWallClockDateToUtcIso(end, BUSINESS_TZ);
       await addDoc(collection(db, "appointments"), {
         business_id: businessId,
         employee_id: employeeId,
@@ -343,8 +328,8 @@ export default function MySchedulePage() {
         customer_phone: newApptForm.customerPhone.trim() || null,
         service_id: service.id,
         service_name: service.name_sk,
-        start_at: start.toISOString(),
-        end_at: end.toISOString(),
+        start_at: startAtUtc,
+        end_at: endAtUtc,
         status: "confirmed",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

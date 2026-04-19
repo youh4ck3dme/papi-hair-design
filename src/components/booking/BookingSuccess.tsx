@@ -41,7 +41,7 @@ export function BookingSuccess({
         if (!appointmentStart || !appointmentEnd) return;
 
         const ics = buildIcsContent({
-            title: `FYZIO&FIT - ${selectedService?.name_sk ?? t("booking.confirmTitle")}`,
+      title: `PAPI HAIR DESIGN - ${selectedService?.name_sk ?? t("booking.confirmTitle")}`,
             description: t("booking.calendarDescription", {
                 service: selectedService?.name_sk ?? t("booking.confirmTitle"),
             }),
@@ -61,7 +61,7 @@ export function BookingSuccess({
 
     const googleCalendarHref = appointmentStart && appointmentEnd
         ? buildGoogleCalendarUrl({
-            title: `FYZIO&FIT - ${selectedService?.name_sk ?? t("booking.confirmTitle")}`,
+      title: `PAPI HAIR DESIGN - ${selectedService?.name_sk ?? t("booking.confirmTitle")}`,
             description: t("booking.calendarDescription", {
                 service: selectedService?.name_sk ?? t("booking.confirmTitle"),
             }),

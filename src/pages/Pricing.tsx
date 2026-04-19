@@ -1,9 +1,10 @@
 
 import { useState } from "react";
 import { Check, Loader2, Rocket, Shield, Zap, ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { auth } from "@/integrations/firebase/config";
+import { createCheckoutSession } from "@/integrations/firebase/createCheckoutSession";
 
 const plans = [
   {
@@ -61,7 +62,7 @@ export default function Pricing() {
   const handleSubscribe = async (priceId: string | undefined, planName: string) => {
     if (!priceId) {
         if (planName === "Free") {
-            navigate("/dashboard");
+            navigate("/booking");
             return;
         }
         toast.error("Tento balík momentálne vyžaduje asistenciu predaja.");
@@ -70,27 +71,19 @@ export default function Pricing() {
 
     setLoadingId(planName);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      if (!auth.currentUser) {
         toast.error("Najprv sa musíte prihlásiť pre nákup predplatného.");
-        navigate("/dashboard"); // Redirect to dashboard where login screen handles auth
+        navigate("/auth");
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ price_id: priceId }),
-      });
-
-      const { url, error } = await response.json();
-      if (error) throw new Error(error);
+      const { url, disabled, message } = await createCheckoutSession({ price_id: priceId });
+      if (disabled || !url) {
+        throw new Error(message || "Predplatné je momentálne nedostupné.");
+      }
 
       if (url) {
-        window.location.href = url;
+        window.location.assign(url);
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Nastala chyba pri inicializácii platby.";

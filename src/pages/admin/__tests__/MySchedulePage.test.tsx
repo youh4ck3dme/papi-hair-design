@@ -21,6 +21,7 @@ const calendarSpy = vi.hoisted(() => ({
 const firestoreMocks = vi.hoisted(() => ({
   getDocsMock: vi.fn(),
   getDocMock: vi.fn(),
+  addDocMock: vi.fn(),
   updateDocMock: vi.fn(),
 }));
 
@@ -28,6 +29,7 @@ const firestoreFixtures = vi.hoisted(() => ({
   employeesForUser: [] as any[],
   fallbackEmployees: [] as any[],
   appointments: [] as any[],
+  services: [] as any[],
   docsByPath: {} as Record<string, any>,
 }));
 
@@ -52,6 +54,17 @@ vi.mock("react-big-calendar", () => ({
       <div data-testid="my-schedule-calendar">
         <div data-testid="my-schedule-events">{String(props.events?.length ?? 0)}</div>
         <div data-testid="my-schedule-first-title">{props.events?.[0]?.title ?? ""}</div>
+        <button
+          type="button"
+          onClick={() =>
+            props.onSelectSlot?.({
+              start: new Date("2026-01-15T09:00:00.000Z"),
+              end: new Date("2026-01-15T09:30:00.000Z"),
+            })
+          }
+        >
+          open-schedule-slot
+        </button>
         <button
           type="button"
           onClick={() => {
@@ -91,6 +104,7 @@ vi.mock("firebase/firestore", async () => {
     doc: (_db: unknown, name: string, id: string) => ({ __collection: name, id }),
     getDocs: firestoreMocks.getDocsMock,
     getDoc: firestoreMocks.getDocMock,
+    addDoc: firestoreMocks.addDocMock,
     updateDoc: firestoreMocks.updateDocMock,
   };
 });
@@ -113,11 +127,13 @@ function seedScheduleFirestore(options?: {
   employeesForUser?: any[];
   fallbackEmployees?: any[];
   appointments?: any[];
+  services?: any[];
   docsByPath?: Record<string, any>;
 }) {
   firestoreFixtures.employeesForUser = options?.employeesForUser ?? [{ id: "emp-1", profile_id: "user-1" }];
   firestoreFixtures.fallbackEmployees = options?.fallbackEmployees ?? [{ id: "emp-2" }];
   firestoreFixtures.appointments = options?.appointments ?? [];
+  firestoreFixtures.services = options?.services ?? [{ id: "svc-1", name_sk: "Strih", duration_minutes: 30 }];
   firestoreFixtures.docsByPath = options?.docsByPath ?? {};
 }
 
@@ -131,6 +147,7 @@ describe("MySchedulePage", () => {
     toastMocks.error.mockReset();
     firestoreMocks.getDocsMock.mockReset();
     firestoreMocks.getDocMock.mockReset();
+    firestoreMocks.addDocMock.mockReset();
     firestoreMocks.updateDocMock.mockReset();
 
     firestoreMocks.getDocsMock.mockImplementation(async (input: any) => {
@@ -143,6 +160,10 @@ describe("MySchedulePage", () => {
 
       if (input?.__collection === "appointments") {
         return makeSnapshot(firestoreFixtures.appointments);
+      }
+
+      if (input?.__collection === "services") {
+        return makeSnapshot(firestoreFixtures.services);
       }
 
       return makeSnapshot([]);
@@ -164,6 +185,7 @@ describe("MySchedulePage", () => {
     });
 
     firestoreMocks.updateDocMock.mockResolvedValue(undefined);
+    firestoreMocks.addDocMock.mockResolvedValue({ id: "apt-new" });
   });
 
   it("shows empty state when user has no linked employee", async () => {
@@ -265,6 +287,35 @@ describe("MySchedulePage", () => {
 
     await waitFor(() => {
       expect(toastMocks.error).toHaveBeenCalledWith("Chyba pri aktualizácii");
+    });
+  });
+
+  it("stores newly selected slot in business timezone UTC", async () => {
+    seedScheduleFirestore();
+
+    render(<MySchedulePage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("my-schedule-calendar")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("open-schedule-slot"));
+    await screen.findByText("Nová rezervácia");
+
+    fireEvent.change(screen.getByPlaceholderText("Meno a priezvisko"), {
+      target: { value: "Test Customer" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Vytvoriť rezerváciu/i }));
+
+    await waitFor(() => {
+      expect(firestoreMocks.addDocMock).toHaveBeenCalledWith(
+        expect.objectContaining({ __collection: "appointments", constraints: [] }),
+        expect.objectContaining({
+          start_at: "2026-01-15T08:00:00.000Z",
+          end_at: "2026-01-15T08:30:00.000Z",
+        }),
+      );
     });
   });
 });

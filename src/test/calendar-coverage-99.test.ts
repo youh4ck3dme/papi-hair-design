@@ -594,7 +594,7 @@ describe("calendar coverage 99", () => {
     it("88 print HTML contains date label and title", () => {
       const html = buildAdminCalendarPrintHtml("Pondelok", [row]);
       expect(html).toContain("Pondelok");
-      expect(html).toContain("FYZIO&FIT - Denny prehlad");
+      expect(html).toContain("PAPI HAIR DESIGN - Denný prehľad");
     });
 
     it("89 print HTML uses placeholders for missing optional values", () => {
@@ -667,3 +667,4 @@ describe("calendar coverage 99", () => {
   });
 
 });
+

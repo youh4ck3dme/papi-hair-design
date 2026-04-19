@@ -7,33 +7,21 @@ import { contactSchema, ServiceRow, EmployeeRow, BookingResult, MembershipRow } 
 import { createBookingHold } from "@/integrations/firebase/createBookingHold";
 import { confirmBooking } from "@/integrations/firebase/confirmBooking";
 import { getRecaptchaToken } from "@/integrations/firebase/recaptcha";
+import {
+    buildServiceSubcategoryOptions,
+    filterServicesBySubcategoryOption,
+    type BookingMainCategory,
+    type ServiceSubcategoryRow,
+} from "@/lib/serviceSubcategories";
 
 const makeIdempotencyKey = () =>
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-function inferCategoryFromName(name: string): "damske" | "panske" {
-    const normalized = name.toLowerCase();
-    const menPattern = /(p[aá]nsk|brad|junior|depil[aá]cia nosa|u[šs]n[eé] svie[cč]k|maska|t[oó]novanie sed[ií]n)/i;
-    return menPattern.test(normalized) ? "panske" : "damske";
-}
-
-function resolveServiceCategory(service: ServiceRow): "damske" | "panske" {
-    if (service.category === "damske" || service.category === "panske") {
-        return service.category;
-    }
-    return inferCategoryFromName(service.name_sk ?? "");
-}
-
-function resolveServiceSubcategory(service: ServiceRow): string | null {
-    return typeof service.subcategory === "string" && service.subcategory.trim().length > 0
-        ? service.subcategory
-        : null;
-}
-
 export function useBookingForm(
     services: ServiceRow[],
+    serviceSubcategories: ServiceSubcategoryRow[],
     employees: EmployeeRow[],
     business: any,
     employeeServiceMap: Record<string, string[]>,
@@ -42,7 +30,7 @@ export function useBookingForm(
     const { t } = useTranslation();
 
     // Booking states
-    const [category, setCategory] = useState<"damske" | "panske">("damske");
+    const [category, setCategory] = useState<BookingMainCategory>("damske");
     const [subcategory, setSubcategory] = useState<string | null>(null);
     const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
@@ -74,28 +62,60 @@ export function useBookingForm(
         }
     }, [profile]);
 
-    // Derived: grouped subcategories
-    const subcategories = useMemo(() => {
-        const cats = services
-            .filter((s): s is typeof s & { subcategory: string } =>
-                resolveServiceCategory(s) === category && Boolean(resolveServiceSubcategory(s))
-            )
-            .map((s) => resolveServiceSubcategory(s) as string);
-        return [...new Set(cats)].sort((a, b) => a.localeCompare(b));
-    }, [services, category]);
+    const subcategoryOptions = useMemo(() => buildServiceSubcategoryOptions(
+        services,
+        serviceSubcategories,
+        category,
+    ), [services, serviceSubcategories, category]);
 
-    // Derived: filtered services for selected subcategory
+    const showSubcategoryStep = useMemo(() => {
+        if (subcategoryOptions.length === 0) return false;
+        return subcategoryOptions.some((option) => !option.isUncategorized) || subcategoryOptions.length > 1;
+    }, [subcategoryOptions]);
+
+    const selectedSubcategoryOption = useMemo(
+        () => subcategoryOptions.find((option) => option.key === subcategory) ?? null,
+        [subcategoryOptions, subcategory],
+    );
+
     const filteredServices = useMemo(() => {
-        if (!subcategory) {
-            if (subcategories.length === 0) {
-                return services.filter((s) => resolveServiceCategory(s) === category);
-            }
+        if (!showSubcategoryStep) {
+            return filterServicesBySubcategoryOption(services, category, null);
+        }
+
+        if (!selectedSubcategoryOption) {
             return [];
         }
-        return services.filter((s) => resolveServiceCategory(s) === category && resolveServiceSubcategory(s) === subcategory);
-    }, [services, category, subcategory, subcategories.length]);
+
+        return filterServicesBySubcategoryOption(services, category, selectedSubcategoryOption);
+    }, [services, category, selectedSubcategoryOption, showSubcategoryStep]);
 
     const selectedService = useMemo(() => services.find((s) => s.id === selectedServiceId) ?? null, [services, selectedServiceId]);
+
+    useEffect(() => {
+        if (!showSubcategoryStep) {
+            if (subcategory !== null) {
+                setSubcategory(null);
+            }
+            return;
+        }
+
+        if (subcategory !== null && !subcategoryOptions.some((option) => option.key === subcategory)) {
+            setSubcategory(null);
+            return;
+        }
+
+        if (subcategory == null && subcategoryOptions.length === 1) {
+            setSubcategory(subcategoryOptions[0].key);
+        }
+    }, [showSubcategoryStep, subcategory, subcategoryOptions]);
+
+    useEffect(() => {
+        if (!selectedServiceId) return;
+        if (!filteredServices.some((service) => service.id === selectedServiceId)) {
+            setSelectedServiceId(null);
+        }
+    }, [filteredServices, selectedServiceId]);
 
     // Filter employees based on selected service and admin setting
     const filteredEmployees = useMemo(() => {
@@ -266,7 +286,9 @@ export function useBookingForm(
         submitting,
         bookingDone,
         bookingResult,
-        subcategories,
+        subcategoryOptions,
+        showSubcategoryStep,
+        selectedSubcategoryOption,
         filteredServices,
         selectedService,
         filteredEmployees,

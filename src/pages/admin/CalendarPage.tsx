@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { addMinutes, startOfDay, addDays, startOfMonth, startOfWeek, format as fmtDate } from "date-fns";
+import { addMinutes, startOfDay, format as fmtDate } from "date-fns";
 import { sk } from "date-fns/locale";
 import { auth, db } from "@/integrations/firebase/config";
 import {
@@ -49,6 +49,12 @@ import {
   isIgnorableBlockedFirestoreError,
   warnBlockedByClientOnce,
 } from "@/lib/firebaseClientErrors";
+import {
+  DEFAULT_BUSINESS_TIMEZONE,
+  fromCalendarWallClockDateToUtcIso,
+  getBusinessDayUtcRange,
+  toCalendarWallClockDate,
+} from "@/lib/calendarEventUtils";
 
 interface CalEvent {
   id: string; title: string; start: Date; end: Date; status: string; resource: any;
@@ -60,6 +66,9 @@ interface CustomerHistoryItem {
   status: string;
   service_name: string | null;
 }
+
+const TOOLBAR_ACTION_START_HOUR = 8;
+const TOOLBAR_ACTION_DURATION_MINUTES = 30;
 
 export default function CalendarPage() {
   const { businessId, isOwnerOrAdmin, activeMembership } = useBusiness();
@@ -106,6 +115,10 @@ export default function CalendarPage() {
   const copyLabelResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filtersStorageKey = `admin-calendar-filters:${businessId}`;
+  const calendarTimezone =
+    typeof business?.timezone === "string" && business.timezone.trim().length > 0
+      ? business.timezone
+      : DEFAULT_BUSINESS_TIMEZONE;
 
   const scheduleCopyLabelReset = useCallback(() => {
     if (copyLabelResetTimeoutRef.current) {
@@ -170,11 +183,15 @@ export default function CalendarPage() {
 
       const appointmentEvents: CalEvent[] = apptsSnap.docs.map((doc) => {
         const a = doc.data();
+        const rawStart =
+          a.start_at instanceof Timestamp ? a.start_at.toDate().toISOString() : String(a.start_at ?? "");
+        const rawEnd =
+          a.end_at instanceof Timestamp ? a.end_at.toDate().toISOString() : String(a.end_at ?? "");
         return {
           id: doc.id,
           title: `${a.customer_name ?? "Zákazník"} – ${a.service_name ?? "Služba"}`,
-          start: a.start_at instanceof Timestamp ? a.start_at.toDate() : new Date(a.start_at),
-          end: a.end_at instanceof Timestamp ? a.end_at.toDate() : new Date(a.end_at),
+          start: toCalendarWallClockDate(rawStart, calendarTimezone),
+          end: toCalendarWallClockDate(rawEnd, calendarTimezone),
           status: a.status,
           resource: { ...a, id: doc.id },
         };
@@ -186,11 +203,15 @@ export default function CalendarPage() {
           typeof row.employee_name === "string" ? row.employee_name : null;
         const employeeColor =
           typeof row.employee_color === "string" ? row.employee_color : null;
+        const rawStart =
+          row.start_at instanceof Timestamp ? row.start_at.toDate().toISOString() : String(row.start_at ?? "");
+        const rawEnd =
+          row.end_at instanceof Timestamp ? row.end_at.toDate().toISOString() : String(row.end_at ?? "");
         return {
           id: docSnap.id,
           title: `Blok: ${typeof row.reason === "string" ? row.reason : "Blokovaný čas"}`,
-          start: row.start_at instanceof Timestamp ? row.start_at.toDate() : new Date(String(row.start_at)),
-          end: row.end_at instanceof Timestamp ? row.end_at.toDate() : new Date(String(row.end_at)),
+          start: toCalendarWallClockDate(rawStart, calendarTimezone),
+          end: toCalendarWallClockDate(rawEnd, calendarTimezone),
           status: "blocked",
           resource: {
             ...row,
@@ -217,7 +238,7 @@ export default function CalendarPage() {
         setLoading(false);
       }
     }
-  }, [businessId, isOwnerOrAdmin]);
+  }, [businessId, calendarTimezone, isOwnerOrAdmin]);
 
 
   useEffect(() => {
@@ -364,20 +385,24 @@ export default function CalendarPage() {
     [activeMembership?.profile_id, availableEmployees, employeeFilter, isOwnerOrAdmin],
   );
 
+  const actionableEmployees = useMemo(
+    () => (visibleResources.length > 0 ? visibleResources : availableEmployees),
+    [availableEmployees, visibleResources],
+  );
+
 
   const loadAvailableSlots = useCallback(async (slotDate: Date, employeeId: string, serviceId: string) => {
     const service = services.find((s) => s.id === serviceId);
     if (!service || !employeeId || !business) return;
 
-    const dayStart = startOfDay(slotDate);
-    const dayEnd = addDays(dayStart, 1);
+    const { startUtc, endUtc } = getBusinessDayUtcRange(slotDate, calendarTimezone);
 
     try {
       const apptsSnap = await getDocs(query(
         collection(db, "appointments"),
         where("employee_id", "==", employeeId),
-        where("start_at", ">=", dayStart.toISOString()),
-        where("start_at", "<", dayEnd.toISOString())
+        where("start_at", ">=", startUtc),
+        where("start_at", "<", endUtc)
       ));
 
       const existing: ExistingAppointment[] = apptsSnap.docs
@@ -385,13 +410,19 @@ export default function CalendarPage() {
         .filter((appointment) => appointment.status !== "cancelled")
         .map((appointment) => ({
           start_at:
-            appointment.start_at instanceof Timestamp
-              ? appointment.start_at.toDate().toISOString()
-              : appointment.start_at,
+            toCalendarWallClockDate(
+              appointment.start_at instanceof Timestamp
+                ? appointment.start_at.toDate().toISOString()
+                : String(appointment.start_at ?? ""),
+              calendarTimezone,
+            ).toISOString(),
           end_at:
-            appointment.end_at instanceof Timestamp
-              ? appointment.end_at.toDate().toISOString()
-              : appointment.end_at,
+            toCalendarWallClockDate(
+              appointment.end_at instanceof Timestamp
+                ? appointment.end_at.toDate().toISOString()
+                : String(appointment.end_at ?? ""),
+              calendarTimezone,
+            ).toISOString(),
         }));
 
       const slots = generateSlots({
@@ -409,7 +440,7 @@ export default function CalendarPage() {
     } catch (err) {
       console.error("Error loading slots:", err);
     }
-  }, [services, business, schedules]);
+  }, [calendarTimezone, services, business, schedules]);
 
   useEffect(() => {
     if (bookForm.service_id && bookForm.employee_id && selectedSlot) {
@@ -428,7 +459,6 @@ export default function CalendarPage() {
   };
 
   const handleSelectSlot = (slot: SlotInfo) => {
-    if (!isOwnerOrAdmin) return;
     setSelectedSlot(slot);
     setCustomStartTime(fmtDate(slot.start, "HH:mm"));
     setBookForm({
@@ -458,6 +488,39 @@ export default function CalendarPage() {
     const pad = (value: number) => String(value).padStart(2, "0");
     return `${input.getFullYear()}-${pad(input.getMonth() + 1)}-${pad(input.getDate())}T${pad(input.getHours())}:${pad(input.getMinutes())}`;
   };
+
+  const buildToolbarActionSlot = useCallback((baseDate: Date) => {
+    const start = startOfDay(baseDate);
+    start.setHours(TOOLBAR_ACTION_START_HOUR, 0, 0, 0);
+    const end = addMinutes(start, TOOLBAR_ACTION_DURATION_MINUTES);
+    return { start, end };
+  }, []);
+
+  const handleToolbarCreateBooking = useCallback(() => {
+    const slot = buildToolbarActionSlot(date);
+    handleSelectSlot(slot);
+  }, [buildToolbarActionSlot, date]);
+
+  const handleToolbarBlock = useCallback(() => {
+    const defaultEmployeeId =
+      actionableEmployees[0]?.id ??
+      visibleResources[0]?.id ??
+      availableEmployees[0]?.id ??
+      "";
+
+    if (!defaultEmployeeId) {
+      toast.error("Nie je dostupný žiadny zamestnanec pre blokáciu.");
+      return;
+    }
+
+    const slot = buildToolbarActionSlot(date);
+    setQuickActionType("block");
+    setQuickActionEmployeeId(defaultEmployeeId);
+    setQuickActionStartAt(toInputDateTimeLocal(slot.start));
+    setQuickActionEndAt(toInputDateTimeLocal(slot.end));
+    setQuickActionReason("Blokovaný čas");
+    setQuickActionOpen(true);
+  }, [actionableEmployees, availableEmployees, buildToolbarActionSlot, date, visibleResources]);
 
   const openQuickAction = (action: "move" | "duplicate" | "block") => {
     if (!selectedEvent) return;
@@ -602,18 +665,6 @@ export default function CalendarPage() {
     setView("day");
   }, []);
 
-  const handleJumpWeek = useCallback(() => {
-    const now = new Date();
-    setDate(startOfWeek(now, { weekStartsOn: 1 }));
-    setView("week");
-  }, []);
-
-  const handleJumpMonth = useCallback(() => {
-    const now = new Date();
-    setDate(startOfMonth(now));
-    setView("month");
-  }, []);
-
 
   const handleBook = async () => {
     if (!bookForm.service_id || !bookForm.employee_id || !bookForm.start_at) { toast.error("Vyplňte všetky polia"); return; }
@@ -632,6 +683,8 @@ export default function CalendarPage() {
       const duration = (service?.duration_minutes ?? 30) + (service?.buffer_minutes ?? 0);
       const start = new Date(bookForm.start_at);
       const end = addMinutes(start, duration);
+      const startAtUtc = fromCalendarWallClockDateToUtcIso(start, calendarTimezone);
+      const endAtUtc = fromCalendarWallClockDateToUtcIso(end, calendarTimezone);
 
       const walkinEmail = `walkin-${Date.now()}@internal`;
 
@@ -645,8 +698,8 @@ export default function CalendarPage() {
         employee_color: employee?.color ?? null,
         service_id: bookForm.service_id,
         service_name: service?.name_sk ?? "?",
-        start_at: start.toISOString(),
-        end_at: end.toISOString(),
+        start_at: startAtUtc,
+        end_at: endAtUtc,
         status: "confirmed",
         created_at: new Date().toISOString()
       });
@@ -714,29 +767,31 @@ export default function CalendarPage() {
   };
 
   const handleRunQuickAction = async () => {
-    if (!selectedEvent) return;
+    if (quickActionType !== "block" && !selectedEvent) return;
     if (!quickActionStartAt || !quickActionEndAt) {
       toast.error("Vyberte čas od aj do.");
       return;
     }
 
     const eventType =
-      selectedEvent.resource?.event_type === "time_block" ? "time_block" : "appointment";
+      selectedEvent?.resource?.event_type === "time_block" ? "time_block" : "appointment";
     const payload: Record<string, unknown> = {
       business_id: businessId,
       action: quickActionType,
-      event_type: eventType,
-      start_at: new Date(quickActionStartAt).toISOString(),
-      end_at: new Date(quickActionEndAt).toISOString(),
-      employee_id: quickActionEmployeeId || selectedEvent.resource?.employee_id,
+      start_at: fromCalendarWallClockDateToUtcIso(new Date(quickActionStartAt), calendarTimezone),
+      end_at: fromCalendarWallClockDateToUtcIso(new Date(quickActionEndAt), calendarTimezone),
+      employee_id: quickActionEmployeeId || selectedEvent?.resource?.employee_id,
     };
-    if (eventType === "time_block") {
-      payload.time_block_id = selectedEvent.id;
-    } else {
-      payload.appointment_id = selectedEvent.id;
-    }
+
     if (quickActionType === "block") {
       payload.reason = quickActionReason.trim() || "Blokovaný čas";
+    } else if (selectedEvent) {
+      payload.event_type = eventType;
+      if (eventType === "time_block") {
+        payload.time_block_id = selectedEvent.id;
+      } else {
+        payload.appointment_id = selectedEvent.id;
+      }
     }
 
     setQuickActionSaving(true);
@@ -831,12 +886,6 @@ export default function CalendarPage() {
             {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground mr-1" />}
             <div className="hidden sm:block"><ThemeToggle /></div>
             
-            <div className="hidden lg:flex items-center gap-1 mr-1">
-              <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={handleJumpToday}>Today</Button>
-              <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={handleJumpWeek}>Week</Button>
-              <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={handleJumpMonth}>Month</Button>
-            </div>
-
             {compactActionMenu ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -884,6 +933,36 @@ export default function CalendarPage() {
           selectable={isOwnerOrAdmin}
           businessHours={{ hours: openingHours, overrides }}
           resources={visibleResources}
+          headerActions={(
+            <div className="flex w-full flex-wrap items-stretch justify-end gap-2" data-testid="calendar-header-actions">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="min-w-0 flex-1 sm:flex-none"
+                onClick={handleJumpToday}
+              >
+                Dnes
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="min-w-0 flex-1 sm:flex-none"
+                onClick={handleToolbarBlock}
+              >
+                Blokácia
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="min-w-0 flex-1 bg-gold text-gold-foreground hover:bg-gold/90 sm:flex-none"
+                onClick={handleToolbarCreateBooking}
+              >
+                Nová rezervácia
+              </Button>
+            </div>
+          )}
         />
       </div>
 
@@ -931,7 +1010,7 @@ export default function CalendarPage() {
                 }
               >
                 <SelectTrigger><SelectValue placeholder="Vyberte zamestnanca" /></SelectTrigger>
-                <SelectContent>{availableEmployees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.display_name}</SelectItem>)}</SelectContent>
+                <SelectContent>{actionableEmployees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.display_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             {selectedSlot && (
@@ -1225,7 +1304,7 @@ export default function CalendarPage() {
               <Select value={quickActionEmployeeId} onValueChange={setQuickActionEmployeeId}>
                 <SelectTrigger><SelectValue placeholder="Vyberte zamestnanca" /></SelectTrigger>
                 <SelectContent>
-                  {availableEmployees.map((employee: any) => (
+                  {actionableEmployees.map((employee: any) => (
                     <SelectItem key={employee.id} value={employee.id}>{employee.display_name}</SelectItem>
                   ))}
                 </SelectContent>

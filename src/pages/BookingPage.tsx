@@ -29,6 +29,7 @@ export default function BookingPage() {
   // Phase 2: Use custom hooks
   const {
     services,
+    serviceSubcategories,
     employees,
     business,
     businessHourEntries,
@@ -54,14 +55,15 @@ export default function BookingPage() {
     submitting,
     bookingDone,
     bookingResult,
-    subcategories,
+    subcategoryOptions,
+    showSubcategoryStep,
     filteredServices,
     selectedService,
     filteredEmployees,
     handleCheckAll,
     handleConsentChange,
     handleSubmit
-  } = useBookingForm(services, employees, business, employeeServiceMap, memberships);
+  } = useBookingForm(services, serviceSubcategories, employees, business, employeeServiceMap, memberships);
 
   const selectedAvailabilityEmployees = useMemo(() => {
     if (!selectedEmployeeId) return filteredEmployees;
@@ -258,7 +260,8 @@ export default function BookingPage() {
             setCategory={setCategory}
             subcategory={subcategory}
             setSubcategory={setSubcategory}
-            subcategories={subcategories}
+            subcategoryOptions={subcategoryOptions}
+            showSubcategoryStep={showSubcategoryStep}
             filteredServices={filteredServices}
             selectedServiceId={selectedServiceId}
             setSelectedServiceId={setSelectedServiceId}

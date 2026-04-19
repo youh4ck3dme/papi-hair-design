@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -110,8 +110,7 @@ describe("booking-calendar components", () => {
     const date = new Date(2026, 0, 15, 10, 0);
     const { setDate } = renderWithProvider(<CalendarHeaderDate />, { mode: "day", date });
 
-    const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Predchádzajúci deň" }));
 
     expect(setDate).toHaveBeenCalledTimes(1);
     expect((setDate.mock.calls[0][0] as Date).getDate()).toBe(14);
@@ -121,8 +120,7 @@ describe("booking-calendar components", () => {
     const date = new Date(2026, 0, 15, 10, 0);
     const { setDate } = renderWithProvider(<CalendarHeaderDate />, { mode: "week", date });
 
-    const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Ďalší týždeň" }));
 
     expect(setDate).toHaveBeenCalledTimes(1);
     expect((setDate.mock.calls[0][0] as Date).getDate()).toBe(22);
@@ -132,11 +130,67 @@ describe("booking-calendar components", () => {
     const date = new Date(2026, 0, 15, 10, 0);
     const { setDate } = renderWithProvider(<CalendarHeaderDate />, { mode: "month", date });
 
-    const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Ďalší mesiac" }));
 
     expect(setDate).toHaveBeenCalledTimes(1);
     expect((setDate.mock.calls[0][0] as Date).getMonth()).toBe(1);
+  });
+
+  it("opens quick date picker dialog from date label click", () => {
+    renderWithProvider(<CalendarHeaderDate />, {
+      mode: "week",
+      date: new Date(2026, 1, 20, 10, 0),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Vybrať dátum v kalendári" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText("20. februára 2026")).toBeInTheDocument();
+    expect(within(dialog).getAllByText("február 2026").length).toBeGreaterThan(0);
+  });
+
+  it("navigates months inside quick date picker", () => {
+    renderWithProvider(<CalendarHeaderDate />, {
+      mode: "week",
+      date: new Date(2026, 1, 20, 10, 0),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Vybrať dátum v kalendári" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getAllByText("február 2026").length).toBeGreaterThan(0);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Ďalší mesiac" }));
+    expect(within(dialog).getAllByText("marec 2026").length).toBeGreaterThan(0);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Predchádzajúci mesiac" }));
+    expect(within(dialog).getAllByText("február 2026").length).toBeGreaterThan(0);
+  });
+
+  it("selects a day from quick date picker and switches to day mode", () => {
+    const setDate = vi.fn();
+    const setMode = vi.fn();
+
+    renderWithProvider(<CalendarHeaderDate />, {
+      mode: "week",
+      date: new Date(2026, 1, 15, 10, 0),
+      setDate,
+      setMode,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Vybrať dátum v kalendári" }));
+
+    const dialog = screen.getByRole("dialog");
+    const dayButton = within(dialog).getAllByText("20", { selector: "button" })[0];
+    fireEvent.click(dayButton);
+
+    expect(setDate).toHaveBeenCalledTimes(1);
+    expect((setDate.mock.calls[0][0] as Date).getFullYear()).toBe(2026);
+    expect((setDate.mock.calls[0][0] as Date).getMonth()).toBe(1);
+    expect((setDate.mock.calls[0][0] as Date).getDate()).toBe(20);
+    expect(setMode).toHaveBeenCalledWith("day");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("hides add button when selectable is false", () => {
@@ -585,8 +639,7 @@ describe("booking-calendar components", () => {
     expect(zn).toBeLessThan(zd);
   });
 
-  it("filters day events using centered calendar search", () => {
-    vi.useFakeTimers();
+  it("renders day events without search filtering controls", () => {
     const date = new Date(2026, 0, 15);
     const events = [
       makeEvent({
@@ -615,20 +668,12 @@ describe("booking-calendar components", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("Hľadať v kalendári"), {
-      target: { value: "2222" },
-    });
-
-    act(() => {
-      vi.advanceTimersByTime(220);
-    });
-
-    expect(screen.queryByText("Anna - Farbenie")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Hľadať v kalendári")).not.toBeInTheDocument();
+    expect(screen.getByText("Anna - Farbenie")).toBeInTheDocument();
     expect(screen.getByText("Mato - Strih")).toBeInTheDocument();
-    vi.useRealTimers();
   });
 
-  it("switches month density to compact and shows +N more earlier", () => {
+  it("keeps month mode functional without compact toggle", () => {
     const date = new Date(2026, 0, 15);
     const events = [
       makeEvent({ id: "m1", start: new Date(2026, 0, 15, 8, 0), end: new Date(2026, 0, 15, 8, 30) }),
@@ -647,9 +692,8 @@ describe("booking-calendar components", () => {
       />,
     );
 
-    expect(screen.queryByText("+2 ďalších")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Compact" }));
-    expect(screen.getByText("+2 ďalších")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Compact" })).not.toBeInTheDocument();
+    expect(screen.getByText("január 2026")).toBeInTheDocument();
   });
 
   it("renders resource columns in day mode when resources are present", () => {

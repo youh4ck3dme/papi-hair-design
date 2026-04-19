@@ -211,6 +211,6 @@ test.describe("Booking Flow", () => {
         await reachBookingDetailsStep(page);
         await page.getByTestId("booking-step-details").locator('a[href="/terms"]').first().click();
         await expect(page).toHaveURL(/\/terms/i, { timeout: 10000 });
-        await expect(page.getByRole("heading", { name: /Zmluvné podmienky|Terms/i })).toBeVisible({ timeout: 10000 });
+        await expect(page.getByRole("heading", { name: /Zmluvné podmienky/i })).toBeVisible({ timeout: 10000 });
     });
 });

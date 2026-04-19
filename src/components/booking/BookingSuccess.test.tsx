@@ -99,7 +99,7 @@ describe("BookingSuccess", () => {
       />,
       { wrapper }
     );
-    const historyLink = screen.getByRole("link", { name: /História/i });
+    const historyLink = screen.getByRole("link", { name: /Moje rezervácie/i });
     expect(historyLink).toHaveAttribute("href", expect.stringContaining("tok-abc"));
   });
 

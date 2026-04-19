@@ -93,10 +93,11 @@ salon-*.png
 docs/import-reports/
 docs/customerExport_*.xlsx
 
-# Supabase local
-supabase/.temp
-
 # Local IDE/caches and side projects
 .vs/
 booking-buddy/
 *.new
+
+# Python local tooling artifacts
+__pycache__/
+.venv/

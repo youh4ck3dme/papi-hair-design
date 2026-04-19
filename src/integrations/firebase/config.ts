@@ -18,19 +18,24 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
+
 // Initialize App Check (optional but recommended for security)
 // reCAPTCHA Enterprise is the modern choice.
 // In local dev/CI, use the Debug Token if provided.
 if (typeof window !== "undefined") {
-    const appCheckSiteKey =
-        (import.meta.env.VITE_FIREBASE_APP_CHECK_SITE_KEY as string | undefined) ||
-        (import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined);
+    const appCheckSiteKey = import.meta.env.VITE_FIREBASE_APP_CHECK_SITE_KEY as string | undefined;
 
-    if (import.meta.env.VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN) {
-        (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN;
+    const appCheckDebugToken = import.meta.env.VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN as string | undefined;
+    const isLocalHost = LOCAL_HOSTNAMES.has(window.location.hostname);
+
+    if (appCheckDebugToken) {
+        (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = appCheckDebugToken;
     }
 
-    if (appCheckSiteKey) {
+    if (isLocalHost && !appCheckDebugToken) {
+        console.info("🔐 Firebase App Check: Skipped on localhost (missing debug token).");
+    } else if (appCheckSiteKey) {
         try {
             initializeAppCheck(app, {
                 provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
@@ -40,6 +45,8 @@ if (typeof window !== "undefined") {
         } catch (err) {
             console.error("🔐 Firebase App Check: Failed to initialize:", err);
         }
+    } else {
+        console.info("🔐 Firebase App Check: Skipped (missing VITE_FIREBASE_APP_CHECK_SITE_KEY).");
     }
 }
 

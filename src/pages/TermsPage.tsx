@@ -1,4 +1,5 @@
 import { ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 
 export default function TermsOfService() {
@@ -15,7 +16,7 @@ export default function TermsOfService() {
         </button>
 
         <h1 className="text-4xl md:text-6xl font-black uppercase mb-8 leading-none">
-          Obchodné <span className="text-red-600">podmienky</span>
+          Zmluvné podmienky
         </h1>
 
         <div className="border-l-4 border-black pl-4 mb-8 font-bold text-sm text-gray-500 uppercase">
@@ -26,9 +27,9 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">1. Všeobecné ustanovenia</h2>
             <p>
-              Tieto obchodné podmienky upravujú práva a povinnosti medzi prevádzkovateľom
+              Tieto Zmluvné podmienky upravujú práva a povinnosti medzi prevádzkovateľom
               služby Papi Hair Design ("Poskytovateľ") a osobou využívajúcou službu ("Používateľ").
-              Používaním Služby vyjadrujete súhlas s týmito podmienkami.
+              Používaním Služby vyjadrujete súhlas s Zmluvné podmienky.
             </p>
           </section>
 
@@ -116,6 +117,11 @@ export default function TermsOfService() {
             </p>
             <div className="mt-4 border-4 border-black bg-yellow-400 p-6 font-black text-lg">
               booking@papihairdesign.sk
+            </div>
+            <div className="mt-4">
+              <Link to="/privacy" className="font-black text-sm uppercase hover:text-red-600 transition-colors">
+                Zásady ochrany osobných údajov
+              </Link>
             </div>
           </section>
         </div>

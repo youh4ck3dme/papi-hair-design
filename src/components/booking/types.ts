@@ -19,6 +19,7 @@ export interface ServiceRow {
     business_id: string;
     category: string | null;
     subcategory: string | null;
+    subcategory_id?: string | null;
 }
 
 export interface EmployeeRow {

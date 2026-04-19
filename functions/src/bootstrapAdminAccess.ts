@@ -2,7 +2,7 @@ import * as functions from "firebase-functions/v2";
 import { CallableRequest, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { requireAuth } from "./guards";
-import { buildAndWriteSnapshot } from "./rebuildPublicSnapshot";
+import { buildAndWriteSnapshot } from "./publicSnapshotBuilder";
 
 interface BootstrapAdminAccessData {
   business_id?: string;

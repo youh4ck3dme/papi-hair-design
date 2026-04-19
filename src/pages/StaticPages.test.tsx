@@ -14,16 +14,16 @@ vi.mock("@/components/LanguageToggle", () => ({
 }));
 
 describe("static pages", () => {
-  it("renders privacy page with back link and GDPR endpoints", () => {
+  it("renders privacy page with back button and GDPR section", () => {
     render(
       <MemoryRouter>
         <PrivacyPage />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Zásady ochrany osobných údajov")).toBeInTheDocument();
-    expect(screen.getByText(/gdpr\/export/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Späť na úvod/i })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("heading", { name: /Ochrana súkromia/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Vaše práva \(GDPR\)/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Späť/i })).toBeInTheDocument();
   });
 
   it("renders terms page with privacy link", () => {

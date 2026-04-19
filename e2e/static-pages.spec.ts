@@ -16,7 +16,7 @@ test.describe("Static pages", () => {
 
   test("terms page renders heading", async ({ page }) => {
     await page.goto("/terms");
-    await expect(page.getByRole("heading", { name: /Zmluvné podmienky|Terms/i })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("heading", { name: /Zmluvné podmienky/i })).toBeVisible({ timeout: 15000 });
   });
 
   test("terms page has link to privacy policy", async ({ page }) => {

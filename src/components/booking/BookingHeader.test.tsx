@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { BookingHeader } from "./BookingHeader";
 
@@ -11,27 +12,34 @@ vi.mock("@/components/booking/BookingUI", () => ({
 }));
 
 describe("BookingHeader", () => {
+  const renderHeader = (isDark = false, setTheme = vi.fn()) =>
+    render(
+      <MemoryRouter>
+        <BookingHeader isDark={isDark} setTheme={setTheme} />
+      </MemoryRouter>,
+    );
+
   it("renders the salon logo image", () => {
-    render(<BookingHeader isDark={false} setTheme={vi.fn()} />);
+    renderHeader();
     const logo = screen.getByAltText("PAPI HAIR DESIGN");
     expect(logo).toBeInTheDocument();
     expect(logo).toHaveAttribute("src", "/favicon.png");
   });
 
   it("renders salon name text", () => {
-    render(<BookingHeader isDark={false} setTheme={vi.fn()} />);
+    renderHeader();
     expect(screen.getByText(/PAPI/)).toBeInTheDocument();
     expect(screen.getByText(/DESIGN/)).toBeInTheDocument();
   });
 
   it("renders language toggle", () => {
-    render(<BookingHeader isDark={false} setTheme={vi.fn()} />);
+    renderHeader();
     expect(screen.getByTestId("language-toggle")).toBeInTheDocument();
   });
 
   it("calls setTheme with dark when isDark=false and theme button clicked", () => {
     const setTheme = vi.fn();
-    render(<BookingHeader isDark={false} setTheme={setTheme} />);
+    renderHeader(false, setTheme);
     const themeBtn = screen.getByRole("button", { name: /Toggle theme/i });
     fireEvent.click(themeBtn);
     expect(setTheme).toHaveBeenCalledWith("dark");
@@ -39,7 +47,7 @@ describe("BookingHeader", () => {
 
   it("calls setTheme with light when isDark=true and theme button clicked", () => {
     const setTheme = vi.fn();
-    render(<BookingHeader isDark={true} setTheme={setTheme} />);
+    renderHeader(true, setTheme);
     const themeBtn = screen.getByRole("button", { name: /Toggle theme/i });
     fireEvent.click(themeBtn);
     expect(setTheme).toHaveBeenCalledWith("light");

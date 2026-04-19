@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { functions } from "@/integrations/firebase/config";
 import { httpsCallable } from "firebase/functions";
@@ -48,7 +48,10 @@ function applyGtagConsent(prefs: Omit<CookiePrefs, "timestamp">) {
 function getConsentSubjectId() {
   const existing = localStorage.getItem(CONSENT_SUBJECT_KEY);
   if (existing) return existing;
-  const next = crypto.randomUUID();
+  const next =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
   localStorage.setItem(CONSENT_SUBJECT_KEY, next);
   return next;
 }
@@ -85,6 +88,7 @@ export default function CookieConsent() {
   const [analytics, setAnalytics] = useState(false);
   const [marketing, setMarketing] = useState(false);
   const isHiddenRoute = pathname.startsWith("/papihairsalon2026");
+  const cardRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const existing = loadPrefs();
@@ -94,6 +98,42 @@ export default function CookieConsent() {
     }
     applyGtagConsent(existing);
   }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+
+    if (!visible || isHiddenRoute || !cardRef.current) {
+      body.classList.remove("cookie-consent-visible");
+      root.style.removeProperty("--cookie-consent-offset");
+      return;
+    }
+
+    const updateOffset = () => {
+      const rect = cardRef.current?.getBoundingClientRect();
+      const offset = rect ? Math.ceil(rect.height + 28) : 0;
+      root.style.setProperty("--cookie-consent-offset", `${offset}px`);
+      body.classList.add("cookie-consent-visible");
+    };
+
+    updateOffset();
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(updateOffset)
+        : null;
+
+    if (observer && cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+    window.addEventListener("resize", updateOffset);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateOffset);
+      body.classList.remove("cookie-consent-visible");
+      root.style.removeProperty("--cookie-consent-offset");
+    };
+  }, [visible, isHiddenRoute, customize]);
 
   // ESC closes customize panel
   useEffect(() => {
@@ -136,8 +176,8 @@ export default function CookieConsent() {
   if (!visible || isHiddenRoute) return null;
 
   return (
-    <div className="cookie-wrap" role="dialog" aria-label="Cookie consent" aria-describedby="cookie-desc">
-      <div className="cookie-card">
+    <div className="cookie-wrap" role="dialog" aria-label="Cookie consent" aria-describedby="cookie-desc" aria-modal="false">
+      <div className="cookie-card" ref={cardRef}>
         <div className="cookie-glow" />
 
         <div className="cookie-header">
@@ -145,10 +185,10 @@ export default function CookieConsent() {
         </div>
 
         <div className="cookie-body" id="cookie-desc">
-          Súbory cookie používame na zlepšenie vášho zážitku z prehliadania, poskytovanie
-          prispôsobených reklám alebo obsahu a analýzu našej návštevnosti. Viac v{" "}
+          Používame nevyhnutné cookies a s vaším súhlasom aj analytické a marketingové.
+          Viac v{" "}
           <Link to="/privacy" className="text-primary underline hover:no-underline">zásadách ochrany osobných údajov</Link>.
-          Kliknutím na „Prijať všetko" súhlasíte s naším používaním súborov cookie.
+          Kliknutím na „Prijať všetko“ súhlasíte s ich použitím.
         </div>
 
         <div className="cookie-actions">

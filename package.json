@@ -9,7 +9,7 @@
   "scripts": {
     "setup": "powershell -ExecutionPolicy Bypass -File ./setup.ps1",
     "dev": "node ./node_modules/vite/bin/vite.js --port 5678 --strictPort",
-    "dev:clean": "npm run kill-dev; npm run dev",
+    "dev:clean": "npm run kill-dev && npm run dev",
     "kill-dev": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$ports = 5678,5679,8080,8081,8082; $connections = Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Object { $ports -contains $_.LocalPort }; $connections | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }\"",
     "sync": "npm run lint && npm run build && git add . && (git commit -m 'fix: final Firebase migration and cleanup' || echo 'No changes to commit') && git push origin main",
     "prebuild": "node ./scripts/check-env.mjs",
@@ -18,7 +18,7 @@
     "lint": "node ./node_modules/eslint/bin/eslint.js .",
     "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit",
     "preview": "node ./node_modules/vite/bin/vite.js preview",
-    "test": "node ./node_modules/vitest/vitest.mjs run",
+    "test": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs run",
     "test:coverage": "node ./node_modules/vitest/vitest.mjs run --coverage",
     "test:watch": "node ./node_modules/vitest/vitest.mjs",
     "test:responsive": "node ./node_modules/@playwright/test/cli.js test --config=e2e/playwright.config.ts",
@@ -26,6 +26,7 @@
     "test:admin": "node ./node_modules/@playwright/test/cli.js test e2e/admin-calendar.spec.ts --config=e2e/playwright.config.ts",
     "test:booking-mobile-live": "node scripts/booking-mobile-audit-live.mjs",
     "test:calendar-mobile-live": "node scripts/calendar-mobile-audit-live.mjs",
+    "backfill:service-subcategories": "node ./node_modules/tsx/dist/cli.mjs ./scripts/backfill-service-subcategories.ts",
     "budget": "node scripts/budget-check.mjs",
     "lockin:check": "node scripts/lockin-check.mjs"
   },
@@ -99,7 +100,6 @@
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@playwright/test": "^1.58.2",
-    "@supabase/supabase-js": "^2.103.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.0.0",

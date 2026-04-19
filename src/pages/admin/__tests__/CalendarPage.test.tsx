@@ -1,7 +1,8 @@
 import { Children, isValidElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import CalendarPage from "../CalendarPage";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 const businessState = vi.hoisted(() => ({
   value: {
@@ -45,6 +46,11 @@ const firestoreFixtures = vi.hoisted(() => ({
 const adminUpdateBookingStatusMock = vi.hoisted(() => vi.fn());
 const adminCalendarQuickActionMock = vi.hoisted(() => vi.fn());
 const generateSlotsMock = vi.hoisted(() => vi.fn());
+const calendarEventUtilsMocks = vi.hoisted(() => ({
+  toCalendarWallClockDate: vi.fn(),
+  fromCalendarWallClockDateToUtcIso: vi.fn(),
+  getBusinessDayUtcRange: vi.fn(),
+}));
 const toastMocks = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
@@ -65,6 +71,7 @@ vi.mock("@/components/booking-calendar", () => ({
     bookingCalendarSpy.props = props;
     return (
       <div data-testid="booking-calendar-mock">
+        <div data-testid="booking-calendar-actions">{props.headerActions}</div>
         <div data-testid="events-count">{String(props.events?.length ?? 0)}</div>
         <div data-testid="selectable-flag">{String(Boolean(props.selectable))}</div>
         <button
@@ -107,6 +114,19 @@ vi.mock("@/integrations/firebase/adminCalendarQuickAction", () => ({
 vi.mock("@/lib/availability", () => ({
   generateSlots: generateSlotsMock,
 }));
+
+vi.mock("@/lib/calendarEventUtils", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/calendarEventUtils")>("@/lib/calendarEventUtils");
+  calendarEventUtilsMocks.toCalendarWallClockDate.mockImplementation(actual.toCalendarWallClockDate);
+  calendarEventUtilsMocks.fromCalendarWallClockDateToUtcIso.mockImplementation(actual.fromCalendarWallClockDateToUtcIso);
+  calendarEventUtilsMocks.getBusinessDayUtcRange.mockImplementation(actual.getBusinessDayUtcRange);
+  return {
+    ...actual,
+    toCalendarWallClockDate: calendarEventUtilsMocks.toCalendarWallClockDate,
+    fromCalendarWallClockDateToUtcIso: calendarEventUtilsMocks.fromCalendarWallClockDateToUtcIso,
+    getBusinessDayUtcRange: calendarEventUtilsMocks.getBusinessDayUtcRange,
+  };
+});
 
 function collectSelectItems(node: unknown): Array<{ value: string; label: string }> {
   const items: Array<{ value: string; label: string }> = [];
@@ -262,6 +282,13 @@ function seedInitialFirestore(options?: {
   firestoreFixtures.customerHistory = [];
 }
 
+function renderCalendarPage() {
+  return render(
+    <SidebarProvider>
+      <CalendarPage />
+    </SidebarProvider>,
+  );
+}
 describe("CalendarPage", () => {
   beforeEach(() => {
     bookingCalendarSpy.props = null;
@@ -286,6 +313,9 @@ describe("CalendarPage", () => {
     adminUpdateBookingStatusMock.mockReset();
     adminCalendarQuickActionMock.mockReset();
     generateSlotsMock.mockReset();
+    calendarEventUtilsMocks.toCalendarWallClockDate.mockClear();
+    calendarEventUtilsMocks.fromCalendarWallClockDateToUtcIso.mockClear();
+    calendarEventUtilsMocks.getBusinessDayUtcRange.mockClear();
     toastMocks.success.mockReset();
     toastMocks.error.mockReset();
     toastMocks.warning.mockReset();
@@ -315,16 +345,16 @@ describe("CalendarPage", () => {
 
   it("renders calendar shell and page title", async () => {
     seedInitialFirestore();
-    render(<CalendarPage />);
+    renderCalendarPage();
 
-    expect(await screen.findByText("Kalendár")).toBeInTheDocument();
-    expect(screen.getByTestId("booking-calendar-mock")).toBeInTheDocument();
+    expect(await screen.findByTestId("booking-calendar-mock")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Toggle Sidebar/i })).toBeInTheDocument();
     expect(screen.getByTestId("selectable-flag")).toHaveTextContent("true");
   });
 
   it("passes mapped events to BookingCalendar", async () => {
     seedInitialFirestore({ withEvent: true });
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     await waitFor(() => {
       expect(screen.getByTestId("events-count")).toHaveTextContent("1");
@@ -335,7 +365,7 @@ describe("CalendarPage", () => {
 
   it("does not trigger an infinite reload loop after employees state hydration", async () => {
     seedInitialFirestore({ withEvent: true });
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     await waitFor(() => {
       expect(screen.getByTestId("events-count")).toHaveTextContent("1");
@@ -351,7 +381,7 @@ describe("CalendarPage", () => {
 
   it("keeps calendar containers overflow-safe on mobile widths", async () => {
     seedInitialFirestore({ withEvent: true });
-    const { container } = render(<CalendarPage />);
+    const { container } = renderCalendarPage();
 
     await waitFor(() => {
       expect(screen.getByTestId("events-count")).toHaveTextContent("1");
@@ -376,7 +406,7 @@ describe("CalendarPage", () => {
       { id: "emp-2", display_name: "Nika", is_active: true, profile_id: "profile-2", color: "#999999" },
     ];
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     await waitFor(() => {
       expect(bookingCalendarSpy.props?.resources).toHaveLength(1);
@@ -404,7 +434,7 @@ describe("CalendarPage", () => {
     firestoreFixtures.memberships = [{ profile_id: "profile-1", role: "owner" }];
     firestoreFixtures.schedules = [{ employee_id: "emp-1", day_of_week: "monday", start_time: "08:00", end_time: "16:00" }];
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     await waitFor(() => {
       expect(screen.getByTestId("events-count")).toHaveTextContent("80");
@@ -417,7 +447,19 @@ describe("CalendarPage", () => {
     });
   });
 
-  it("shows desktop quick presets and updates calendar mode", async () => {
+  it("renders calendar action buttons in exact order", async () => {
+    seedInitialFirestore({ withEvent: true });
+    renderCalendarPage();
+
+    const actions = await screen.findByTestId("booking-calendar-actions");
+    const labels = Array.from(actions.querySelectorAll("button")).map((button) =>
+      button.textContent?.trim(),
+    );
+
+    expect(labels).toEqual(["Dnes", "Blokácia", "Nová rezervácia"]);
+  });
+
+  it("clicking Dnes jumps calendar to current day view", async () => {
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       matches: query === "(max-width: 1024px)" ? false : false,
@@ -432,29 +474,41 @@ describe("CalendarPage", () => {
 
     try {
       seedInitialFirestore({ withEvent: true });
-      render(<CalendarPage />);
+      renderCalendarPage();
 
-      await screen.findByText("Kalendár");
-      fireEvent.click(screen.getByRole("button", { name: "Today" }));
+      await screen.findByTestId("booking-calendar-mock");
+      fireEvent.click(screen.getByRole("button", { name: "Dnes" }));
       await waitFor(() => {
         expect(bookingCalendarSpy.props?.mode).toBe("day");
       });
-
-      fireEvent.click(screen.getByRole("button", { name: "This Month" }));
-      await waitFor(() => {
-        expect(bookingCalendarSpy.props?.mode).toBe("month");
-      });
+      expect(bookingCalendarSpy.props?.date).toBeInstanceOf(Date);
     } finally {
       window.matchMedia = originalMatchMedia;
     }
   });
 
+  it("opens block dialog from toolbar action", async () => {
+    seedInitialFirestore();
+    renderCalendarPage();
+
+    fireEvent.click((await screen.findByTestId("booking-calendar-actions")).querySelectorAll("button")[1]);
+    expect(await screen.findByRole("heading", { name: "Blokovať čas" })).toBeInTheDocument();
+  });
+
+  it("opens booking modal from toolbar action", async () => {
+    seedInitialFirestore();
+    renderCalendarPage();
+
+    fireEvent.click((await screen.findByTestId("booking-calendar-actions")).querySelectorAll("button")[2]);
+    expect(await screen.findByRole("heading", { name: "Nová rezervácia" })).toBeInTheDocument();
+  });
+
   it("opens booking modal when selecting slot as admin", async () => {
     seedInitialFirestore();
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-slot"));
-    expect(await screen.findByText("Nová rezervácia")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Nová rezervácia" })).toBeInTheDocument();
   });
 
   it("disables selectability for non-admin user", async () => {
@@ -465,8 +519,24 @@ describe("CalendarPage", () => {
     };
     seedInitialFirestore({ employeeProfileId: "profile-1", nonAdmin: true });
 
-    render(<CalendarPage />);
+    renderCalendarPage();
     expect(await screen.findByTestId("selectable-flag")).toHaveTextContent("false");
+  });
+
+  it("keeps toolbar actions available for employee-scoped calendar", async () => {
+    businessState.value = {
+      businessId: "biz-1",
+      isOwnerOrAdmin: false,
+      activeMembership: { profile_id: "profile-1" },
+    };
+    seedInitialFirestore({ employeeProfileId: "profile-1", nonAdmin: true });
+
+    renderCalendarPage();
+
+    const actions = await screen.findByTestId("booking-calendar-actions");
+    expect(within(actions).getByRole("button", { name: "Dnes" })).toBeInTheDocument();
+    expect(within(actions).getByRole("button", { name: "Blokácia" })).toBeInTheDocument();
+    expect(within(actions).getByRole("button", { name: "Nová rezervácia" })).toBeInTheDocument();
   });
 
   it("exports CSV for selected day when events exist", async () => {
@@ -482,7 +552,7 @@ describe("CalendarPage", () => {
     const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(clickMock as any);
 
     try {
-      render(<CalendarPage />);
+      renderCalendarPage();
       await waitFor(() => {
         expect(screen.getByTestId("events-count")).toHaveTextContent("1");
       });
@@ -507,11 +577,14 @@ describe("CalendarPage", () => {
     };
     const openSpy = vi.spyOn(window, "open").mockReturnValue(printWindowMock as any);
 
-    render(<CalendarPage />);
+    const { container } = renderCalendarPage();
     await waitFor(() => {
       expect(screen.getByTestId("events-count")).toHaveTextContent("1");
     });
-    fireEvent.click(await screen.findByRole("button", { name: /PDF \/ Tlač/i }));
+    const printIcon = container.querySelector("svg.lucide-printer");
+    const printButton = printIcon?.closest("button");
+    expect(printButton).toBeTruthy();
+    fireEvent.click(printButton!);
 
     expect(openSpy).toHaveBeenCalled();
     expect(printWindowMock.document.write).toHaveBeenCalled();
@@ -521,7 +594,7 @@ describe("CalendarPage", () => {
   it("changes booking status from detail sheet", async () => {
     seedInitialFirestore({ withEvent: true });
 
-    render(<CalendarPage />);
+    renderCalendarPage();
     fireEvent.click(await screen.findByText("open-event"));
     fireEvent.click(await screen.findByRole("button", { name: /Potvrdiť/i }));
 
@@ -534,12 +607,84 @@ describe("CalendarPage", () => {
     });
   });
 
-  it("shows validation error when creating booking without required fields", async () => {
+  it("renders appointment detail time in business timezone instead of browser local offset", async () => {
+    useBusinessInfoState.value = {
+      info: {
+        business: { allow_admin_as_provider: true, opening_hours: {}, timezone: "Europe/Bratislava" },
+        hours: [],
+        overrides: [],
+      },
+      loading: false,
+    };
+    firestoreFixtures.appointments = [
+      {
+        id: "apt-tz",
+        customer_name: "Jana",
+        service_name: "Strih",
+        employee_name: "Marek",
+        employee_color: "#22aa88",
+        customer_email: "jana@example.com",
+        customer_phone: "+421900000111",
+        customer_id: "cust-1",
+        start_at: "2026-01-15T11:00:00.000Z",
+        end_at: "2026-01-15T11:30:00.000Z",
+        status: "pending",
+      },
+    ];
+
+    renderCalendarPage();
+
+    fireEvent.click(await screen.findByText("open-event"));
+    expect(await screen.findByText("15. 1. 2026 12:00 – 12:30")).toBeInTheDocument();
+  });
+
+  it("stores newly created slot in business timezone UTC, not browser local UTC", async () => {
+    useBusinessInfoState.value = {
+      info: {
+        business: { allow_admin_as_provider: true, opening_hours: {}, timezone: "Europe/Bratislava" },
+        hours: [],
+        overrides: [],
+      },
+      loading: false,
+    };
     seedInitialFirestore();
-    render(<CalendarPage />);
+
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-slot"));
-    await screen.findByText("Nová rezervácia");
+    await screen.findByRole("heading", { name: "Nová rezervácia" });
+
+    fireEvent.change(screen.getByLabelText("service-select"), { target: { value: "svc-1" } });
+    fireEvent.change(screen.getAllByLabelText("employee-select")[1], { target: { value: "emp-1" } });
+
+    calendarEventUtilsMocks.fromCalendarWallClockDateToUtcIso
+      .mockReturnValueOnce("2026-01-15T08:00:00.000Z")
+      .mockReturnValueOnce("2026-01-15T08:30:00.000Z");
+
+    await waitFor(() => {
+      expect(generateSlotsMock).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Vytvoriť rezerváciu/i }));
+
+    await waitFor(() => {
+      expect(firestoreMocks.addDocMock).toHaveBeenCalledWith(
+        expect.objectContaining({ __collection: "appointments", constraints: [] }),
+        expect.objectContaining({
+          start_at: "2026-01-15T08:00:00.000Z",
+          end_at: "2026-01-15T08:30:00.000Z",
+        }),
+      );
+    });
+    expect(calendarEventUtilsMocks.fromCalendarWallClockDateToUtcIso).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows validation error when creating booking without required fields", async () => {
+    seedInitialFirestore();
+    renderCalendarPage();
+
+    fireEvent.click(await screen.findByText("open-slot"));
+    await screen.findByRole("heading", { name: "Nová rezervácia" });
     fireEvent.click(screen.getByRole("button", { name: /Vytvoriť rezerváciu/i }));
 
     expect(toastMocks.error).toHaveBeenCalledWith("Vyplňte všetky polia");
@@ -550,11 +695,14 @@ describe("CalendarPage", () => {
     seedInitialFirestore({ withEvent: true });
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
 
-    render(<CalendarPage />);
+    const { container } = renderCalendarPage();
     await waitFor(() => {
       expect(screen.getByTestId("events-count")).toHaveTextContent("1");
     });
-    fireEvent.click(await screen.findByRole("button", { name: /PDF \/ Tlač/i }));
+    const printIcon = container.querySelector("svg.lucide-printer");
+    const printButton = printIcon?.closest("button");
+    expect(printButton).toBeTruthy();
+    fireEvent.click(printButton!);
 
     expect(openSpy).toHaveBeenCalled();
     expect(toastMocks.error).toHaveBeenCalledWith("Nepodarilo sa otvoriť tlačové okno");
@@ -562,10 +710,10 @@ describe("CalendarPage", () => {
 
   it("saves note from detail sheet", async () => {
     seedInitialFirestore({ withEvent: true });
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
-    fireEvent.change(screen.getByPlaceholderText("Krátka interná poznámka k rezervácii"), {
+    fireEvent.change(await screen.findByPlaceholderText(/Interná poznámka k rezervácii/i), {
       target: { value: "Nová interná poznámka" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Uložiť poznámku/i }));
@@ -599,7 +747,7 @@ describe("CalendarPage", () => {
       },
     ];
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
     expect(await screen.findByText("História klienta")).toBeInTheDocument();
@@ -614,7 +762,7 @@ describe("CalendarPage", () => {
       clipboard: { writeText: writeTextMock },
     });
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
     fireEvent.click(await screen.findByRole("button", { name: /Skopírovať/i }));
@@ -632,7 +780,7 @@ describe("CalendarPage", () => {
       clipboard: { writeText: writeTextMock },
     });
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
     fireEvent.click(await screen.findByRole("button", { name: /Skopírovať/i }));
@@ -657,7 +805,7 @@ describe("CalendarPage", () => {
       },
     ];
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
     expect(await screen.findByText("Jana – Služba")).toBeInTheDocument();
@@ -667,10 +815,10 @@ describe("CalendarPage", () => {
     seedInitialFirestore({ withEvent: true });
     firestoreMocks.updateDocMock.mockRejectedValueOnce(new Error("save failed"));
 
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
-    fireEvent.change(screen.getByPlaceholderText("Krátka interná poznámka k rezervácii"), {
+    fireEvent.change(await screen.findByPlaceholderText(/Interná poznámka k rezervácii/i), {
       target: { value: "Nepodarilo sa uložiť" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Uložiť poznámku/i }));
@@ -682,7 +830,7 @@ describe("CalendarPage", () => {
 
   it("submits move quick action from detail sheet", async () => {
     seedInitialFirestore({ withEvent: true });
-    render(<CalendarPage />);
+    renderCalendarPage();
 
     fireEvent.click(await screen.findByText("open-event"));
     fireEvent.click(await screen.findByRole("button", { name: /Presunúť/i }));
@@ -700,3 +848,4 @@ describe("CalendarPage", () => {
     });
   });
 });
+

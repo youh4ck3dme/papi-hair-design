@@ -1,405 +1,128 @@
 # PAPI HAIR DESIGN – Booking System
 
-Moderný rezervačný systém pre salóny krásy. React 18 PWA + Firebase backend.
+Firebase-first rezervačný systém pre salón.
+Frontend beží na React + Vite, backend na Firebase Auth/Firestore/Functions.
 
-> **Repo:** https://github.com/youh4ck3dme/papi-hair-design
-> **Vercel:** https://vercel.com/yyys-projects-639e38fd/papi-hair-design
-> **Produkčná doména (primary):** https://booking.papihairdesign.sk
-> **Fallback URL:** https://hairchainger-main-876665-176e8.web.app
+## Source Of Truth
 
----
+Aktuálne prevádzkové dokumenty:
+- `README.md` (tento súbor)
+- `docs/DEVELOPMENT-SETUP.md`
+- `docs/GRANDE-FINALE-STATUS-2026-03-11.md` (release snapshot)
+- `docs/E2E-TESTING.md`
 
-## CURRENT STATUS (2026-03-11)
+Historické a migračné materiály sú v `docs/archive/2026-04-cleanup/`.
 
-Aktualny produkcny stav, hotove bloky a dalsie kroky:
+## Runtime Moduly
 
-- [docs/GRANDE-FINALE-STATUS-2026-03-11.md](./docs/GRANDE-FINALE-STATUS-2026-03-11.md)
-- [docs/ANALYTICS.md](./docs/ANALYTICS.md)
-- [OWNERMANUAL.md](./OWNERMANUAL.md)
+- `src/` – frontend aplikácia (React 18 + Vite + TypeScript)
+- `functions/` – Firebase Cloud Functions (TypeScript)
+- `e2e/` – Playwright E2E testy
+- `scripts/` – pomocné build/test/deploy utility
 
-`TODO.md` je historicky diagnosticky dokument a nie je uz primarny operativny plan.
+## Aktívne Entrypointy
 
----
+- `npm run dev` → Vite dev server na `http://localhost:5678`
+- `npm run build` → produkčný build do `dist/`
+- `firebase.json`:
+  - hosting `public: dist`
+  - functions `source: functions`
+- `functions/src/index.ts` → export Firebase callable/trigger funkcií
 
-## Obsah
+## Architektúra (Aktuálny Stav)
 
-- [Current Status](#current-status-2026-03-11)
-- [Architektúra](#architektúra)
-- [Rýchly štart](#rýchly-štart)
-- [Premenné prostredia](#premenné-prostredia)
-- [GitHub Secrets – povinné nastaviť](#github-secrets--povinné-nastaviť)
-- [Vercel env premenné](#vercel-env-premenné)
-- [Stránky a routy](#stránky-a-routy)
-- [Firebase Cloud Functions](#firebase-cloud-functions)
-- [Offline podpora](#offline-podpora)
-- [Testy](#testy)
-- [Deploy](#deploy)
-- [Otváracie hodiny](#otváracie-hodiny)
-- [AI Handoff Notes](#-ai-handoff-notes)
+### Primárny backend
+- Firebase Auth
+- Firestore
+- Firebase Cloud Functions (`europe-west1`)
 
----
+### Frontend
+- React 18 + React Router 6
+- TanStack Query
+- PWA (`vite-plugin-pwa`)
 
-## Poznamka k starsim dokumentom
+### Runtime backend
+- Booking/Admin/Billing runtime je Firebase.
 
-- `TODO.md` a cast starsich continuation dokumentov su archivny vstup z predchadzajucich auditov.
-- Aktualna operativa je v `docs/GRANDE-FINALE-STATUS-2026-03-11.md`.
+## Rýchly Lokálny Setup
 
----
+1. Požiadavky:
+   - Node.js `>=20.19.0` (odporúčané 22.x)
+   - npm
 
-## Architektúra
+2. Inštalácia:
 
-```
-React 18 + Vite 7 + TypeScript
-├── shadcn/ui + Tailwind CSS 3.4   — UI komponenty
-├── TanStack React Query           — Server state management
-├── Dexie.js (IndexedDB)           — Offline-first lokálna DB
-├── vite-plugin-pwa (Workbox)      — PWA + service worker
-└── Firebase (100% backend)
-    ├── Firestore                  — NoSQL databáza (real-time)
-    ├── Firebase Auth              — Autentifikácia (Email / Google)
-    └── Cloud Functions            — Business logika, emaily, sync
+```bash
+npm ci
+cd functions && npm ci && cd ..
 ```
 
-> Supabase bol kompletne odstránený (PR #1). Všetok backend bežia cez Firebase.
+3. Env:
 
-### Tok dát
-
-```
-Zákazník → /booking → createPublicBooking (Cloud Fn) → Firestore → email
-                                                              ↓
-Admin    ← /admin/calendar ←────────────────────── real-time listener
-```
-
----
-
-## Rýchly štart
-
-### Požiadavky
-
-- **Node.js 20.19+ alebo 22.x** (Vite 7)
-- `npm` (nie yarn ani pnpm)
-
-```sh
-node -v   # musí byť 20.19+ alebo 22+
-```
-
-### Inštalácia a spustenie
-
-```sh
-# Naklonuj repo
-git clone https://github.com/youh4ck3dme/papi-hair-design.git
-cd papi-hair-design
-
-# Závislosti
-npm install
-
-# Skopíruj env šablónu a vyplň Firebase hodnoty
+```bash
 cp .env.example .env
-# → uprav .env (pozri sekciu Premenné prostredia)
+```
 
-# Vývojový server
+Vyplň minimálne Firebase hodnoty:
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+- `VITE_FIREBASE_MEASUREMENT_ID`
+- `VITE_FIREBASE_FUNCTIONS_REGION` (default `europe-west1`)
+
+4. Spustenie:
+
+```bash
 npm run dev
-# → http://localhost:5678
 ```
 
-### Všetky príkazy
+## Jeden Správny Dev Flow
 
-| Príkaz | Popis |
-|--------|-------|
-| `npm run dev` | Vývojový server s HMR (port 5678) |
-| `npm run build` | Produkčný build → `dist/` |
-| `npm run preview` | Statický náhľad `dist/` (port 4173) |
-| `npm run typecheck` | TypeScript kontrola |
-| `npm run lint` | ESLint |
-| `npm run test` | Vitest – jednorazový beh |
-| `npm run test:watch` | Vitest – sledovací mód |
-| `npm run test:coverage` | Testy + coverage report |
+1. `npm ci`
+2. `cd functions && npm ci && cd ..`
+3. `npm run lint`
+4. `npm run typecheck`
+5. `npm run test`
+6. `npm run build`
+7. `npm run dev`
 
----
+## Testovanie a Validácia
 
-## Premenné prostredia
+Root projekt:
 
-Skopíruj `.env.example` → `.env` a vyplň hodnoty z Firebase Console:
-
-```env
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=...
-VITE_FIREBASE_APP_ID=...
-VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXX
-VITE_FIREBASE_FUNCTIONS_REGION=europe-west1
-```
-
-Hodnoty nájdeš v:
-**Firebase Console** → ⚙️ Project Settings → Your apps → Web app → `firebaseConfig`
-
----
-
-## GitHub Secrets – povinné nastaviť
-
-> **Kde:** https://github.com/youh4ck3dme/papi-hair-design/settings/secrets/actions → **New repository secret**
-
-Bez týchto secrets CI build vždy failuje:
-
-| Secret | Popis |
-|--------|-------|
-| `VITE_FIREBASE_API_KEY` | Firebase `apiKey` |
-| `VITE_FIREBASE_AUTH_DOMAIN` | napr. `hairchainger-main-876665-176e8.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | napr. `hairchainger-main-876665-176e8` |
-| `VITE_FIREBASE_STORAGE_BUCKET` | napr. `hairchainger-main-876665-176e8.firebasestorage.app` |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | získate z Firebase Console |
-| `VITE_FIREBASE_APP_ID` | získate z Firebase Console |
-| `VITE_FIREBASE_MEASUREMENT_ID` | napr. `G-WKF7CKN6MN` |
-| `VITE_FIREBASE_FUNCTIONS_REGION` | napr. `europe-west1` |
-
-Voliteľné (CI krok preskočí ak chýbajú):
-
-| Secret | Popis |
-|--------|-------|
-
-
----
-
-## Vercel env premenné
-
-> **Kde:** https://vercel.com/yyys-projects-639e38fd/papi-hair-design/settings/environment-variables
-
-Nastav rovnaké Firebase hodnoty ako GitHub Secrets plus:
-
-| Premenná | Hodnota |
-|----------|---------|
-| `VITE_FIREBASE_API_KEY` | rovnaká hodnota |
-| `VITE_FIREBASE_AUTH_DOMAIN` | rovnaká hodnota |
-| `VITE_FIREBASE_PROJECT_ID` | rovnaká hodnota |
-| `VITE_FIREBASE_STORAGE_BUCKET` | rovnaká hodnota |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | rovnaká hodnota |
-| `VITE_FIREBASE_APP_ID` | rovnaká hodnota |
-| `VITE_FIREBASE_MEASUREMENT_ID` | rovnaká hodnota |
-| `VITE_FIREBASE_FUNCTIONS_REGION` | napr. `europe-west1` |
-| `TWILIO_ACCOUNT_SID` | SID projektu na SMS |
-| `TWILIO_AUTH_TOKEN` | Auth token z Twilio Console |
-| `TWILIO_FROM_NUMBER` | Odosielateľ, napr. `+421900000000` |
-| `ADMIN_NOTIFICATION_EMAIL` | E-mail pre admin notifikácie nových rezervácií |
-
----
-
-## Stránky a routy
-
-| Route | Popis | Prístup |
-|-------|-------|---------|
-| `/booking` | Rezervačný formulár pre zákazníkov | Verejná |
-| `/papihairsalon2026` | Admin prihlásenie | Skrytá (nie linkovaná) |
-| `/admin` | Admin dashboard | Len `owner` / `admin` |
-| `/admin/calendar` | Kalendár rezervácií | Len `owner` / `admin` |
-| `/admin/appointments` | Zoznam rezervácií | Len `owner` / `admin` |
-| `/admin/employees` | Správa zamestnancov | Len `owner` / `admin` |
-| `/admin/services` | Správa služieb | Len `owner` / `admin` |
-| `/admin/settings` | Otváracie hodiny, SMTP | Len `owner` |
-| `/reception` | Recepčný mód | Len `employee+` |
-
----
-
-## Firebase Cloud Functions
-
-Nasadené v regióne `europe-west1`:
-
-| Funkcia | Popis |
-|---------|-------|
-| `createPublicBooking` | Vytvorenie rezervácie (zákazník) |
-| `claimBooking` | Priradenie rezervácie k zamestnancovi |
-| `listBookableProviders` | Zoznam dostupných zamestnancov |
-| `saveSmtpConfig` | Uloženie SMTP nastavení (šifrované) |
-| `syncOfflineData` | Synchronizácia offline dát |
-| `consentEvent` | GDPR súhlas audit trail |
-
-### Deploy funkcií
-
-```sh
-cd functions
-npm install
+```bash
+npm run lint
+npm run typecheck
+npm run test
 npm run build
-firebase deploy --only functions
 ```
 
----
+Functions:
 
-## Offline podpora
-
-```
-Online  ──▶  Firebase Firestore (real-time)
-               ↕  optimistic updates + sync
-Offline ──▶  IndexedDB (Dexie)
-               ├── appointments  (lokálna kópia)
-               ├── queue         (čakajúce akcie)
-               └── meta          (čas posledného syncu)
-```
-
-Offline sync logika: `src/lib/offline/sync.ts`
-
----
-
-## Testy
-
-```sh
-npm run test              # Vitest – jednorazový beh
-npm run test:watch        # sledovací mód
-npm run test:coverage     # + coverage report
-npm run typecheck         # TypeScript bez buildu
-npm run lint              # ESLint
-```
-
-### Testovacie príkazy (Firebase & E2E)
-
-Použite tieto príkazy na lokálne testovanie s emulátorom:
-
-**1. Spustenie Firestore emulátora**
 ```bash
-firebase emulators:start --only firestore --project demo-test --import=./emulator-data --export-on-exit=./emulator-data
+cd functions
+npm test
 ```
 
-**2. Spustenie testov Cloud Functions**
+E2E:
+
 ```bash
-# Windows (PowerShell/CMD)
-set FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 && cd functions && npm test
+npm run test:responsive
 ```
-
-**3. Spustenie komplexných E2E testov (Playwright)**
-```bash
-# Predpokladá spustený 'npm run dev' na porte 5678
-$env:PLAYWRIGHT_BASE_URL="http://localhost:5678"; npx playwright test e2e/calendar-comprehensive.spec.ts --reporter=list
-```
-
-Framework: **Vitest** + `@testing-library/react` + `jsdom`
-
----
 
 ## Deploy
 
-### Automatický (GitHub → Vercel)
+Primárny deploy target je Firebase:
 
-Každý push na `main` → automatický deploy na Vercel.
-**Podmienka:** GitHub Secrets musia byť nastavené (pozri sekciu vyššie).
-
-### Manuálny
-
-```sh
-npm run build
-npx vercel --prod
-```
-
-### Pripojenie vlastnej domény `booking.papihairdesign.sk`
-
-1. Vercel Dashboard → projekt → **Domains** → pridať `booking.papihairdesign.sk`
-2. Vercel ukáže DNS záznamy
-3. Nastaviť u registrátora (Websupport): `CNAME → cname.vercel-dns.com`
-4. Počkať na propagáciu (5–30 min)
-
----
-
-## Otváracie hodiny
-
-Uložené v Firestore (kolekcia `businesses`, dokument prevádzky).
-Zmena: admin panel → `/admin/settings` → Pracovné hodiny.
-
-| Deň | Stav | Čas |
-|-----|------|-----|
-| Pondelok – Piatok | Otvorené | 08:00 – 17:00 |
-| Sobota | Podľa objednávok | 08:00 – 17:00 |
-| Nedeľa | Zatvorené | — |
-
----
-
-## Štruktúra projektu
-
-```
-papi-hair-design/
-├── src/
-│   ├── pages/                    # Stránky (BookingPage, CalendarPage...)
-│   ├── components/               # UI komponenty
-│   ├── contexts/AuthContext.tsx  # Firebase Auth context
-│   ├── hooks/                    # useAvailability, useBookingForm...
-│   ├── integrations/firebase/    # Firestore klient, hooks
-│   └── lib/offline/sync.ts       # Offline sync logika
-├── functions/src/                # Firebase Cloud Functions (TypeScript)
-├── functions/lib/                # Skompilované Cloud Functions (JS)
-├── docs/                         # Dokumentácia
-├── e2e/                          # Playwright E2E testy
-├── scripts/                      # check-env, budget-check, lockin-check
-├── public/                       # Statické assety, PWA ikony
-├── firebase.json                 # Firebase Hosting + Functions config
-├── firestore.rules               # Firestore bezpečnostné pravidlá
-├── firestore.indexes.json        # Firestore indexy
-├── vite.config.ts                # Vite + PWA
-└── .env.example                  # Šablóna env premenných
-```
-
----
-
-## Bezpečnosť
-
-- **Firestore Rules** – každá kolekcia zabezpečená, dáta izolované podľa `business_id`
-- **Multi-tenant** – každá prevádzka vidí iba svoje dáta
-- **Role-based access** – 4 roly: `owner › admin › employee › customer`
-- **Firebase Auth** – Email + Google prihlásenie
-- **Zod validácia** – vstupy validované na FE aj v Cloud Functions
-
----
-
-## Licencia
-
-Proprietary – © EB-EU s.r.o. Všetky práva vyhradené.
-
----
-
-## 🤖 AI Handoff Notes
-
-**For continuation by AI agents:**
-
-This project has been comprehensively audited and a repair blueprint created.
-
-### Key Artifacts
-- **`TODO.md`** – 12 action items, prioritized, with code examples
-- **`docs/CURRENT_PROJECT_STATE.md`** – Project state snapshot
-- **Diagnostic Report** – 7.2/10 score, 4 critical blockers
-
-### Before Continuing
-1. Read `TODO.md` fully (it's the source of truth)
-2. Check "Status:" field in each section
-3. Start with 🔴 CRITICAL items
-4. Run validation checklist before launch
-
-### Testing Commands
 ```bash
-npm run lint                 # Code quality
-npm run typecheck            # TypeScript check
-npm run test:coverage        # Unit tests + coverage
-npm run test:responsive      # E2E testy (responzivita)
-npm run test:admin           # E2E testy (admin kalendár)
-$env:PLAYWRIGHT_BASE_URL="http://localhost:5678"; npx playwright test e2e/calendar-comprehensive.spec.ts --reporter=list # Komplexný test
-npm run build               # Production build
-npm run preview             # Test prod build locally
+firebase deploy --only functions,hosting
 ```
 
-### Critical Files to Review
-- `firestore.rules` – Security (excellent)
-- `functions/src/*.ts` – Cloud Functions (needs rate limiting)
-- `src/components/ProtectedRoute.tsx` – Role authorization (has bypass)
-- `src/pages/admin/*.tsx` – Admin pages (need query limits)
-- `.env` & `.env.local` – ❌ Remove from git (in TODO.md)
+## Poznámky k bezpečnosti
 
-### Deployment Workflow
-1. Fix critical issues in TODO.md
-2. Run validation checklist
-3. `npm run build && firebase deploy` (all services)
-4. Test in Vercel preview deployment
-5. Merge to main for auto-production deploy
-
----
-
-### Questions?
-- Architecture: See `docs/ARCHITECTURE.md`
-- Setup: See `docs/DEVELOPMENT-SETUP.md`
-- Firebase migration: See `docs/MIGRATION-FIREBASE.md`
-- Troubleshooting: See `docs/` folder (10+ guides)
+- `.env` nikdy necommitovať.
+- Service account kľúče nepatria do klienta ani do repozitára.
+- Firestore/Storage pravidlá meniť iba s testom a review.

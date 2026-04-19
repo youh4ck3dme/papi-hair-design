@@ -25,7 +25,7 @@ describe("adminCalendarExport", () => {
 
   it("builds print HTML", () => {
     const html = buildAdminCalendarPrintHtml("12. marec 2026", rows);
-    expect(html).toContain("FYZIO&FIT - Denny prehlad");
+    expect(html).toContain("PAPI HAIR DESIGN - Denný prehľad");
     expect(html).toContain("Test User");
     expect(html).toContain("Interna poznamka");
   });

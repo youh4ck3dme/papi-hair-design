@@ -5,7 +5,7 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "coverage", ".firebase", "supabase/.temp", "booking-papihairdesign-sk", "jaro-dashboard", "functions/lib", "functions/node_modules"] },
+  { ignores: ["dist", "coverage", ".firebase", "booking-papihairdesign-sk", "jaro-dashboard", "functions/lib", "functions/node_modules", ".venv", "__pycache__"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],

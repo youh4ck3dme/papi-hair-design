@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { BookingCalendarEvent, BookingCalendarMode } from "./calendar-types";
 import type { SlotInfo } from "./calendar-context";
 import { BookingCalendarProvider } from "./BookingCalendarProvider";
@@ -20,6 +21,7 @@ export interface BookingCalendarProps {
   selectable?: boolean;
   businessHours?: any;
   resources?: any[];
+  headerActions?: ReactNode;
 }
 
 
@@ -35,6 +37,7 @@ export function BookingCalendar({
   selectable = false,
   businessHours,
   resources,
+  headerActions,
 }: BookingCalendarProps) {
   return (
     <BookingCalendarProvider
@@ -61,10 +64,9 @@ export function BookingCalendar({
 
             {/* Mobile Row 2 (Search + Add) / Desktop Right */}
             <div className={cn(
-              "flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0",
-              mode === "month" ? "hidden lg:flex" : "flex flex-1 lg:flex-none justify-end"
+              "flex flex-wrap items-stretch sm:items-center justify-end gap-2 min-w-0 w-full lg:w-auto"
             )}>
-<CalendarHeaderAdd className="w-full sm:w-auto shrink-0" />
+              {headerActions ?? <CalendarHeaderAdd className="w-full sm:w-auto shrink-0" />}
             </div>
           </div>
           <CalendarHeaderMode />

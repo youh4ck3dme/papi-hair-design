@@ -1,11 +1,12 @@
 # Migration data for importMigrationData Cloud Function
 
-Place Supabase export JSON files here:
+Place legacy export JSON files here:
 
 - `profiles.json`
 - `memberships.json`
 - `businesses.json`
 - `services.json`
+- `service_subcategories.json`
 - `employees.json`
 - `employee_services.json`
 - `appointments.json`
@@ -20,4 +21,4 @@ Each file must be a JSON array of objects with an `id` field. The function reads
 
 3. **Invoke:** From your app or a one-off script, call the callable function `importMigrationData` with `{ adminSecret: "<your-secret>" }` (if configured). The function returns an object with per-collection counts, e.g. `{ businesses: 1, services: 4, employees: 2, ... }`.
 
-4. **Verify:** Check Firestore in the Firebase Console for document counts in `businesses`, `services`, `employees`, `employee_services`, etc.
+4. **Verify:** Check Firestore in the Firebase Console for document counts in `businesses`, `services`, `service_subcategories`, `employees`, `employee_services`, etc.

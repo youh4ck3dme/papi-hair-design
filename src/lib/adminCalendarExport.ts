@@ -81,7 +81,7 @@ export function buildAdminCalendarPrintHtml(dateLabel: string, rows: AdminCalend
         </style>
       </head>
       <body>
-        <h1>FYZIO&FIT - Denny prehlad</h1>
+        <h1>PAPI HAIR DESIGN - Denný prehľad</h1>
         <p>${dateLabel}</p>
         <div class="meta">Pocet rezervacii: ${rows.length}</div>
         <table>
