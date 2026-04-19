@@ -28,13 +28,26 @@ import { useTranslation } from "react-i18next";
 const PUBLIC_BOOKING_URL = "https://booking.papihairdesign.sk/booking";
 const PUBLIC_BOOKING_PATH = "/booking";
 const CROSS_DOMAIN_AUTH_HOST = "booking.papihairdesign.sk";
+const CALENDAR_REDIRECT_EMAILS = new Set([
+  "papi@papihairdesign.sk",
+  "mato@papihairdesign.sk",
+  "miska@papihairdesign.sk",
+]);
+
+function shouldRedirectToCalendar(email: string | null | undefined): boolean {
+  return CALENDAR_REDIRECT_EMAILS.has(normalizeEmail(email));
+}
 
 async function resolvePostAuthPath(
   uid: string | undefined,
   email: string | null | undefined
-): Promise<"/admin" | "/admin/my" | "/booking" | "cross-domain-booking"> {
+): Promise<"/admin/calendar" | "/admin/my" | "/booking" | "cross-domain-booking"> {
+  if (shouldRedirectToCalendar(email)) {
+    return "/admin/calendar";
+  }
+
   if (isAdminAllowlisted(email)) {
-    return "/admin";
+    return "/admin/calendar";
   }
 
   if (!uid) {
@@ -56,7 +69,7 @@ async function resolvePostAuthPath(
       role === "owner" || role === "admin" || role === "employee" || role === "customer"
     );
 
-  if (roles.includes("owner") || roles.includes("admin")) return "/admin";
+  if (roles.includes("owner") || roles.includes("admin")) return "/admin/calendar";
   if (roles.includes("employee")) return "/admin/my";
 
   if (typeof window !== "undefined" && normalizeEmail(window.location.hostname) === CROSS_DOMAIN_AUTH_HOST) {
