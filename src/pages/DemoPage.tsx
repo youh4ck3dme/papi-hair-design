@@ -2,8 +2,19 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  User, Shield, Crown, Copy, Check, Calendar, Users,
-  BarChart3, Bell, Smartphone, Lock, Sparkles, QrCode, Zap,
+  User,
+  Shield,
+  Scissors,
+  Calendar,
+  Users,
+  BarChart3,
+  Bell,
+  Smartphone,
+  Lock,
+  Sparkles,
+  QrCode,
+  Zap,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,40 +38,44 @@ const cardBackgrounds: Record<string, string> = {
   qr: cardBgQr,
 };
 
-/* ── Helpers ── */
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-      className="ml-2 p-1 rounded hover:bg-primary/10 transition-colors"
-    >
-      {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
-    </button>
-  );
-}
-
-const contentAnim: any = {
+const contentAnim = {
   initial: { opacity: 0, y: 16, filter: "blur(4px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] } },
+  animate: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] },
+  },
   exit: { opacity: 0, y: -6, filter: "blur(2px)", transition: { duration: 0.35, ease: "easeIn" } },
 };
 
-/* ── Card Content Components ── */
-
 function HeroContent({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
   const { t } = useTranslation();
+  const points = [t("demo.heroPoint1"), t("demo.heroPoint2"), t("demo.heroPoint3"), t("demo.heroPoint4")];
+
   return (
     <div className="flex flex-col items-center justify-center h-full gap-6 text-center">
       <LogoIcon size="lg" />
+      <Badge variant="outline" className="border-primary/30 bg-primary/15 text-primary">
+        {t("demo.heroBadge")}
+      </Badge>
       <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-        {t("demo.heroTitle")}<br />
+        {t("demo.heroTitle")}
+        <br />
         <span className="text-primary">{t("demo.heroSub")}</span>
       </h1>
-      <p className="text-sm text-muted-foreground max-w-md">
-        {t("demo.heroDesc")}
-      </p>
+      <p className="text-sm text-muted-foreground max-w-lg">{t("demo.heroDesc")}</p>
+      <div className="grid w-full max-w-lg gap-2">
+        {points.map((point) => (
+          <div
+            key={point}
+            className="flex items-center gap-2 rounded-lg border border-border/30 bg-card/25 px-3 py-2 text-left text-sm"
+          >
+            <Check className="h-4 w-4 text-primary shrink-0" />
+            <span>{point}</span>
+          </div>
+        ))}
+      </div>
       <div className="flex flex-col sm:flex-row gap-3">
         <Button size="lg" onClick={() => navigate("/booking")}>
           {t("demo.bookBtn")}
@@ -76,60 +91,80 @@ function HeroContent({ navigate }: { navigate: ReturnType<typeof useNavigate> })
 function AccountsContent({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
   const { t } = useTranslation();
 
-  const demoAccounts = [
+  const roleCards = [
     {
-      role: t("demo.roleCustomer"), icon: User,
-      email: "demo@papihairdesign.sk", password: "PapiDemo2025!",
-      badge: "bg-primary/20 text-primary border-primary/30",
-      description: t("demo.customerDesc"),
-      redirect: "/booking",
-    },
-    {
-      role: t("demo.roleOwner"), icon: Shield,
-      email: "owner@papihairdesign.sk", password: "PapiDemo2025!",
-      badge: "bg-accent text-accent-foreground border-border",
+      role: t("demo.roleOwner"),
+      icon: Shield,
       description: t("demo.ownerDesc"),
-      redirect: "/admin",
+      benefits: [
+        t("demo.ownerBenefit1"),
+        t("demo.ownerBenefit2"),
+        t("demo.ownerBenefit3"),
+        t("demo.ownerBenefit4"),
+        t("demo.ownerBenefit5"),
+      ],
+      impact: t("demo.ownerImpact"),
+      cta: t("demo.ownerCta"),
+      href: "/auth?email=papi@papihairdesign.sk",
     },
     {
-      role: t("demo.roleSuperadmin"), icon: Crown,
-      email: "larsenevans@proton.me", password: null,
-      badge: "bg-primary/15 text-primary border-primary/25",
-      description: t("demo.superadminDesc"),
-      redirect: "/admin",
+      role: t("demo.roleEmployee"),
+      icon: Scissors,
+      description: t("demo.employeeDesc"),
+      benefits: [
+        t("demo.employeeBenefit1"),
+        t("demo.employeeBenefit2"),
+        t("demo.employeeBenefit3"),
+        t("demo.employeeBenefit4"),
+        t("demo.employeeBenefit5"),
+      ],
+      impact: t("demo.employeeImpact"),
+      cta: t("demo.employeeCta"),
+      href: "/auth?email=mato@papihairdesign.sk",
+    },
+    {
+      role: t("demo.roleCustomer"),
+      icon: User,
+      description: t("demo.customerDesc"),
+      benefits: [
+        t("demo.customerBenefit1"),
+        t("demo.customerBenefit2"),
+        t("demo.customerBenefit3"),
+        t("demo.customerBenefit4"),
+        t("demo.customerBenefit5"),
+      ],
+      impact: t("demo.customerImpact"),
+      cta: t("demo.customerCta"),
+      href: "/booking",
     },
   ];
 
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold mb-4">{t("demo.demoTitle")}</h2>
-      {demoAccounts.map((acc) => (
-        <div key={acc.email} className="rounded-xl border border-border/30 bg-card/20 p-4 space-y-2">
+      {roleCards.map((card) => (
+        <div key={card.role} className="rounded-xl border border-border/30 bg-card/20 p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <acc.icon className="w-5 h-5 text-primary" />
-            <Badge variant="outline" className={acc.badge}>{acc.role}</Badge>
+            <card.icon className="w-5 h-5 text-primary" />
+            <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">
+              {card.role}
+            </Badge>
           </div>
-          <p className="text-xs text-muted-foreground">{acc.description}</p>
-          <div className="text-xs space-y-1">
-            <div className="flex items-center">
-              <span className="text-muted-foreground w-12">{t("demo.emailLabel")}</span>
-              <code className="text-foreground/80">{acc.email}</code>
-              <CopyButton text={acc.email} />
-            </div>
-            <div className="flex items-center">
-              <span className="text-muted-foreground w-12">{t("demo.passwordLabel")}</span>
-              {acc.password ? (
-                <>
-                  <code className="text-foreground/80">{acc.password}</code>
-                  <CopyButton text={acc.password} />
-                </>
-              ) : (
-                <span className="text-primary text-xs">{t("demo.contactForPass")}</span>
-              )}
-            </div>
+          <p className="text-sm text-muted-foreground">{card.description}</p>
+          <ul className="space-y-1.5">
+            {card.benefits.map((benefit) => (
+              <li key={benefit} className="flex items-start gap-2 text-sm">
+                <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <span>{benefit}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="rounded-lg border border-primary/25 bg-primary/10 px-3 py-2 text-xs">
+            <span className="font-semibold text-primary">{t("demo.impactLabel")}:</span>{" "}
+            <span className="text-foreground/85">{card.impact}</span>
           </div>
-          <Button size="sm" variant="outline" className="w-full mt-2" onClick={(e) => { e.stopPropagation(); navigate(`/auth?redirect=${acc.redirect}`); }}>
-            {t("demo.loginBtn2")}
+          <Button size="sm" variant="outline" className="w-full" onClick={() => navigate(card.href)}>
+            {card.cta}
           </Button>
         </div>
       ))}
@@ -139,52 +174,66 @@ function AccountsContent({ navigate }: { navigate: ReturnType<typeof useNavigate
 
 function HowContent() {
   const { t } = useTranslation();
-  const steps = [
-    { num: "1", title: t("demo.step1Title"), desc: t("demo.step1Desc") },
-    { num: "2", title: t("demo.step2Title"), desc: t("demo.step2Desc") },
-    { num: "3", title: t("demo.step3Title"), desc: t("demo.step3Desc") },
+  const packs = [
+    {
+      icon: Calendar,
+      title: t("demo.pack1Title"),
+      desc: t("demo.pack1Desc"),
+      impact: t("demo.pack1Impact"),
+    },
+    {
+      icon: Users,
+      title: t("demo.pack2Title"),
+      desc: t("demo.pack2Desc"),
+      impact: t("demo.pack2Impact"),
+    },
+    {
+      icon: Zap,
+      title: t("demo.pack3Title"),
+      desc: t("demo.pack3Desc"),
+      impact: t("demo.pack3Impact"),
+    },
+    {
+      icon: BarChart3,
+      title: t("demo.pack4Title"),
+      desc: t("demo.pack4Desc"),
+      impact: t("demo.pack4Impact"),
+    },
+    {
+      icon: Lock,
+      title: t("demo.pack5Title"),
+      desc: t("demo.pack5Desc"),
+      impact: t("demo.pack5Impact"),
+    },
+    {
+      icon: Bell,
+      title: t("demo.pack6Title"),
+      desc: t("demo.pack6Desc"),
+      impact: t("demo.pack6Impact"),
+    },
+    {
+      icon: Smartphone,
+      title: t("demo.pack7Title"),
+      desc: t("demo.pack7Desc"),
+      impact: t("demo.pack7Impact"),
+    },
   ];
-  return (
-    <div className="flex flex-col justify-center h-full gap-8">
-      <h2 className="text-xl font-bold">{t("demo.howTitle")}</h2>
-      {steps.map((s) => (
-        <div key={s.num} className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-full border border-primary/30 bg-card/30 flex items-center justify-center text-lg font-bold text-primary shrink-0">
-            {s.num}
-          </div>
-          <div>
-            <h3 className="font-semibold">{s.title}</h3>
-            <p className="text-sm text-muted-foreground">{s.desc}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
-function FeaturesContent() {
-  const { t } = useTranslation();
-  const features = [
-    { icon: Calendar, title: t("demo.feat1"), desc: t("demo.feat1Sub") },
-    { icon: Users, title: t("demo.feat2"), desc: t("demo.feat2Sub") },
-    { icon: BarChart3, title: t("demo.feat3"), desc: t("demo.feat3Sub") },
-    { icon: Bell, title: t("demo.feat4"), desc: t("demo.feat4Sub") },
-    { icon: Smartphone, title: t("demo.feat5"), desc: t("demo.feat5Sub") },
-    { icon: Lock, title: t("demo.feat6"), desc: t("demo.feat6Sub") },
-  ];
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold">{t("demo.featTitle")}</h2>
+      <h2 className="text-xl font-bold">{t("demo.howTitle")}</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {features.map((f) => (
-          <div key={f.title} className="flex gap-3 items-start rounded-lg border border-border/20 bg-card/20 p-3">
-            <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
-              <f.icon className="w-4 h-4 text-primary" />
+        {packs.map((pack) => (
+          <div key={pack.title} className="rounded-xl border border-border/20 bg-card/20 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <pack.icon className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold">{pack.title}</h3>
             </div>
-            <div>
-              <h3 className="font-medium text-sm">{f.title}</h3>
-              <p className="text-xs text-muted-foreground">{f.desc}</p>
-            </div>
+            <p className="text-xs text-muted-foreground">{pack.desc}</p>
+            <p className="text-xs">
+              <span className="font-semibold text-primary">{t("demo.impactLabel")}:</span>{" "}
+              <span className="text-foreground/85">{pack.impact}</span>
+            </p>
           </div>
         ))}
       </div>
@@ -192,8 +241,62 @@ function FeaturesContent() {
   );
 }
 
-function QrContent() {
+function FeaturesContent() {
   const { t } = useTranslation();
+  const outcomes = [
+    { icon: Calendar, title: t("demo.feat1"), desc: t("demo.feat1Sub") },
+    { icon: Users, title: t("demo.feat2"), desc: t("demo.feat2Sub") },
+    { icon: BarChart3, title: t("demo.feat3"), desc: t("demo.feat3Sub") },
+    { icon: Bell, title: t("demo.feat4"), desc: t("demo.feat4Sub") },
+    { icon: Smartphone, title: t("demo.feat5"), desc: t("demo.feat5Sub") },
+    { icon: Lock, title: t("demo.feat6"), desc: t("demo.feat6Sub") },
+    { icon: QrCode, title: t("demo.feat7"), desc: t("demo.feat7Sub") },
+    { icon: Zap, title: t("demo.feat8"), desc: t("demo.feat8Sub") },
+  ];
+  const keyFunctions = [
+    t("demo.keyFn1"),
+    t("demo.keyFn2"),
+    t("demo.keyFn3"),
+    t("demo.keyFn4"),
+    t("demo.keyFn5"),
+    t("demo.keyFn6"),
+  ];
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold">{t("demo.featTitle")}</h2>
+      <p className="text-sm text-muted-foreground">{t("demo.featLead")}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {outcomes.map((item) => (
+          <div key={item.title} className="flex gap-3 items-start rounded-lg border border-border/20 bg-card/20 p-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+              <item.icon className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-medium text-sm">{item.title}</h3>
+              <p className="text-xs text-muted-foreground">{item.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-xl border border-primary/20 bg-primary/10 p-4">
+        <h3 className="text-sm font-semibold mb-2 text-primary">{t("demo.keyFunctionsTitle")}</h3>
+        <ul className="grid gap-1.5 sm:grid-cols-2">
+          {keyFunctions.map((item) => (
+            <li key={item} className="flex items-start gap-2 text-xs sm:text-sm">
+              <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function QrContent({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
       <img
@@ -203,14 +306,16 @@ function QrContent() {
         loading="lazy"
       />
       <h3 className="font-semibold text-lg">{t("demo.qrTitle")}</h3>
-      <p className="text-sm text-muted-foreground max-w-xs">
-        {t("demo.qrDesc")}
-      </p>
+      <p className="text-sm text-muted-foreground max-w-sm">{t("demo.qrDesc")}</p>
+      <div className="grid w-full max-w-sm gap-2">
+        <Button onClick={() => navigate("/booking")}>{t("demo.qrPrimaryBtn")}</Button>
+        <Button variant="outline" onClick={() => navigate("/auth")}>
+          {t("demo.qrSecondaryBtn")}
+        </Button>
+      </div>
     </div>
   );
 }
-
-/* ── Main Component ── */
 
 export default function DemoPage() {
   const [activeCard, setActiveCard] = useState(0);
@@ -230,7 +335,7 @@ export default function DemoPage() {
     accounts: <AccountsContent navigate={navigate} />,
     how: <HowContent />,
     features: <FeaturesContent />,
-    qr: <QrContent />,
+    qr: <QrContent navigate={navigate} />,
   };
 
   return (
@@ -253,30 +358,20 @@ export default function DemoPage() {
                 className="expanding-cards__bg"
                 style={{ backgroundImage: `url(${cardBackgrounds[card.id]})` }}
               />
-              {!isActive && (
-                <span className="expanding-cards__collapsed-label">{card.label}</span>
-              )}
+              {!isActive && <span className="expanding-cards__collapsed-label">{card.label}</span>}
               <div className="expanding-cards__shadow" />
               <div className="expanding-cards__label">
                 <div className="expanding-cards__label-icon">
                   <card.Icon className="w-5 h-5" />
                 </div>
                 <div className="expanding-cards__label-info">
-                  <div className="expanding-cards__label-text expanding-cards__label-main">
-                    {card.label}
-                  </div>
-                  <div className="expanding-cards__label-text expanding-cards__label-sub">
-                    {card.sub}
-                  </div>
+                  <div className="expanding-cards__label-text expanding-cards__label-main">{card.label}</div>
+                  <div className="expanding-cards__label-text expanding-cards__label-sub">{card.sub}</div>
                 </div>
               </div>
               <AnimatePresence mode="wait">
                 {isActive && (
-                  <motion.div
-                    key={card.id}
-                    className="expanding-cards__content"
-                    {...contentAnim}
-                  >
+                  <motion.div key={card.id} className="expanding-cards__content" {...contentAnim}>
                     {contentMap[card.id]}
                   </motion.div>
                 )}
