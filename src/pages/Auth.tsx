@@ -381,7 +381,7 @@ export default function AuthPage() {
 
   return (
     <div
-      className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-secondary to-background p-4 safe-x safe-y relative overflow-x-hidden"
+      className="min-h-[100dvh] flex items-center justify-center bg-black p-4 safe-x safe-y relative overflow-x-hidden"
       data-testid="auth-page"
     >
       <div
