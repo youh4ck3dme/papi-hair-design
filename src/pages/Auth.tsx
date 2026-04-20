@@ -24,6 +24,8 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { isAdminAllowlisted, normalizeEmail } from "@/lib/adminAllowlist";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
+import { DEFAULT_BUSINESS_ID } from "@/lib/businessIds";
+import { queueRegistrationWelcomeEmail } from "@/integrations/firebase/queueRegistrationWelcomeEmail";
 
 const PUBLIC_BOOKING_URL = "https://booking.papihairdesign.sk/booking";
 const PUBLIC_BOOKING_PATH = "/booking";
@@ -211,6 +213,13 @@ function useAuthForm() {
       try {
         const credential = await createUserWithEmailAndPassword(auth, form.email, form.password);
         const claimed = await tryClaimBooking(claimToken);
+        try {
+          await queueRegistrationWelcomeEmail({
+            business_id: DEFAULT_BUSINESS_ID,
+          });
+        } catch (emailError) {
+          console.warn("Registration welcome email failed:", emailError);
+        }
         toast.success(claimed ? t("auth.toastRegisterOkBooking") : t("auth.toastRegisterOk"));
         await redirectAfterAuthWithMembership(
           navigate,
@@ -381,7 +390,7 @@ export default function AuthPage() {
 
   return (
     <div
-      className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-secondary to-background p-4 safe-x safe-y relative overflow-x-hidden"
+      className="min-h-[100dvh] flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(201,168,76,0.10),_transparent_32%),linear-gradient(135deg,_#16120e_0%,_#0d0b09_52%,_#080808_100%)] p-4 safe-x safe-y relative overflow-x-hidden"
       data-testid="auth-page"
     >
       <div
@@ -401,7 +410,10 @@ export default function AuthPage() {
           <span className="text-2xl font-bold text-foreground">PAPI HAIR DESIGN</span>
         </div>
 
-        <Card className="shadow-lg border-gold/20 bg-card/90 backdrop-blur-sm">
+        <Card
+          className="rounded-[6px] border-[#C9A84C]/18 bg-[#12100d]/88 shadow-[0_24px_70px_-36px_rgba(0,0,0,0.85),0_0_0_1px_rgba(201,168,76,0.08)] backdrop-blur-md"
+          data-testid="auth-card"
+        >
           <CardHeader>
             <CardTitle>{copy.title}</CardTitle>
             <CardDescription>{copy.description}</CardDescription>
