@@ -1,5 +1,5 @@
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { enGB, sk } from "date-fns/locale";
@@ -25,9 +25,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { toast } from "sonner";
 
-const ACCESS_STORAGE_KEY = "booking_history_access_token";
-const REFERENCE_STORAGE_KEY = "booking_history_reference";
-
 const STATUS_VARIANTS: Record<string, string> = {
   confirmed: "bg-primary/15 text-primary border-primary/20",
   completed: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -44,34 +41,21 @@ type HistoryLookupState = {
   phone: string;
 };
 
-function readStoredAccess(): { accessToken: string | null; reference: string | null } {
-  if (typeof window === "undefined") {
-    return { accessToken: null, reference: null };
-  }
-
-  return {
-    accessToken: window.sessionStorage.getItem(ACCESS_STORAGE_KEY),
-    reference: window.sessionStorage.getItem(REFERENCE_STORAGE_KEY),
-  };
-}
-
-function storeAccess(accessToken: string, reference: string) {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(ACCESS_STORAGE_KEY, accessToken);
-  window.sessionStorage.setItem(REFERENCE_STORAGE_KEY, reference);
-}
-
-function clearAccess() {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.removeItem(ACCESS_STORAGE_KEY);
-  window.sessionStorage.removeItem(REFERENCE_STORAGE_KEY);
-}
+type BookingHistoryLocationState = {
+  bookingHistoryAccess?: {
+    accessToken: string;
+    reference: string;
+  } | null;
+} | null;
 
 export default function BookingHistoryPage() {
   const { t, i18n } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const dateLocale = i18n.language === "en" ? enGB : sk;
+  const locationState = location.state as BookingHistoryLocationState;
+  const persistedAccess = locationState?.bookingHistoryAccess ?? null;
 
   const [loading, setLoading] = useState(false);
   const [historyItems, setHistoryItems] = useState<BookingHistoryItem[]>([]);
@@ -115,44 +99,53 @@ export default function BookingHistoryPage() {
       setHistoryLoaded(true);
       return true;
     } catch (error) {
-      if (input.accessToken) {
-        clearAccess();
-      }
       setHistoryItems([]);
       setHistoryLoaded(false);
+      if (input.accessToken) {
+        navigate("/dashboard/history", { replace: true, state: null });
+      }
       toast.error(t("history.lookupError"));
       return false;
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [navigate, t]);
 
   useEffect(() => {
     const accessFromQuery = searchParams.get("access");
     const referenceFromQuery = searchParams.get("ref");
 
     if (accessFromQuery && referenceFromQuery) {
-      storeAccess(accessFromQuery, referenceFromQuery);
       setManualForm((current) => ({
         ...current,
         reference: referenceFromQuery,
       }));
-      navigate("/dashboard/history", { replace: true });
+      navigate("/dashboard/history", {
+        replace: true,
+        state: {
+          bookingHistoryAccess: {
+            accessToken: accessFromQuery,
+            reference: referenceFromQuery,
+          },
+        },
+      });
       void loadHistory({ accessToken: accessFromQuery, reference: referenceFromQuery });
       return;
     }
 
-    const stored = readStoredAccess();
-    if (stored.accessToken && stored.reference) {
+    if (persistedAccess?.accessToken && persistedAccess.reference) {
       setManualForm((current) => ({
         ...current,
-        reference: stored.reference ?? current.reference,
+        reference: persistedAccess.reference,
       }));
-      void loadHistory({ accessToken: stored.accessToken, reference: stored.reference });
+      void loadHistory({
+        accessToken: persistedAccess.accessToken,
+        reference: persistedAccess.reference,
+      });
     }
-  }, [loadHistory, navigate, searchParams]);
+  }, [loadHistory, navigate, persistedAccess, searchParams]);
 
-  const handleManualSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleManualSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const ok = await loadHistory({
       reference: manualForm.reference.trim(),
@@ -161,9 +154,9 @@ export default function BookingHistoryPage() {
     });
 
     if (ok) {
-      clearAccess();
+      navigate("/dashboard/history", { replace: true, state: null });
     }
-  };
+  }, [loadHistory, manualForm, navigate]);
 
   const historySummary = useMemo(() => {
     if (!historyItems.length) return null;

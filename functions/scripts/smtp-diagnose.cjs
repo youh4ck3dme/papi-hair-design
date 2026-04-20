@@ -132,13 +132,13 @@ function getCertificateName(value) {
   return value ? JSON.stringify(value) : null;
 }
 
-async function testTlsHandshake(host, port, timeoutMs, servername, allowInvalidCert) {
+async function testTlsHandshake(host, port, timeoutMs, servername) {
   return withTimeout(new Promise((resolve, reject) => {
     const socket = tls.connect({
       host,
       port,
       servername: servername || host,
-      rejectUnauthorized: !allowInvalidCert,
+      rejectUnauthorized: true,
     });
 
     socket.once("secureConnect", () => {
@@ -178,7 +178,7 @@ async function diagnoseSmtp(config) {
     socketTimeout: config.timeoutMs,
     tls: {
       servername: config.servername || config.host,
-      rejectUnauthorized: !config.allowInvalidCert,
+      rejectUnauthorized: true,
     },
   });
 
@@ -265,7 +265,6 @@ function buildRuntimeConfig(args, env) {
     recipient: args.recipient || env.SMTP_TEST_RECIPIENT || "",
     timeoutMs: Number(args.timeout || env.SMTP_TIMEOUT_MS || "10000"),
     sendTest: toBool(args["send-test"] || env.SMTP_SEND_TEST || "false"),
-    allowInvalidCert: toBool(args["allow-invalid-cert"] || env.SMTP_ALLOW_INVALID_CERT || "false"),
     targets: buildTargetConfigs(args, env),
   };
 }
@@ -281,7 +280,6 @@ function printConfig(config) {
         from: config.from,
         recipient: config.recipient || null,
         sendTest: config.sendTest,
-        allowInvalidCert: config.allowInvalidCert,
         timeoutMs: config.timeoutMs,
         targets: config.targets,
       },
@@ -352,7 +350,6 @@ async function runTargetDiagnosis(target, config) {
         target.port,
         config.timeoutMs,
         config.host,
-        config.allowInvalidCert,
       );
       logResult(
         "TLS handshake",

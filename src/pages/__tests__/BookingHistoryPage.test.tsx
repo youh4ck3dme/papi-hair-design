@@ -29,7 +29,6 @@ describe("BookingHistoryPage", () => {
     cancelCustomerBooking.mockReset();
     toast.error.mockReset();
     toast.success.mockReset();
-    globalThis.sessionStorage.clear();
   });
 
   it("loads history from magic link query", async () => {
@@ -79,11 +78,16 @@ describe("BookingHistoryPage", () => {
       appointment_id: "ref-1",
       status: "cancelled",
     });
-    globalThis.sessionStorage.setItem("booking_history_access_token", "token123");
-    globalThis.sessionStorage.setItem("booking_history_reference", "ref-1");
-
     render(
-      <MemoryRouter initialEntries={["/dashboard/history"]}>
+      <MemoryRouter initialEntries={[{
+        pathname: "/dashboard/history",
+        state: {
+          bookingHistoryAccess: {
+            accessToken: "token123",
+            reference: "ref-1",
+          },
+        },
+      }]}>
         <BookingHistoryPage />
       </MemoryRouter>
     );

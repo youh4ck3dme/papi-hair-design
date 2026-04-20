@@ -3,10 +3,10 @@
  * Lock-in check: ensures Node version is correct and blocks accidental Vercel lock-in
  * in this Firebase-only project.
  */
-import { existsSync, readdirSync, readFileSync, statSync } from "fs";
-import { execFileSync } from "child_process";
-import { join, dirname, relative, sep } from "path";
-import { fileURLToPath } from "url";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { join, dirname, relative, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "..");
