@@ -5,10 +5,21 @@ import { format } from "date-fns";
 import { enGB, sk } from "date-fns/locale";
 import { CalendarClock, History, Loader2, Mail, Phone, Search } from "lucide-react";
 import { lookupBookingHistory, type BookingHistoryItem } from "@/integrations/firebase/lookupBookingHistory";
+import { cancelCustomerBooking } from "@/integrations/firebase/cancelCustomerBooking";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { LogoIcon } from "@/components/LogoIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -24,6 +35,13 @@ const STATUS_VARIANTS: Record<string, string> = {
   hold_created: "bg-amber-100 text-amber-700 border-amber-200",
   cancelled: "bg-rose-100 text-rose-700 border-rose-200",
   expired: "bg-slate-100 text-slate-700 border-slate-200",
+};
+
+type HistoryLookupState = {
+  accessToken: string | null;
+  reference: string | null;
+  email: string;
+  phone: string;
 };
 
 function readStoredAccess(): { accessToken: string | null; reference: string | null } {
@@ -60,6 +78,9 @@ export default function BookingHistoryPage() {
   const [customerEmail, setCustomerEmail] = useState<string | null>(null);
   const [customerPhone, setCustomerPhone] = useState<string | null>(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [activeLookup, setActiveLookup] = useState<HistoryLookupState | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<BookingHistoryItem | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [manualForm, setManualForm] = useState({
     reference: "",
     email: "",
@@ -72,13 +93,20 @@ export default function BookingHistoryPage() {
     email?: string;
     phone?: string;
   }) => {
+    const normalizedInput: HistoryLookupState = {
+      accessToken: input.accessToken ?? null,
+      reference: input.reference ?? null,
+      email: input.email?.trim() ?? "",
+      phone: input.phone?.trim() ?? "",
+    };
+    setActiveLookup(normalizedInput);
     setLoading(true);
     try {
       const response = await lookupBookingHistory({
-        access_token: input.accessToken ?? undefined,
-        reference: input.reference ?? undefined,
-        email: input.email,
-        phone: input.phone,
+        access_token: normalizedInput.accessToken ?? undefined,
+        reference: normalizedInput.reference ?? undefined,
+        email: normalizedInput.email || undefined,
+        phone: normalizedInput.phone || undefined,
       });
 
       setHistoryItems(response.appointments ?? []);
@@ -144,6 +172,51 @@ export default function BookingHistoryPage() {
       total: historyItems.length,
     };
   }, [historyItems]);
+
+  const canCancelBooking = useCallback((item: BookingHistoryItem) => {
+    const status = item.status ?? "pending";
+    if (status === "cancelled" || status === "completed" || status === "expired" || status === "no_show") {
+      return false;
+    }
+
+    if (!item.start_at) {
+      return false;
+    }
+
+    const startMs = new Date(item.start_at).getTime();
+    return Number.isFinite(startMs) && startMs > Date.now();
+  }, []);
+
+  const handleCancelBooking = useCallback(async () => {
+    if (!cancelTarget || !activeLookup) {
+      return;
+    }
+
+    setCancellingId(cancelTarget.id);
+    try {
+      await cancelCustomerBooking({
+        appointment_id: cancelTarget.id,
+        access_token: activeLookup.accessToken ?? undefined,
+        reference: activeLookup.reference ?? undefined,
+        email: activeLookup.email || undefined,
+        phone: activeLookup.phone || undefined,
+      });
+
+      toast.success(t("history.cancelSuccess"));
+      setCancelTarget(null);
+
+      await loadHistory({
+        accessToken: activeLookup.accessToken,
+        reference: activeLookup.reference,
+        email: activeLookup.email,
+        phone: activeLookup.phone,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("history.cancelError"));
+    } finally {
+      setCancellingId(null);
+    }
+  }, [activeLookup, cancelTarget, loadHistory]);
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-primary/10 via-background to-background safe-x safe-y">
@@ -250,6 +323,19 @@ export default function BookingHistoryPage() {
                             {typeof item.service_price === "number" && (
                               <span className="text-sm font-semibold text-foreground">€{item.service_price}</span>
                             )}
+                            {canCancelBooking(item) && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="mt-1 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                                onClick={() => setCancelTarget(item)}
+                                disabled={cancellingId === item.id}
+                              >
+                                {cancellingId === item.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {t("history.cancelButton")}
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -318,6 +404,38 @@ export default function BookingHistoryPage() {
           </Card>
         </div>
       </div>
+
+      <AlertDialog
+        open={Boolean(cancelTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCancelTarget(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("history.cancelDialogTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("history.cancelDialogDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("history.cancelDialogCancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void handleCancelBooking();
+              }}
+              className="bg-rose-600 text-white hover:bg-rose-700"
+              disabled={cancellingId === cancelTarget?.id}
+            >
+              {cancellingId === cancelTarget?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("history.cancelDialogConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

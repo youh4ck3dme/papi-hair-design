@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Loader2, User, Clock, Phone, Check, Plus, Trash2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
+import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
 
 const localizer = dateFnsLocalizer({
   format,
@@ -278,7 +279,11 @@ export default function MySchedulePage() {
     if (!selectedEvent) return;
     setUpdatingStatus(true);
     try {
-      await updateDoc(doc(db, "appointments", selectedEvent.id), { status: "cancelled", updated_at: new Date().toISOString() });
+      await adminUpdateBookingStatus({
+        business_id: businessId,
+        appointment_id: selectedEvent.id,
+        status: "cancelled",
+      });
       toast.success("Rezervácia zrušená");
       setDetailModal(false);
       loadEvents();

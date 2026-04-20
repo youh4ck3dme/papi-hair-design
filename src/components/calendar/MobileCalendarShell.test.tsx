@@ -18,6 +18,7 @@ const firestoreMocks = vi.hoisted(() => ({
 const callableMocks = vi.hoisted(() => ({
   listProviders: vi.fn(),
   createPublicBooking: vi.fn(),
+  adminUpdateBookingStatus: vi.fn(),
 }));
 
 const fixtures = vi.hoisted(() => ({
@@ -44,6 +45,7 @@ vi.mock("firebase/functions", () => ({
   httpsCallable: (_functions: unknown, name: string) => {
     if (name === "listBookableProviders") return callableMocks.listProviders;
     if (name === "createPublicBooking") return callableMocks.createPublicBooking;
+    if (name === "adminUpdateBookingStatus") return callableMocks.adminUpdateBookingStatus;
     return vi.fn();
   },
 }));
@@ -183,14 +185,17 @@ vi.mock("@/components/booking/BlockTimeSheet", () => ({
   ),
 }));
 
-vi.mock("@/components/booking/AppointmentDetailSheet", () => ({
-  default: (props: any) => (
-    <div data-testid="appointment-detail-sheet">
-      <span data-testid="detail-open">{String(Boolean(props.open))}</span>
-      <button onClick={() => props.onCancel?.(props.appointment?.id)}>detail-cancel</button>
-      <button onClick={() => props.onMarkArrived?.(props.appointment?.id)}>detail-arrived</button>
-    </div>
+vi.mock("@/components/ui/drawer", () => ({
+  Drawer: ({ open, children, overlayClassName }: { open: boolean; children: React.ReactNode; overlayClassName?: string }) =>
+    open ? <div data-testid="drawer-root" data-overlay-class={overlayClassName ?? ""}>{children}</div> : null,
+  DrawerContent: ({ className, children }: { className?: string; children: React.ReactNode }) => (
+    <div data-testid="drawer-content" className={className}>{children}</div>
   ),
+  DrawerHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DrawerTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <h2 className={className}>{children}</h2>
+  ),
+  DrawerFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 function makeSnapshot(items: any[]) {
@@ -220,6 +225,7 @@ describe("MobileCalendarShell", () => {
     firestoreMocks.updateDoc.mockReset();
     callableMocks.listProviders.mockReset();
     callableMocks.createPublicBooking.mockReset();
+    callableMocks.adminUpdateBookingStatus.mockReset();
 
     fixtures.providers = [
       { id: "emp-1", display_name: "Marek", is_active: true },
@@ -247,6 +253,7 @@ describe("MobileCalendarShell", () => {
 
     callableMocks.listProviders.mockResolvedValue({ data: fixtures.providers });
     callableMocks.createPublicBooking.mockResolvedValue({ data: { success: true } });
+    callableMocks.adminUpdateBookingStatus.mockResolvedValue({ data: { success: true, appointment_id: "apt-1", status: "cancelled" } });
 
     firestoreMocks.getDocs.mockImplementation(async (input: any) => {
       const collectionName = input?.__collection;
@@ -357,25 +364,36 @@ describe("MobileCalendarShell", () => {
     fireEvent.click(screen.getByText("grid-open-first-event"));
 
     expect(toastMocks.info).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("detail-open")).toHaveTextContent("false");
+    expect(screen.queryByTestId("drawer-root")).not.toBeInTheDocument();
   });
 
-  it("opens detail for reservation and supports cancel + arrived actions", async () => {
+  it("opens detail for reservation and supports cancel action", async () => {
     render(<MobileCalendarShell />);
     await screen.findByTestId("calendar-grid");
     fireEvent.click(screen.getByText("grid-open-first-event"));
 
-    await waitFor(() => expect(screen.getByTestId("detail-open")).toHaveTextContent("true"));
+    await waitFor(() => expect(screen.getByTestId("drawer-root")).toBeInTheDocument());
 
-    fireEvent.click(screen.getByText("detail-cancel"));
+    fireEvent.click(await screen.findByRole("button", { name: /Zrušiť/i }));
     await waitFor(() => {
-      expect(firestoreMocks.updateDoc).toHaveBeenCalledWith(
-        expect.objectContaining({ __collection: "appointments", id: "apt-1" }),
-        expect.objectContaining({ status: "cancelled" }),
+      expect(callableMocks.adminUpdateBookingStatus).toHaveBeenCalledWith(
+        expect.objectContaining({
+          business_id: expect.any(String),
+          appointment_id: "apt-1",
+          status: "cancelled",
+        }),
       );
     });
+  });
 
-    fireEvent.click(screen.getByText("detail-arrived"));
+  it("opens detail for reservation and supports arrived action", async () => {
+    render(<MobileCalendarShell />);
+    await screen.findByTestId("calendar-grid");
+    fireEvent.click(screen.getByText("grid-open-first-event"));
+
+    await waitFor(() => expect(screen.getByTestId("drawer-root")).toBeInTheDocument());
+
+    fireEvent.click(await screen.findByRole("button", { name: /Označiť prišiel/i }));
     await waitFor(() => {
       expect(firestoreMocks.updateDoc).toHaveBeenCalledWith(
         expect.objectContaining({ __collection: "appointments", id: "apt-1" }),

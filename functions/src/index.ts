@@ -30,6 +30,8 @@ export { getPublicAvailabilityConflicts } from "./getPublicAvailabilityConflicts
 export { adminUpdateBookingStatus } from "./adminUpdateBookingStatus";
 export { adminCalendarQuickAction } from "./adminCalendarQuickAction";
 export { lookupBookingHistory } from "./lookupBookingHistory";
+export { cancelCustomerBooking } from "./cancelCustomerBooking";
+export { queueRegistrationWelcomeEmail } from "./queueRegistrationWelcomeEmail";
 export { cleanupExpiredHolds } from "./cleanupExpiredHolds";
 export { rebuildPublicSnapshot } from "./rebuildPublicSnapshot";
 export { bootstrapAdminAccess } from "./bootstrapAdminAccess";

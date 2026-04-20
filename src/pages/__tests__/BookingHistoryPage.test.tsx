@@ -6,21 +6,29 @@ import BookingHistoryPage from "../BookingHistoryPage";
 vi.mock("@/integrations/firebase/lookupBookingHistory", () => ({
   lookupBookingHistory: vi.fn(),
 }));
+vi.mock("@/integrations/firebase/cancelCustomerBooking", () => ({
+  cancelCustomerBooking: vi.fn(),
+}));
 vi.mock("sonner", () => ({
   toast: {
     error: vi.fn(),
+    success: vi.fn(),
   },
 }));
 
 describe("BookingHistoryPage", () => {
   let lookupBookingHistory: ReturnType<typeof vi.fn>;
-  let toast: { error: ReturnType<typeof vi.fn> };
+  let cancelCustomerBooking: ReturnType<typeof vi.fn>;
+  let toast: { error: ReturnType<typeof vi.fn>; success: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     ({ lookupBookingHistory } = await import("@/integrations/firebase/lookupBookingHistory"));
+    ({ cancelCustomerBooking } = await import("@/integrations/firebase/cancelCustomerBooking"));
     ({ toast } = await import("sonner"));
     lookupBookingHistory.mockReset();
+    cancelCustomerBooking.mockReset();
     toast.error.mockReset();
+    toast.success.mockReset();
     window.localStorage.clear();
   });
 
@@ -48,6 +56,51 @@ describe("BookingHistoryPage", () => {
     await waitFor(() => expect(lookupBookingHistory).toHaveBeenCalled());
     expect(await screen.findByText("Express")).toBeInTheDocument();
     expect(screen.getByText(/Referencia:/i)).toHaveTextContent("ref-1");
+  });
+
+  it("opens cancel dialog and cancels future bookings", async () => {
+    lookupBookingHistory.mockResolvedValue({
+      success: true,
+      customer_email: "user@example.com",
+      customer_phone: "+421905123456",
+      reference: "ref-1",
+      appointments: [
+        {
+          id: "ref-1",
+          service_name: "Express",
+          start_at: "2099-03-01T09:00:00.000Z",
+          status: "confirmed",
+          is_reference: true,
+        },
+      ],
+    });
+    cancelCustomerBooking.mockResolvedValue({
+      success: true,
+      appointment_id: "ref-1",
+      status: "cancelled",
+    });
+    window.localStorage.setItem("booking_history_access_token", "token123");
+    window.localStorage.setItem("booking_history_reference", "ref-1");
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard/history"]}>
+        <BookingHistoryPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByRole("button", { name: /Zrušiť rezerváciu/i });
+    fireEvent.click(screen.getByRole("button", { name: /Zrušiť rezerváciu/i }));
+
+    expect(await screen.findByText(/Zrušiť túto rezerváciu\?/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Áno, zrušiť/i }));
+
+    await waitFor(() => expect(cancelCustomerBooking).toHaveBeenCalledWith(expect.objectContaining({
+      appointment_id: "ref-1",
+      access_token: "token123",
+      reference: "ref-1",
+    })));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Rezervácia bola zrušená."));
+    await waitFor(() => expect(lookupBookingHistory).toHaveBeenCalledTimes(2));
   });
 
   it("shows error toast when lookup fails", async () => {

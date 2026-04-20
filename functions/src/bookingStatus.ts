@@ -37,7 +37,11 @@ export function ensureAllowedAdminTransition(currentStatus: string, nextStatus: 
   }
 }
 
-export function buildBookingStatusUpdate(status: AdminBookingStatus, nowIso: string): Record<string, string | null> {
+export function buildBookingStatusUpdate(
+  status: AdminBookingStatus,
+  nowIso: string,
+  options: { cancelledBy?: "admin" | "customer" } = {}
+): Record<string, string | null> {
   const update: Record<string, string | null> = {
     status,
     updated_at: nowIso,
@@ -45,6 +49,7 @@ export function buildBookingStatusUpdate(status: AdminBookingStatus, nowIso: str
 
   if (status === "confirmed") update.confirmed_at = nowIso;
   if (status === "cancelled") update.cancelled_at = nowIso;
+  if (status === "cancelled" && options.cancelledBy) update.cancelled_by = options.cancelledBy;
   if (status === "completed") update.completed_at = nowIso;
   if (status === "no_show") update.no_show_at = nowIso;
 

@@ -8,7 +8,7 @@ import {
   ensureAllowedAdminTransition,
   type AdminBookingStatus,
 } from "./bookingStatus";
-import { queueCustomerCancellationEmail } from "./emailQueue";
+import { queueAdminCustomerCancellationEmail, queueCustomerCancellationEmail } from "./emailQueue";
 import { appendAppointmentStatusAuditEntry } from "./auditLog";
 
 interface AdminUpdateBookingStatusData {
@@ -55,7 +55,9 @@ export const adminUpdateBookingStatus = functions.https.onCall(
     }
 
     const nowIso = new Date().toISOString();
-    await appointmentRef.update(buildBookingStatusUpdate(status, nowIso));
+    await appointmentRef.update(
+      buildBookingStatusUpdate(status, nowIso, status === "cancelled" ? { cancelledBy: "admin" } : {})
+    );
 
     try {
       await appendAppointmentStatusAuditEntry(db, {
@@ -87,6 +89,25 @@ export const adminUpdateBookingStatus = functions.https.onCall(
         });
       } catch (error) {
         functions.logger.warn("adminUpdateBookingStatus: queue cancellation email failed", {
+          appointment_id,
+          business_id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      try {
+        await queueAdminCustomerCancellationEmail({
+          businessId: business_id,
+          appointmentId: appointment_id,
+          customerEmail: appointment.customer_email,
+          customerPhone: typeof appointment.customer_phone === "string" ? appointment.customer_phone : null,
+          customerName: typeof appointment.customer_name === "string" ? appointment.customer_name : null,
+          serviceName: typeof appointment.service_name === "string" ? appointment.service_name : null,
+          startAtIso: typeof appointment.start_at === "string" ? appointment.start_at : nowIso,
+          cancelledBy: "admin",
+        });
+      } catch (error) {
+        functions.logger.warn("adminUpdateBookingStatus: queue admin cancellation email failed", {
           appointment_id,
           business_id,
           error: error instanceof Error ? error.message : String(error),
