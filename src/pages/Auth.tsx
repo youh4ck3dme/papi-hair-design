@@ -7,7 +7,10 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { collection, getDocs, limit, query, where } from "firebase/firestore";
@@ -112,14 +115,16 @@ export type AuthMode = "login" | "register" | "forgot";
 // ---------------------------------------------------------------------------
 
 async function tryClaimBooking(claimToken: string): Promise<boolean> {
+  if (!claimToken) {
+    return false;
+  }
+
   try {
     const claimBookingFn = httpsCallable(functions, "claimBooking");
     await claimBookingFn({ claim_token: claimToken });
-    sessionStorage.removeItem("claim_token");
     return true;
   } catch (err) {
     console.warn("Claim booking failed:", err);
-    sessionStorage.removeItem("claim_token");
     return false;
   }
 }
@@ -145,7 +150,7 @@ function useAuthForm() {
   const [searchParams] = useSearchParams();
   const urlMode = searchParams.get("mode");
   const urlEmail = searchParams.get("email") ?? "";
-  const claimToken = sessionStorage.getItem("claim_token") ?? "";
+  const claimToken = searchParams.get("claim")?.trim() ?? "";
 
   const [mode, setMode] = useState<AuthMode>(
     urlMode === "register" ? "register" : "login"
@@ -153,9 +158,7 @@ function useAuthForm() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: urlEmail, password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [rememberMe, setRememberMe] = useState(
-    () => localStorage.getItem("auth_remember_me") === "true"
-  );
+  const [rememberMe, setRememberMe] = useState(true);
 
   const setField = useCallback((key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -163,13 +166,13 @@ function useAuthForm() {
 
   const setRememberMePersisted = useCallback((checked: boolean) => {
     setRememberMe(checked);
-    if (checked) localStorage.setItem("auth_remember_me", "true");
-    else localStorage.removeItem("auth_remember_me");
   }, []);
 
-  const persistSessionPreference = useCallback((remember: boolean) => {
-    if (remember) sessionStorage.removeItem("auth_session_tab_only");
-    else sessionStorage.setItem("auth_session_tab_only", "true");
+  const applyAuthPersistence = useCallback(async (remember: boolean) => {
+    await setPersistence(
+      auth,
+      remember ? browserLocalPersistence : browserSessionPersistence,
+    );
   }, []);
 
   const handleLogin = useCallback(
@@ -184,6 +187,7 @@ function useAuthForm() {
       setErrors({});
       setLoading(true);
       try {
+        await applyAuthPersistence(rememberMe);
         const credential = await signInWithEmailAndPassword(auth, form.email, form.password);
         await redirectAfterAuthWithMembership(
           navigate,
@@ -196,7 +200,7 @@ function useAuthForm() {
         setLoading(false);
       }
     },
-    [form, navigate, t]
+    [applyAuthPersistence, form, navigate, rememberMe, t]
   );
 
   const handleRegister = useCallback(
@@ -211,6 +215,7 @@ function useAuthForm() {
       setErrors({});
       setLoading(true);
       try {
+        await applyAuthPersistence(rememberMe);
         const credential = await createUserWithEmailAndPassword(auth, form.email, form.password);
         const claimed = await tryClaimBooking(claimToken);
         try {
@@ -232,22 +237,20 @@ function useAuthForm() {
         setLoading(false);
       }
     },
-    [form, claimToken, navigate, t]
+    [applyAuthPersistence, claimToken, form, navigate, rememberMe, t]
   );
 
   const handleGoogleLogin = useCallback(async () => {
     setLoading(true);
     try {
+      await applyAuthPersistence(rememberMe);
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const userEmail = result.user.email;
 
-      const token = sessionStorage.getItem("claim_token");
-      if (token) {
-        const claimed = await tryClaimBooking(token);
-        if (claimed) {
-          toast.success(t("auth.toastLoginOkBooking"));
-        }
+      const claimed = await tryClaimBooking(claimToken);
+      if (claimed) {
+        toast.success(t("auth.toastLoginOkBooking"));
       }
       await redirectAfterAuthWithMembership(navigate, result.user.uid, userEmail);
     } catch (err: unknown) {
@@ -255,7 +258,7 @@ function useAuthForm() {
     } finally {
       setLoading(false);
     }
-  }, [navigate, t]);
+  }, [applyAuthPersistence, claimToken, navigate, rememberMe, t]);
 
   const handleForgot = useCallback(
     async (e: React.FormEvent) => {

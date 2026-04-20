@@ -15,6 +15,9 @@ vi.mock("firebase/auth", () => ({
   signInWithPopup: vi.fn(),
   GoogleAuthProvider: vi.fn(),
   sendPasswordResetEmail: vi.fn(),
+  setPersistence: vi.fn(),
+  browserLocalPersistence: { type: "LOCAL" },
+  browserSessionPersistence: { type: "SESSION" },
 }));
 
 vi.mock("firebase/functions", () => ({
