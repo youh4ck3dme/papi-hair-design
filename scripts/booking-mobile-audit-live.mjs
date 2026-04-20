@@ -32,8 +32,8 @@ async function dismissCookieConsent(page) {
 function normalizeText(value) {
   return value
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
+    .replaceAll(/[\u0300-\u036f]/g, "")
+    .replaceAll(/\s+/g, " ")
     .trim()
     .toLowerCase();
 }

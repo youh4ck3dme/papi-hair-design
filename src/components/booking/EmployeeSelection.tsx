@@ -104,9 +104,10 @@ export function EmployeeSelection({
             const displayName = employee.display_name || t("booking.employeeRole");
             const photoUrl = resolveEmployeePhotoUrl(employee);
             const fallbackAvatarSrc = resolveEmployeeFallbackAvatar(displayName);
-            const avatarSrc = imageLoadErrorByEmployeeId[employee.id]
-              ? fallbackAvatarSrc ?? PLACEHOLDER_AVATAR_SRC
-              : photoUrl ?? fallbackAvatarSrc ?? PLACEHOLDER_AVATAR_SRC;
+            let avatarSrc = photoUrl ?? fallbackAvatarSrc ?? PLACEHOLDER_AVATAR_SRC;
+            if (imageLoadErrorByEmployeeId[employee.id]) {
+              avatarSrc = fallbackAvatarSrc ?? PLACEHOLDER_AVATAR_SRC;
+            }
 
             return (
               <button

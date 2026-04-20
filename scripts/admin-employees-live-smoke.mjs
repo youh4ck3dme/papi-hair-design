@@ -18,6 +18,10 @@ const expectedEmployees = [
   { name: "Papi", expectedUrl: "/papi.webp" },
 ];
 
+function formatError(error) {
+  return error instanceof Error ? error.message : JSON.stringify(error);
+}
+
 async function login(page) {
   await page.goto(`${baseURL}/auth`, { waitUntil: "domcontentloaded", timeout: 60_000 });
   await page.locator('[data-testid="auth-email-input"]').fill(ownerEmail);
@@ -78,14 +82,14 @@ try {
     return Array.from(document.querySelectorAll("div.group.relative")).map((card) => {
       const name = card.querySelector("h3")?.textContent?.trim() ?? "";
       const avatarHost = Array.from(card.querySelectorAll("div")).find((element) => {
-        const styles = window.getComputedStyle(element);
+        const styles = globalThis.getComputedStyle(element);
         return styles.backgroundImage && styles.backgroundImage !== "none";
       });
 
       return {
         name,
         found: Boolean(name),
-        backgroundImage: avatarHost ? window.getComputedStyle(avatarHost).backgroundImage : "none",
+        backgroundImage: avatarHost ? globalThis.getComputedStyle(avatarHost).backgroundImage : "none",
       };
     });
   });
@@ -123,7 +127,7 @@ try {
 
   const results = {
     pass: false,
-    error: String(error),
+    error: formatError(error),
     consoleErrors,
     consoleWarnings,
     screenshot,

@@ -92,10 +92,14 @@ vi.mock("react-i18next", () => ({
 
 describe("AuthPage", () => {
   beforeAll(() => {
+    const observe = vi.fn();
+    const unobserve = vi.fn();
+    const disconnect = vi.fn();
+
     class ResizeObserverMock {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
+      observe = observe;
+      unobserve = unobserve;
+      disconnect = disconnect;
     }
 
     vi.stubGlobal("ResizeObserver", ResizeObserverMock);

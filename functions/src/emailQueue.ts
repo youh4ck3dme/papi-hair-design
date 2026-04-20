@@ -34,6 +34,11 @@ interface QueueAdminNotificationInput {
   startAtIso: string;
 }
 
+interface QueueAdminCancellationEmailInput extends Omit<QueueCancellationEmailInput, "customerEmail"> {
+  customerEmail: string | null;
+  customerPhone: string | null;
+}
+
 interface QueueRegistrationWelcomeInput {
   businessId: string;
   customerEmail: string;
@@ -240,15 +245,15 @@ function safeString(value: unknown): string | null {
 
 function escapeHtml(value: string): string {
   return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function escapeAttr(value: string): string {
-  return escapeHtml(value).replace(/`/g, "&#96;");
+  return escapeHtml(value).replaceAll("`", "&#96;");
 }
 
 function dedupeRecipients(recipients: string[]): string[] {
@@ -444,7 +449,7 @@ function buildMessage(
           href="${escapeAttr(action.href)}"
           style="
             display:inline-block;
-            margin:${index === 0 ? "0 12px 12px 0" : "0 12px 12px 0"};
+            margin:0 12px 12px 0;
             padding:14px 26px;
             border-radius:999px;
             background:${index === 0 ? variant.primaryButtonBg : EMAIL_COLOR_SYSTEM.secondaryButtonBg};
@@ -470,7 +475,7 @@ function buildMessage(
       </div>
       <div style="font-size:14px;line-height:1.7;color:${EMAIL_COLOR_SYSTEM.mutedText};">
         ${context.businessAddress ? `<div>${escapeHtml(context.businessAddress)}</div>` : ""}
-        ${context.businessPhone ? `<div><a href="tel:${escapeAttr(context.businessPhone.replace(/\s+/g, ""))}" style="color:${EMAIL_COLOR_SYSTEM.linkText};text-decoration:none;font-weight:600;">${escapeHtml(context.businessPhone)}</a></div>` : ""}
+        ${context.businessPhone ? `<div><a href="tel:${escapeAttr(context.businessPhone.replaceAll(/\s+/g, ""))}" style="color:${EMAIL_COLOR_SYSTEM.linkText};text-decoration:none;font-weight:600;">${escapeHtml(context.businessPhone)}</a></div>` : ""}
         ${context.businessEmail ? `<div><a href="mailto:${escapeAttr(context.businessEmail)}" style="color:${EMAIL_COLOR_SYSTEM.linkText};text-decoration:none;font-weight:600;">${escapeHtml(context.businessEmail)}</a></div>` : ""}
         ${extraFooterLines.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}
       </div>
@@ -749,7 +754,7 @@ export async function queueAdminBookingNotificationEmail(
 }
 
 export async function queueAdminCustomerCancellationEmail(
-  input: QueueCancellationEmailInput & { customerPhone: string | null }
+  input: QueueAdminCancellationEmailInput
 ): Promise<{ queued: boolean; reason?: string }> {
   const context = await resolveBusinessMailContext(input.businessId);
   if (!context) {

@@ -4,7 +4,8 @@
  * in this Firebase-only project.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
-import { join, dirname, relative } from "path";
+import { execFileSync } from "child_process";
+import { join, dirname, relative, sep } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -36,8 +37,25 @@ if (!ok) {
 }
 
 const errors = [];
+const runningOnVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV;
 
-if (existsSync(join(rootDir, "vercel.json"))) {
+function isTrackedByGit(target) {
+  try {
+    execFileSync("git", ["ls-files", "--error-unmatch", "--", target], {
+      cwd: rootDir,
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const vercelConfigPath = join(rootDir, "vercel.json");
+if (
+  existsSync(vercelConfigPath) &&
+  (!runningOnVercel || isTrackedByGit("vercel.json"))
+) {
   errors.push("vercel.json must not exist in the Firebase source-of-truth project.");
 }
 
@@ -71,19 +89,19 @@ const skipDirs = new Set([
   "emulator-data",
 ]);
 const skipFiles = new Set([
-  "scripts\\lockin-check.mjs",
+  "scripts/lockin-check.mjs",
 ]);
 const scanned = new Set();
 
 function scanPath(targetPath) {
   if (!existsSync(targetPath)) return;
-  const normalized = relative(rootDir, targetPath) || ".";
+  const normalized = (relative(rootDir, targetPath) || ".").split(sep).join("/");
   if (scanned.has(normalized)) return;
   scanned.add(normalized);
 
   const stat = statSync(targetPath);
   if (stat.isDirectory()) {
-    const dirName = normalized.split("\\").at(-1) ?? normalized;
+    const dirName = normalized.split("/").at(-1) ?? normalized;
     if (skipDirs.has(dirName)) return;
     for (const entry of readdirSync(targetPath)) {
       scanPath(join(targetPath, entry));
