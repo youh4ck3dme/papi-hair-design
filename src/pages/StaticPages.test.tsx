@@ -46,7 +46,7 @@ describe("static pages", () => {
 
     expect(screen.getByText("PAPI HAIR DESIGN")).toBeInTheDocument();
     expect(screen.getByText("language-toggle")).toBeInTheDocument();
-    expect(screen.getByText("theme-toggle")).toBeInTheDocument();
+    expect(screen.queryByText("theme-toggle")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Rezervovať/i })).toHaveAttribute("href", "/booking");
     expect(screen.getByRole("link", { name: /Prihlásiť/i })).toHaveAttribute("href", "/auth");
   });

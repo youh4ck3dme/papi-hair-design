@@ -26,15 +26,7 @@ interface CreatePublicBookingData {
     note?: string | null;
     payment_method?: string | null;
     idempotency_key?: string;
-    recaptcha_token?: string | null;
     admin_mode?: boolean;
-}
-
-interface RecaptchaVerifyResponse {
-    success: boolean;
-    score?: number;
-    action?: string;
-    "error-codes"?: string[];
 }
 
 interface CreatePublicBookingResult {
@@ -48,10 +40,6 @@ interface CreatePublicBookingResult {
     reused: boolean;
 }
 
-const RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
-const RECAPTCHA_MIN_SCORE = 0.5;
-const RECAPTCHA_EXPECTED_ACTION = "booking";
-
 function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): string | null {
     const forwarded = rawRequest.headers["x-forwarded-for"];
     if (typeof forwarded === "string" && forwarded.trim().length > 0) {
@@ -61,52 +49,6 @@ function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): st
         return forwarded[0]?.trim() || null;
     }
     return rawRequest.socket.remoteAddress ?? null;
-}
-
-async function verifyRecaptchaIfConfigured(recaptchaToken: string | null | undefined, clientIp: string | null): Promise<void> {
-    const recaptchaSecret = process.env.RECAPTCHA_SECRET?.trim();
-    if (!recaptchaSecret) return;
-
-    if (!recaptchaToken || typeof recaptchaToken !== "string") {
-        throw new HttpsError("invalid-argument", "Chýba reCAPTCHA token");
-    }
-
-    const payload = new URLSearchParams();
-    payload.set("secret", recaptchaSecret);
-    payload.set("response", recaptchaToken);
-    if (clientIp) {
-        payload.set("remoteip", clientIp);
-    }
-
-    let verification: RecaptchaVerifyResponse;
-    try {
-        const response = await fetch(RECAPTCHA_VERIFY_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            body: payload.toString()
-        });
-        if (!response.ok) {
-            throw new Error(`reCAPTCHA endpoint returned ${response.status}`);
-        }
-        verification = await response.json() as RecaptchaVerifyResponse;
-    } catch (error) {
-        throw new HttpsError("unavailable", "reCAPTCHA overenie zlyhalo");
-    }
-
-    if (!verification.success) {
-        throw new HttpsError("permission-denied", "reCAPTCHA overenie neprešlo");
-    }
-
-    if (verification.action && verification.action !== RECAPTCHA_EXPECTED_ACTION) {
-        throw new HttpsError("permission-denied", "Neplatná reCAPTCHA akcia");
-    }
-
-    const score = typeof verification.score === "number" ? verification.score : 0;
-    if (score < RECAPTCHA_MIN_SCORE) {
-        throw new HttpsError("permission-denied", "reCAPTCHA skóre je príliš nízke");
-    }
 }
 
 import { checkRateLimit } from "./middleware/rateLimit";
@@ -131,8 +73,6 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
     if (adminMode) {
         const uid = requireAuth(request.auth);
         await requireMembership(uid, business_id, ["owner", "admin"]);
-    } else {
-        await verifyRecaptchaIfConfigured(data.recaptcha_token, extractClientIp(request.rawRequest));
     }
 
     const sanitizedEmail = normalizeEmail(customer_email);

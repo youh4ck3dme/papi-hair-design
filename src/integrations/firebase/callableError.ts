@@ -17,10 +17,6 @@ function resolveErrorCode(error: CallableErrorLike): string | null {
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
-  missing_recaptcha_token: "Prosím potvrďte bezpečnostný overovací krok a skúste to znova.",
-  recaptcha_unavailable: "Bezpečnostné overenie je dočasne nedostupné. Skúste to o chvíľu.",
-  recaptcha_failed: "Bezpečnostné overenie zlyhalo. Obnovte stránku a skúste to znova.",
-  recaptcha_low_score: "Bezpečnostné overenie neprešlo. Skúste to znova.",
   slot_unavailable: "Vybraný termín už nie je dostupný. Vyberte prosím iný čas.",
   hold_expired: "Potvrdzovací čas vypršal. Vytvorte novú rezerváciu.",
   appointment_not_found: "Rezerváciu sa nepodarilo nájsť.",
@@ -38,4 +34,3 @@ export function toCallableErrorMessage(error: unknown, fallback: string): string
   }
   return fallback;
 }
-

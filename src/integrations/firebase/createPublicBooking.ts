@@ -14,7 +14,6 @@ export interface CreatePublicBookingBody {
     customer_phone?: string;
     note?: string | null;
     payment_method?: string | null;
-    recaptcha_token?: string | null;
     admin_mode?: boolean;
 }
 

@@ -22,7 +22,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { isAdminAllowlisted, normalizeEmail } from "@/lib/adminAllowlist";
 import { z } from "zod";
@@ -404,7 +403,6 @@ export default function AuthPage() {
         }}
       >
         <LanguageToggle />
-        <ThemeToggle />
       </div>
 
       <div className="w-full max-w-md min-w-0">

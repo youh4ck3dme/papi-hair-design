@@ -9,10 +9,6 @@ import MonthGrid from "./MonthGrid";
 import { CalendarEventCard } from "./CalendarEventCard";
 import type { NormalizedCalendarEvent } from "@/lib/calendarEventUtils";
 
-vi.mock("@/components/ThemeToggle", () => ({
-  ThemeToggle: () => <div data-testid="theme-toggle" />,
-}));
-
 function appointment(partial: Partial<CalendarAppointment> = {}): CalendarAppointment {
   return {
     id: partial.id ?? "apt-1",
@@ -81,7 +77,7 @@ describe("calendar components", () => {
       />,
     );
     expect(screen.getByText("Dnes")).toBeInTheDocument();
-    expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
+    expect(screen.queryByTestId("theme-toggle")).not.toBeInTheDocument();
   });
 
   it("glass header hides today button for today date", () => {

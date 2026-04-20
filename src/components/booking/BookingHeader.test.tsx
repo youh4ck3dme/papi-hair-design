@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { BookingHeader } from "./BookingHeader";
@@ -12,10 +12,10 @@ vi.mock("@/components/booking/BookingUI", () => ({
 }));
 
 describe("BookingHeader", () => {
-  const renderHeader = (isDark = false, setTheme = vi.fn()) =>
+  const renderHeader = () =>
     render(
       <MemoryRouter>
-        <BookingHeader isDark={isDark} setTheme={setTheme} />
+        <BookingHeader />
       </MemoryRouter>,
     );
 
@@ -37,19 +37,8 @@ describe("BookingHeader", () => {
     expect(screen.getByTestId("language-toggle")).toBeInTheDocument();
   });
 
-  it("calls setTheme with dark when isDark=false and theme button clicked", () => {
-    const setTheme = vi.fn();
-    renderHeader(false, setTheme);
-    const themeBtn = screen.getByRole("button", { name: /Toggle theme/i });
-    fireEvent.click(themeBtn);
-    expect(setTheme).toHaveBeenCalledWith("dark");
-  });
-
-  it("calls setTheme with light when isDark=true and theme button clicked", () => {
-    const setTheme = vi.fn();
-    renderHeader(true, setTheme);
-    const themeBtn = screen.getByRole("button", { name: /Toggle theme/i });
-    fireEvent.click(themeBtn);
-    expect(setTheme).toHaveBeenCalledWith("light");
+  it("does not render a theme toggle button", () => {
+    renderHeader();
+    expect(screen.queryByRole("button", { name: /Toggle theme/i })).not.toBeInTheDocument();
   });
 });

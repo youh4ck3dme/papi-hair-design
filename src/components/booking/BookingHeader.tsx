@@ -1,14 +1,9 @@
 import { LanguageToggle } from "@/components/LanguageToggle";
-import { Moon, Sun, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { GoldText } from "./BookingUI";
 import { useNavigate } from "react-router-dom";
 
-interface BookingHeaderProps {
-    isDark: boolean;
-    setTheme: (theme: string) => void;
-}
-
-export function BookingHeader({ isDark, setTheme }: BookingHeaderProps) {
+export function BookingHeader() {
     const navigate = useNavigate();
     return (
         <header
@@ -35,15 +30,6 @@ export function BookingHeader({ isDark, setTheme }: BookingHeaderProps) {
                 </div>
                 <div className="flex items-center gap-3">
                     <LanguageToggle />
-                    <button
-                        onClick={() => setTheme(isDark ? "light" : "dark")}
-                        aria-label="Toggle theme"
-                        className="flex h-10 w-10 min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-border/60 bg-card transition-all duration-200 hover:border-primary/50 hover:bg-primary/5 active:scale-90"
-                    >
-                        <span className="transition-transform duration-300" style={{ transform: isDark ? 'rotate(0deg)' : 'rotate(-30deg)' }}>
-                            {isDark ? <Sun size={17} className="text-primary" /> : <Moon size={17} className="text-foreground/80" />}
-                        </span>
-                    </button>
                 </div>
             </div>
         </header>

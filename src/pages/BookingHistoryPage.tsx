@@ -21,7 +21,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { LogoIcon } from "@/components/LogoIcon";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { toast } from "sonner";
 
@@ -303,7 +302,6 @@ export default function BookingHistoryPage() {
           </Link>
           <div className="flex items-center gap-1">
             <LanguageToggle />
-            <ThemeToggle />
           </div>
         </div>
 

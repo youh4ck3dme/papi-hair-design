@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { useTheme } from "next-themes";
 import { Loader2 } from "lucide-react";
 import { enGB, sk } from "date-fns/locale";
 import { addDays, format, startOfDay } from "date-fns";
@@ -22,9 +21,6 @@ export default function BookingPage() {
   const { i18n } = useTranslation();
   const currentLang = i18n.language;
   const dateLocale = currentLang === "en" ? enGB : sk;
-
-  const { theme, setTheme } = useTheme();
-  const isDark = theme === "dark";
 
   // Phase 2: Use custom hooks
   const {
@@ -205,7 +201,7 @@ export default function BookingPage() {
       data-testid="booking-page"
     >
       <div className="mx-auto w-full max-w-md overflow-x-hidden shadow-2xl lg:max-w-6xl lg:shadow-none">
-        <BookingHeader isDark={isDark} setTheme={setTheme} />
+        <BookingHeader />
 
         {/* Gold progress bar */}
         {(() => {

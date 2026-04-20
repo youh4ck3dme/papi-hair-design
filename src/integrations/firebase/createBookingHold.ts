@@ -11,7 +11,6 @@ export interface CreateBookingHoldBody {
   customer_email: string;
   customer_phone?: string;
   idempotency_key?: string;
-  recaptcha_token?: string | null;
 }
 
 export interface CreateBookingHoldResponse {
