@@ -7,6 +7,7 @@
         "start": "npm run shell",
         "deploy": "firebase deploy --only functions",
         "logs": "firebase functions:log",
+        "diagnose:smtp": "node ./scripts/smtp-diagnose.cjs",
         "test": "npm run build && vitest run --config vitest.config.ts"
     },
     "engines": {
