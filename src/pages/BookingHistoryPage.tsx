@@ -98,7 +98,7 @@ export default function BookingHistoryPage() {
       setCustomerPhone(response.customer_phone ?? input.phone ?? null);
       setHistoryLoaded(true);
       return true;
-    } catch (error) {
+    } catch {
       setHistoryItems([]);
       setHistoryLoaded(false);
       if (input.accessToken) {
@@ -129,7 +129,7 @@ export default function BookingHistoryPage() {
           },
         },
       });
-      void loadHistory({ accessToken: accessFromQuery, reference: referenceFromQuery });
+      loadHistory({ accessToken: accessFromQuery, reference: referenceFromQuery });
       return;
     }
 
@@ -138,7 +138,7 @@ export default function BookingHistoryPage() {
         ...current,
         reference: persistedAccess.reference,
       }));
-      void loadHistory({
+      loadHistory({
         accessToken: persistedAccess.accessToken,
         reference: persistedAccess.reference,
       });
