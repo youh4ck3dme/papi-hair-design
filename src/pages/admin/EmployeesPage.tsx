@@ -69,6 +69,31 @@ interface ServiceRow {
   name_sk: string;
 }
 
+const PRESET_EMPLOYEE_PHOTOS: Record<string, string> = {
+  mato: "/mato.webp",
+  miska: "/miska.webp",
+  papi: "/papi.webp",
+};
+
+function normalizeEmployeeName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function resolveEmployeePhotoUrl(displayName: string, photoUrl: string | null): string | null {
+  if (photoUrl) return photoUrl;
+
+  const normalizedName = normalizeEmployeeName(displayName);
+  if (normalizedName.includes("mato")) return PRESET_EMPLOYEE_PHOTOS.mato;
+  if (normalizedName.includes("miska")) return PRESET_EMPLOYEE_PHOTOS.miska;
+  if (normalizedName.includes("papi")) return PRESET_EMPLOYEE_PHOTOS.papi;
+
+  return null;
+}
+
 function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let index = 0; index < items.length; index += size) {
@@ -408,6 +433,8 @@ export default function EmployeesPage() {
     setSchedule((current) => ({ ...current, [day]: { ...current[day], [field]: value } }));
   };
 
+  const formPhotoUrl = resolveEmployeePhotoUrl(form.display_name, form.photo_url);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -446,6 +473,7 @@ export default function EmployeesPage() {
               const order = DAYS.map(d => d.key);
               return order.indexOf(a.day_of_week) - order.indexOf(b.day_of_week);
             });
+            const employeePhotoUrl = resolveEmployeePhotoUrl(employee.display_name, employee.photo_url);
 
             return (
               <div
@@ -458,11 +486,11 @@ export default function EmployeesPage() {
                       className="w-12 h-12 rounded-2xl shadow-inner flex items-center justify-center text-white text-lg font-bold bg-cover bg-center overflow-hidden shrink-0"
                       style={{
                         backgroundColor: employee.color,
-                        backgroundImage: employee.photo_url ? `url(${employee.photo_url})` : "none",
+                        backgroundImage: employeePhotoUrl ? `url(${employeePhotoUrl})` : "none",
                         boxShadow: `inset 0 0 10px rgba(0,0,0,0.1), 0 4px 12px ${employee.color}40`
                       }}
                     >
-                      {!employee.photo_url && employee.display_name.charAt(0).toUpperCase()}
+                      {!employeePhotoUrl && employee.display_name.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <h3 className="font-bold text-lg text-foreground truncate group-hover:text-primary transition-colors">
@@ -545,9 +573,9 @@ export default function EmployeesPage() {
                 <div className="flex flex-col items-center gap-2">
                   <div
                     className="relative group cursor-pointer w-24 h-24 rounded-2xl overflow-hidden shadow-lg border-2 border-background flex items-center justify-center text-white text-2xl font-bold bg-cover bg-center shrink-0"
-                    style={{ backgroundColor: form.color, backgroundImage: form.photo_url ? `url(${form.photo_url})` : "none" }}
+                    style={{ backgroundColor: form.color, backgroundImage: formPhotoUrl ? `url(${formPhotoUrl})` : "none" }}
                   >
-                    {!form.photo_url && !uploadingPhoto && form.display_name.charAt(0).toUpperCase()}
+                    {!formPhotoUrl && !uploadingPhoto && form.display_name.charAt(0).toUpperCase()}
                     {uploadingPhoto && <Loader2 className="w-8 h-8 animate-spin text-white" />}
 
                     {!uploadingPhoto && (

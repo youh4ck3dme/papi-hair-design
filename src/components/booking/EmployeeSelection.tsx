@@ -22,11 +22,29 @@ type EmployeeWithProfileFallback = EmployeeRow & {
 };
 
 const PLACEHOLDER_AVATAR_SRC = "/placeholder.svg";
+const EMPLOYEE_FALLBACK_AVATAR_BY_NAME: Record<string, string> = {
+  mato: "/mato.webp",
+  miska: "/miska.webp",
+  papi: "/papi.webp",
+};
 
 function normalizePhotoUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeEmployeeName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function resolveEmployeeFallbackAvatar(displayName: string | null | undefined): string | null {
+  if (!displayName) return null;
+  return EMPLOYEE_FALLBACK_AVATAR_BY_NAME[normalizeEmployeeName(displayName)] ?? null;
 }
 
 function resolveEmployeePhotoUrl(employee: EmployeeRow): string | null {
@@ -85,9 +103,10 @@ export function EmployeeSelection({
             const isSelected = selectedEmployeeId === employee.id;
             const displayName = employee.display_name || t("booking.employeeRole");
             const photoUrl = resolveEmployeePhotoUrl(employee);
+            const fallbackAvatarSrc = resolveEmployeeFallbackAvatar(displayName);
             const avatarSrc = imageLoadErrorByEmployeeId[employee.id]
-              ? PLACEHOLDER_AVATAR_SRC
-              : photoUrl ?? PLACEHOLDER_AVATAR_SRC;
+              ? fallbackAvatarSrc ?? PLACEHOLDER_AVATAR_SRC
+              : photoUrl ?? fallbackAvatarSrc ?? PLACEHOLDER_AVATAR_SRC;
 
             return (
               <button
@@ -109,7 +128,8 @@ export function EmployeeSelection({
                   loading="lazy"
                   onError={(event) => {
                     if (imageLoadErrorByEmployeeId[employee.id]) return;
-                    if (event.currentTarget.getAttribute("src") === PLACEHOLDER_AVATAR_SRC) return;
+                    const currentSrc = event.currentTarget.getAttribute("src");
+                    if (currentSrc === PLACEHOLDER_AVATAR_SRC || currentSrc === fallbackAvatarSrc) return;
                     setImageLoadErrorByEmployeeId((current) => ({ ...current, [employee.id]: true }));
                   }}
                 />

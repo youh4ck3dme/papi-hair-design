@@ -225,6 +225,53 @@ describe("EmployeesPage", () => {
     expect(screen.getByText("Marek Urban")).toBeInTheDocument();
   });
 
+  it("uses bundled preset photos for Mato, Miska and Papi when remote photo is missing", async () => {
+    fixtures.employees = [
+      {
+        id: "emp-mato",
+        display_name: "Mato",
+        email: null,
+        phone: null,
+        color: "#22c55e",
+        photo_url: null,
+        service_mode: "all",
+        is_active: true,
+      },
+      {
+        id: "emp-miska",
+        display_name: "Miska",
+        email: null,
+        phone: null,
+        color: "#a855f7",
+        photo_url: null,
+        service_mode: "all",
+        is_active: true,
+      },
+      {
+        id: "emp-papi",
+        display_name: "Papi",
+        email: null,
+        phone: null,
+        color: "#f59e0b",
+        photo_url: null,
+        service_mode: "all",
+        is_active: true,
+      },
+    ];
+    fixtures.schedules = [];
+
+    const { container } = render(<EmployeesPage />);
+    await screen.findByText("Mato");
+
+    const styledAvatars = Array.from(container.querySelectorAll("div[style]")).map((element) =>
+      (element as HTMLDivElement).style.backgroundImage,
+    );
+
+    expect(styledAvatars.some((value) => value.includes("/mato.webp"))).toBe(true);
+    expect(styledAvatars.some((value) => value.includes("/miska.webp"))).toBe(true);
+    expect(styledAvatars.some((value) => value.includes("/papi.webp"))).toBe(true);
+  });
+
   it("shows loading state before data arrives", async () => {
     render(<EmployeesPage />);
     expect(screen.getByText("Načítavam zoznam tímu...")).toBeInTheDocument();

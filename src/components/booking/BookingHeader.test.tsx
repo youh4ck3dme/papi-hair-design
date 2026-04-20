@@ -23,7 +23,7 @@ describe("BookingHeader", () => {
     renderHeader();
     const logo = screen.getByAltText("PAPI HAIR DESIGN");
     expect(logo).toBeInTheDocument();
-    expect(logo).toHaveAttribute("src", "/favicon.png");
+    expect(logo).toHaveAttribute("src", "/favicon-32x32.png");
   });
 
   it("renders salon name text", () => {

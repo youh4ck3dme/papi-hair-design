@@ -72,6 +72,24 @@ describe("EmployeeSelection", () => {
     });
   });
 
+  it("uses bundled local fallback photos for known stylists without remote images", () => {
+    render(
+      <EmployeeSelection
+        employees={[
+          makeEmployee({ id: "emp-mato", display_name: "Mato", photo_url: null }),
+          makeEmployee({ id: "emp-miska", display_name: "Miska", photo_url: null }),
+          makeEmployee({ id: "emp-papi", display_name: "Papi", photo_url: null }),
+        ]}
+        selectedEmployeeId={null}
+        setSelectedEmployeeId={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("img", { name: "Mato" })).toHaveAttribute("src", "/mato.webp");
+    expect(screen.getByRole("img", { name: "Miska" })).toHaveAttribute("src", "/miska.webp");
+    expect(screen.getByRole("img", { name: "Papi" })).toHaveAttribute("src", "/papi.webp");
+  });
+
   it("renders skeleton cards while loading", () => {
     render(
       <EmployeeSelection
@@ -85,4 +103,3 @@ describe("EmployeeSelection", () => {
     expect(screen.getAllByTestId("employee-card-skeleton")).toHaveLength(3);
   });
 });
-
