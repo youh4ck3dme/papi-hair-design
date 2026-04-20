@@ -29,15 +29,68 @@ async function dismissCookieConsent(page) {
   return true;
 }
 
+function normalizeText(value) {
+  return value
+    .normalize("NFD")
+    .replaceAll(/[\u0300-\u036f]/g, "")
+    .replaceAll(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+async function clickFirstVisibleSubcategory(page, categoryStep) {
+  const buttons = categoryStep.locator("button");
+  const buttonCount = await buttons.count();
+
+  for (let i = 0; i < buttonCount; i += 1) {
+    const button = buttons.nth(i);
+    if (!(await button.isVisible({ timeout: 500 }).catch(() => false))) continue;
+
+    const text = normalizeText((await button.textContent().catch(() => "")) ?? "");
+    if (!text) continue;
+    if (text.includes("sluzby")) continue;
+    if (text.includes("otvorene")) continue;
+    if (text.includes("vyberte")) continue;
+    if (text.includes("min")) continue;
+    if (text.includes("€") || text.includes("eur")) continue;
+
+    await button.click({ force: true });
+    await page.waitForTimeout(700);
+    return true;
+  }
+
+  return false;
+}
+
 async function selectFirstService(page) {
   const categoryStep = page.getByTestId("booking-step-category");
+  const employeeStep = page.getByTestId("booking-step-employee");
   await categoryStep.waitFor({ state: "visible", timeout: 15_000 });
 
-  const firstServiceDirect = categoryStep.locator('button:has-text("min")').first();
-  if (await firstServiceDirect.isVisible({ timeout: 1200 }).catch(() => false)) {
-    await firstServiceDirect.click({ force: true });
-    return;
-  }
+  const clickVisibleService = async () => {
+    const buttons = page.locator("button");
+    const buttonCount = await buttons.count();
+
+    for (let index = 0; index < buttonCount; index += 1) {
+      const button = buttons.nth(index);
+      if (!(await button.isVisible({ timeout: 500 }).catch(() => false))) continue;
+
+      const text = normalizeText((await button.textContent().catch(() => "")) ?? "");
+      if (!text.includes("min")) continue;
+
+      await button.click({ force: true });
+      await page.waitForTimeout(700);
+
+      const employeeVisible = await employeeStep.isVisible({ timeout: 2500 }).catch(() => false);
+      if (employeeVisible) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  if (await clickVisibleService()) return;
 
   const categoryButtons = categoryStep.locator("div.relative.flex").first().locator("button");
   const categoryCount = await categoryButtons.count();
@@ -49,20 +102,10 @@ async function selectFirstService(page) {
     await categoryButton.click({ force: true });
     await page.waitForTimeout(700);
 
-    if (await firstServiceDirect.isVisible({ timeout: 1200 }).catch(() => false)) {
-      await firstServiceDirect.click({ force: true });
-      return;
-    }
+    if (await clickVisibleService()) return;
 
-    const firstSubcategory = page.locator('button[class*="uppercase"][class*="tracking-wider"]').first();
-    if (await firstSubcategory.isVisible({ timeout: 1200 }).catch(() => false)) {
-      await firstSubcategory.click({ force: true });
-      await page.waitForTimeout(600);
-      if (await firstServiceDirect.isVisible({ timeout: 1200 }).catch(() => false)) {
-        await firstServiceDirect.click({ force: true });
-        return;
-      }
-    }
+    await clickFirstVisibleSubcategory(page, categoryStep);
+    if (await clickVisibleService()) return;
   }
 
   throw new Error("No visible service found in booking category step");
@@ -107,6 +150,28 @@ async function selectSlot(page) {
   }
 
   throw new Error("No date with available time slots found");
+}
+
+async function selectFirstEmployee(page) {
+  const employeeOptions = page.locator('[data-testid^="employee-card-"]');
+  const employeeCount = await employeeOptions.count();
+
+  if (employeeCount === 0) {
+    throw new Error("Employee step rendered but no employee options are selectable");
+  }
+
+  for (let index = 0; index < employeeCount; index += 1) {
+    const employeeOption = employeeOptions.nth(index);
+    if (!(await employeeOption.isVisible({ timeout: 1000 }).catch(() => false))) continue;
+
+    await employeeOption.click({ force: true }).catch(async () => {
+      await employeeOption.evaluate((el) => el.click());
+    });
+    await page.waitForTimeout(700);
+    return employeeCount;
+  }
+
+  throw new Error("Employee step rendered but all employee options are hidden");
 }
 
 function hasHorizontalOverflow(metrics) {
@@ -154,11 +219,7 @@ for (const viewport of viewports) {
     const employeeStep = page.getByTestId("booking-step-employee");
     await employeeStep.waitFor({ state: "visible", timeout: 12_000 });
 
-    const employeeButtons = employeeStep.locator("button");
-    const employeeCount = await employeeButtons.count();
-    if (employeeCount < 1) {
-      throw new Error("Employee step rendered but no employee options are selectable");
-    }
+    const employeeCount = await selectFirstEmployee(page);
 
     await selectSlot(page);
     await page.getByTestId("booking-step-details").waitFor({ state: "visible", timeout: 18_000 });

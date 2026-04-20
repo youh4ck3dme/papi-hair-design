@@ -28,7 +28,7 @@ export function BookingHeader({ isDark, setTheme }: BookingHeaderProps) {
                     >
                         <ChevronLeft size={18} className="text-foreground/70" />
                     </button>
-                    <img src="/favicon.png" alt="PAPI HAIR DESIGN" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                    <img src="/favicon-32x32.png" alt="PAPI HAIR DESIGN" className="w-7 h-7 rounded-full object-cover shrink-0" />
                     <span className="text-[14px] font-bold tracking-widest uppercase font-serif sm:text-[15px]">
                         PAPI <GoldText>HAIR</GoldText> DESIGN
                     </span>

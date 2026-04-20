@@ -7,7 +7,10 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { collection, getDocs, limit, query, where } from "firebase/firestore";
@@ -24,6 +27,8 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { isAdminAllowlisted, normalizeEmail } from "@/lib/adminAllowlist";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
+import { DEFAULT_BUSINESS_ID } from "@/lib/businessIds";
+import { queueRegistrationWelcomeEmail } from "@/integrations/firebase/queueRegistrationWelcomeEmail";
 
 const PUBLIC_BOOKING_URL = "https://booking.papihairdesign.sk/booking";
 const PUBLIC_BOOKING_PATH = "/booking";
@@ -110,14 +115,16 @@ export type AuthMode = "login" | "register" | "forgot";
 // ---------------------------------------------------------------------------
 
 async function tryClaimBooking(claimToken: string): Promise<boolean> {
+  if (!claimToken) {
+    return false;
+  }
+
   try {
     const claimBookingFn = httpsCallable(functions, "claimBooking");
     await claimBookingFn({ claim_token: claimToken });
-    sessionStorage.removeItem("claim_token");
     return true;
   } catch (err) {
     console.warn("Claim booking failed:", err);
-    sessionStorage.removeItem("claim_token");
     return false;
   }
 }
@@ -143,7 +150,7 @@ function useAuthForm() {
   const [searchParams] = useSearchParams();
   const urlMode = searchParams.get("mode");
   const urlEmail = searchParams.get("email") ?? "";
-  const claimToken = sessionStorage.getItem("claim_token") ?? "";
+  const claimToken = searchParams.get("claim")?.trim() ?? "";
 
   const [mode, setMode] = useState<AuthMode>(
     urlMode === "register" ? "register" : "login"
@@ -151,9 +158,7 @@ function useAuthForm() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: urlEmail, password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [rememberMe, setRememberMe] = useState(
-    () => localStorage.getItem("auth_remember_me") === "true"
-  );
+  const [rememberMe, setRememberMe] = useState(true);
 
   const setField = useCallback((key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -161,13 +166,13 @@ function useAuthForm() {
 
   const setRememberMePersisted = useCallback((checked: boolean) => {
     setRememberMe(checked);
-    if (checked) localStorage.setItem("auth_remember_me", "true");
-    else localStorage.removeItem("auth_remember_me");
   }, []);
 
-  const persistSessionPreference = useCallback((remember: boolean) => {
-    if (remember) sessionStorage.removeItem("auth_session_tab_only");
-    else sessionStorage.setItem("auth_session_tab_only", "true");
+  const applyAuthPersistence = useCallback(async (remember: boolean) => {
+    await setPersistence(
+      auth,
+      remember ? browserLocalPersistence : browserSessionPersistence,
+    );
   }, []);
 
   const handleLogin = useCallback(
@@ -182,6 +187,7 @@ function useAuthForm() {
       setErrors({});
       setLoading(true);
       try {
+        await applyAuthPersistence(rememberMe);
         const credential = await signInWithEmailAndPassword(auth, form.email, form.password);
         await redirectAfterAuthWithMembership(
           navigate,
@@ -194,7 +200,7 @@ function useAuthForm() {
         setLoading(false);
       }
     },
-    [form, navigate, t]
+    [applyAuthPersistence, form, navigate, rememberMe, t]
   );
 
   const handleRegister = useCallback(
@@ -209,8 +215,16 @@ function useAuthForm() {
       setErrors({});
       setLoading(true);
       try {
+        await applyAuthPersistence(rememberMe);
         const credential = await createUserWithEmailAndPassword(auth, form.email, form.password);
         const claimed = await tryClaimBooking(claimToken);
+        try {
+          await queueRegistrationWelcomeEmail({
+            business_id: DEFAULT_BUSINESS_ID,
+          });
+        } catch (emailError) {
+          console.warn("Registration welcome email failed:", emailError);
+        }
         toast.success(claimed ? t("auth.toastRegisterOkBooking") : t("auth.toastRegisterOk"));
         await redirectAfterAuthWithMembership(
           navigate,
@@ -223,22 +237,20 @@ function useAuthForm() {
         setLoading(false);
       }
     },
-    [form, claimToken, navigate, t]
+    [applyAuthPersistence, claimToken, form, navigate, rememberMe, t]
   );
 
   const handleGoogleLogin = useCallback(async () => {
     setLoading(true);
     try {
+      await applyAuthPersistence(rememberMe);
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const userEmail = result.user.email;
 
-      const token = sessionStorage.getItem("claim_token");
-      if (token) {
-        const claimed = await tryClaimBooking(token);
-        if (claimed) {
-          toast.success(t("auth.toastLoginOkBooking"));
-        }
+      const claimed = await tryClaimBooking(claimToken);
+      if (claimed) {
+        toast.success(t("auth.toastLoginOkBooking"));
       }
       await redirectAfterAuthWithMembership(navigate, result.user.uid, userEmail);
     } catch (err: unknown) {
@@ -246,7 +258,7 @@ function useAuthForm() {
     } finally {
       setLoading(false);
     }
-  }, [navigate, t]);
+  }, [applyAuthPersistence, claimToken, navigate, rememberMe, t]);
 
   const handleForgot = useCallback(
     async (e: React.FormEvent) => {
@@ -381,7 +393,7 @@ export default function AuthPage() {
 
   return (
     <div
-      className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-secondary to-background p-4 safe-x safe-y relative overflow-x-hidden"
+      className="min-h-[100dvh] flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(201,168,76,0.10),_transparent_32%),linear-gradient(135deg,_#16120e_0%,_#0d0b09_52%,_#080808_100%)] p-4 safe-x safe-y relative overflow-x-hidden"
       data-testid="auth-page"
     >
       <div
@@ -401,7 +413,10 @@ export default function AuthPage() {
           <span className="text-2xl font-bold text-foreground">PAPI HAIR DESIGN</span>
         </div>
 
-        <Card className="shadow-lg border-gold/20 bg-card/90 backdrop-blur-sm">
+        <Card
+          className="rounded-[6px] border-[#C9A84C]/18 bg-[#12100d]/88 shadow-[0_24px_70px_-36px_rgba(0,0,0,0.85),0_0_0_1px_rgba(201,168,76,0.08)] backdrop-blur-md"
+          data-testid="auth-card"
+        >
           <CardHeader>
             <CardTitle>{copy.title}</CardTitle>
             <CardDescription>{copy.description}</CardDescription>

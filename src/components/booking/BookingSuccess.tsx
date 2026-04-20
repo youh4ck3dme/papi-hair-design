@@ -77,7 +77,7 @@ export function BookingSuccess({
             <header className="sticky top-0 z-50 flex flex-col bg-background/95 border-b border-border/60 backdrop-blur-md">
                 <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
                 <div className="flex items-center gap-2.5 px-5 py-3.5">
-                    <img src="/favicon.png" alt="PAPI HAIR DESIGN" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                    <img src="/favicon-32x32.png" alt="PAPI HAIR DESIGN" className="w-8 h-8 rounded-full object-cover shrink-0" />
                     <span className="text-[15px] font-bold tracking-widest uppercase font-serif">
                         PAPI <GoldText>HAIR</GoldText> DESIGN
                     </span>

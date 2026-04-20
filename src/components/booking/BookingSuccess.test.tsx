@@ -85,6 +85,22 @@ describe("BookingSuccess", () => {
     expect(screen.getAllByText(/PAPI HAIR DESIGN/i).length).toBeGreaterThan(0);
   });
 
+  it("renders the updated header logo asset", () => {
+    render(
+      <BookingSuccess
+        bookingResult={makeResult()}
+        selectedService={makeService()}
+        selectedFullDate={new Date(2026, 3, 20)}
+        selectedTime="10:30"
+        dateLocale={undefined}
+      />,
+      { wrapper }
+    );
+
+    const logo = screen.getByAltText("PAPI HAIR DESIGN");
+    expect(logo).toHaveAttribute("src", "/favicon-32x32.png");
+  });
+
   it("renders history link with access token", () => {
     render(
       <BookingSuccess

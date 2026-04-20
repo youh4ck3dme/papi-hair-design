@@ -14,6 +14,7 @@ import { db, functions } from "@/integrations/firebase/config";
 import { collection, query, where, getDocs, getDoc, doc, updateDoc, addDoc, orderBy } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { toast } from "sonner";
+import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
 import GlassHeader from "./GlassHeader";
 import MonthGrid from "./MonthGrid";
 import WeekTimeline from "./WeekTimeline";
@@ -387,15 +388,16 @@ export default function MobileCalendarShell() {
     }
   };
 
-  const handleCancel = async (id: string) => {
-    try {
-      await updateDoc(doc(db, "appointments", id), {
-        status: "cancelled",
-        updated_at: new Date().toISOString()
-      });
-      toast.success("Rezervácia zrušená");
-      setDetailOpen(false);
-      await loadAppointments();
+    const handleCancel = async (id: string) => {
+      try {
+        await adminUpdateBookingStatus({
+          business_id: DEMO_BUSINESS_ID,
+          appointment_id: id,
+          status: "cancelled",
+        });
+        toast.success("Rezervácia zrušená");
+        setDetailOpen(false);
+        await loadAppointments();
     } catch (error: any) {
       toast.error(error.message || "Nepodarilo sa zrušiť rezerváciu");
     }

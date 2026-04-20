@@ -8,7 +8,7 @@ import {
   ensureAllowedAdminTransition,
   type AdminBookingStatus,
 } from "./bookingStatus";
-import { queueCustomerCancellationEmail } from "./emailQueue";
+import { queueAdminCustomerCancellationEmail, queueCustomerCancellationEmail } from "./emailQueue";
 import { appendAppointmentStatusAuditEntry } from "./auditLog";
 
 interface AdminUpdateBookingStatusData {
@@ -17,86 +17,169 @@ interface AdminUpdateBookingStatusData {
   status: AdminBookingStatus;
 }
 
+function resolveStatusPayload(data: AdminUpdateBookingStatusData) {
+  const { business_id, appointment_id, status } = data;
+  if (!business_id || !appointment_id || !status) {
+    throw new HttpsError("invalid-argument", "Missing booking status payload");
+  }
+
+  return { businessId: business_id, appointmentId: appointment_id, status };
+}
+
+async function loadBusinessAppointment(
+  db: FirebaseFirestore.Firestore,
+  appointmentId: string,
+  businessId: string
+): Promise<Record<string, any>> {
+  const appointmentSnap = await db.collection("appointments").doc(appointmentId).get();
+  if (!appointmentSnap.exists) {
+    throw new HttpsError("not-found", "Appointment not found");
+  }
+
+  const appointment = appointmentSnap.data() as Record<string, any>;
+  if (appointment.business_id !== businessId) {
+    throw new HttpsError("permission-denied", "Appointment does not belong to this business");
+  }
+
+  return appointment;
+}
+
+function resolveAppointmentStatus(appointment: Record<string, any>): string {
+  return typeof appointment.status === "string" ? appointment.status : "pending";
+}
+
+async function appendAdminStatusAudit(
+  db: FirebaseFirestore.Firestore,
+  appointmentId: string,
+  businessId: string,
+  previousStatus: string,
+  nextStatus: string,
+  uid: string
+) {
+  try {
+    await appendAppointmentStatusAuditEntry(db, {
+      appointmentId,
+      businessId,
+      previousStatus,
+      nextStatus,
+      actorType: "admin",
+      actorUid: uid,
+    });
+  } catch (error) {
+    functions.logger.warn("adminUpdateBookingStatus: failed to append audit entry", {
+      appointment_id: appointmentId,
+      business_id: businessId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+function resolveCancellationEmailPayload(appointment: Record<string, any>, fallbackStartAtIso: string) {
+  const customerEmail = typeof appointment.customer_email === "string" ? appointment.customer_email.trim() : "";
+  if (!customerEmail) {
+    return null;
+  }
+
+  return {
+    customerEmail,
+    customerName: typeof appointment.customer_name === "string" ? appointment.customer_name : null,
+    customerPhone: typeof appointment.customer_phone === "string" ? appointment.customer_phone : null,
+    serviceName: typeof appointment.service_name === "string" ? appointment.service_name : null,
+    startAtIso: typeof appointment.start_at === "string" ? appointment.start_at : fallbackStartAtIso,
+  };
+}
+
+async function queueAdminCancellationNotifications(input: {
+  businessId: string;
+  appointmentId: string;
+  appointment: Record<string, any>;
+  fallbackStartAtIso: string;
+}) {
+  const payload = resolveCancellationEmailPayload(input.appointment, input.fallbackStartAtIso);
+  if (!payload) {
+    return;
+  }
+
+  try {
+    await queueCustomerCancellationEmail({
+      businessId: input.businessId,
+      appointmentId: input.appointmentId,
+      customerEmail: payload.customerEmail,
+      customerName: payload.customerName,
+      serviceName: payload.serviceName,
+      startAtIso: payload.startAtIso,
+      cancelledBy: "admin",
+    });
+  } catch (error) {
+    functions.logger.warn("adminUpdateBookingStatus: queue cancellation email failed", {
+      appointment_id: input.appointmentId,
+      business_id: input.businessId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  try {
+    await queueAdminCustomerCancellationEmail({
+      businessId: input.businessId,
+      appointmentId: input.appointmentId,
+      customerEmail: payload.customerEmail,
+      customerPhone: payload.customerPhone,
+      customerName: payload.customerName,
+      serviceName: payload.serviceName,
+      startAtIso: payload.startAtIso,
+      cancelledBy: "admin",
+    });
+  } catch (error) {
+    functions.logger.warn("adminUpdateBookingStatus: queue admin cancellation email failed", {
+      appointment_id: input.appointmentId,
+      business_id: input.businessId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export const adminUpdateBookingStatus = functions.https.onCall(
   { region: "europe-west1" },
   async (request: CallableRequest<AdminUpdateBookingStatusData>) => {
     const uid = requireAuth(request.auth);
-    const { business_id, appointment_id, status } = request.data;
+    const { businessId, appointmentId, status } = resolveStatusPayload(request.data);
 
-    if (!business_id || !appointment_id || !status) {
-      throw new HttpsError("invalid-argument", "Missing booking status payload");
-    }
-
-    await requireMembership(uid, business_id);
+    await requireMembership(uid, businessId);
     assertValidAdminStatus(status);
 
     const db = getFirestore();
-    const appointmentRef = db.collection("appointments").doc(appointment_id);
-    const appointmentSnap = await appointmentRef.get();
-    if (!appointmentSnap.exists) {
-      throw new HttpsError("not-found", "Appointment not found");
-    }
-
-    const appointment = appointmentSnap.data() as Record<string, any>;
-    if (appointment.business_id !== business_id) {
-      throw new HttpsError("permission-denied", "Appointment does not belong to this business");
-    }
-
-    const currentStatus =
-      typeof appointment.status === "string" ? appointment.status : "pending";
+    const appointmentRef = db.collection("appointments").doc(appointmentId);
+    const appointment = await loadBusinessAppointment(db, appointmentId, businessId);
+    const currentStatus = resolveAppointmentStatus(appointment);
     ensureAllowedAdminTransition(currentStatus, status);
 
     if (currentStatus === status) {
       return {
         success: true,
-        appointment_id,
+        appointment_id: appointmentId,
         status,
       };
     }
 
     const nowIso = new Date().toISOString();
-    await appointmentRef.update(buildBookingStatusUpdate(status, nowIso));
+    await appointmentRef.update(
+      buildBookingStatusUpdate(status, nowIso, status === "cancelled" ? { cancelledBy: "admin" } : {})
+    );
 
-    try {
-      await appendAppointmentStatusAuditEntry(db, {
-        appointmentId: appointment_id,
-        businessId: business_id,
-        previousStatus: currentStatus,
-        nextStatus: status,
-        actorType: "admin",
-        actorUid: uid,
-      });
-    } catch (error) {
-      functions.logger.warn("adminUpdateBookingStatus: failed to append audit entry", {
-        appointment_id,
-        business_id,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    await appendAdminStatusAudit(db, appointmentId, businessId, currentStatus, status, uid);
 
-    if (status === "cancelled" && typeof appointment.customer_email === "string" && appointment.customer_email.trim().length > 0) {
-      try {
-        await queueCustomerCancellationEmail({
-          businessId: business_id,
-          appointmentId: appointment_id,
-          customerEmail: appointment.customer_email,
-          customerName: typeof appointment.customer_name === "string" ? appointment.customer_name : null,
-          serviceName: typeof appointment.service_name === "string" ? appointment.service_name : null,
-          startAtIso: typeof appointment.start_at === "string" ? appointment.start_at : nowIso,
-          cancelledBy: "admin",
-        });
-      } catch (error) {
-        functions.logger.warn("adminUpdateBookingStatus: queue cancellation email failed", {
-          appointment_id,
-          business_id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
+    if (status === "cancelled") {
+      await queueAdminCancellationNotifications({
+        businessId,
+        appointmentId,
+        appointment,
+        fallbackStartAtIso: nowIso,
+      });
     }
 
     return {
       success: true,
-      appointment_id,
+      appointment_id: appointmentId,
       status,
     };
   }

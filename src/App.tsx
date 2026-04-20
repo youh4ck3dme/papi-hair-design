@@ -6,9 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { ThemeProvider } from "next-themes";
-import { SpeedInsights } from "@vercel/speed-insights/react";
 
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { usePageAnalytics } from "@/hooks/usePageAnalytics";
 import { Loader2 } from "lucide-react";
 
@@ -71,21 +70,6 @@ function useCanonicalHostRedirect() {
   }, []);
 }
 
-/** Speed Insights script is only served at /_vercel/... on Vercel; elsewhere it 404s. Render only on Vercel. */
-function useSpeedInsightsEnabled() {
-  const [enabled, setEnabled] = useState(false);
-  useEffect(() => {
-    const host =
-      typeof globalThis.window !== "undefined"
-        ? globalThis.window.location.hostname
-        : "";
-    const isVercel =
-      host.endsWith(".vercel.app") || import.meta.env.VITE_VERCEL === "true";
-    setEnabled(!!isVercel);
-  }, []);
-  return enabled;
-}
-
 function AnalyticsTracker() {
   usePageAnalytics();
   return null;
@@ -93,7 +77,6 @@ function AnalyticsTracker() {
 
 const App = () => {
   useCanonicalHostRedirect();
-  const speedInsightsEnabled = useSpeedInsightsEnabled();
   const salonLoginEnabled =
     import.meta.env.DEV || import.meta.env.VITE_ENABLE_SALON_LOGIN === "true";
   const bootstrapEnabled =
@@ -215,7 +198,6 @@ const App = () => {
               </Suspense>
             </AuthProvider>
           </BrowserRouter>
-          {speedInsightsEnabled && <SpeedInsights />}
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>
