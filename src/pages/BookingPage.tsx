@@ -273,7 +273,10 @@ export default function BookingPage() {
                     <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/[0.08] text-gold">
                       <Phone className="h-4 w-4" strokeWidth={1.8} />
                     </div>
-                    <p className="min-w-0 text-sm leading-7 text-text-caption md:text-base">
+                    <p
+                      data-testid="booking-papi-consultation-text"
+                      className="min-w-0 text-sm leading-7 text-white/82 md:text-base"
+                    >
                         {currentLang === "en"
                           ? 'Appointments with Róbert Papcun "PAPI" require a consultation, which you can arrange by phone.'
                           : 'Rezervácie k Róbertovi Papcunovi "PAPI" si vyžadujú konzultáciu, ktorú si viete dohodnúť telefonicky.'}
@@ -295,7 +298,7 @@ export default function BookingPage() {
                     </div>
                   </div>
                 </div>
-                <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+                <div className="mt-5 hidden flex-wrap justify-center gap-2.5 sm:flex">
                   {[
                     currentLang === "en" ? "Men's services" : "Pánske služby",
                     currentLang === "en" ? "Women's services" : "Dámske služby",

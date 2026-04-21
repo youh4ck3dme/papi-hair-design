@@ -190,7 +190,9 @@ describe("BookingPage stylist step flow", () => {
   it("renders the PAPI consultation info block with direct call actions", () => {
     render(<BookingPage />);
 
-    expect(screen.getByText(/Rezervácie k Róbertovi Papcunovi "PAPI" si vyžadujú konzultáciu/i)).toBeInTheDocument();
+    const consultationText = screen.getByTestId("booking-papi-consultation-text");
+    expect(consultationText).toBeInTheDocument();
+    expect(consultationText.className).toContain("text-white/82");
     const phoneLink = screen.getByRole("link", { name: /\+421 949 459 624/i });
     const callLink = screen.getByRole("link", { name: /Volať/i });
 
@@ -199,5 +201,13 @@ describe("BookingPage stylist step flow", () => {
     expect(phoneLink.className).toContain("rounded-[7px]");
     expect(callLink.className).toContain("rounded-[7px]");
     expect(screen.queryByText(/tel\. č\.: \+421 949 459 624/i)).not.toBeInTheDocument();
+  });
+
+  it("hides the top category pills on mobile-first layout to prioritize subcategories", () => {
+    render(<BookingPage />);
+
+    const menPill = screen.getByText(/Pánske služby/i);
+    expect(menPill.parentElement?.className).toContain("hidden");
+    expect(menPill.parentElement?.className).toContain("sm:flex");
   });
 });
