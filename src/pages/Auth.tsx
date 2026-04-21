@@ -106,6 +106,26 @@ function parseZodErrors(error: z.ZodError): Record<string, string> {
   return errs;
 }
 
+function getSubmittedFormValues(
+  event: React.FormEvent<HTMLFormElement>,
+  fallback: { email: string; password: string },
+) {
+  const formData = new FormData(event.currentTarget);
+  const submittedEmail = formData.get("email");
+  const submittedPassword = formData.get("password");
+
+  const email =
+    typeof submittedEmail === "string" && submittedEmail.trim().length > 0
+      ? submittedEmail.trim()
+      : fallback.email.trim();
+  const password =
+    typeof submittedPassword === "string" && submittedPassword.length > 0
+      ? submittedPassword
+      : fallback.password;
+
+  return { email, password };
+}
+
 // ---------------------------------------------------------------------------
 // Auth mode copy
 // ---------------------------------------------------------------------------
@@ -258,10 +278,13 @@ function useAuthForm() {
   }, [fullNameHint]);
 
   const handleLogin = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      const submittedForm = getSubmittedFormValues(e, form);
+      setForm(submittedForm);
+
       const { loginSchema } = buildSchemas(t);
-      const result = loginSchema.safeParse(form);
+      const result = loginSchema.safeParse(submittedForm);
       if (!result.success) {
         setErrors(parseZodErrors(result.error));
         return;
@@ -270,7 +293,7 @@ function useAuthForm() {
       setLoading(true);
       try {
         await applyAuthPersistence(rememberMe);
-        const credential = await signInWithEmailAndPassword(auth, form.email, form.password);
+        const credential = await signInWithEmailAndPassword(auth, submittedForm.email, submittedForm.password);
         await syncProfile(credential.user);
         const claimed = await tryClaimBooking(claimToken);
         if (claimed) {
@@ -279,7 +302,7 @@ function useAuthForm() {
         await redirectAfterAuthWithMembership(
           navigate,
           credential.user.uid,
-          credential.user.email ?? form.email
+          credential.user.email ?? submittedForm.email
         );
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : t("auth.toastLoginFail"));
@@ -291,10 +314,13 @@ function useAuthForm() {
   );
 
   const handleRegister = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      const submittedForm = getSubmittedFormValues(e, form);
+      setForm(submittedForm);
+
       const { registerSchema } = buildSchemas(t);
-      const result = registerSchema.safeParse(form);
+      const result = registerSchema.safeParse(submittedForm);
       if (!result.success) {
         setErrors(parseZodErrors(result.error));
         return;
@@ -304,8 +330,8 @@ function useAuthForm() {
       try {
         await applyAuthPersistence(rememberMe);
         const credential = auth.currentUser?.isAnonymous
-          ? await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(form.email.trim(), form.password))
-          : await createUserWithEmailAndPassword(auth, form.email.trim(), form.password);
+          ? await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(submittedForm.email, submittedForm.password))
+          : await createUserWithEmailAndPassword(auth, submittedForm.email, submittedForm.password);
         await syncProfile(credential.user);
         const claimed = await tryClaimBooking(claimToken);
         try {
@@ -319,7 +345,7 @@ function useAuthForm() {
         await redirectAfterAuthWithMembership(
           navigate,
           credential.user.uid,
-          credential.user.email ?? form.email
+          credential.user.email ?? submittedForm.email
         );
       } catch (err: unknown) {
         if (isExistingAccountError(err)) {
@@ -333,7 +359,7 @@ function useAuthForm() {
         setLoading(false);
       }
     },
-    [applyAuthPersistence, claimToken, form.email, form.password, navigate, rememberMe, syncProfile, t]
+    [applyAuthPersistence, claimToken, form, navigate, rememberMe, syncProfile, t]
   );
 
   const handleGoogleLogin = useCallback(async () => {
@@ -373,15 +399,18 @@ function useAuthForm() {
   }, [applyAuthPersistence, claimToken, navigate, rememberMe, syncProfile, t]);
 
   const handleForgot = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      if (!form.email) {
+      const submittedForm = getSubmittedFormValues(e, form);
+      setForm((current) => ({ ...current, email: submittedForm.email }));
+
+      if (!submittedForm.email) {
         setErrors({ email: t("auth.toastEnterEmail") });
         return;
       }
       setLoading(true);
       try {
-        await sendPasswordResetEmail(auth, form.email);
+        await sendPasswordResetEmail(auth, submittedForm.email);
         toast.success(t("auth.toastResetSent"));
         setMode("login");
       } catch (err: unknown) {
@@ -390,7 +419,7 @@ function useAuthForm() {
         setLoading(false);
       }
     },
-    [form.email, t]
+    [form, t]
   );
 
   const handleFormSubmit = getFormSubmitHandler(mode, handleLogin, handleRegister, handleForgot);
@@ -538,8 +567,12 @@ export default function AuthPage() {
                 <Label htmlFor="email">{t("auth.email")}</Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder={t("auth.emailPlaceholder")}
                   value={form.email}
                   onChange={setField("email")}
@@ -554,8 +587,12 @@ export default function AuthPage() {
                   <Label htmlFor="password">{t("auth.password")}</Label>
                   <Input
                     id="password"
+                    name="password"
                     type="password"
                     autoComplete={mode === "register" ? "new-password" : "current-password"}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     placeholder="••••••••"
                     value={form.password}
                     onChange={setField("password")}

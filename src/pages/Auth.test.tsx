@@ -212,6 +212,32 @@ describe("AuthPage", () => {
     expect(toastSuccess).toHaveBeenCalledWith("Prihlásenie úspešné. Rezervácia bola prepojená s vaším účtom.");
   });
 
+  it("uses submitted DOM credentials even when secure input state is stale on first submit", async () => {
+    authFns.signInWithEmailAndPassword.mockResolvedValue({
+      user: { uid: "owner-1", email: "owner@example.sk", displayName: null, photoURL: null },
+    });
+
+    renderAuth("/auth?mode=login");
+
+    const emailInput = screen.getByLabelText("E-mail") as HTMLInputElement;
+    const passwordInput = screen.getByLabelText("Heslo") as HTMLInputElement;
+    const nativeEmailSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    const nativePasswordSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+
+    nativeEmailSetter?.call(emailInput, "owner@example.sk");
+    nativePasswordSetter?.call(passwordInput, "Secret123");
+
+    fireEvent.submit(screen.getByRole("button", { name: "Prihlásiť sa" }).closest("form")!);
+
+    await waitFor(() => {
+      expect(authFns.signInWithEmailAndPassword).toHaveBeenCalledWith(
+        mockAuthState.auth,
+        "owner@example.sk",
+        "Secret123",
+      );
+    });
+  });
+
   it("links anonymous booking guest through Google provider first", async () => {
     mockAuthState.auth.currentUser = { uid: "anon-google", isAnonymous: true };
     authFns.linkWithPopup.mockResolvedValue({
