@@ -99,7 +99,7 @@ type RichEmailTemplate = {
 };
 
 const EMAIL_COLOR_SYSTEM = {
-  canvas: "#f5f2eb",
+  canvas: "#ffffff",
   cardStart: "rgba(20,17,14,.92)",
   cardEnd: "rgba(10,8,6,.97)",
   cardBorder: "rgba(220,183,115,.34)",
