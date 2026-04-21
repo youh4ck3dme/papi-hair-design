@@ -49,7 +49,7 @@ export default function LandingPage() {
 
           <div className="flex flex-1 items-center justify-center px-4 pb-6 sm:px-6">
             <div className="flex w-full max-w-[780px] flex-col items-center justify-center gap-4 md:gap-5">
-              <div className="w-full md:mt-2">
+              <div className="mt-10 w-full md:mt-2">
                 <LandingMainCard onOpenPrice={() => openDrawer("cennik")} />
               </div>
               <LandingOpeningHours />
