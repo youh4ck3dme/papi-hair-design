@@ -22,7 +22,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
-import { LanguageToggle } from "@/components/LanguageToggle";
 import { isAdminAllowlisted, normalizeEmail } from "@/lib/adminAllowlist";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
@@ -390,22 +389,12 @@ export default function AuthPage() {
 
   const showGoogle = mode === "login";
 
-  return (
-    <div
-      className="min-h-[100dvh] flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(201,168,76,0.10),_transparent_32%),linear-gradient(135deg,_#16120e_0%,_#0d0b09_52%,_#080808_100%)] p-4 safe-x safe-y relative overflow-x-hidden"
-      data-testid="auth-page"
-    >
+    return (
       <div
-        className="fixed top-4 right-4 z-50 flex items-center gap-1 safe-top safe-right"
-        style={{
-          top: "max(1rem, env(safe-area-inset-top))",
-          right: "max(1rem, env(safe-area-inset-right))",
-        }}
+        className="min-h-[100dvh] flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(201,168,76,0.10),_transparent_32%),linear-gradient(135deg,_#16120e_0%,_#0d0b09_52%,_#080808_100%)] p-4 safe-x safe-y relative overflow-x-hidden"
+        data-testid="auth-page"
       >
-        <LanguageToggle />
-      </div>
-
-      <div className="w-full max-w-md min-w-0">
+        <div className="w-full max-w-md min-w-0">
         <div className="flex items-center justify-center gap-2 mb-8">
           <LogoIcon size="md" />
           <span className="text-2xl font-bold text-foreground">PAPI HAIR DESIGN</span>

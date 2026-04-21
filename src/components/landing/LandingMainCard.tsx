@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { APP_LOGO_SRC } from "@/lib/branding";
 
 interface LandingMainCardProps {
   onOpenPrice: () => void;
@@ -58,7 +59,7 @@ export function LandingMainCard({ onOpenPrice }: LandingMainCardProps) {
         style={{ boxShadow: "var(--shadow-medallion)" }}
         aria-hidden="true"
       >
-        <img src="/phd-logo.png" alt="Papi Hair Design" className="h-full w-full object-cover" />
+        <img src={APP_LOGO_SRC} alt="Papi Hair Design" className="h-full w-full object-cover" />
       </div>
 
       <p className="mb-4 mt-1 select-none text-center text-[10px] font-semibold uppercase tracking-[0.35em] text-gold/70 sm:text-[11px]">

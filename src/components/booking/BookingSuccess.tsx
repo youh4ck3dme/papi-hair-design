@@ -1,9 +1,9 @@
 import { Check, CalendarCheck2, Clock4, Scissors } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
-import { GoldText } from "./BookingUI";
 import { BookingResult, ServiceRow } from "./types";
 import { buildGoogleCalendarUrl, buildIcsContent } from "@/lib/calendarExport";
+import { PublicStickyHeader } from "@/components/public/PublicStickyHeader";
 
 interface BookingSuccessProps {
     bookingResult: BookingResult;
@@ -73,16 +73,7 @@ export function BookingSuccess({
 
     return (
         <div className="min-h-screen bg-background" data-testid="booking-success">
-            {/* Header */}
-            <header className="sticky top-0 z-50 flex flex-col bg-background/95 border-b border-border/60 backdrop-blur-md">
-                <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-primary to-transparent opacity-80" />
-                <div className="flex items-center gap-2.5 px-5 py-3.5">
-                    <img src="/favicon-32x32.png" alt="PAPI HAIR DESIGN" className="w-8 h-8 rounded-full object-cover shrink-0" />
-                    <span className="text-[15px] font-bold tracking-widest uppercase font-serif">
-                        PAPI <GoldText>HAIR</GoldText> DESIGN
-                    </span>
-                </div>
-            </header>
+            <PublicStickyHeader currentOverride="booking" />
 
             <div className="max-w-md mx-auto px-5 py-12 text-center space-y-6">
                 {/* Animated checkmark */}

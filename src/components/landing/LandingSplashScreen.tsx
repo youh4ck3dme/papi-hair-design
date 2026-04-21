@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { APP_LOGO_SRC } from "@/lib/branding";
 
 interface LandingSplashScreenProps {
   onFinish: () => void;
@@ -73,7 +74,7 @@ export function LandingSplashScreen({ onFinish }: LandingSplashScreenProps) {
           className="relative z-10 h-44 w-44 md:h-52 md:w-52"
           style={{ filter: "drop-shadow(0 0 40px rgba(220,183,115,0.40))" }}
         >
-          <img src="/phd-logo.png" alt="Papi Hair Design" className="h-full w-full object-contain" />
+          <img src={APP_LOGO_SRC} alt="Papi Hair Design" className="h-full w-full object-contain" />
         </div>
       </div>
 

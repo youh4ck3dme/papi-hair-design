@@ -41,6 +41,23 @@ describe("LandingPage", () => {
     expect(screen.getByText("Cenník Služieb")).toBeInTheDocument();
   });
 
+  it("renders the sticky public header after splash completes", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(2800);
+    });
+
+    expect(screen.getByTestId("public-sticky-header")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Domov" })).toBeInTheDocument();
+  });
+
   it("navigates directly to booking from the main CTA after splash completes", () => {
     render(
       <MemoryRouter initialEntries={["/"]}>

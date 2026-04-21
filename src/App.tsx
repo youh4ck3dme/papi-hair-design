@@ -12,6 +12,7 @@ import { usePageAnalytics } from "@/hooks/usePageAnalytics";
 import { Loader2 } from "lucide-react";
 
 const AdminLayout = lazy(() => import("@/components/AdminLayout").then((m) => ({ default: m.AdminLayout })));
+const PublicChromeLayout = lazy(() => import("@/components/public/PublicChromeLayout").then((m) => ({ default: m.PublicChromeLayout })));
 const CookieConsent = lazy(() => import("@/components/CookieConsent"));
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -94,26 +95,28 @@ const App = () => {
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/liquid-playground" element={<LiquidPlayground />} />
-                  <Route path="/demo" element={<DemoPage />} />
                   <Route path="/booking" element={<BookingPage />} />
-                  <Route path="/pricing" element={<PricingPage />} />
-                  <Route
-                    path="/papihairsalon2026"
-                    element={salonLoginEnabled ? <SalonLoginPage /> : <Navigate to="/auth" replace />}
-                  />
-
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route path="/offline" element={<OfflinePage />} />
-                  <Route path="/install" element={<InstallPage />} />
-                  <Route path="/diagnostics" element={<DiagnosticsPage />} />
-                  <Route path="/dashboard/history" element={<BookingHistoryPage />} />
-                  <Route path="/privacy" element={<PrivacyPage />} />
-                  <Route path="/privacy-policy" element={<PrivacyPage />} />
-                  <Route path="/terms" element={<TermsPage />} />
-                  <Route
-                    path="/bootstrap"
-                    element={bootstrapEnabled ? <BootstrapPage /> : <Navigate to="/auth" replace />}
-                  />
+                  <Route element={<PublicChromeLayout />}>
+                    <Route path="/demo" element={<DemoPage />} />
+                    <Route path="/pricing" element={<PricingPage />} />
+                    <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/offline" element={<OfflinePage />} />
+                    <Route path="/install" element={<InstallPage />} />
+                    <Route
+                      path="/papihairsalon2026"
+                      element={salonLoginEnabled ? <SalonLoginPage /> : <Navigate to="/auth" replace />}
+                    />
+                    <Route
+                      path="/bootstrap"
+                      element={bootstrapEnabled ? <BootstrapPage /> : <Navigate to="/auth" replace />}
+                    />
+                    <Route path="/diagnostics" element={<DiagnosticsPage />} />
+                    <Route path="/dashboard/history" element={<BookingHistoryPage />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+                    <Route path="/privacy-policy" element={<PrivacyPage />} />
+                    <Route path="/terms" element={<TermsPage />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Route>
                   <Route
                     path="/reception"
                     element={
@@ -189,7 +192,6 @@ const App = () => {
                       </ProtectedRoute>
                     }
                   />
-                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
             </AuthProvider>

@@ -4,13 +4,39 @@ import { describe, expect, it, vi } from "vitest";
 import { BookingSuccess } from "./BookingSuccess";
 import type { BookingResult, ServiceRow } from "./types";
 
-vi.mock("@/components/booking/BookingUI", () => ({
-  GoldText: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-}));
-
 vi.mock("@/lib/calendarExport", () => ({
   buildGoogleCalendarUrl: vi.fn(() => "https://calendar.google.com/fake"),
   buildIcsContent: vi.fn(() => "BEGIN:VCALENDAR"),
+}));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, values?: Record<string, string>) => {
+      const translations: Record<string, string> = {
+        "booking.confirmTitle": "Rezervácia potvrdená",
+        "booking.confirmDesc": "Potvrdenie bolo odoslané na váš e-mail.",
+        "booking.confirmBrand": "Salón",
+        "booking.confirmService": "Služba",
+        "booking.confirmDate": "Dátum",
+        "booking.confirmTime": "Čas",
+        "booking.historyCta": "Moje rezervácie",
+        "booking.newBooking": "Nová rezervácia",
+        "booking.addToGoogleCalendar": "Pridať do Google Kalendára",
+        "booking.downloadIcs": "Stiahnuť ICS",
+        "index.address": "Spoločenský pavilón, Košice",
+      };
+
+      if (key === "booking.calendarDescription") {
+        return `Služba: ${values?.service ?? ""}`;
+      }
+
+      return translations[key] ?? key;
+    },
+    i18n: {
+      language: "sk",
+      changeLanguage: vi.fn(),
+    },
+  }),
 }));
 
 const makeResult = (overrides: Partial<BookingResult> = {}): BookingResult => ({
@@ -85,7 +111,7 @@ describe("BookingSuccess", () => {
     expect(screen.getAllByText(/PAPI HAIR DESIGN/i).length).toBeGreaterThan(0);
   });
 
-  it("renders the updated header logo asset", () => {
+  it("renders the shared sticky header", () => {
     render(
       <BookingSuccess
         bookingResult={makeResult()}
@@ -97,8 +123,7 @@ describe("BookingSuccess", () => {
       { wrapper }
     );
 
-    const logo = screen.getByAltText("PAPI HAIR DESIGN");
-    expect(logo).toHaveAttribute("src", "/favicon-32x32.png");
+    expect(screen.getByTestId("public-sticky-header")).toBeInTheDocument();
   });
 
   it("renders history link with access token", () => {

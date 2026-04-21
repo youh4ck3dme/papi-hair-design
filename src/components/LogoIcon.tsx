@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { APP_LOGO_SRC } from "@/lib/branding";
 
 interface LogoIconProps {
   className?: string;
@@ -15,7 +16,7 @@ const sizeMap = {
 export function LogoIcon({ className = "", size = "md" }: LogoIconProps) {
   return (
     <img
-      src="/favicon-32x32.png"
+      src={APP_LOGO_SRC}
       alt="PAPI HAIR DESIGN"
       className={cn(sizeMap[size], "rounded-full object-cover shrink-0", className)}
     />

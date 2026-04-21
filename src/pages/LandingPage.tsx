@@ -24,15 +24,14 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <main className="relative h-[100svh] overflow-hidden bg-black text-white md:min-h-screen">
+    <main className="relative min-h-[100svh] overflow-hidden bg-black text-white md:min-h-screen">
       {!splashDone && <LandingSplashScreen onFinish={handleSplashFinish} />}
 
       <div
-        className={`relative flex h-[100svh] flex-col items-center justify-center overflow-hidden px-4 transition-opacity duration-700 md:min-h-screen ${
+        className={`relative flex min-h-[100svh] flex-col overflow-hidden transition-opacity duration-700 md:min-h-screen ${
           splashDone ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         style={{
-          paddingTop: "max(16px, env(safe-area-inset-top))",
           paddingBottom: "max(16px, env(safe-area-inset-bottom))",
         }}
       >
@@ -55,12 +54,21 @@ export default function LandingPage() {
           aria-hidden="true"
         />
 
-        <div className="relative z-10 flex w-full max-w-[780px] flex-col items-center justify-center gap-4 md:gap-5">
-          <LandingTopNav onOpenPrice={() => openDrawer("cennik")} />
-          <div className="mt-6 w-full md:mt-8">
-            <LandingMainCard onOpenPrice={() => openDrawer("cennik")} />
+        <div className="relative z-10 flex min-h-[100svh] flex-col">
+          <div className="px-4 pt-[max(16px,env(safe-area-inset-top))] sm:px-6">
+            <div className="mx-auto max-w-[780px]">
+              <LandingTopNav onOpenPrice={() => openDrawer("cennik")} />
+            </div>
           </div>
-          <LandingOpeningHours />
+
+          <div className="flex flex-1 items-center justify-center px-4 pb-6 sm:px-6">
+            <div className="flex w-full max-w-[780px] flex-col items-center justify-center gap-4 md:gap-5">
+              <div className="w-full md:mt-2">
+                <LandingMainCard onOpenPrice={() => openDrawer("cennik")} />
+              </div>
+              <LandingOpeningHours />
+            </div>
+          </div>
         </div>
       </div>
 

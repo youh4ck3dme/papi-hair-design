@@ -7,9 +7,6 @@ vi.mock("firebase/auth", () => ({
   signInWithEmailAndPassword: vi.fn(),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock("@/components/LanguageToggle", () => ({
-  LanguageToggle: () => <button type="button">SK</button>,
-}));
 vi.mock("@/lib/firebaseClientErrors", () => ({
   getFirebaseErrorCode: vi.fn(() => "auth/wrong-password"),
   isBlockedByClientError: vi.fn(() => false),
@@ -60,8 +57,8 @@ describe("SalonLoginPage", () => {
     expect(toggleBtn).toBeInTheDocument();
   });
 
-  it("renders language toggle in header", async () => {
+  it("does not render the legacy standalone language toggle", async () => {
     await renderPage();
-    expect(screen.getByText("SK")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "SK" })).not.toBeInTheDocument();
   });
 });

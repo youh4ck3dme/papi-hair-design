@@ -42,7 +42,7 @@ vi.mock("@/lib/adminAllowlist", () => ({
 }));
 
 vi.mock("@/components/LogoIcon", () => ({
-  LogoIcon: () => <img src="/favicon-32x32.png" alt="PAPI HAIR DESIGN" />,
+  LogoIcon: () => <img src="/phd-logo.png" alt="PAPI HAIR DESIGN" />,
 }));
 
 vi.mock("@/components/ThemeToggle", () => ({

@@ -1,17 +1,22 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Static pages", () => {
-  test("privacy page renders GDPR heading", async ({ page }) => {
+  test("privacy page renders core heading and GDPR section", async ({ page }) => {
     await page.goto("/privacy");
-    await expect(page.getByRole("heading", { name: /Zásady ochrany osobných údajov/i })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("heading", { name: /Ochrana súkromia/i })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("heading", { name: /Vaše práva \(GDPR\)/i })).toBeVisible({ timeout: 15000 });
   });
 
-  test("privacy page has back link to home", async ({ page }) => {
+  test("privacy page exposes booking CTA and sticky header", async ({ page }) => {
     await page.goto("/privacy");
-    const backLink = page.getByRole("link", { name: /Späť na úvod/i });
-    await expect(backLink).toBeVisible({ timeout: 10000 });
-    await backLink.click();
-    await expect(page).toHaveURL(/\/$|\/papihairdesign/, { timeout: 10000 });
+    await expect(page.getByTestId("public-sticky-header")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("link", { name: /Rezervovať termín/i }).last()).toBeVisible({ timeout: 10000 });
+  });
+
+  test("demo page renders sticky header shell", async ({ page }) => {
+    await page.goto("/demo");
+    await expect(page.getByTestId("public-sticky-header")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: "Domov" })).toBeVisible({ timeout: 10000 });
   });
 
   test("terms page renders heading", async ({ page }) => {

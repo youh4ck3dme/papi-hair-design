@@ -8,7 +8,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LogoIcon } from "@/components/LogoIcon";
-import { LanguageToggle } from "@/components/LanguageToggle";
 import { useTranslation } from "react-i18next";
 import "@/styles/expanding-cards.css";
 
@@ -234,10 +233,6 @@ export default function DemoPage() {
 
   return (
     <div className="bg-background min-h-screen flex items-center justify-center relative overflow-hidden">
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-1">
-        <LanguageToggle />
-      </div>
-
       <div className="expanding-cards">
         {cards.map((card, i) => {
           const isActive = activeCard === i;

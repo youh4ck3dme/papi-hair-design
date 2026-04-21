@@ -20,8 +20,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { LogoIcon } from "@/components/LogoIcon";
-import { LanguageToggle } from "@/components/LanguageToggle";
 import { toast } from "sonner";
 
 const STATUS_VARIANTS: Record<string, string> = {
@@ -295,16 +293,6 @@ export default function BookingHistoryPage() {
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-primary/10 via-background to-background safe-x safe-y">
       <div className="mx-auto flex w-full max-w-5xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <Link to="/" className="inline-flex items-center gap-3 text-foreground">
-            <LogoIcon size="sm" />
-            <span className="text-sm font-semibold tracking-[0.2em] uppercase">PAPI HAIR DESIGN</span>
-          </Link>
-          <div className="flex items-center gap-1">
-            <LanguageToggle />
-          </div>
-        </div>
-
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <Card className="border-primary/15 bg-card/90 shadow-xl shadow-primary/5 backdrop-blur-sm">
             <CardHeader className="space-y-3">
