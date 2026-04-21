@@ -1,7 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { functions } from "@/integrations/firebase/config";
-import { httpsCallable } from "firebase/functions";
 import "@/styles/liquid-cookie.css";
 
 interface CookiePrefs {
@@ -64,6 +62,10 @@ async function trackConsentEvent(prefs: Omit<CookiePrefs, "timestamp">, action: 
   ];
 
   try {
+    const [{ httpsCallable }, { functions }] = await Promise.all([
+      import("firebase/functions"),
+      import("@/integrations/firebase/config"),
+    ]);
     const consentEventFn = httpsCallable<any, any>(functions, "consentEvent");
     await consentEventFn({
       subject_type: "session",
