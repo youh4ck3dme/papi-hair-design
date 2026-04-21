@@ -45,10 +45,9 @@ export function LandingMainCard({ onOpenPrice }: LandingMainCardProps) {
 
   return (
     <div
-      className="relative mb-6 flex w-full flex-col items-center rounded-3xl border border-border-subtle bg-gradient-to-b from-bg-base/90 to-bg-deep/95 p-6 pt-16 backdrop-blur-2xl backdrop-saturate-[120%] md:p-10"
-      style={{ boxShadow: "var(--shadow-card)" }}
+      className="public-premium-shell relative mb-6 flex w-full flex-col items-center p-6 pt-16 backdrop-blur-2xl backdrop-saturate-[120%] md:p-10"
     >
-      <div className="pointer-events-none absolute left-0 right-0 top-0 h-40 rounded-t-3xl bg-gradient-to-b from-gold/10 to-transparent" aria-hidden="true" />
+      <div className="public-premium-topglow" aria-hidden="true" />
       <div className="pointer-events-none absolute left-5 top-5 h-8 w-8 rounded-tl-lg border-l border-t border-gold/30" aria-hidden="true" />
       <div className="pointer-events-none absolute right-5 top-5 h-8 w-8 rounded-tr-lg border-r border-t border-gold/30" aria-hidden="true" />
       <div className="pointer-events-none absolute bottom-5 left-5 h-8 w-8 rounded-bl-lg border-b border-l border-gold/30" aria-hidden="true" />
@@ -90,7 +89,7 @@ export function LandingMainCard({ onOpenPrice }: LandingMainCardProps) {
         Oficiálny ambasádor Gold Haircare na Slovensku
       </p>
 
-      <p className="mb-7 max-w-sm px-2 text-center text-[14px] leading-relaxed text-text-muted md:text-[15px]">
+      <p className="public-section-copy mb-7 max-w-sm px-2 text-center">
         Precízne strihy, farbenie a barber služby s online rezerváciou bez čakania.
       </p>
 
@@ -106,7 +105,7 @@ export function LandingMainCard({ onOpenPrice }: LandingMainCardProps) {
       </div>
 
       <div
-        className="mb-6 w-full rounded-2xl border border-border-subtle bg-gradient-to-b from-bg-cta/80 to-bg-deep/90 p-5 md:p-6"
+        className="public-premium-panel mb-6 w-full p-5 md:p-6"
         style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}
       >
         <div className="mb-5 flex items-center gap-3">
@@ -137,7 +136,7 @@ export function LandingMainCard({ onOpenPrice }: LandingMainCardProps) {
 
         <button
           onClick={goToBooking}
-          className="group relative w-full overflow-hidden rounded-xl border border-gold/40 bg-gradient-to-b from-ink-600 to-ink-500 py-4 text-[15px] font-bold uppercase tracking-[0.22em] text-text-primary transition-all duration-200 hover:border-gold/70 hover:from-ink-800 hover:to-ink-600 active:scale-[0.98] sm:text-[16px]"
+          className="public-primary-cta group relative w-full overflow-hidden py-4 text-[15px] font-bold uppercase tracking-[0.22em] text-text-primary transition-all duration-200 hover:border-gold/70 hover:from-ink-800 hover:to-ink-600 active:scale-[0.98] sm:text-[16px]"
           style={{ boxShadow: "var(--shadow-cta-btn)" }}
           type="button"
         >

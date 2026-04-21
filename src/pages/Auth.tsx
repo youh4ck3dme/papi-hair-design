@@ -548,7 +548,7 @@ export default function AuthPage() {
         </div>
 
         <Card
-          className="rounded-[24px] border-[#C9A84C]/18 bg-[#12100d]/88 shadow-[0_24px_70px_-36px_rgba(0,0,0,0.85),0_0_0_1px_rgba(201,168,76,0.08)] backdrop-blur-md"
+          className="public-premium-shell rounded-[24px] border-[#C9A84C]/18 bg-[#12100d]/88 shadow-[0_24px_70px_-36px_rgba(0,0,0,0.85),0_0_0_1px_rgba(201,168,76,0.08)] backdrop-blur-md"
           data-testid="auth-card"
         >
           <CardHeader className="space-y-2 px-6 pt-6">
@@ -617,7 +617,7 @@ export default function AuthPage() {
                 </div>
               )}
 
-              <Button type="submit" className="min-h-12 w-full rounded-[10px]" disabled={loading} data-testid="auth-login-btn">
+              <Button type="submit" className="public-primary-cta w-full" disabled={loading} data-testid="auth-login-btn">
                 {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {copy.submitText}
               </Button>
@@ -635,7 +635,7 @@ export default function AuthPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="min-h-12 w-full rounded-[10px]"
+                    className="public-primary-cta w-full border-white/12 bg-white/[0.02]"
                     disabled={loading}
                     onClick={handleGoogleLogin}
                     data-testid="auth-google-btn"

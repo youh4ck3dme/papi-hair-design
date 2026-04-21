@@ -92,14 +92,10 @@ export default function MyAccountPage() {
         <div className="flex flex-1 px-4 pb-8 pt-6 sm:px-6 sm:pt-8 md:pb-10">
           <div className="mx-auto flex w-full max-w-[780px] flex-col">
             <section
-              className="relative mt-10 w-full overflow-visible rounded-[30px] border border-border-subtle bg-gradient-to-b from-bg-base/90 to-bg-deep/95 pb-6 pt-16 backdrop-blur-2xl backdrop-saturate-[120%] sm:mt-12 md:pb-8 md:pt-20"
-              style={{ boxShadow: "var(--shadow-card)" }}
+              className="public-premium-shell relative mt-10 w-full pb-6 pt-16 backdrop-blur-2xl backdrop-saturate-[120%] sm:mt-12 md:pb-8 md:pt-20"
               data-testid="my-account-hero-shell"
             >
-              <div
-                className="pointer-events-none absolute left-0 right-0 top-0 h-40 rounded-t-[30px] bg-gradient-to-b from-gold/10 to-transparent"
-                aria-hidden="true"
-              />
+              <div className="public-premium-topglow" aria-hidden="true" />
               <div className="pointer-events-none absolute left-5 top-5 h-8 w-8 rounded-tl-lg border-l border-t border-gold/30" aria-hidden="true" />
               <div className="pointer-events-none absolute right-5 top-5 h-8 w-8 rounded-tr-lg border-r border-t border-gold/30" aria-hidden="true" />
               <div className="pointer-events-none absolute bottom-5 left-5 h-8 w-8 rounded-bl-lg border-b border-l border-gold/30" aria-hidden="true" />
@@ -123,7 +119,7 @@ export default function MyAccountPage() {
                 >
                   {isEnglish ? "My account" : "Môj účet"}
                 </h1>
-                <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-text-muted md:text-[15px]">
+                <p className="public-section-copy">
                   {isEnglish
                     ? "Log in, register or continue to your reservation dashboard from one premium client access point."
                     : "Prihláste sa, zaregistrujte sa alebo pokračujte na svoj dashboard rezervácií z jedného prémiového klientskeho vstupu."}
@@ -155,7 +151,7 @@ export default function MyAccountPage() {
               </div>
 
               <div className="px-6 pt-8 md:px-10">
-                <div className="rounded-[24px] border border-gold/16 bg-[linear-gradient(180deg,rgba(12,10,8,0.86),rgba(27,20,14,0.82))] p-5 shadow-[0_20px_60px_-42px_rgba(0,0,0,0.85)] sm:p-6">
+                <div className="public-premium-panel p-5 sm:p-6">
                   {loading ? (
                     <div className="flex min-h-[220px] items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-gold" />
@@ -176,7 +172,7 @@ export default function MyAccountPage() {
                         <button
                           type="button"
                           onClick={() => navigate(currentPanel.actionPath)}
-                          className="group mt-6 inline-flex min-h-[48px] w-full items-center justify-center gap-3 rounded-[10px] border border-gold/40 bg-gradient-to-b from-ink-600 to-ink-500 px-5 py-4 text-sm font-bold uppercase tracking-[0.22em] text-text-primary transition-all duration-200 hover:border-gold/70 hover:from-ink-800 hover:to-ink-600 active:scale-[0.98]"
+                          className="public-primary-cta group mt-6 inline-flex w-full items-center justify-center gap-3 px-5 py-4 text-sm font-bold uppercase tracking-[0.22em] text-text-primary transition-all duration-200 hover:border-gold/70 hover:from-ink-800 hover:to-ink-600 active:scale-[0.98]"
                           style={{ boxShadow: "var(--shadow-cta-btn)" }}
                         >
                           <CurrentIcon className="h-4 w-4 flex-shrink-0 text-gold" />
