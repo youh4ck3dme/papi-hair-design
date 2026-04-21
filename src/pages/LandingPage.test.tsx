@@ -1,7 +1,14 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import LandingPage from "./LandingPage";
+
+vi.mock("@/hooks/useBookingData", () => ({
+  useBookingData: () => ({
+    services: [],
+    initialLoading: false,
+  }),
+}));
 
 describe("LandingPage", () => {
   beforeEach(() => {
@@ -36,13 +43,45 @@ describe("LandingPage", () => {
       vi.advanceTimersByTime(2800);
     });
 
-    expect(screen.queryByText("Cenník Služieb")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Cenník služieb/i)).not.toBeInTheDocument();
 
     vi.useRealTimers();
     fireEvent.click(screen.getByRole("button", { name: /Zobraziť cenník/i }));
-    await vi.dynamicImportSettled();
+    await act(async () => {
+      await vi.dynamicImportSettled();
+    });
 
-    expect(await screen.findByText("Cenník Služieb")).toBeInTheDocument();
+    expect(await screen.findByText(/Cenník služieb/i)).toBeInTheDocument();
+  });
+
+  it("closes the pricing drawer on escape", async () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(2800);
+    });
+
+    vi.useRealTimers();
+    fireEvent.click(screen.getByRole("button", { name: /Zobraziť cenník/i }));
+    await act(async () => {
+      await vi.dynamicImportSettled();
+    });
+
+    expect(await screen.findByText(/Cenník služieb/i)).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(document.body.style.overflow).toBe("");
+    });
+
+    expect(screen.getByRole("dialog", { name: /Cenník služieb/i })).toHaveClass("pointer-events-none");
   });
 
   it("renders the sticky public header after splash completes", () => {
