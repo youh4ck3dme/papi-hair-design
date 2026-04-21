@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { RefObject, useState } from "react";
 import { Sparkles, User2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { StepHeader, RadioIcon } from "./BookingUI";
@@ -17,6 +17,7 @@ interface ServiceSelectionProps {
     setSelectedServiceId: (id: string | null) => void;
     isBusinessOpenNow: boolean;
     onCategoryChange: () => void;
+    servicesSectionRef?: RefObject<HTMLDivElement | null>;
 }
 
 export function ServiceSelection({
@@ -31,6 +32,7 @@ export function ServiceSelection({
     setSelectedServiceId,
     isBusinessOpenNow,
     onCategoryChange,
+    servicesSectionRef,
 }: ServiceSelectionProps) {
     const { t } = useTranslation();
     const [expandedCategory, setExpandedCategory] = useState<"damske" | "panske" | null>(null);
@@ -123,7 +125,7 @@ export function ServiceSelection({
 
             {/* Step 2: Service picker */}
             {isCategoryExpanded && (!showSubcategoryStep || subcategory != null) && filteredServices.length > 0 && (
-                <div className="animate-fade-in">
+                <div ref={servicesSectionRef} className="animate-fade-in">
                     <StepHeader num="2" title={t("booking.step2")} />
                     <div className="flex flex-col gap-3" aria-live="polite">
                         {filteredServices.map((srv) => {

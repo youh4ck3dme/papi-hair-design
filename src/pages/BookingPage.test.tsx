@@ -186,4 +186,12 @@ describe("BookingPage stylist step flow", () => {
     expect(screen.getByTestId("booking-hero-logo")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Rezervujte si termín/i })).toBeInTheDocument();
   });
+
+  it("renders the PAPI consultation info block with direct call actions", () => {
+    render(<BookingPage />);
+
+    expect(screen.getByText(/Rezervácie k Róbertovi Papcunovi "PAPI"/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /\+421 949 459 624/i })).toHaveAttribute("href", "tel:+421949459624");
+    expect(screen.getByRole("link", { name: /Volať/i })).toHaveAttribute("href", "tel:+421949459624");
+  });
 });

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ServiceSelection } from "./ServiceSelection";
 import type { ServiceRow } from "./types";
@@ -137,5 +138,21 @@ describe("ServiceSelection", () => {
     fireEvent.click(screen.getByRole("button", { name: /dámske/i }));
     fireEvent.click(screen.getByText("Dámsky strih"));
     expect(setSelectedServiceId).toHaveBeenCalledWith("svc-1");
+  });
+
+  it("attaches the provided services section ref once services are visible", () => {
+    const servicesSectionRef = createRef<HTMLDivElement>();
+    render(
+      <ServiceSelection
+        {...defaultProps}
+        category="damske"
+        filteredServices={[makeService()]}
+        servicesSectionRef={servicesSectionRef}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /dámske/i }));
+
+    expect(servicesSectionRef.current).toBeInstanceOf(HTMLDivElement);
   });
 });

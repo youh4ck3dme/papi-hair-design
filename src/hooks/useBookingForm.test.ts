@@ -254,7 +254,7 @@ describe("useBookingForm", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual(["Mato", "Papi"]);
+      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual(["Papi", "Mato"]);
     });
 
     act(() => {
@@ -312,5 +312,30 @@ describe("useBookingForm", () => {
     });
 
     expect(result.current.filteredServices.map((service) => service.id)).toEqual(["svc-1"]);
+  });
+
+  it("keeps Papi first whenever he is available alongside other stylists", async () => {
+    const services = [makeService({ id: "svc-cut", name_sk: "Dámsky strih" })];
+    const employees = [
+      makeEmployee({ id: "mato", display_name: "Mato", service_mode: "all" }),
+      makeEmployee({ id: "papi", display_name: "Papi", service_mode: "all" }),
+      makeEmployee({ id: "miska", display_name: "Miska", service_mode: "all" }),
+    ];
+
+    const { result } = renderHook(() =>
+      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
+    );
+
+    act(() => {
+      result.current.setSelectedServiceId("svc-cut");
+    });
+
+    await waitFor(() => {
+      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual([
+        "Papi",
+        "Mato",
+        "Miska",
+      ]);
+    });
   });
 });

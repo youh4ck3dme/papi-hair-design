@@ -18,6 +18,15 @@ const makeIdempotencyKey = () =>
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+const normalizeEmployeeName = (value: string | null | undefined) =>
+    (value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+
+const isPapiEmployee = (employee: EmployeeRow) => normalizeEmployeeName(employee.display_name).includes("papi");
+
 export function useBookingForm(
     services: ServiceRow[],
     serviceSubcategories: ServiceSubcategoryRow[],
@@ -139,7 +148,15 @@ export function useBookingForm(
             });
         }
 
-        return result;
+        return result
+            .map((employee, index) => ({ employee, index }))
+            .sort((left, right) => {
+                const leftIsPapi = isPapiEmployee(left.employee);
+                const rightIsPapi = isPapiEmployee(right.employee);
+                if (leftIsPapi !== rightIsPapi) return leftIsPapi ? -1 : 1;
+                return left.index - right.index;
+            })
+            .map(({ employee }) => employee);
     }, [employees, selectedServiceId, employeeServiceMap, business, memberships]);
 
     useEffect(() => {
