@@ -517,7 +517,7 @@ function buildMessage(
                     ${escapeHtml(template.eyebrow)}
                   </div>
                   ${template.heroNote ? `<div style="margin-top:18px;font-size:13px;text-transform:uppercase;letter-spacing:.26em;color:${EMAIL_COLOR_SYSTEM.heroBadgeText};font-weight:700;text-align:center;">${escapeHtml(template.heroNote)}</div>` : ""}
-                  <h1 style="margin:18px 0 0;font-size:32px;line-height:1.12;color:${EMAIL_COLOR_SYSTEM.heroTitle};font-weight:800;letter-spacing:-.02em;text-align:left;">
+                  <h1 style="margin:18px 0 0;font-size:28px;line-height:1.12;color:${EMAIL_COLOR_SYSTEM.heroTitle};font-weight:800;letter-spacing:-.02em;text-align:left;">
                     ${escapeHtml(template.title)}
                   </h1>
                   <p style="margin:16px 0 0;font-size:18px;line-height:1.7;color:${escapeAttr(template.introColor ?? variant.introColor)};font-weight:400;">
