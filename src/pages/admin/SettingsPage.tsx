@@ -18,6 +18,7 @@ import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound, Camera, Trash2
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
 import type { FirebaseError } from "firebase/app";
 import { compressProfileImage, readFileAsDataUrl, validateProfileImageBlob, validateProfileImageFile } from "@/lib/profileImage";
+import { cn } from "@/lib/utils";
 import {
   getFirebaseErrorCode,
   getFirebaseErrorMessage,
@@ -73,6 +74,8 @@ function maybeWarnBlockedRequest(err: unknown) {
     warnBlockedByClientOnce((message) => toast.warning(message));
   }
 }
+
+const settingsCardClassName = "admin-premium-card overflow-hidden";
 
 export default function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
@@ -404,7 +407,7 @@ export default function SettingsPage() {
     .slice(0, 2);
 
   return (
-    <div className="space-y-6 max-w-4xl animate-in fade-in duration-500">
+    <div className="admin-premium-page max-w-4xl space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
           Nastavenia
@@ -413,7 +416,12 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue={isOwnerOrAdmin ? "general" : "profile"} className="w-full">
-        <TabsList className={`grid w-full h-auto p-1 bg-muted/30 backdrop-blur-md border border-primary/10 rounded-xl mb-6 ${isOwnerOrAdmin ? "grid-cols-2 md:grid-cols-7" : "grid-cols-1"}`}>
+        <TabsList
+          className={cn(
+            "admin-premium-toolbar mb-6 grid h-auto w-full p-1",
+            isOwnerOrAdmin ? "grid-cols-2 md:grid-cols-7" : "grid-cols-1",
+          )}
+        >
           {isOwnerOrAdmin && (
             <>
               <TabsTrigger value="general" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Všeobecné</TabsTrigger>
@@ -429,7 +437,7 @@ export default function SettingsPage() {
 
         <TabsContent value="general" className="space-y-6 mt-0">
           {business && (
-            <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+            <Card className={settingsCardClassName}>
               <CardHeader className="border-b border-primary/5 bg-muted/20">
                 <CardTitle className="text-lg font-bold">Nastavenia firmy</CardTitle>
                 <CardDescription>Základné informácie o vašom podniku</CardDescription>
@@ -478,7 +486,7 @@ export default function SettingsPage() {
 
         <TabsContent value="booking" className="space-y-6 mt-0">
           {business && (
-            <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+            <Card className={settingsCardClassName}>
               <CardHeader className="border-b border-primary/5 bg-muted/20">
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
                   <Users className="w-5 h-5 text-primary" />
@@ -489,7 +497,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6 pt-6">
-                <div className="flex items-center justify-between p-6 rounded-2xl border border-primary/10 bg-primary/5 group hover:bg-primary/10 transition-colors">
+                <div className="admin-premium-subtle flex items-center justify-between p-6 transition-colors group hover:bg-primary/10">
                   <div className="space-y-1 flex-1">
                     <div className="flex items-center gap-2">
                       <Shield className="w-5 h-5 text-primary" />
@@ -512,7 +520,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 {!isOwner && (
-                  <div className="p-4 rounded-xl bg-muted/50 border border-border text-center">
+                  <div className="admin-premium-subtle p-4 text-center">
                     <p className="text-sm text-muted-foreground italic flex items-center justify-center gap-2">
                       <Shield className="w-4 h-4 opacity-50" />
                       Toto nastavenie môže meniť iba majiteľ salónu.
@@ -537,7 +545,7 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="smtp" className="space-y-6 mt-0">
-          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+          <Card className={settingsCardClassName}>
             <CardHeader className="border-b border-primary/5 bg-muted/20">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <Mail className="w-5 h-5 text-primary" />
@@ -607,7 +615,7 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="snapshot" className="space-y-6 mt-0">
-          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+          <Card className={settingsCardClassName}>
             <CardHeader className="border-b border-primary/5 bg-muted/20 flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -659,7 +667,7 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="license" className="space-y-6 mt-0">
-          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+          <Card className={settingsCardClassName}>
             <CardHeader className="border-b border-primary/5 bg-muted/20">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <KeyRound className="w-5 h-5 text-primary" />
@@ -697,13 +705,13 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="profile" className="space-y-6 mt-0">
-          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+          <Card className={settingsCardClassName}>
             <CardHeader className="border-b border-primary/5 bg-muted/20">
               <CardTitle className="text-lg font-bold">Môj profil</CardTitle>
               <CardDescription>Osobné informácie správcu</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
-              <div className="flex items-center gap-5 rounded-2xl border border-primary/10 bg-background/40 p-4">
+              <div className="admin-premium-subtle flex items-center gap-5 p-4">
                 <div className="relative group">
                   <Avatar className="w-20 h-20 border-2 border-primary/20 shadow-lg">
                     {profileForm.avatar_url && <AvatarImage src={profileForm.avatar_url} alt="Profilová fotka" />}

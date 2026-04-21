@@ -123,7 +123,7 @@ function InsightCard({
   icon: typeof Users;
 }) {
   return (
-    <div className="rounded-2xl border border-primary/10 bg-card/40 p-4 shadow-lg shadow-primary/5 backdrop-blur-xl">
+    <div className="admin-premium-card p-4 shadow-lg shadow-primary/5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground/80">{title}</p>
@@ -339,7 +339,7 @@ export default function CustomersPage() {
   const hasActiveFilters = search.trim().length > 0 || quickFilter !== "all";
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="admin-premium-page space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
@@ -397,7 +397,7 @@ export default function CustomersPage() {
         />
       </div>
 
-      <div className="rounded-2xl border border-primary/10 bg-card/30 p-4 shadow-2xl shadow-primary/5 backdrop-blur-xl">
+      <div className="admin-premium-toolbar p-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground/80">Rýchle segmenty</p>
@@ -421,7 +421,7 @@ export default function CustomersPage() {
                     variant="ghost"
                     onClick={() => setQuickFilter(key as QuickFilter)}
                     className={cn(
-                      "rounded-full border px-4 py-2 text-sm font-semibold transition-all",
+                      "rounded-xl border px-4 py-2 text-sm font-semibold transition-all",
                       active
                         ? "border-primary/40 bg-primary/10 text-primary shadow-lg shadow-primary/10"
                         : "border-primary/10 bg-background/40 text-muted-foreground hover:border-primary/25 hover:text-foreground",
@@ -446,7 +446,7 @@ export default function CustomersPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-primary/10 bg-background/40 px-4 py-3 text-sm">
+          <div className="admin-premium-subtle px-4 py-3 text-sm">
             <p className="font-semibold text-foreground">{visibleSummaryLabel}</p>
             <p className="mt-1 text-muted-foreground">
               Zobrazených <span className="font-semibold text-foreground">{filteredAndSorted.length}</span> z{" "}
@@ -456,7 +456,7 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-primary/10 bg-card/30 backdrop-blur-xl overflow-hidden shadow-2xl shadow-primary/5">
+      <div className="admin-premium-card shadow-2xl shadow-primary/5">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 className="w-10 h-10 animate-spin text-primary/50" />
@@ -666,7 +666,7 @@ export default function CustomersPage() {
       </div>
 
       <Dialog open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
-        <DialogContent className="max-w-lg border-primary/15 bg-card/95 backdrop-blur-xl">
+        <DialogContent className="admin-premium-dialog max-w-lg border-primary/15">
           <DialogHeader>
             <DialogTitle className="text-xl">História zákazníka</DialogTitle>
             <DialogDescription>
@@ -676,7 +676,7 @@ export default function CustomersPage() {
 
           <div className="space-y-4">
             {selectedCustomer && (
-              <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
+              <div className="admin-premium-subtle p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-semibold text-foreground">{selectedCustomer.full_name}</p>
@@ -723,7 +723,7 @@ export default function CustomersPage() {
                 <Loader2 className="h-6 w-6 animate-spin text-primary/60" />
               </div>
             ) : customerHistory.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-primary/15 p-8 text-center text-sm text-muted-foreground">
+              <div className="admin-premium-subtle border-dashed p-8 text-center text-sm text-muted-foreground">
                 Pre tohto zákazníka zatiaľ neevidujeme žiadnu históriu rezervácií.
               </div>
             ) : (
@@ -731,7 +731,7 @@ export default function CustomersPage() {
                 {customerHistory.map((appointment) => {
                   const status = appointment.status ?? "pending";
                   return (
-                    <div key={appointment.id} className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm">
+                    <div key={appointment.id} className="admin-premium-subtle border-border/60 p-4 shadow-sm">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground">{appointment.service_name ?? "Služba"}</p>

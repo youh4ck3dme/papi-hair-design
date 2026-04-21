@@ -102,7 +102,7 @@ export function AdminSidebar() {
   return (
     <Sidebar className="border-r-0">
       <div className="border-b border-sidebar-border px-4 py-4">
-        <div className="flex items-center gap-2 rounded-2xl border border-white/15 bg-black px-3 py-2.5 backdrop-blur-xl">
+        <div className="admin-premium-toolbar flex items-center gap-2 px-3 py-2.5">
         <LogoIcon size="sm" color="#C9A84C" />
         <div className="overflow-hidden flex flex-col items-center w-full">
           <p className="text-sm font-black text-white truncate uppercase tracking-tighter">PAPI HAIR DESIGN</p>
@@ -211,10 +211,12 @@ function AdminInnerLayout({ children }: { children: React.ReactNode }) {
         <AdminSidebar />
         <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden">
           {!isCalendarPage && (
-            <header className="h-10 md:h-12 flex items-center border-b border-border/70 px-2 md:px-4 safe-x bg-background/80 backdrop-blur-xl sticky top-0 z-10 pt-[env(safe-area-inset-top)]">
-              <SidebarTrigger className="mr-2 md:mr-3 min-h-touch min-w-touch flex items-center justify-center" />
-              <div className="flex-1 min-w-0 font-black uppercase text-xs tracking-widest text-muted-foreground">
-                {navItems.find(n => n.url === location.pathname)?.title ?? "PAPI HAIR DESIGN"}
+            <header className="sticky top-0 z-10 px-2 pt-[env(safe-area-inset-top)] md:px-4 safe-x">
+              <div className="admin-premium-toolbar mt-2 flex h-10 items-center px-2 md:mt-3 md:h-12 md:px-4">
+                <SidebarTrigger className="mr-2 md:mr-3 min-h-touch min-w-touch flex items-center justify-center" />
+                <div className="flex-1 min-w-0 font-black uppercase text-xs tracking-widest text-muted-foreground">
+                  {navItems.find(n => n.url === location.pathname)?.title ?? "PAPI HAIR DESIGN"}
+                </div>
               </div>
             </header>
           )}

@@ -222,7 +222,7 @@ export default function AppointmentsPage() {
   });
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="admin-premium-page space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
@@ -268,7 +268,7 @@ export default function AppointmentsPage() {
           <p className="text-sm text-muted-foreground animate-pulse">Spracúvam rezervácie...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 border border-dashed border-primary/20 rounded-3xl bg-card/20">
+        <div className="admin-premium-card border border-dashed border-primary/20 py-20 text-center">
           <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-4">
             <Calendar className="w-10 h-10 text-primary/30" />
           </div>
@@ -288,7 +288,7 @@ export default function AppointmentsPage() {
               <button
                 key={a.id}
                 onClick={() => setSelected(a)}
-                className="group relative w-full text-left flex flex-col md:flex-row md:items-center gap-4 p-5 rounded-2xl border border-primary/10 bg-card/40 backdrop-blur-xl transition-all hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/30"
+                className="admin-premium-card group relative flex w-full flex-col gap-4 p-5 text-left transition-all hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5 md:flex-row md:items-center"
               >
                 <div className="flex items-center gap-4 min-w-[120px]">
                   <div className="bg-primary/5 p-2 rounded-xl text-center min-w-[60px] group-hover:bg-primary/10 transition-colors">
@@ -362,7 +362,7 @@ export default function AppointmentsPage() {
       )}
 
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent className="max-w-md bg-card/95 backdrop-blur-2xl border-primary/20 shadow-2xl">
+        <DialogContent className="admin-premium-dialog max-w-md border-primary/20 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -377,7 +377,7 @@ export default function AppointmentsPage() {
 
           {selected && (
             <div className="space-y-6 pt-2">
-              <div className="flex items-center gap-4 bg-primary/5 p-4 rounded-2xl border border-primary/5">
+              <div className="admin-premium-subtle flex items-center gap-4 p-4">
                 <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
                   <UserPlus className="w-6 h-6 text-primary" />
                 </div>
