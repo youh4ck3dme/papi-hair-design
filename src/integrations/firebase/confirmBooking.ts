@@ -18,6 +18,7 @@ export interface ConfirmBookingResponse {
   history_reference?: string | null;
   customer_email?: string | null;
   customer_name?: string | null;
+  customer_record_status?: "existing" | "created" | null;
 }
 
 export async function confirmBooking(

@@ -17,6 +17,7 @@ if (sentryDsn) {
 }
 
 export { claimBooking } from "./claimBooking";
+export { resolveBookingAccountState } from "./resolveBookingAccountState";
 export { createPublicBooking } from "./createPublicBooking";
 export { saveSmtpConfig } from "./saveSmtpConfig";
 export { consentEvent } from "./consentEvent";

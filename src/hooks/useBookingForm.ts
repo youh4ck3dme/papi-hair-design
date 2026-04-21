@@ -253,6 +253,7 @@ export function useBookingForm(
                 history_reference: confirm.history_reference ?? hold.appointment_id,
                 customer_email: confirm.customer_email ?? formData.email,
                 customer_name: confirm.customer_name ?? `${formData.meno} ${formData.priezvisko}`.trim(),
+                customer_record_status: confirm.customer_record_status ?? hold.customer_record_status ?? null,
             };
 
             setBookingResult(data);

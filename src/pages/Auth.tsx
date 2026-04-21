@@ -7,13 +7,17 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  linkWithCredential,
+  linkWithPopup,
+  EmailAuthProvider,
   sendPasswordResetEmail,
   setPersistence,
   browserLocalPersistence,
   browserSessionPersistence,
+  type User,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
-import { collection, getDocs, limit, query, where } from "firebase/firestore";
+import { collection, doc, getDocs, limit, query, setDoc, where } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,6 +111,7 @@ function parseZodErrors(error: z.ZodError): Record<string, string> {
 // ---------------------------------------------------------------------------
 
 export type AuthMode = "login" | "register" | "forgot";
+type AccountHint = "existing_account" | "known_customer" | "new_customer" | null;
 
 // ---------------------------------------------------------------------------
 // Claim booking (shared after register / Google sign-in)
@@ -125,6 +130,75 @@ async function tryClaimBooking(claimToken: string): Promise<boolean> {
     console.warn("Claim booking failed:", err);
     return false;
   }
+}
+
+function normalizeNonEmptyString(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function resolveFirebaseAuthCode(error: unknown): string {
+  if (!error || typeof error !== "object") return "";
+  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  return code.replace(/^functions\//, "");
+}
+
+function isExistingAccountError(error: unknown): boolean {
+  const code = resolveFirebaseAuthCode(error);
+  return (
+    code === "auth/email-already-in-use" ||
+    code === "auth/credential-already-in-use" ||
+    code === "auth/account-exists-with-different-credential"
+  );
+}
+
+async function upsertOwnProfile(user: User, fullNameHint?: string | null): Promise<void> {
+  const fullName = normalizeNonEmptyString(user.displayName) ?? normalizeNonEmptyString(fullNameHint) ?? null;
+  await setDoc(
+    doc(db, "profiles", user.uid),
+    {
+      email: user.email ?? null,
+      full_name: fullName,
+      avatar_url: user.photoURL ?? null,
+      updated_at: new Date().toISOString(),
+    },
+    { merge: true },
+  );
+}
+
+function buildClaimNotice(
+  mode: AuthMode,
+  accountHint: AccountHint,
+  t: (key: string) => string,
+) {
+  if (!accountHint) return null;
+
+  if (accountHint === "existing_account") {
+    if (mode === "forgot") {
+      return {
+        title: t("auth.claimExistingTitle"),
+        body: t("auth.claimExistingReset"),
+      };
+    }
+
+    return {
+      title: t("auth.claimExistingTitle"),
+      body: mode === "register" ? t("auth.claimExistingRegister") : t("auth.claimExistingLogin"),
+    };
+  }
+
+  if (accountHint === "known_customer") {
+    return {
+      title: t("auth.claimKnownTitle"),
+      body: mode === "login" ? t("auth.claimKnownLogin") : t("auth.claimKnownRegister"),
+    };
+  }
+
+  return {
+    title: t("auth.claimNewTitle"),
+    body: mode === "login" ? t("auth.claimNewLogin") : t("auth.claimNewRegister"),
+  };
 }
 
 function getFormSubmitHandler(
@@ -149,9 +223,15 @@ function useAuthForm() {
   const urlMode = searchParams.get("mode");
   const urlEmail = searchParams.get("email") ?? "";
   const claimToken = searchParams.get("claim")?.trim() ?? "";
+  const fullNameHint = searchParams.get("name")?.trim() ?? "";
+  const accountHintRaw = searchParams.get("account")?.trim() ?? "";
+  const accountHint: AccountHint =
+    accountHintRaw === "existing_account" || accountHintRaw === "known_customer" || accountHintRaw === "new_customer"
+      ? accountHintRaw
+      : null;
 
   const [mode, setMode] = useState<AuthMode>(
-    urlMode === "register" ? "register" : "login"
+    urlMode === "register" ? "register" : urlMode === "forgot" ? "forgot" : "login"
   );
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: urlEmail, password: "" });
@@ -173,6 +253,10 @@ function useAuthForm() {
     );
   }, []);
 
+  const syncProfile = useCallback(async (user: User) => {
+    await upsertOwnProfile(user, fullNameHint);
+  }, [fullNameHint]);
+
   const handleLogin = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -187,6 +271,11 @@ function useAuthForm() {
       try {
         await applyAuthPersistence(rememberMe);
         const credential = await signInWithEmailAndPassword(auth, form.email, form.password);
+        await syncProfile(credential.user);
+        const claimed = await tryClaimBooking(claimToken);
+        if (claimed) {
+          toast.success(t("auth.toastLoginOkBooking"));
+        }
         await redirectAfterAuthWithMembership(
           navigate,
           credential.user.uid,
@@ -198,7 +287,7 @@ function useAuthForm() {
         setLoading(false);
       }
     },
-    [applyAuthPersistence, form, navigate, rememberMe, t]
+    [applyAuthPersistence, claimToken, form, navigate, rememberMe, syncProfile, t]
   );
 
   const handleRegister = useCallback(
@@ -214,7 +303,10 @@ function useAuthForm() {
       setLoading(true);
       try {
         await applyAuthPersistence(rememberMe);
-        const credential = await createUserWithEmailAndPassword(auth, form.email, form.password);
+        const credential = auth.currentUser?.isAnonymous
+          ? await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(form.email.trim(), form.password))
+          : await createUserWithEmailAndPassword(auth, form.email.trim(), form.password);
+        await syncProfile(credential.user);
         const claimed = await tryClaimBooking(claimToken);
         try {
           await queueRegistrationWelcomeEmail({
@@ -230,12 +322,18 @@ function useAuthForm() {
           credential.user.email ?? form.email
         );
       } catch (err: unknown) {
+        if (isExistingAccountError(err)) {
+          setMode("login");
+          setForm((current) => ({ ...current, password: "" }));
+          toast.error(t("auth.toastAccountExists"));
+          return;
+        }
         toast.error(err instanceof Error ? err.message : t("auth.toastRegisterFail"));
       } finally {
         setLoading(false);
       }
     },
-    [applyAuthPersistence, claimToken, form, navigate, rememberMe, t]
+    [applyAuthPersistence, claimToken, form.email, form.password, navigate, rememberMe, syncProfile, t]
   );
 
   const handleGoogleLogin = useCallback(async () => {
@@ -243,8 +341,24 @@ function useAuthForm() {
     try {
       await applyAuthPersistence(rememberMe);
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      provider.setCustomParameters({ prompt: "select_account" });
+
+      let result;
+      if (auth.currentUser?.isAnonymous) {
+        try {
+          result = await linkWithPopup(auth.currentUser, provider);
+        } catch (error) {
+          if (!isExistingAccountError(error)) {
+            throw error;
+          }
+          result = await signInWithPopup(auth, provider);
+        }
+      } else {
+        result = await signInWithPopup(auth, provider);
+      }
+
       const userEmail = result.user.email;
+      await syncProfile(result.user);
 
       const claimed = await tryClaimBooking(claimToken);
       if (claimed) {
@@ -256,7 +370,7 @@ function useAuthForm() {
     } finally {
       setLoading(false);
     }
-  }, [applyAuthPersistence, claimToken, navigate, rememberMe, t]);
+  }, [applyAuthPersistence, claimToken, navigate, rememberMe, syncProfile, t]);
 
   const handleForgot = useCallback(
     async (e: React.FormEvent) => {
@@ -287,6 +401,8 @@ function useAuthForm() {
     forgot: { title: t("auth.forgotTitle"), description: t("auth.forgotDesc"), submitText: t("auth.forgotBtn") },
   }[mode];
 
+  const claimNotice = buildClaimNotice(mode, accountHint, t);
+
   return {
     mode,
     setMode,
@@ -299,6 +415,7 @@ function useAuthForm() {
     handleFormSubmit,
     handleGoogleLogin,
     copy,
+    claimNotice,
     t,
   };
 }
@@ -384,6 +501,7 @@ export default function AuthPage() {
     handleFormSubmit,
     handleGoogleLogin,
     copy,
+    claimNotice,
     t,
   } = useAuthForm();
 
@@ -409,6 +527,12 @@ export default function AuthPage() {
             <CardDescription>{copy.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {claimNotice && (
+              <div className="rounded-md border border-[#C9A84C]/24 bg-[#C9A84C]/8 px-4 py-3 text-sm text-white/85">
+                <p className="font-semibold text-[#E7CA77]">{claimNotice.title}</p>
+                <p className="mt-1 text-white/70">{claimNotice.body}</p>
+              </div>
+            )}
             <form onSubmit={handleFormSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="email">{t("auth.email")}</Label>

@@ -45,4 +45,5 @@ export interface BookingResult {
   customer_name?: string;
   history_access_token?: string | null;
   history_reference?: string | null;
+  customer_record_status?: "existing" | "created" | null;
 }

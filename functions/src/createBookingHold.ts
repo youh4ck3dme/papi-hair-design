@@ -20,6 +20,8 @@ interface CreateBookingHoldInput {
   idempotency_key?: string;
 }
 
+type CustomerRecordStatus = "existing" | "created";
+
 const HOLD_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 function createIdempotencyKey(rawKey: string | undefined): string {
@@ -100,7 +102,14 @@ export const createBookingHold = functions.https.onCall(
       .get();
     if (!existingSnap.empty) {
       const doc = existingSnap.docs[0];
-      return { success: true, appointment_id: doc.id, reused: true, confirm_token: doc.data().confirm_token };
+      return {
+        success: true,
+        appointment_id: doc.id,
+        reused: true,
+        confirm_token: doc.data().confirm_token,
+        customer_record_status:
+          doc.data().customer_record_status === "existing" ? "existing" : "created",
+      };
     }
 
     // Load service and auto-assign eligible employee
@@ -179,14 +188,17 @@ export const createBookingHold = functions.https.onCall(
       .limit(1)
       .get();
     let customerId: string;
+    let customerRecordStatus: CustomerRecordStatus;
     if (!customersSnap.empty) {
       customerId = customersSnap.docs[0].id;
+      customerRecordStatus = "existing";
       await db.collection("customers").doc(customerId).update({
         full_name: customer_name.trim(),
         phone: customerPhone,
         updated_at: new Date().toISOString(),
       });
     } else {
+      customerRecordStatus = "created";
       const newCust = await db.collection("customers").add({
         business_id,
         full_name: customer_name.trim(),
@@ -212,6 +224,7 @@ export const createBookingHold = functions.https.onCall(
       start_at: startDate.toISOString(),
       end_at: endDate.toISOString(),
       status: "hold_created",
+      customer_record_status: customerRecordStatus,
       hold_expires_at: holdExpiresAt.toISOString(),
       confirm_token: confirmToken,
       idempotency_key: idemKey,
@@ -225,6 +238,7 @@ export const createBookingHold = functions.https.onCall(
       confirm_token: confirmToken,
       idempotency_key: idemKey,
       reused: false,
+      customer_record_status: customerRecordStatus,
     };
   }
 );

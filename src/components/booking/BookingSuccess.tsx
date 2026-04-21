@@ -1,9 +1,15 @@
-import { Check, CalendarCheck2, Clock4, Scissors } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, CalendarCheck2, Clock4, Loader2, Scissors } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { BookingResult, ServiceRow } from "./types";
 import { buildGoogleCalendarUrl, buildIcsContent } from "@/lib/calendarExport";
 import { PublicStickyHeader } from "@/components/public/PublicStickyHeader";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+    resolveBookingAccountState,
+    type BookingAccountState,
+} from "@/integrations/firebase/resolveBookingAccountState";
 
 interface BookingSuccessProps {
     bookingResult: BookingResult;
@@ -21,9 +27,54 @@ export function BookingSuccess({
     dateLocale,
 }: BookingSuccessProps) {
     const { t } = useTranslation();
+    const { user } = useAuth();
+    const [accountState, setAccountState] = useState<BookingAccountState | null>(null);
+    const [accountStateLoading, setAccountStateLoading] = useState(false);
+
+    const accountHint = useMemo<BookingAccountState | null>(() => {
+        if (accountState) return accountState;
+        if (bookingResult.customer_record_status === "existing") return "known_customer";
+        if (bookingResult.customer_record_status === "created") return "new_customer";
+        return null;
+    }, [accountState, bookingResult.customer_record_status]);
+
+    useEffect(() => {
+        if (user || !bookingResult.claim_token) {
+            setAccountState(null);
+            setAccountStateLoading(false);
+            return;
+        }
+
+        let active = true;
+        setAccountStateLoading(true);
+        void resolveBookingAccountState({ claim_token: bookingResult.claim_token })
+            .then((result) => {
+                if (!active || result.error || !result.state) return;
+                setAccountState(result.state);
+            })
+            .finally(() => {
+                if (active) {
+                    setAccountStateLoading(false);
+                }
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [bookingResult.claim_token, user]);
+
     const historyHref = bookingResult.history_access_token && bookingResult.history_reference
         ? `/dashboard/history?access=${encodeURIComponent(bookingResult.history_access_token)}&ref=${encodeURIComponent(bookingResult.history_reference)}`
         : "/dashboard/history";
+    const authQuery = new URLSearchParams();
+    if (bookingResult.claim_token) authQuery.set("claim", bookingResult.claim_token);
+    if (bookingResult.customer_email) authQuery.set("email", bookingResult.customer_email);
+    if (bookingResult.customer_name) authQuery.set("name", bookingResult.customer_name);
+    if (accountHint) authQuery.set("account", accountHint);
+
+    const registerHref = `/auth?mode=register&${authQuery.toString()}`;
+    const loginHref = `/auth?mode=login&${authQuery.toString()}`;
+    const forgotHref = `/auth?mode=forgot&email=${encodeURIComponent(bookingResult.customer_email ?? "")}&account=existing_account`;
     const appointmentStart = selectedFullDate && selectedTime
         ? new Date(
             selectedFullDate.getFullYear(),
@@ -143,6 +194,51 @@ export function BookingSuccess({
 
                 {/* CTAs */}
                 <div className="flex flex-col gap-3 pt-2">
+                    {!user && bookingResult.claim_token && (
+                        <div className="rounded-2xl border border-primary/18 bg-gradient-to-br from-primary/10 via-transparent to-primary/5 p-4 text-left">
+                            {accountStateLoading ? (
+                                <div className="flex min-h-[96px] items-center justify-center">
+                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                </div>
+                            ) : (
+                                <>
+                                    <h3 className="text-base font-semibold text-foreground">
+                                        {accountHint === "existing_account"
+                                            ? t("booking.accountExistingTitle")
+                                            : accountHint === "known_customer"
+                                                ? t("booking.accountKnownTitle")
+                                                : t("booking.accountNewTitle")}
+                                    </h3>
+                                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                                        {accountHint === "existing_account"
+                                            ? t("booking.accountExistingDesc")
+                                            : accountHint === "known_customer"
+                                                ? t("booking.accountKnownDesc")
+                                                : t("booking.accountNewDesc")}
+                                    </p>
+
+                                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                                        <a
+                                            href={accountHint === "existing_account" ? loginHref : registerHref}
+                                            className="premium-action-btn inline-flex min-h-[48px] flex-1 items-center justify-center rounded-xl px-4 py-3 text-sm tracking-wide transition-all active:scale-[0.98]"
+                                        >
+                                            {accountHint === "existing_account"
+                                                ? t("booking.accountExistingPrimary")
+                                                : t("booking.accountCreatePrimary")}
+                                        </a>
+                                        <a
+                                            href={accountHint === "existing_account" ? forgotHref : loginHref}
+                                            className="inline-flex min-h-[48px] flex-1 items-center justify-center rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary"
+                                        >
+                                            {accountHint === "existing_account"
+                                                ? t("booking.accountExistingSecondary")
+                                                : t("booking.accountCreateSecondary")}
+                                        </a>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
                     {googleCalendarHref && (
                         <div className="grid gap-2 sm:grid-cols-2">
                             <a

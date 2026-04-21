@@ -20,6 +20,8 @@ interface ConfirmBookingInput {
   idempotency_key?: string;
 }
 
+type CustomerRecordStatus = "existing" | "created" | null;
+
 function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): string | null {
   const forwarded = rawRequest.headers["x-forwarded-for"];
   if (typeof forwarded === "string" && forwarded.trim().length > 0) {
@@ -76,6 +78,12 @@ export const confirmBooking = functions.https.onCall(
         status: appt.status,
         customer_email: appt.customer_email ?? null,
         customer_name: appt.customer_name ?? null,
+        customer_record_status:
+          appt.customer_record_status === "existing"
+            ? "existing"
+            : appt.customer_record_status === "created"
+              ? "created"
+              : null,
       };
     }
 
@@ -134,6 +142,12 @@ export const confirmBooking = functions.https.onCall(
     const customerEmailRaw = typeof appt.customer_email === "string" ? appt.customer_email : "";
     const customerPhoneRaw = typeof appt.customer_phone === "string" ? appt.customer_phone : null;
     const customerName = typeof appt.customer_name === "string" ? appt.customer_name : null;
+    const customerRecordStatus: CustomerRecordStatus =
+      appt.customer_record_status === "existing"
+        ? "existing"
+        : appt.customer_record_status === "created"
+          ? "created"
+          : null;
 
     if (businessId && customerEmailRaw) {
       const customerEmail = normalizeEmail(customerEmailRaw);
@@ -211,6 +225,7 @@ export const confirmBooking = functions.https.onCall(
       history_reference: appointment_id,
       customer_email: customerEmailRaw || null,
       customer_name: customerName,
+      customer_record_status: customerRecordStatus,
     };
   }
 );

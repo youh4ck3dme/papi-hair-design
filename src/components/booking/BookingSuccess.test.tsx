@@ -1,12 +1,34 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BookingSuccess } from "./BookingSuccess";
 import type { BookingResult, ServiceRow } from "./types";
+
+const authState = vi.hoisted(() => ({
+  user: null as { id: string; email: string | null } | null,
+}));
+
+const resolveBookingAccountStateMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/calendarExport", () => ({
   buildGoogleCalendarUrl: vi.fn(() => "https://calendar.google.com/fake"),
   buildIcsContent: vi.fn(() => "BEGIN:VCALENDAR"),
+}));
+
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => ({
+    user: authState.user,
+    fbUser: null,
+    profile: null,
+    memberships: [],
+    loading: false,
+    signOut: vi.fn(),
+    refreshProfile: vi.fn(),
+  }),
+}));
+
+vi.mock("@/integrations/firebase/resolveBookingAccountState", () => ({
+  resolveBookingAccountState: (...args: unknown[]) => resolveBookingAccountStateMock(...args),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -19,6 +41,16 @@ vi.mock("react-i18next", () => ({
         "booking.confirmService": "Služba",
         "booking.confirmDate": "Dátum",
         "booking.confirmTime": "Čas",
+        "booking.accountExistingTitle": "Váš účet už existuje",
+        "booking.accountExistingDesc": "Prihláste sa a rezerváciu pripojíme k vášmu účtu.",
+        "booking.accountKnownTitle": "Ste už v systéme",
+        "booking.accountKnownDesc": "Dokončite si účet a spravujte rezervácie pohodlnejšie.",
+        "booking.accountNewTitle": "Vytvorte si účet",
+        "booking.accountNewDesc": "Uložte si rezerváciu do nového účtu a spravujte ju online.",
+        "booking.accountExistingPrimary": "Prihlásiť sa",
+        "booking.accountExistingSecondary": "Obnoviť heslo",
+        "booking.accountCreatePrimary": "Vytvoriť účet",
+        "booking.accountCreateSecondary": "Už mám účet",
         "booking.historyCta": "Moje rezervácie",
         "booking.newBooking": "Nová rezervácia",
         "booking.addToGoogleCalendar": "Pridať do Google Kalendára",
@@ -68,6 +100,17 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe("BookingSuccess", () => {
+  beforeEach(() => {
+    authState.user = { id: "signed-in", email: "test@test.sk" };
+    resolveBookingAccountStateMock.mockResolvedValue({
+      success: true,
+      state: "new_customer",
+      email: "test@test.sk",
+      has_password: false,
+      has_google: false,
+    });
+  });
+
   it("renders success confirmation title", () => {
     render(
       <BookingSuccess
@@ -156,5 +199,36 @@ describe("BookingSuccess", () => {
       { wrapper }
     );
     expect(screen.getByRole("button", { name: /Nová rezervácia/i })).toBeInTheDocument();
+  });
+
+  it("shows login-first account CTA when booking email already has an account", async () => {
+    authState.user = null;
+    resolveBookingAccountStateMock.mockResolvedValue({
+      success: true,
+      state: "existing_account",
+      email: "test@test.sk",
+      has_password: true,
+      has_google: true,
+    });
+
+    render(
+      <BookingSuccess
+        bookingResult={makeResult({ customer_record_status: "existing" })}
+        selectedService={makeService()}
+        selectedFullDate={new Date(2026, 3, 20)}
+        selectedTime="10:30"
+        dateLocale={undefined}
+      />,
+      { wrapper }
+    );
+
+    expect(await screen.findByRole("link", { name: /Prihlásiť sa/i })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/auth?mode=login"),
+    );
+    expect(screen.getByRole("link", { name: /Obnoviť heslo/i })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/auth?mode=forgot"),
+    );
   });
 });
