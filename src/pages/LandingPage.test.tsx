@@ -22,7 +22,7 @@ describe("LandingPage", () => {
     });
   });
 
-  it("opens the pricing drawer after splash completes", () => {
+  it("opens the pricing drawer only after the user asks for it", async () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
@@ -36,9 +36,12 @@ describe("LandingPage", () => {
       vi.advanceTimersByTime(2800);
     });
 
+    expect(screen.queryByText("Cenník Služieb")).not.toBeInTheDocument();
+
+    vi.useRealTimers();
     fireEvent.click(screen.getByRole("button", { name: /Zobraziť cenník/i }));
 
-    expect(screen.getByText("Cenník Služieb")).toBeInTheDocument();
+    expect(await screen.findByText("Cenník Služieb")).toBeInTheDocument();
   });
 
   it("renders the sticky public header after splash completes", () => {

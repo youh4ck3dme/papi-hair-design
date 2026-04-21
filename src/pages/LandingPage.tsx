@@ -1,5 +1,4 @@
-import { useCallback, useState } from "react";
-import { LandingBottomDrawer } from "@/components/landing/LandingBottomDrawer";
+import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { LandingInstallPrompt } from "@/components/landing/LandingInstallPrompt";
 import { LandingMainCard } from "@/components/landing/LandingMainCard";
 import { LandingOpeningHours } from "@/components/landing/LandingOpeningHours";
@@ -8,9 +7,15 @@ import { LandingTopNav } from "@/components/landing/LandingTopNav";
 import { PublicAtmosphereBackground } from "@/components/public/PublicAtmosphereBackground";
 import type { LandingDrawerType } from "@/components/landing/types";
 
+const LandingBottomDrawer = lazy(async () => {
+  const module = await import("@/components/landing/LandingBottomDrawer");
+  return { default: module.LandingBottomDrawer };
+});
+
 export default function LandingPage() {
   const [splashDone, setSplashDone] = useState(false);
   const [drawer, setDrawer] = useState<LandingDrawerType>(null);
+  const [drawerLoaded, setDrawerLoaded] = useState(false);
 
   const handleSplashFinish = useCallback(() => {
     setSplashDone(true);
@@ -23,6 +28,12 @@ export default function LandingPage() {
   const closeDrawer = useCallback(() => {
     setDrawer(null);
   }, []);
+
+  useEffect(() => {
+    if (drawer !== null) {
+      setDrawerLoaded(true);
+    }
+  }, [drawer]);
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden bg-black text-white md:min-h-screen">
@@ -58,7 +69,11 @@ export default function LandingPage() {
         </div>
       </div>
 
-      <LandingBottomDrawer open={drawer} onClose={closeDrawer} />
+      {drawerLoaded ? (
+        <Suspense fallback={null}>
+          <LandingBottomDrawer open={drawer} onClose={closeDrawer} />
+        </Suspense>
+      ) : null}
       <LandingInstallPrompt visible={splashDone && drawer === null} />
     </main>
   );
