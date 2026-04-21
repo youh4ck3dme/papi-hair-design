@@ -40,6 +40,7 @@ describe("LandingPage", () => {
 
     vi.useRealTimers();
     fireEvent.click(screen.getByRole("button", { name: /Zobraziť cenník/i }));
+    await vi.dynamicImportSettled();
 
     expect(await screen.findByText("Cenník Služieb")).toBeInTheDocument();
   });

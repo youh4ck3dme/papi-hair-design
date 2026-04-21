@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { addMinutes, startOfDay, format as fmtDate } from "date-fns";
 import { sk } from "date-fns/locale";
+import "@/styles/booking-calendar.css";
 import { auth, db } from "@/integrations/firebase/config";
 import {
   collection,
