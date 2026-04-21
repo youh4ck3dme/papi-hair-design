@@ -73,7 +73,7 @@ export function BookingSuccess({
 
     return (
         <div className="min-h-screen bg-background" data-testid="booking-success">
-            <PublicStickyHeader currentOverride="booking" />
+            <PublicStickyHeader currentOverride="services" />
 
             <div className="max-w-md mx-auto px-5 py-12 text-center space-y-6">
                 {/* Animated checkmark */}
