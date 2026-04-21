@@ -24,7 +24,7 @@ import {
   type NextOpening,
   type BusinessHourEntry,
 } from "@/hooks/useBusinessInfo";
-import cardBgQr3d from "@/assets/luxury-qr-3d.png";
+import cardBgQr3d from "@/assets/luxury-qr-3d.webp";
 
 const DEMO_BUSINESS_ID = "papi-hair-design-main";
 const BOOKING_URL = "https://booking.papihairdesign.sk/booking";
