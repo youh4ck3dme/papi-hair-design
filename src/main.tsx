@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import App from "./App.tsx";
 import "./index.css";
+import "@/styles/phd-design-system.css";
 import "@/i18n";
 import "@/styles/booking-calendar.css";
 import { ensureStorageAndServiceWorker } from "@/lib/indexed-db-available";

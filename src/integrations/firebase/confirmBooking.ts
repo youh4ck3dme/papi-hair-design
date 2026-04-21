@@ -6,7 +6,6 @@ export interface ConfirmBookingBody {
   appointment_id: string;
   confirm_token: string;
   idempotency_key?: string;
-  recaptcha_token?: string | null;
 }
 
 export interface ConfirmBookingResponse {

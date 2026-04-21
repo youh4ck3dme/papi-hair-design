@@ -3,10 +3,6 @@ import { HttpsError } from "firebase-functions/v2/https";
 export type BookingErrorCode =
   | "missing_fields"
   | "invalid_start_at"
-  | "missing_recaptcha_token"
-  | "recaptcha_unavailable"
-  | "recaptcha_failed"
-  | "recaptcha_low_score"
   | "service_not_found"
   | "slot_unavailable"
   | "appointment_not_found"
@@ -22,4 +18,3 @@ interface BookingErrorOptions {
 export function throwBookingError({ status, code, message }: BookingErrorOptions): never {
   throw new HttpsError(status, message, { code });
 }
-

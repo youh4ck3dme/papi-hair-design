@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogoIcon } from "@/components/LogoIcon";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { MapPin, Phone, Mail } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -13,7 +12,6 @@ const Index = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-secondary to-background p-4 relative">
       <div className="fixed top-4 right-4 z-50 flex items-center gap-1">
         <LanguageToggle />
-        <ThemeToggle />
       </div>
       <div className="text-center space-y-6 max-w-md">
         <div className="flex items-center justify-center gap-3">

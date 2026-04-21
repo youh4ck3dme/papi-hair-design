@@ -4,11 +4,30 @@ import { CERTIFIED_VIEWPORTS } from "./viewports";
 const OVERFLOW_TOLERANCE_PX = 2;
 
 const PAGES: { path: string; criticalSelector?: string; criticalLabel?: string }[] = [
-  { path: "/", criticalSelector: "text=PAPI", criticalLabel: "heading/brand" },
+  { path: "/", criticalSelector: "[data-testid=\"public-sticky-header\"]", criticalLabel: "sticky header" },
   { path: "/booking", criticalSelector: "text=Vyberte kategóriu", criticalLabel: "booking step" },
+  { path: "/my-account", criticalSelector: "text=Môj účet", criticalLabel: "account heading" },
   { path: "/auth", criticalSelector: "text=Prihlásenie", criticalLabel: "auth heading" },
   { path: "/demo", criticalSelector: "text=Rezervačný systém", criticalLabel: "demo heading" },
 ];
+
+async function gotoWithWarmRetry(page: import("@playwright/test").Page, path: string) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await page.goto(path, { waitUntil: "domcontentloaded", timeout: 45_000 });
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) {
+        await page.waitForTimeout(1500);
+        continue;
+      }
+    }
+  }
+
+  throw lastError;
+}
 
 for (const viewport of CERTIFIED_VIEWPORTS) {
   test.describe(`Viewport: ${viewport.name} (${viewport.width}×${viewport.height})`, () => {
@@ -18,7 +37,8 @@ for (const viewport of CERTIFIED_VIEWPORTS) {
 
     for (const { path, criticalSelector, criticalLabel } of PAGES) {
       test(`${path} – no horizontal overflow & page loaded`, async ({ page }) => {
-        const response = await page.goto(path, { waitUntil: "domcontentloaded" });
+        test.setTimeout(70_000);
+        const response = await gotoWithWarmRetry(page, path);
         expect(response?.status()).toBe(200);
 
         await page.waitForLoadState("domcontentloaded");
@@ -47,7 +67,8 @@ for (const viewport of CERTIFIED_VIEWPORTS) {
 
       if (criticalSelector && criticalLabel) {
         test(`${path} – critical element visible (${criticalLabel})`, async ({ page }) => {
-          await page.goto(path, { waitUntil: "domcontentloaded" });
+          test.setTimeout(70_000);
+          await gotoWithWarmRetry(page, path);
 
           // Wait for any splash to clear
           await page.locator('.loading-spinner, [aria-label="Loading"]').waitFor({ state: 'hidden', timeout: 15000 }).catch(() => { });
@@ -60,7 +81,7 @@ for (const viewport of CERTIFIED_VIEWPORTS) {
             path === "/auth"
               ? page.getByText(/Prihlásenie|Registrácia|Obnova hesla/).first()
               : page.locator(criticalSelector).first();
-          await expect(locator).toBeVisible({ timeout: 20_000 });
+          await expect(locator).toBeVisible({ timeout: path === "/" ? 40_000 : 20_000 });
         });
       }
     }

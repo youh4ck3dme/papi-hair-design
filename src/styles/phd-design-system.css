@@ -1,0 +1,430 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap");
+
+:root {
+  --gold-100: #ffeaa3;
+  --gold-200: #f5d97a;
+  --gold-300: #dcb773;
+  --gold-400: #c9a055;
+  --gold-500: #b38b47;
+  --gold-600: #8a6830;
+
+  --ink-0: #050403;
+  --ink-50: #080604;
+  --ink-100: #0a0806;
+  --ink-200: #0c0a07;
+  --ink-300: #0c0907;
+  --ink-400: #0e0b07;
+  --ink-500: #131008;
+  --ink-600: #181410;
+  --ink-700: #191410;
+  --ink-800: #1a1612;
+  --ink-900: #1c1810;
+  --ink-950: #1e1912;
+
+  --warm-100: #e6dfd3;
+  --warm-200: #d6cebe;
+  --warm-300: #b8b1a8;
+  --warm-400: #9a9088;
+  --warm-500: #8a8278;
+  --warm-600: #7a7367;
+  --warm-700: #5e574f;
+  --warm-800: #4a443e;
+
+  --status-open: #4ade80;
+  --status-open-bg: #22c55e;
+  --status-open-deep: #0a2d12;
+  --status-open-dark: #041508;
+  --status-closed: #ef4444;
+
+  --color-gold: var(--gold-300);
+  --color-gold-light: var(--gold-100);
+  --color-gold-muted: var(--gold-600);
+
+  --color-bg-void: var(--ink-0);
+  --color-bg-deep: var(--ink-50);
+  --color-bg-base: var(--ink-500);
+  --color-bg-surface: var(--ink-800);
+  --color-bg-elevated: var(--ink-950);
+  --color-bg-drawer: var(--ink-700);
+  --color-bg-cta: var(--ink-900);
+
+  --color-text-primary: #ffffff;
+  --color-text-gold: var(--gold-300);
+  --color-text-muted: var(--warm-300);
+  --color-text-label: var(--warm-200);
+  --color-text-caption: var(--warm-600);
+  --color-text-hint: var(--warm-800);
+  --color-text-note: var(--warm-700);
+
+  --color-border-gold: var(--gold-300);
+  --color-border-subtle: rgba(220, 183, 115, 0.25);
+  --color-border-faint: rgba(220, 183, 115, 0.12);
+
+  --shadow-card: 0 20px 60px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-drawer: 0 -20px 60px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-nav-btn: 0 4px 10px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  --shadow-cta-btn: 0 4px 20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-gold-btn: 0 6px 24px rgba(220, 183, 115, 0.3);
+  --shadow-gold-btn-hover: 0 8px 32px rgba(220, 183, 115, 0.5);
+  --shadow-medallion: 0 6px 30px rgba(0, 0, 0, 0.9), 0 0 0 3px rgba(220, 183, 115, 0.25);
+  --shadow-splash-logo: 0 0 40px rgba(220, 183, 115, 0.4);
+  --shadow-icon-circle: 0 0 30px rgba(220, 183, 115, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-nav-line: 0 0 2px rgba(220, 183, 115, 0.2);
+  --shadow-open-badge: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-3xl: 28px;
+  --radius-full: 9999px;
+
+  --background: 40 45.5% 93.5%;
+  --foreground: 30 14% 10%;
+  --card: 40 36.8% 88.8%;
+  --card-foreground: 30 14% 10%;
+  --popover: 40 36.8% 88.8%;
+  --popover-foreground: 30 14% 10%;
+  --primary: 39 60% 65.7%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 37 22.8% 80.2%;
+  --secondary-foreground: 30 14% 10%;
+  --muted: 40 36.8% 88.8%;
+  --muted-foreground: 27 8.2% 56.9%;
+  --accent: 39 60% 65.7%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 69.2% 58%;
+  --success-foreground: 0 0% 100%;
+  --warning: 39 60% 65.7%;
+  --warning-foreground: 0 0% 0%;
+  --border: 35 20% 76%;
+  --input: 35 20% 76%;
+  --ring: 39 60% 65.7%;
+  --radius: var(--radius-xl);
+
+  --sidebar-background: 40 36.8% 88.8%;
+  --sidebar-foreground: 30 14% 10%;
+  --sidebar-primary: 39 60% 65.7%;
+  --sidebar-primary-foreground: 0 0% 0%;
+  --sidebar-accent: 40 45.5% 93.5%;
+  --sidebar-accent-foreground: 30 14% 10%;
+  --sidebar-border: 35 20% 76%;
+  --sidebar-ring: 39 60% 65.7%;
+
+  --calendar-pending: 39 60% 65.7%;
+  --calendar-pending-fg: 0 0% 0%;
+  --calendar-confirmed: 142 69.2% 58%;
+  --calendar-confirmed-fg: 0 0% 0%;
+  --calendar-cancelled: 0 84.2% 60.2%;
+  --calendar-cancelled-fg: 0 0% 100%;
+  --calendar-completed: 27 8.2% 56.9%;
+  --calendar-completed-fg: 0 0% 100%;
+}
+
+.dark {
+  --background: 30 25% 1.6%;
+  --foreground: 38 27.5% 86.5%;
+  --card: 30 18.2% 8.6%;
+  --card-foreground: 38 27.5% 86.5%;
+  --popover: 30 18.2% 8.6%;
+  --popover-foreground: 38 27.5% 86.5%;
+  --primary: 39 60% 65.7%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 27 22% 8%;
+  --secondary-foreground: 38 27.5% 86.5%;
+  --muted: 27 22% 8%;
+  --muted-foreground: 34 10.1% 69%;
+  --accent: 39 60% 65.7%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 69.2% 58%;
+  --success-foreground: 0 0% 0%;
+  --warning: 39 60% 65.7%;
+  --warning-foreground: 0 0% 0%;
+  --border: 36 23% 21%;
+  --input: 36 23% 21%;
+  --ring: 39 60% 65.7%;
+
+  --sidebar-background: 30 18.2% 8.6%;
+  --sidebar-foreground: 38 27.5% 86.5%;
+  --sidebar-primary: 39 60% 65.7%;
+  --sidebar-primary-foreground: 0 0% 0%;
+  --sidebar-accent: 27 22% 8%;
+  --sidebar-accent-foreground: 38 27.5% 86.5%;
+  --sidebar-border: 36 23% 21%;
+  --sidebar-ring: 39 60% 65.7%;
+
+  --calendar-pending: 39 60% 65.7%;
+  --calendar-pending-fg: 0 0% 0%;
+  --calendar-confirmed: 142 69.2% 58%;
+  --calendar-confirmed-fg: 0 0% 0%;
+  --calendar-cancelled: 0 84.2% 60.2%;
+  --calendar-cancelled-fg: 0 0% 100%;
+  --calendar-completed: 27 8.2% 56.9%;
+  --calendar-completed-fg: 0 0% 100%;
+}
+
+.install-orb {
+  position: fixed;
+  right: 0;
+  bottom: calc(env(safe-area-inset-bottom) + 20px);
+  z-index: 260;
+  width: 92px;
+  height: 92px;
+  border: 1px solid rgba(220, 183, 115, 0.5);
+  border-right: none;
+  border-radius: 9999px 0 0 9999px;
+  background:
+    radial-gradient(circle at 28% 50%, rgba(255, 234, 163, 0.28), transparent 34%),
+    linear-gradient(180deg, rgba(30, 25, 18, 0.96), rgba(12, 10, 7, 0.98));
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(220, 183, 115, 0.08),
+    0 0 28px rgba(220, 183, 115, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease;
+}
+
+.install-orb:hover {
+  transform: translateX(-4px) scale(1.02);
+  border-color: rgba(220, 183, 115, 0.72);
+  box-shadow:
+    0 22px 50px rgba(0, 0, 0, 0.5),
+    0 0 36px rgba(220, 183, 115, 0.34);
+}
+
+.install-orb:active {
+  transform: translateX(-2px) scale(0.99);
+}
+
+.install-orb::before {
+  content: "";
+  position: absolute;
+  inset: 10px 14px 10px 10px;
+  border-radius: 9999px 0 0 9999px;
+  border: 1px solid rgba(220, 183, 115, 0.14);
+}
+
+.install-orb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(130deg, transparent 20%, rgba(255, 255, 255, 0.14) 48%, transparent 68%);
+  transform: translateX(-120%);
+  animation: installSweep 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.install-orb__inner {
+  position: relative;
+  left: -7px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.install-orb__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  color: var(--color-gold);
+  background: rgba(220, 183, 115, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 18px rgba(220, 183, 115, 0.22);
+  animation: installPulse 1.65s ease-in-out infinite;
+}
+
+.install-orb__label {
+  max-width: 48px;
+  color: var(--color-text-gold);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.18em;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 0 0 14px rgba(220, 183, 115, 0.24);
+}
+
+.install-orb__ping {
+  position: absolute;
+  inset: 6px 9px 6px 6px;
+  border-radius: 9999px 0 0 9999px;
+  border: 1px solid rgba(220, 183, 115, 0.22);
+  opacity: 0;
+  animation: installRing 2.1s ease-out infinite;
+  pointer-events: none;
+}
+
+.install-orb__hint {
+  position: fixed;
+  right: 78px;
+  bottom: 18px;
+  z-index: 259;
+  padding: 9px 12px;
+  border-radius: 9999px;
+  border: 1px solid rgba(220, 183, 115, 0.24);
+  background: rgba(10, 8, 6, 0.9);
+  color: var(--color-text-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  animation: installHintFloat 2.3s ease-in-out infinite;
+}
+
+@media (max-width: 640px) {
+  .install-orb {
+    width: 84px;
+    height: 84px;
+    bottom: calc(env(safe-area-inset-bottom) + 14px);
+  }
+
+  .install-orb__label {
+    font-size: 8px;
+  }
+
+  .install-orb__hint {
+    right: 72px;
+    bottom: 16px;
+    font-size: 10px;
+    padding: 8px 10px;
+  }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(1.5rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.7s ease-out forwards;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 3.5s linear infinite;
+}
+
+.animate-spin-reverse-slow {
+  animation: spinSlow 12s linear infinite reverse;
+}
+
+.animate-spin-medium {
+  animation: spinSlow 4s linear infinite;
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-15deg) scale(1.1); }
+  75% { transform: rotate(15deg) scale(1.1); }
+}
+
+.group:hover .icon-wiggle {
+  animation: wiggle 0.4s ease-in-out infinite;
+}
+
+@keyframes flip3d {
+  0% { transform: rotateY(0deg) scale(1); }
+  50% { transform: rotateY(180deg) scale(1.2); }
+  100% { transform: rotateY(360deg) scale(1); }
+}
+
+.group:hover .icon-flip {
+  animation: flip3d 0.6s ease-in-out;
+}
+
+@keyframes bounceSub {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px) scale(1.05); }
+}
+
+.group:hover .icon-bounce {
+  animation: bounceSub 0.5s ease-in-out infinite;
+}
+
+@keyframes installPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 0 18px rgba(220, 183, 115, 0.18);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 0 28px rgba(220, 183, 115, 0.42);
+  }
+}
+
+@keyframes installSweep {
+  0%, 42% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  52% {
+    opacity: 1;
+  }
+  72%, 100% {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+
+@keyframes installRing {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  18% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes installHintFloat {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+@keyframes kenBurns {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.08) translate(-1%, 1%); }
+  100% { transform: scale(1.15) translate(1%, -1%); }
+}
+
+.animate-ken-burns {
+  animation: kenBurns 40s ease-in-out infinite alternate;
+}

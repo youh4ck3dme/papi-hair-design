@@ -18,21 +18,9 @@ interface CreateBookingHoldInput {
   customer_email: string;
   customer_phone?: string;
   idempotency_key?: string;
-  recaptcha_token?: string | null;
 }
 
 const HOLD_TTL_MS = 15 * 60 * 1000; // 15 minutes
-
-const RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
-const RECAPTCHA_MIN_SCORE = 0.5;
-const RECAPTCHA_EXPECTED_ACTION = "booking";
-
-interface RecaptchaVerifyResponse {
-  success: boolean;
-  score?: number;
-  action?: string;
-  "error-codes"?: string[];
-}
 
 function createIdempotencyKey(rawKey: string | undefined): string {
   const normalized = typeof rawKey === "string" ? rawKey.trim() : "";
@@ -53,72 +41,6 @@ function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): st
   return rawRequest.socket.remoteAddress ?? null;
 }
 
-async function verifyRecaptchaIfConfigured(recaptchaToken: string | null | undefined, clientIp: string | null): Promise<void> {
-  const recaptchaSecret = process.env.RECAPTCHA_SECRET?.trim();
-  if (!recaptchaSecret) return;
-
-  if (!recaptchaToken || typeof recaptchaToken !== "string") {
-    throwBookingError({
-      status: "invalid-argument",
-      code: "missing_recaptcha_token",
-      message: "Chýba reCAPTCHA token",
-    });
-  }
-
-  const payload = new URLSearchParams();
-  payload.set("secret", recaptchaSecret);
-  payload.set("response", recaptchaToken);
-  if (clientIp) {
-    payload.set("remoteip", clientIp);
-  }
-
-  let verification: RecaptchaVerifyResponse;
-  try {
-    const response = await fetch(RECAPTCHA_VERIFY_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: payload.toString()
-    });
-    if (!response.ok) {
-      throw new Error(`reCAPTCHA endpoint returned ${response.status}`);
-    }
-    verification = await response.json() as RecaptchaVerifyResponse;
-  } catch (error) {
-    throwBookingError({
-      status: "unavailable",
-      code: "recaptcha_unavailable",
-      message: "reCAPTCHA overenie zlyhalo",
-    });
-  }
-
-  if (!verification.success) {
-    throwBookingError({
-      status: "permission-denied",
-      code: "recaptcha_failed",
-      message: "reCAPTCHA overenie neprešlo",
-    });
-  }
-
-  if (verification.action && verification.action !== RECAPTCHA_EXPECTED_ACTION) {
-    throwBookingError({
-      status: "permission-denied",
-      code: "recaptcha_failed",
-      message: "Neplatná reCAPTCHA akcia",
-    });
-  }
-
-  const score = typeof verification.score === "number" ? verification.score : 0;
-  if (score < RECAPTCHA_MIN_SCORE) {
-    throwBookingError({
-      status: "permission-denied",
-      code: "recaptcha_low_score",
-      message: "reCAPTCHA skóre je príliš nízke",
-    });
-  }
-}
-
 export const createBookingHold = functions.https.onCall(
   { region: "europe-west1" },
   async (request: CallableRequest<CreateBookingHoldInput>) => {
@@ -128,9 +50,6 @@ export const createBookingHold = functions.https.onCall(
     // Rate limit by IP
     const ip = extractClientIp(request.rawRequest) || "unknown";
     await checkRateLimit(ip);
-
-    // Verify reCAPTCHA
-    await verifyRecaptchaIfConfigured(data.recaptcha_token, extractClientIp(request.rawRequest));
 
     const {
       business_id,

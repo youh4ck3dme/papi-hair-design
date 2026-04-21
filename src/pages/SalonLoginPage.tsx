@@ -11,7 +11,6 @@ import {
   LockKeyhole,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { LanguageToggle } from "@/components/LanguageToggle";
 import {
   getFirebaseErrorCode,
   isBlockedByClientError,
@@ -518,13 +517,6 @@ export default function SalonLoginPage() {
         <div className="absolute -left-16 top-16 h-64 w-64 rounded-full bg-[#d7b465]/10 blur-3xl" />
         <div className="absolute -right-16 top-80 h-72 w-72 rounded-full bg-[#8a5b26]/10 blur-3xl" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(215,180,101,0.12),transparent_26%),linear-gradient(180deg,#030303_0%,#070707_52%,#030303_100%)]" />
-      </div>
-
-      <div
-        className="fixed left-4 top-4 z-20 flex items-center gap-2 safe-left safe-top"
-        style={{ top: "max(1rem, env(safe-area-inset-top))" }}
-      >
-        <LanguageToggle />
       </div>
 
       <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-col px-4 pb-10 pt-16 sm:px-6 sm:pt-20 lg:px-8">

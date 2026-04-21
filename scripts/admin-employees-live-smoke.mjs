@@ -74,7 +74,7 @@ try {
     naturalHeight: img.naturalHeight,
   }));
 
-  if (!headerLogo.currentSrc.includes("/favicon-32x32.png")) {
+  if (!headerLogo.currentSrc.includes("/phd-logo.png")) {
     throw new Error(`Unexpected admin header logo asset: ${headerLogo.currentSrc}`);
   }
 

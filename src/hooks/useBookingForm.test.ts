@@ -7,7 +7,6 @@ import { useBookingForm } from "./useBookingForm";
 const mockUseAuth = vi.fn();
 const mockCreateBookingHold = vi.fn();
 const mockConfirmBooking = vi.fn();
-const mockGetRecaptchaToken = vi.fn();
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
 
@@ -21,10 +20,6 @@ vi.mock("@/integrations/firebase/createBookingHold", () => ({
 
 vi.mock("@/integrations/firebase/confirmBooking", () => ({
   confirmBooking: (...args: unknown[]) => mockConfirmBooking(...args),
-}));
-
-vi.mock("@/integrations/firebase/recaptcha", () => ({
-  getRecaptchaToken: (...args: unknown[]) => mockGetRecaptchaToken(...args),
 }));
 
 vi.mock("sonner", () => ({
@@ -76,7 +71,6 @@ describe("useBookingForm", () => {
     mockUseAuth.mockReturnValue({
       profile: null,
     });
-    mockGetRecaptchaToken.mockResolvedValue("recaptcha-token");
     mockCreateBookingHold.mockResolvedValue({
       success: true,
       appointment_id: "appt-1",
@@ -192,7 +186,6 @@ describe("useBookingForm", () => {
       })
     );
     expect(mockConfirmBooking).toHaveBeenCalledTimes(1);
-    expect(mockGetRecaptchaToken).toHaveBeenCalledTimes(2);
     expect(toastError).not.toHaveBeenCalled();
   });
 

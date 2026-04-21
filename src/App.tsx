@@ -11,17 +11,17 @@ import { lazy, Suspense, useEffect } from "react";
 import { usePageAnalytics } from "@/hooks/usePageAnalytics";
 import { Loader2 } from "lucide-react";
 
-const AdminLayout = lazy(() => import("@/components/AdminLayout").then(m => ({ default: m.AdminLayout })));
+const AdminLayout = lazy(() => import("@/components/AdminLayout").then((m) => ({ default: m.AdminLayout })));
+const PublicChromeLayout = lazy(() => import("@/components/public/PublicChromeLayout").then((m) => ({ default: m.PublicChromeLayout })));
 const CookieConsent = lazy(() => import("@/components/CookieConsent"));
 
-import LiquidPlayground from "./pages/LiquidPlayground";
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const LiquidPlayground = lazy(() => import("./pages/LiquidPlayground"));
 const DemoPage = lazy(() => import("./pages/DemoPage"));
 const BookingPage = lazy(() => import("./pages/BookingPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const OfflinePage = lazy(() => import("./pages/OfflinePage"));
 const InstallPage = lazy(() => import("./pages/InstallPage"));
-
-
 const AuthPage = lazy(() => import("./pages/Auth"));
 const DashboardPage = lazy(() => import("./pages/admin/DashboardPage"));
 const CalendarPage = lazy(() => import("./pages/admin/CalendarPage"));
@@ -38,14 +38,13 @@ const BookingHistoryPage = lazy(() => import("./pages/BookingHistoryPage"));
 const SalonLoginPage = lazy(() => import("./pages/SalonLoginPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const BootstrapPage = lazy(() => import("./pages/BootstrapPage"));
-
-// Papi Hair Design Components
 const PricingPage = lazy(() => import("./pages/Pricing"));
+const MyAccountPage = lazy(() => import("./pages/MyAccountPage"));
 const InstallPrompt = lazy(() => import("@/components/InstallPrompt"));
 
 const LazyFallback = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+  <div className="flex min-h-screen items-center justify-center">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
   </div>
 );
 
@@ -83,7 +82,7 @@ const App = () => {
     import.meta.env.DEV || import.meta.env.VITE_ENABLE_BOOTSTRAP === "true";
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+    <ThemeProvider attribute="class" forcedTheme="dark" defaultTheme="dark" enableSystem={false}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
@@ -95,27 +94,31 @@ const App = () => {
               <AnalyticsTracker />
               <Suspense fallback={<LazyFallback />}>
                 <Routes>
-                  <Route path="/" element={<LiquidPlayground />} />
-                  <Route path="/demo" element={<DemoPage />} />
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/liquid-playground" element={<LiquidPlayground />} />
                   <Route path="/booking" element={<BookingPage />} />
-                  <Route path="/pricing" element={<PricingPage />} />
-                  <Route
-                    path="/papihairsalon2026"
-                    element={salonLoginEnabled ? <SalonLoginPage /> : <Navigate to="/auth" replace />}
-                  />
-
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route path="/offline" element={<OfflinePage />} />
-                  <Route path="/install" element={<InstallPage />} />
-                  <Route path="/diagnostics" element={<DiagnosticsPage />} />
-                  <Route path="/dashboard/history" element={<BookingHistoryPage />} />
-                  <Route path="/privacy" element={<PrivacyPage />} />
-                  <Route path="/privacy-policy" element={<PrivacyPage />} />
-                  <Route path="/terms" element={<TermsPage />} />
-                  <Route
-                    path="/bootstrap"
-                    element={bootstrapEnabled ? <BootstrapPage /> : <Navigate to="/auth" replace />}
-                  />
+                  <Route element={<PublicChromeLayout />}>
+                    <Route path="/demo" element={<DemoPage />} />
+                    <Route path="/pricing" element={<PricingPage />} />
+                    <Route path="/my-account" element={<MyAccountPage />} />
+                    <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/offline" element={<OfflinePage />} />
+                    <Route path="/install" element={<InstallPage />} />
+                    <Route
+                      path="/papihairsalon2026"
+                      element={salonLoginEnabled ? <SalonLoginPage /> : <Navigate to="/auth" replace />}
+                    />
+                    <Route
+                      path="/bootstrap"
+                      element={bootstrapEnabled ? <BootstrapPage /> : <Navigate to="/auth" replace />}
+                    />
+                    <Route path="/diagnostics" element={<DiagnosticsPage />} />
+                    <Route path="/dashboard/history" element={<BookingHistoryPage />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+                    <Route path="/privacy-policy" element={<PrivacyPage />} />
+                    <Route path="/terms" element={<TermsPage />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Route>
                   <Route
                     path="/reception"
                     element={
@@ -124,7 +127,6 @@ const App = () => {
                       </ProtectedRoute>
                     }
                   />
-
 
                   <Route
                     path="/admin"
@@ -192,8 +194,6 @@ const App = () => {
                       </ProtectedRoute>
                     }
                   />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
             </AuthProvider>

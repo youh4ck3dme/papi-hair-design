@@ -32,7 +32,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from "sonner";
 import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer, MoreVertical, FilterX, MoveRight, CopyPlus, Lock, Trash2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
 import { adminCalendarQuickAction } from "@/integrations/firebase/adminCalendarQuickAction";
 import { toCallableErrorMessage } from "@/integrations/firebase/callableError";
@@ -884,8 +883,6 @@ export default function CalendarPage() {
 
           <div className="flex items-center gap-1.5 shrink-0">
             {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground mr-1" />}
-            <div className="hidden sm:block"><ThemeToggle /></div>
-            
             {compactActionMenu ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

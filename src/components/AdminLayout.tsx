@@ -15,7 +15,6 @@ import {
 import { LogoIcon } from "@/components/LogoIcon";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { LiquidGlassNav, type LiquidGlassNavItem } from "@/components/LiquidGlassNav";
 import { cn } from "@/lib/utils";
 import { db, storage } from "@/integrations/firebase/config";
@@ -217,7 +216,6 @@ function AdminInnerLayout({ children }: { children: React.ReactNode }) {
               <div className="flex-1 min-w-0 font-black uppercase text-xs tracking-widest text-muted-foreground">
                 {navItems.find(n => n.url === location.pathname)?.title ?? "PAPI HAIR DESIGN"}
               </div>
-              <div className="hidden md:block"><ThemeToggle /></div>
             </header>
           )}
           <main className={`flex-1 overflow-auto max-w-full safe-x ${isCalendarPage ? "p-1.5 sm:p-3" : "p-4 sm:p-6"} ${!isCalendarPage ? "pb-24 lg:pb-6" : ""}`}>
