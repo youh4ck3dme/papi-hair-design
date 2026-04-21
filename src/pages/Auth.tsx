@@ -541,21 +541,21 @@ export default function AuthPage() {
         className="min-h-[100dvh] flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(201,168,76,0.10),_transparent_32%),linear-gradient(135deg,_#16120e_0%,_#0d0b09_52%,_#080808_100%)] p-4 safe-x safe-y relative overflow-x-hidden"
         data-testid="auth-page"
       >
-        <div className="w-full max-w-md min-w-0">
-        <div className="flex items-center justify-center gap-2 mb-8">
+        <div className="w-full max-w-[440px] min-w-0">
+        <div className="mb-8 flex items-center justify-center gap-2.5">
           <LogoIcon size="md" />
-          <span className="text-2xl font-bold text-foreground">PAPI HAIR DESIGN</span>
+          <span className="text-[26px] font-bold tracking-[0.04em] text-foreground">PAPI HAIR DESIGN</span>
         </div>
 
         <Card
-          className="rounded-[6px] border-[#C9A84C]/18 bg-[#12100d]/88 shadow-[0_24px_70px_-36px_rgba(0,0,0,0.85),0_0_0_1px_rgba(201,168,76,0.08)] backdrop-blur-md"
+          className="rounded-[24px] border-[#C9A84C]/18 bg-[#12100d]/88 shadow-[0_24px_70px_-36px_rgba(0,0,0,0.85),0_0_0_1px_rgba(201,168,76,0.08)] backdrop-blur-md"
           data-testid="auth-card"
         >
-          <CardHeader>
+          <CardHeader className="space-y-2 px-6 pt-6">
             <CardTitle>{copy.title}</CardTitle>
             <CardDescription>{copy.description}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 px-6 pb-6">
             {claimNotice && (
               <div className="rounded-md border border-[#C9A84C]/24 bg-[#C9A84C]/8 px-4 py-3 text-sm text-white/85">
                 <p className="font-semibold text-[#E7CA77]">{claimNotice.title}</p>
@@ -578,6 +578,7 @@ export default function AuthPage() {
                   onChange={setField("email")}
                   disabled={loading}
                   data-testid="auth-email-input"
+                  className="min-h-12 rounded-[10px]"
                 />
                 {errors.email && <p className="text-destructive text-xs">{errors.email}</p>}
               </div>
@@ -597,6 +598,7 @@ export default function AuthPage() {
                     value={form.password}
                     onChange={setField("password")}
                     disabled={loading}
+                    className="min-h-12 rounded-[10px]"
                   />
                   {errors.password && <p className="text-destructive text-xs">{errors.password}</p>}
                 </div>
@@ -615,7 +617,7 @@ export default function AuthPage() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading} data-testid="auth-login-btn">
+              <Button type="submit" className="min-h-12 w-full rounded-[10px]" disabled={loading} data-testid="auth-login-btn">
                 {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {copy.submitText}
               </Button>
@@ -633,7 +635,7 @@ export default function AuthPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full"
+                    className="min-h-12 w-full rounded-[10px]"
                     disabled={loading}
                     onClick={handleGoogleLogin}
                     data-testid="auth-google-btn"
@@ -651,7 +653,7 @@ export default function AuthPage() {
           </CardContent>
         </Card>
 
-        <p className="mt-4 space-y-1 text-center text-sm text-muted-foreground">
+        <div className="mt-4 rounded-[18px] border border-white/8 bg-black/15 px-4 py-3 text-center text-sm text-muted-foreground">
           <a href="/demo" className="text-primary hover:underline block">
             {t("auth.demoLink")}
           </a>
@@ -661,7 +663,7 @@ export default function AuthPage() {
               {t("auth.bookingLinkLabel")}
             </a>
           </span>
-        </p>
+        </div>
       </div>
     </div>
   );

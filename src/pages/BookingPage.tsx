@@ -237,12 +237,12 @@ export default function BookingPage() {
         <div className="flex flex-1 px-4 pb-8 pt-6 sm:px-6 sm:pt-8 md:pb-10">
           <div className="mx-auto flex w-full max-w-[780px] flex-col">
             <section
-              className="relative mt-10 w-full overflow-visible rounded-3xl border border-border-subtle bg-gradient-to-b from-bg-base/90 to-bg-deep/95 pb-6 pt-16 backdrop-blur-2xl backdrop-saturate-[120%] sm:mt-12 md:pb-8 md:pt-20"
+              className="relative mt-10 w-full overflow-visible rounded-[30px] border border-border-subtle bg-gradient-to-b from-bg-base/90 to-bg-deep/95 pb-6 pt-16 backdrop-blur-2xl backdrop-saturate-[120%] sm:mt-12 md:pb-8 md:pt-20"
               style={{ boxShadow: "var(--shadow-card)" }}
               data-testid="booking-hero-shell"
             >
               <div
-                className="pointer-events-none absolute left-0 right-0 top-0 h-40 rounded-t-3xl bg-gradient-to-b from-gold/10 to-transparent"
+                className="pointer-events-none absolute left-0 right-0 top-0 h-40 rounded-t-[30px] bg-gradient-to-b from-gold/10 to-transparent"
                 aria-hidden="true"
               />
               <div className="pointer-events-none absolute left-5 top-5 h-8 w-8 rounded-tl-lg border-l border-t border-gold/30" aria-hidden="true" />
@@ -268,14 +268,14 @@ export default function BookingPage() {
                 >
                   {currentLang === "en" ? "Book your appointment" : "Rezervujte si termín"}
                 </h1>
-                <div className="mx-auto mt-4 max-w-2xl rounded-2xl border border-gold/20 bg-black/20 px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] md:px-5">
+                <div className="mx-auto mt-5 max-w-2xl rounded-[24px] border border-gold/20 bg-black/20 px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] md:px-5">
                   <div className="grid grid-cols-[auto,1fr] items-start gap-x-3 gap-y-3">
                     <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/[0.08] text-gold">
                       <Phone className="h-4 w-4" strokeWidth={1.8} />
                     </div>
                     <p
                       data-testid="booking-papi-consultation-text"
-                      className="min-w-0 text-sm leading-7 text-white/82 md:text-base"
+                      className="min-w-0 text-sm leading-7 text-white/84 md:text-[15px]"
                     >
                         {currentLang === "en"
                           ? 'Appointments with Róbert Papcun "PAPI" require a consultation, which you can arrange by phone.'
@@ -331,14 +331,14 @@ export default function BookingPage() {
 
               {selectedService && (
                 <div className="px-6 pt-5 md:px-10">
-                  <div className="grid gap-3 rounded-2xl border border-primary/15 bg-[linear-gradient(180deg,rgba(218,165,32,0.09),rgba(218,165,32,0.03))] p-4 lg:grid-cols-3">
-                    <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
+                  <div className="grid gap-3 rounded-[24px] border border-primary/15 bg-[linear-gradient(180deg,rgba(218,165,32,0.09),rgba(218,165,32,0.03))] p-4 lg:grid-cols-3">
+                    <div className="min-w-0 rounded-[16px] border border-white/6 bg-black/20 px-3 py-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
                         {i18n.language === "en" ? "Service" : "Služba"}
                       </p>
                       <p className="mt-1 truncate text-sm font-semibold text-white">{selectedService.name_sk}</p>
                     </div>
-                    <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
+                    <div className="min-w-0 rounded-[16px] border border-white/6 bg-black/20 px-3 py-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
                         {i18n.language === "en" ? "Stylist" : "Kaderník"}
                       </p>
@@ -346,7 +346,7 @@ export default function BookingPage() {
                         {selectedEmployee?.display_name ?? (i18n.language === "en" ? "Choose stylist" : "Vyber kaderníka")}
                       </p>
                     </div>
-                    <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
+                    <div className="min-w-0 rounded-[16px] border border-white/6 bg-black/20 px-3 py-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
                         {i18n.language === "en" ? "Appointment" : "Termín"}
                       </p>

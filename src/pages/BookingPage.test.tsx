@@ -192,7 +192,7 @@ describe("BookingPage stylist step flow", () => {
 
     const consultationText = screen.getByTestId("booking-papi-consultation-text");
     expect(consultationText).toBeInTheDocument();
-    expect(consultationText.className).toContain("text-white/82");
+    expect(consultationText.className).toContain("text-white/84");
     const phoneLink = screen.getByRole("link", { name: /\+421 949 459 624/i });
     const callLink = screen.getByRole("link", { name: /Volať/i });
 

@@ -92,12 +92,12 @@ export default function MyAccountPage() {
         <div className="flex flex-1 px-4 pb-8 pt-6 sm:px-6 sm:pt-8 md:pb-10">
           <div className="mx-auto flex w-full max-w-[780px] flex-col">
             <section
-              className="relative mt-10 w-full overflow-visible rounded-3xl border border-border-subtle bg-gradient-to-b from-bg-base/90 to-bg-deep/95 pb-6 pt-16 backdrop-blur-2xl backdrop-saturate-[120%] sm:mt-12 md:pb-8 md:pt-20"
+              className="relative mt-10 w-full overflow-visible rounded-[30px] border border-border-subtle bg-gradient-to-b from-bg-base/90 to-bg-deep/95 pb-6 pt-16 backdrop-blur-2xl backdrop-saturate-[120%] sm:mt-12 md:pb-8 md:pt-20"
               style={{ boxShadow: "var(--shadow-card)" }}
               data-testid="my-account-hero-shell"
             >
               <div
-                className="pointer-events-none absolute left-0 right-0 top-0 h-40 rounded-t-3xl bg-gradient-to-b from-gold/10 to-transparent"
+                className="pointer-events-none absolute left-0 right-0 top-0 h-40 rounded-t-[30px] bg-gradient-to-b from-gold/10 to-transparent"
                 aria-hidden="true"
               />
               <div className="pointer-events-none absolute left-5 top-5 h-8 w-8 rounded-tl-lg border-l border-t border-gold/30" aria-hidden="true" />
@@ -123,7 +123,7 @@ export default function MyAccountPage() {
                 >
                   {isEnglish ? "My account" : "Môj účet"}
                 </h1>
-                <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-text-caption md:text-base">
+                <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-text-muted md:text-[15px]">
                   {isEnglish
                     ? "Log in, register or continue to your reservation dashboard from one premium client access point."
                     : "Prihláste sa, zaregistrujte sa alebo pokračujte na svoj dashboard rezervácií z jedného prémiového klientskeho vstupu."}
@@ -141,7 +141,7 @@ export default function MyAccountPage() {
                         key={key}
                         type="button"
                         onClick={() => setActivePanel(key)}
-                        className={`min-h-[52px] rounded-[7px] border px-5 py-3 text-center text-sm font-semibold uppercase tracking-[0.16em] transition-all duration-200 ${
+                        className={`min-h-[50px] rounded-[7px] border px-5 py-3 text-center text-sm font-semibold uppercase tracking-[0.16em] transition-all duration-200 ${
                           isActive
                             ? "border-[#C9A84C] bg-[#C9A84C] text-black shadow-[0_0_24px_rgba(201,168,76,0.35)]"
                             : "border-white/12 bg-white/[0.02] text-white/75 hover:border-[#C9A84C]/40 hover:text-white"
@@ -155,14 +155,14 @@ export default function MyAccountPage() {
               </div>
 
               <div className="px-6 pt-8 md:px-10">
-                <div className="rounded-[28px] border border-gold/16 bg-[linear-gradient(180deg,rgba(12,10,8,0.86),rgba(27,20,14,0.82))] p-5 shadow-[0_20px_60px_-42px_rgba(0,0,0,0.85)] sm:p-6">
+                <div className="rounded-[24px] border border-gold/16 bg-[linear-gradient(180deg,rgba(12,10,8,0.86),rgba(27,20,14,0.82))] p-5 shadow-[0_20px_60px_-42px_rgba(0,0,0,0.85)] sm:p-6">
                   {loading ? (
                     <div className="flex min-h-[220px] items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-gold" />
                     </div>
                   ) : (
                     <div className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-stretch">
-                      <div className="rounded-3xl border border-gold/12 bg-black/25 p-5">
+                      <div className="rounded-[24px] border border-gold/12 bg-black/25 p-5">
                         <p className="text-[11px] font-black uppercase tracking-[0.28em] text-gold/70">
                           {currentPanel.eyebrow}
                         </p>
@@ -176,7 +176,7 @@ export default function MyAccountPage() {
                         <button
                           type="button"
                           onClick={() => navigate(currentPanel.actionPath)}
-                          className="group mt-6 inline-flex min-h-[48px] w-full items-center justify-center gap-3 rounded-xl border border-gold/40 bg-gradient-to-b from-ink-600 to-ink-500 px-5 py-4 text-sm font-bold uppercase tracking-[0.22em] text-text-primary transition-all duration-200 hover:border-gold/70 hover:from-ink-800 hover:to-ink-600 active:scale-[0.98]"
+                          className="group mt-6 inline-flex min-h-[48px] w-full items-center justify-center gap-3 rounded-[10px] border border-gold/40 bg-gradient-to-b from-ink-600 to-ink-500 px-5 py-4 text-sm font-bold uppercase tracking-[0.22em] text-text-primary transition-all duration-200 hover:border-gold/70 hover:from-ink-800 hover:to-ink-600 active:scale-[0.98]"
                           style={{ boxShadow: "var(--shadow-cta-btn)" }}
                         >
                           <CurrentIcon className="h-4 w-4 flex-shrink-0 text-gold" />
