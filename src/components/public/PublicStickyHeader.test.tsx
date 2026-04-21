@@ -75,12 +75,12 @@ describe("PublicStickyHeader", () => {
     expect(screen.getByTestId("location-probe")).toHaveTextContent("/pricing");
   });
 
-  it("navigates to booking from the booking button", () => {
+  it("navigates to my account from the account button", () => {
     renderHeader("/privacy");
 
-    fireEvent.click(screen.getByRole("button", { name: "Rezervácia" }));
+    fireEvent.click(screen.getByRole("button", { name: "Môj účet" }));
 
-    expect(screen.getByTestId("location-probe")).toHaveTextContent("/booking");
+    expect(screen.getByTestId("location-probe")).toHaveTextContent("/my-account");
   });
 
   it("renders the phone action as a tel link", () => {
