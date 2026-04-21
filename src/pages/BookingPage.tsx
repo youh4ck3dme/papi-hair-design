@@ -269,17 +269,16 @@ export default function BookingPage() {
                   {currentLang === "en" ? "Book your appointment" : "Rezervujte si termín"}
                 </h1>
                 <div className="mx-auto mt-4 max-w-2xl rounded-2xl border border-gold/20 bg-black/20 px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] md:px-5">
-                  <div className="flex items-start gap-3">
+                  <div className="grid grid-cols-[auto,1fr] items-start gap-x-3 gap-y-3">
                     <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/[0.08] text-gold">
                       <Phone className="h-4 w-4" strokeWidth={1.8} />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm leading-7 text-text-caption md:text-base">
+                    <p className="min-w-0 text-sm leading-7 text-text-caption md:text-base">
                         {currentLang === "en"
                           ? 'Appointments with Róbert Papcun "PAPI" require a consultation, which you can arrange by phone.'
-                          : 'Rezervácie k Róbertovi Papcunovi "PAPI" je potrebná konzultácia, ktorú si viete dohodnúť na tel. č.: +421 949 459 624'}
-                      </p>
-                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                          : 'Rezervácie k Róbertovi Papcunovi "PAPI" si vyžadujú konzultáciu, ktorú si viete dohodnúť telefonicky.'}
+                    </p>
+                    <div className="col-start-2 flex flex-wrap items-center gap-3">
                         <a
                           href="tel:+421949459624"
                           className="inline-flex min-h-[44px] items-center gap-2 rounded-[7px] border border-gold/35 bg-gold/[0.08] px-4 py-2 text-sm font-semibold text-gold transition-colors hover:border-gold/60 hover:bg-gold/[0.14]"
@@ -293,7 +292,6 @@ export default function BookingPage() {
                         >
                           {currentLang === "en" ? "Call" : "Volať"}
                         </a>
-                      </div>
                     </div>
                   </div>
                 </div>

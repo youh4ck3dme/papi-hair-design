@@ -190,7 +190,7 @@ describe("BookingPage stylist step flow", () => {
   it("renders the PAPI consultation info block with direct call actions", () => {
     render(<BookingPage />);
 
-    expect(screen.getByText(/Rezervácie k Róbertovi Papcunovi "PAPI"/i)).toBeInTheDocument();
+    expect(screen.getByText(/Rezervácie k Róbertovi Papcunovi "PAPI" si vyžadujú konzultáciu/i)).toBeInTheDocument();
     const phoneLink = screen.getByRole("link", { name: /\+421 949 459 624/i });
     const callLink = screen.getByRole("link", { name: /Volať/i });
 
@@ -198,5 +198,6 @@ describe("BookingPage stylist step flow", () => {
     expect(callLink).toHaveAttribute("href", "tel:+421949459624");
     expect(phoneLink.className).toContain("rounded-[7px]");
     expect(callLink.className).toContain("rounded-[7px]");
+    expect(screen.queryByText(/tel\. č\.: \+421 949 459 624/i)).not.toBeInTheDocument();
   });
 });
