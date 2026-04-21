@@ -43,7 +43,7 @@ export function ServiceSelection({
             {/* Step 1 */}
             <StepHeader num="1" title={t("booking.step1")} extra={
                 <div
-                    className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-semibold ${isBusinessOpenNow
+                    className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-[7px] border px-3 py-2 text-sm font-semibold ${isBusinessOpenNow
                         ? "border-emerald-500/40 text-emerald-600 bg-emerald-500/10"
                         : "border-rose-500/40 text-rose-600 bg-rose-500/10"
                         }`}
@@ -56,7 +56,7 @@ export function ServiceSelection({
             {/* Category Toggle */}
             <div className="neon-laser-border">
             <div className="neon-inner">
-            <div className="relative flex gap-0 rounded-full bg-muted/40 p-1.5">
+            <div className="relative flex gap-0 rounded-[10px] bg-muted/40 p-1.5">
                 {(["damske", "panske"] as const).map((cat) => {
                     const isActive = category === cat && expandedCategory === cat;
                     const Icon = cat === "damske" ? Sparkles : User2;
@@ -79,7 +79,7 @@ export function ServiceSelection({
                             }}
                             aria-pressed={isActive}
                             aria-expanded={isActive}
-                            className={`relative flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-full px-3 py-2.5 text-sm font-semibold transition-all duration-300 ${isActive
+                            className={`relative flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-[7px] px-3 py-2.5 text-[15px] font-semibold transition-all duration-300 ${isActive
                                 ? "bg-primary text-primary-foreground dark:text-background shadow-md shadow-primary/25"
                                 : "text-muted-foreground hover:text-foreground"
                                 }`}
@@ -110,7 +110,7 @@ export function ServiceSelection({
                                         setSelectedServiceId(null);
                                     }}
                                     aria-pressed={isSelected}
-                                    className={`w-full min-h-[52px] rounded-[28px] border px-5 py-3 text-center text-base font-semibold uppercase tracking-[0.14em] transition-all duration-200 ${isSelected
+                                    className={`w-full min-h-[52px] rounded-[7px] border px-5 py-3 text-center text-base font-semibold uppercase tracking-[0.14em] transition-all duration-200 ${isSelected
                                         ? "border-[#C9A84C] bg-[#C9A84C] text-black shadow-[0_0_24px_rgba(201,168,76,0.35)]"
                                         : "border-white/12 bg-white/[0.02] text-white/75 hover:border-[#C9A84C]/40 hover:text-white"
                                         }`}
@@ -150,7 +150,7 @@ export function ServiceSelection({
                                         </span>
                                     </div>
                                     {srv.price != null && (
-                                        <div className={`flex-shrink-0 rounded-full px-3 py-1.5 text-sm font-black transition-all ${isSelected ? "bg-[#C9A84C] text-black" : "bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/30 group-hover:bg-[#C9A84C]/20"}`}>
+                                        <div className={`flex-shrink-0 rounded-[7px] px-3 py-1.5 text-sm font-black transition-all ${isSelected ? "bg-[#C9A84C] text-black" : "bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/30 group-hover:bg-[#C9A84C]/20"}`}>
                                             {srv.price} €
                                         </div>
                                     )}

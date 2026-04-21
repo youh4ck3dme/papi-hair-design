@@ -191,7 +191,12 @@ describe("BookingPage stylist step flow", () => {
     render(<BookingPage />);
 
     expect(screen.getByText(/Rezervácie k Róbertovi Papcunovi "PAPI"/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /\+421 949 459 624/i })).toHaveAttribute("href", "tel:+421949459624");
-    expect(screen.getByRole("link", { name: /Volať/i })).toHaveAttribute("href", "tel:+421949459624");
+    const phoneLink = screen.getByRole("link", { name: /\+421 949 459 624/i });
+    const callLink = screen.getByRole("link", { name: /Volať/i });
+
+    expect(phoneLink).toHaveAttribute("href", "tel:+421949459624");
+    expect(callLink).toHaveAttribute("href", "tel:+421949459624");
+    expect(phoneLink.className).toContain("rounded-[7px]");
+    expect(callLink.className).toContain("rounded-[7px]");
   });
 });

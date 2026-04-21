@@ -73,6 +73,14 @@ describe("ServiceSelection", () => {
     expect(labels.some((l) => /pánske/i.test(l))).toBe(true);
   });
 
+  it("uses the polished category button typography and tighter radius", () => {
+    render(<ServiceSelection {...defaultProps} />);
+
+    const womensButton = screen.getByRole("button", { name: /dámske služby/i });
+    expect(womensButton.className).toContain("rounded-[7px]");
+    expect(womensButton.className).toContain("text-[15px]");
+  });
+
   it("calls setCategory when a category button is clicked", () => {
     const setCategory = vi.fn();
     render(<ServiceSelection {...defaultProps} setCategory={setCategory} />);
@@ -104,7 +112,9 @@ describe("ServiceSelection", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /dámske/i }));
-    expect(screen.getByRole("button", { name: "Strih" })).toBeInTheDocument();
+    const subcategoryButton = screen.getByRole("button", { name: "Strih" });
+    expect(subcategoryButton).toBeInTheDocument();
+    expect(subcategoryButton.className).toContain("rounded-[7px]");
   });
 
   it("shows service list when category is expanded and services exist", () => {

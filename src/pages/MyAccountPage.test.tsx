@@ -44,9 +44,16 @@ describe("MyAccountPage", () => {
 
     expect(screen.getByTestId("my-account-hero-shell")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Môj účet/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Prihlásenie$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Registrácia$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Moje rezervácie$/i })).toBeInTheDocument();
+    const loginButton = screen.getByRole("button", { name: /^Prihlásenie$/i });
+    const registerButton = screen.getByRole("button", { name: /^Registrácia$/i });
+    const historyButton = screen.getByRole("button", { name: /^Moje rezervácie$/i });
+
+    expect(loginButton).toBeInTheDocument();
+    expect(registerButton).toBeInTheDocument();
+    expect(historyButton).toBeInTheDocument();
+    expect(loginButton.className).toContain("rounded-[7px]");
+    expect(registerButton.className).toContain("rounded-[7px]");
+    expect(historyButton.className).toContain("rounded-[7px]");
   });
 
   it("navigates to register flow from the register panel", () => {

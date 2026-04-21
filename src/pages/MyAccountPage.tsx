@@ -141,7 +141,7 @@ export default function MyAccountPage() {
                         key={key}
                         type="button"
                         onClick={() => setActivePanel(key)}
-                        className={`min-h-[52px] rounded-[28px] border px-5 py-3 text-center text-sm font-semibold uppercase tracking-[0.16em] transition-all duration-200 ${
+                        className={`min-h-[52px] rounded-[7px] border px-5 py-3 text-center text-sm font-semibold uppercase tracking-[0.16em] transition-all duration-200 ${
                           isActive
                             ? "border-[#C9A84C] bg-[#C9A84C] text-black shadow-[0_0_24px_rgba(201,168,76,0.35)]"
                             : "border-white/12 bg-white/[0.02] text-white/75 hover:border-[#C9A84C]/40 hover:text-white"
@@ -214,7 +214,7 @@ export default function MyAccountPage() {
                               key={item.key}
                               type="button"
                               onClick={() => setActivePanel(item.key)}
-                              className={`rounded-2xl border p-4 text-left transition-all duration-200 ${
+                              className={`rounded-[7px] border p-4 text-left transition-all duration-200 ${
                                 isActive
                                   ? "border-gold/40 bg-gold/[0.08] shadow-[0_0_20px_rgba(201,168,76,0.18)]"
                                   : "border-white/10 bg-black/20 hover:border-gold/30 hover:bg-gold/[0.04]"
