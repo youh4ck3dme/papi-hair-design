@@ -83,10 +83,6 @@ vi.mock("@/components/ui/checkbox", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/scroll-area", () => ({
-  ScrollArea: ({ children }: any) => <div>{children}</div>,
-}));
-
 vi.mock("firebase/storage", () => ({
   ref: (_storage: unknown, path: string) => ({ path }),
   uploadBytes: storageMocks.uploadBytes,
@@ -328,6 +324,34 @@ describe("EmployeesPage", () => {
     fireEvent.click(screen.getAllByLabelText("switch")[0]);
     fireEvent.click(screen.getByRole("button", { name: /Vytvoriť profil/i }));
     expect(toastMocks.error).toHaveBeenCalledWith("Majiteľ musí priradiť aspoň jednu službu.");
+  });
+
+  it("uses native scroll containers for employee dialog and restricted services list", async () => {
+    render(<EmployeesPage />);
+    await screen.findByText("Tím");
+
+    fireEvent.click(screen.getByRole("button", { name: /Pridať člena tímu/i }));
+    expect(screen.getByTestId("employee-dialog-scroll-container")).toHaveClass("overflow-y-auto");
+
+    fireEvent.click(screen.getAllByLabelText("switch")[0]);
+    const servicesScroll = await screen.findByTestId("employee-services-scroll-container");
+    expect(servicesScroll).toHaveClass("overflow-y-auto");
+    expect(servicesScroll).toHaveClass("overscroll-contain");
+  });
+
+  it("re-opens restricted services without losing the scrollable service list", async () => {
+    render(<EmployeesPage />);
+    await screen.findByText("Tím");
+
+    const editButtons = screen.getAllByRole("button", { name: /Upraviť profil/i });
+    fireEvent.click(editButtons[0]);
+    await screen.findByTestId("employee-services-scroll-container");
+
+    fireEvent.click(screen.getByRole("button", { name: /Zrušiť/i }));
+    expect(screen.queryByTestId("employee-services-scroll-container")).not.toBeInTheDocument();
+
+    fireEvent.click(editButtons[0]);
+    expect(await screen.findByTestId("employee-services-scroll-container")).toHaveClass("overflow-y-auto");
   });
 
   it("creates employee and persists schedule + selected services", async () => {

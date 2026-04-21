@@ -25,7 +25,6 @@ import { toast } from "sonner";
 import { Loader2, Plus, Pencil, Trash2, Users, Mail, Phone, Calendar, Briefcase, ChevronRight, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { compressProfileImage, readFileAsDataUrl, validateProfileImageFile } from "@/lib/profileImage";
 
@@ -567,8 +566,8 @@ export default function EmployeesPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 px-6 py-2">
-            <div className="space-y-6 pb-6 mt-2">
+          <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-2" data-testid="employee-dialog-scroll-container">
+            <div className="mt-2 space-y-6 pb-6">
               <div className="flex flex-col sm:flex-row gap-6">
                 <div className="flex flex-col items-center gap-2">
                   <div
@@ -723,7 +722,11 @@ export default function EmployeesPage() {
                   </div>
 
                   {serviceMode === "restricted" ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 rounded-2xl bg-muted/30 p-4 border border-primary/5">
+                    <div
+                      className="max-h-[min(45vh,22rem)] overflow-y-auto overscroll-contain rounded-2xl border border-primary/5 bg-muted/30 p-4"
+                      data-testid="employee-services-scroll-container"
+                    >
+                      <div className="grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2">
                       {allServices.length === 0 && (
                         <p className="text-xs text-muted-foreground italic col-span-2 py-4 text-center">
                           Najprv vytvorte služby v katalógu.
@@ -749,6 +752,7 @@ export default function EmployeesPage() {
                           </label>
                         </div>
                       ))}
+                      </div>
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4 text-sm text-muted-foreground">
@@ -762,7 +766,7 @@ export default function EmployeesPage() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           <DialogFooter className="p-6 border-t border-primary/5 bg-background/80 backdrop-blur-md">
             <Button variant="ghost" onClick={() => setOpen(false)} className="rounded-xl font-semibold">Zrušiť</Button>
