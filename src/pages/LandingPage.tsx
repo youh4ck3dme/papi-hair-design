@@ -33,7 +33,9 @@ export default function LandingPage() {
           splashDone ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         style={{
-          paddingBottom: "max(16px, env(safe-area-inset-bottom))",
+          paddingBottom: splashDone
+            ? "max(116px, calc(env(safe-area-inset-bottom) + 92px))"
+            : "max(16px, env(safe-area-inset-bottom))",
         }}
       >
         <PublicAtmosphereBackground />
