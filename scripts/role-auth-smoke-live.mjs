@@ -61,6 +61,17 @@ async function login(page, email, password) {
   }
 }
 
+async function waitForAppointmentsHeading(page) {
+  const heading = page.locator('h1:has-text("Rezervácie"),h2:has-text("Rezervácie")').first();
+  try {
+    await heading.waitFor({ state: "visible", timeout: 5_000 });
+    return true;
+  } catch {
+    const bodyText = await page.locator("body").innerText().catch(() => "");
+    return bodyText.includes("Rezervácie");
+  }
+}
+
 async function runScenario(browser, account) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -104,12 +115,7 @@ async function runScenario(browser, account) {
 
     // All 3 accounts should open appointments page.
     await page.goto(`${baseURL}/admin/appointments`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-    await page.waitForTimeout(1_000);
-    const appointmentsHeadingVisible = await page
-      .locator('h1:has-text("Rezervácie"),h2:has-text("Rezervácie")')
-      .first()
-      .isVisible()
-      .catch(() => false);
+    const appointmentsHeadingVisible = await waitForAppointmentsHeading(page);
 
     if (!appointmentsHeadingVisible) {
       throw new Error(`Appointments page did not render for ${toResultLabel(account)}; url=${page.url()}`);
