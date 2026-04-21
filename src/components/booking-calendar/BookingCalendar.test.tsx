@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -16,6 +16,7 @@ import { CalendarBodyMonth } from "./body/CalendarBodyMonth";
 import { BookingCalendarEvent } from "./BookingCalendarEvent";
 import { CalendarBodyHeader } from "./body/CalendarBodyHeader";
 import { CalendarBodyMargin } from "./body/CalendarBodyMargin";
+import { useLongPressAction } from "./useLongPressAction";
 
 interface ProviderOpts {
   mode?: BookingCalendarMode;
@@ -26,6 +27,8 @@ interface ProviderOpts {
   businessHours?: unknown;
   onSelectSlot?: (slot: { start: Date; end: Date }) => void;
   onSelectEvent?: (event: BookingEvent) => void;
+  onLongPressSlot?: (slot: { start: Date; end: Date; resourceId?: string; resourceName?: string }) => void;
+  onLongPressEvent?: (event: BookingEvent) => void;
   setMode?: (mode: BookingCalendarMode) => void;
   setDate?: (date: Date) => void;
 }
@@ -46,6 +49,8 @@ function renderWithProvider(ui: ReactNode, opts: ProviderOpts = {}) {
   const setMode = (opts.setMode ?? vi.fn()) as ReturnType<typeof vi.fn>;
   const onSelectSlot = (opts.onSelectSlot ?? vi.fn()) as ReturnType<typeof vi.fn>;
   const onSelectEvent = (opts.onSelectEvent ?? vi.fn()) as ReturnType<typeof vi.fn>;
+  const onLongPressSlot = (opts.onLongPressSlot ?? vi.fn()) as ReturnType<typeof vi.fn>;
+  const onLongPressEvent = (opts.onLongPressEvent ?? vi.fn()) as ReturnType<typeof vi.fn>;
 
   const date = opts.date ?? new Date(2026, 0, 15, 12, 0);
   const mode = opts.mode ?? "day";
@@ -61,6 +66,8 @@ function renderWithProvider(ui: ReactNode, opts: ProviderOpts = {}) {
       setMode={setMode}
       onSelectSlot={onSelectSlot}
       onSelectEvent={onSelectEvent}
+      onLongPressSlot={onLongPressSlot}
+      onLongPressEvent={onLongPressEvent}
       selectable={selectable}
       businessHours={opts.businessHours}
       resources={opts.resources}
@@ -69,7 +76,23 @@ function renderWithProvider(ui: ReactNode, opts: ProviderOpts = {}) {
     </BookingCalendarProvider>,
   );
 
-  return { ...view, setDate, setMode, onSelectSlot, onSelectEvent, date };
+  return { ...view, setDate, setMode, onSelectSlot, onSelectEvent, onLongPressSlot, onLongPressEvent, date };
+}
+
+function LongPressHarness({
+  onLongPress,
+  onReady,
+}: {
+  onLongPress: ReturnType<typeof vi.fn>;
+  onReady?: (value: ReturnType<typeof useLongPressAction>) => void;
+}) {
+  const longPress = useLongPressAction({
+    onLongPress,
+  });
+
+  onReady?.(longPress);
+
+  return <div data-testid="long-press-harness" {...longPress.handlers} />;
 }
 
 describe("booking-calendar components", () => {
@@ -307,6 +330,121 @@ describe("booking-calendar components", () => {
     rectSpy.mockRestore();
   });
 
+  it("triggers long press on slot with employee context and suppresses the follow-up click", () => {
+    vi.useFakeTimers();
+    const onLongPressSlot = vi.fn();
+    const onSelectSlot = vi.fn();
+    const rectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        width: 100,
+        height: 100,
+        top: 100,
+        left: 0,
+        right: 100,
+        bottom: 200,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+    renderWithProvider(
+      <CalendarBodyDayContent
+        date={new Date(2026, 0, 15)}
+        resourceId="emp-1"
+        resourceName="Papi"
+      />,
+      {
+        selectable: true,
+        onSelectSlot,
+        onLongPressSlot,
+      },
+    );
+
+    const firstHourSlot = screen.getAllByRole("button", { name: /Vybrať čas okolo/i })[0];
+    fireEvent.pointerDown(firstHourSlot, { button: 0, clientX: 16, clientY: 190, pointerType: "touch" });
+    act(() => {
+      vi.advanceTimersByTime(430);
+    });
+
+    expect(onLongPressSlot).toHaveBeenCalledTimes(1);
+    expect(onLongPressSlot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceId: "emp-1",
+        resourceName: "Papi",
+      }),
+    );
+    const slot = onLongPressSlot.mock.calls[0][0] as { start: Date; end: Date };
+    expect(slot.end.getTime() - slot.start.getTime()).toBe(30 * 60 * 1000);
+
+    fireEvent.click(firstHourSlot, { clientY: 190 });
+    expect(onSelectSlot).not.toHaveBeenCalled();
+
+    rectSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it("cancels slot long press when the finger moves beyond threshold", () => {
+    vi.useFakeTimers();
+    const onLongPressSlot = vi.fn();
+    const hookState: { current: ReturnType<typeof useLongPressAction> | null } = { current: null };
+    const element = document.createElement("div");
+
+    render(
+      <LongPressHarness
+        onLongPress={onLongPressSlot}
+        onReady={(value) => {
+          hookState.current = value;
+        }}
+      />,
+    );
+
+    act(() => {
+      hookState.current?.handlers.onPointerDown({
+        button: 0,
+        clientX: 20,
+        clientY: 120,
+        currentTarget: element,
+        pointerType: "touch",
+      } as any);
+      hookState.current?.handlers.onPointerMove({
+        clientX: 20,
+        clientY: 150,
+        currentTarget: element,
+        pointerType: "touch",
+      } as any);
+    });
+    act(() => {
+      vi.advanceTimersByTime(430);
+    });
+
+    expect(onLongPressSlot).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it("does not trigger slot long press on a short tap", () => {
+    vi.useFakeTimers();
+    const onLongPressSlot = vi.fn();
+
+    renderWithProvider(<CalendarBodyDayContent date={new Date(2026, 0, 15)} />, {
+      selectable: true,
+      onLongPressSlot,
+    });
+
+    const firstHourSlot = screen.getAllByRole("button", { name: /Vybrať čas okolo/i })[0];
+    fireEvent.pointerDown(firstHourSlot, { button: 0, clientX: 18, clientY: 118, pointerType: "touch" });
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    fireEvent.pointerUp(firstHourSlot, { clientX: 18, clientY: 118, pointerType: "touch" });
+    act(() => {
+      vi.advanceTimersByTime(260);
+    });
+
+    expect(onLongPressSlot).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
   it("handles Enter keyboard for slot selection", () => {
     const onSelectSlot = vi.fn();
     renderWithProvider(<CalendarBodyDayContent date={new Date(2026, 0, 15)} />, {
@@ -435,6 +573,31 @@ describe("booking-calendar components", () => {
 
     fireEvent.click(screen.getByText("Klik test"));
     expect(onSelectEvent).toHaveBeenCalledWith(event);
+  });
+
+  it("triggers long press on event and suppresses the follow-up click", () => {
+    vi.useFakeTimers();
+    const onSelectEvent = vi.fn();
+    const onLongPressEvent = vi.fn();
+    const event = makeEvent({ title: "Hold test" });
+
+    renderWithProvider(<BookingCalendarEvent event={event} />, {
+      events: [event],
+      onSelectEvent,
+      onLongPressEvent,
+    });
+
+    const button = screen.getByRole("button");
+    fireEvent.pointerDown(button, { button: 0, clientX: 24, clientY: 24, pointerType: "touch" });
+    act(() => {
+      vi.advanceTimersByTime(430);
+    });
+
+    expect(onLongPressEvent).toHaveBeenCalledWith(event);
+
+    fireEvent.click(button);
+    expect(onSelectEvent).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it("selects booking event on Enter key", () => {

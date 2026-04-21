@@ -87,12 +87,34 @@ vi.mock("@/components/booking-calendar", () => ({
         </button>
         <button
           type="button"
+          onClick={() =>
+            props.onLongPressSlot?.({
+              start: new Date("2026-01-15T09:00:00.000Z"),
+              end: new Date("2026-01-15T09:30:00.000Z"),
+              resourceId: "emp-1",
+              resourceName: "Marek",
+            })
+          }
+        >
+          longpress-slot
+        </button>
+        <button
+          type="button"
           onClick={() => {
             const first = props.events?.[0];
             if (first) props.onSelectEvent?.(first);
           }}
         >
           open-event
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const first = props.events?.[0];
+            if (first) props.onLongPressEvent?.(first);
+          }}
+        >
+          longpress-event
         </button>
       </div>
     );
@@ -511,6 +533,31 @@ describe("CalendarPage", () => {
     expect(await screen.findByRole("heading", { name: "Nová rezervácia" })).toBeInTheDocument();
   });
 
+  it("opens long press create menu for free slot and routes reservation action into existing booking flow", async () => {
+    seedInitialFirestore();
+    renderCalendarPage();
+
+    fireEvent.click(await screen.findByText("longpress-slot"));
+    expect(await screen.findByRole("heading", { name: "Udalosť" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rezervácia" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Blokovanie času" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Rezervácia" }));
+    expect(await screen.findByRole("heading", { name: "Nová rezervácia" })).toBeInTheDocument();
+    expect(screen.getAllByLabelText("employee-select")[1]).toHaveValue("emp-1");
+  });
+
+  it("opens long press create menu for free slot and routes block action into existing block flow", async () => {
+    seedInitialFirestore();
+    renderCalendarPage();
+
+    fireEvent.click(await screen.findByText("longpress-slot"));
+    fireEvent.click(await screen.findByRole("button", { name: "Blokovanie času" }));
+
+    expect(await screen.findByRole("heading", { name: "Blokovať čas" })).toBeInTheDocument();
+    expect(screen.getAllByLabelText("employee-select")[1]).toHaveValue("emp-1");
+  });
+
   it("disables selectability for non-admin user", async () => {
     businessState.value = {
       businessId: "biz-1",
@@ -603,6 +650,46 @@ describe("CalendarPage", () => {
         business_id: "biz-1",
         appointment_id: "apt-1",
         status: "confirmed",
+      });
+    });
+  });
+
+  it("opens long press manage menu for occupied event and detail action shows existing detail sheet", async () => {
+    seedInitialFirestore({ withEvent: true });
+    renderCalendarPage();
+
+    fireEvent.click(await screen.findByText("longpress-event"));
+    expect(await screen.findByRole("heading", { name: "Udalosť" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Detail" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upraviť" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Zrušiť" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Detail" }));
+    expect(await screen.findByRole("heading", { name: "Detail rezervácie" })).toBeInTheDocument();
+  });
+
+  it("opens move quick action from occupied event long press edit action", async () => {
+    seedInitialFirestore({ withEvent: true });
+    renderCalendarPage();
+
+    fireEvent.click(await screen.findByText("longpress-event"));
+    fireEvent.click(await screen.findByRole("button", { name: "Upraviť" }));
+
+    expect(await screen.findByRole("heading", { name: "Presun termínu" })).toBeInTheDocument();
+  });
+
+  it("runs cancel flow from occupied event long press action", async () => {
+    seedInitialFirestore({ withEvent: true });
+    renderCalendarPage();
+
+    fireEvent.click(await screen.findByText("longpress-event"));
+    fireEvent.click(await screen.findByRole("button", { name: "Zrušiť" }));
+
+    await waitFor(() => {
+      expect(adminUpdateBookingStatusMock).toHaveBeenCalledWith({
+        business_id: "biz-1",
+        appointment_id: "apt-1",
+        status: "cancelled",
       });
     });
   });

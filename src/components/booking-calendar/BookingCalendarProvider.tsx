@@ -16,6 +16,8 @@ export interface BookingCalendarProviderProps {
   setMode: (mode: BookingCalendarMode) => void;
   onSelectSlot?: (slot: SlotInfo) => void;
   onSelectEvent?: (event: BookingCalendarEvent) => void;
+  onLongPressSlot?: (slot: SlotInfo) => void;
+  onLongPressEvent?: (event: BookingCalendarEvent) => void;
   selectable: boolean;
   businessHours?: any;
   resources?: any[];
@@ -30,6 +32,8 @@ export function BookingCalendarProvider({
   setMode,
   onSelectSlot,
   onSelectEvent,
+  onLongPressSlot,
+  onLongPressEvent,
   selectable,
   businessHours,
   resources,
@@ -90,6 +94,8 @@ export function BookingCalendarProvider({
       setMonthDensity,
       onSelectSlot,
       onSelectEvent,
+      onLongPressSlot,
+      onLongPressEvent,
       selectable,
       businessHours,
       resources,
@@ -104,7 +110,9 @@ export function BookingCalendarProvider({
       filteredEvents,
       mode,
       monthDensity,
+      onLongPressEvent,
       onSelectEvent,
+      onLongPressSlot,
       onSelectSlot,
       pixelsPerHour,
       resources,

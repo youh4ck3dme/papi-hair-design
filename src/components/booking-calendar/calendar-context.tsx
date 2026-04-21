@@ -11,6 +11,8 @@ export type CalendarZoomLevel =
 export interface SlotInfo {
   start: Date;
   end: Date;
+  resourceId?: string;
+  resourceName?: string;
 }
 
 export interface BookingCalendarContextValue {
@@ -26,6 +28,8 @@ export interface BookingCalendarContextValue {
   setMonthDensity: (value: "compact" | "comfortable") => void;
   onSelectSlot?: (slot: SlotInfo) => void;
   onSelectEvent?: (event: BookingCalendarEvent) => void;
+  onLongPressSlot?: (slot: SlotInfo) => void;
+  onLongPressEvent?: (event: BookingCalendarEvent) => void;
   selectable: boolean;
   businessHours?: any; // Business opening hours
   resources?: any[]; // List of resources (employees) for columns

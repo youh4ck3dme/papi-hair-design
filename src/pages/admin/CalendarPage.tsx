@@ -30,8 +30,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { toast } from "sonner";
-import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer, MoreVertical, FilterX, MoveRight, CopyPlus, Lock, Trash2 } from "lucide-react";
+import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer, MoreVertical, FilterX, MoveRight, CopyPlus, Lock, Trash2, CalendarPlus } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
 import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
 import { adminCalendarQuickAction } from "@/integrations/firebase/adminCalendarQuickAction";
@@ -67,6 +75,10 @@ interface CustomerHistoryItem {
   service_name: string | null;
 }
 
+type CalendarActionMenuTarget =
+  | { type: "slot"; slot: SlotInfo }
+  | { type: "event"; event: CalEvent };
+
 const TOOLBAR_ACTION_START_HOUR = 8;
 const TOOLBAR_ACTION_DURATION_MINUTES = 30;
 
@@ -89,6 +101,7 @@ export default function CalendarPage() {
 
   const [bookingModal, setBookingModal] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<SlotInfo | null>(null);
+  const [actionMenuTarget, setActionMenuTarget] = useState<CalendarActionMenuTarget | null>(null);
   const [bookForm, setBookForm] = useState({ service_id: "", employee_id: "", start_at: "" });
   const [availableSlots, setAvailableSlots] = useState<Date[]>([]);
   const [customStartTime, setCustomStartTime] = useState("");
@@ -458,51 +471,38 @@ export default function CalendarPage() {
     setBookForm((current) => ({ ...current, start_at: preciseStart.toISOString() }));
   };
 
-  const handleSelectSlot = (slot: SlotInfo) => {
-    setSelectedSlot(slot);
-    setCustomStartTime(fmtDate(slot.start, "HH:mm"));
-    setBookForm({
-      service_id: "",
-      employee_id: "",
-      start_at: slot.start.toISOString()
-    });
-    setAvailableSlots([]);
-    setBookingModal(true);
+  const toInputDateTimeLocal = (input: Date) => {
+    const pad = (value: number) => String(value).padStart(2, "0");
+    return `${input.getFullYear()}-${pad(input.getMonth() + 1)}-${pad(input.getDate())}T${pad(input.getHours())}:${pad(input.getMinutes())}`;
   };
 
-  const handleSelectEvent = (event: BookingCalendarEvent) => {
+  const hydrateSelectedEvent = useCallback((event: BookingCalendarEvent): CalEvent => {
     const res = event.resource as { status?: string } | undefined;
-    setSelectedEvent({
+    return {
       id: event.id,
       title: event.title,
       start: event.start,
       end: event.end,
       status: res?.status ?? "pending",
       resource: event.resource,
-    });
-    setNoteText(typeof (event.resource as any)?.note === "string" ? (event.resource as any).note : "");
-    setDetailModal(true);
-  };
-
-  const toInputDateTimeLocal = (input: Date) => {
-    const pad = (value: number) => String(value).padStart(2, "0");
-    return `${input.getFullYear()}-${pad(input.getMonth() + 1)}-${pad(input.getDate())}T${pad(input.getHours())}:${pad(input.getMinutes())}`;
-  };
-
-  const buildToolbarActionSlot = useCallback((baseDate: Date) => {
-    const start = startOfDay(baseDate);
-    start.setHours(TOOLBAR_ACTION_START_HOUR, 0, 0, 0);
-    const end = addMinutes(start, TOOLBAR_ACTION_DURATION_MINUTES);
-    return { start, end };
+    };
   }, []);
 
-  const handleToolbarCreateBooking = useCallback(() => {
-    const slot = buildToolbarActionSlot(date);
-    handleSelectSlot(slot);
-  }, [buildToolbarActionSlot, date]);
+  const openBookingForSlot = useCallback((slot: SlotInfo) => {
+    setSelectedSlot(slot);
+    setCustomStartTime(fmtDate(slot.start, "HH:mm"));
+    setBookForm({
+      service_id: "",
+      employee_id: slot.resourceId ?? "",
+      start_at: slot.start.toISOString(),
+    });
+    setAvailableSlots([]);
+    setBookingModal(true);
+  }, []);
 
-  const handleToolbarBlock = useCallback(() => {
+  const openBlockForSlot = useCallback((slot: SlotInfo) => {
     const defaultEmployeeId =
+      slot.resourceId ??
       actionableEmployees[0]?.id ??
       visibleResources[0]?.id ??
       availableEmployees[0]?.id ??
@@ -513,33 +513,67 @@ export default function CalendarPage() {
       return;
     }
 
-    const slot = buildToolbarActionSlot(date);
     setQuickActionType("block");
     setQuickActionEmployeeId(defaultEmployeeId);
     setQuickActionStartAt(toInputDateTimeLocal(slot.start));
     setQuickActionEndAt(toInputDateTimeLocal(slot.end));
     setQuickActionReason("Blokovaný čas");
     setQuickActionOpen(true);
-  }, [actionableEmployees, availableEmployees, buildToolbarActionSlot, date, visibleResources]);
+  }, [actionableEmployees, availableEmployees, visibleResources]);
 
-  const openQuickAction = (action: "move" | "duplicate" | "block") => {
-    if (!selectedEvent) return;
+  const openDetailForEvent = useCallback((event: BookingCalendarEvent | CalEvent) => {
+    const nextSelected =
+      "status" in event ? event : hydrateSelectedEvent(event as BookingCalendarEvent);
+    setSelectedEvent(nextSelected);
+    setNoteText(typeof nextSelected.resource?.note === "string" ? nextSelected.resource.note : "");
+    setDetailModal(true);
+    return nextSelected;
+  }, [hydrateSelectedEvent]);
+
+  const handleSelectSlot = useCallback((slot: SlotInfo) => {
+    openBookingForSlot(slot);
+  }, [openBookingForSlot]);
+
+  const handleSelectEvent = useCallback((event: BookingCalendarEvent) => {
+    openDetailForEvent(event);
+  }, [openDetailForEvent]);
+
+  const buildToolbarActionSlot = useCallback((baseDate: Date) => {
+    const start = startOfDay(baseDate);
+    start.setHours(TOOLBAR_ACTION_START_HOUR, 0, 0, 0);
+    const end = addMinutes(start, TOOLBAR_ACTION_DURATION_MINUTES);
+    return { start, end };
+  }, []);
+
+  const handleToolbarCreateBooking = useCallback(() => {
+    const slot = buildToolbarActionSlot(date);
+    openBookingForSlot(slot);
+  }, [buildToolbarActionSlot, date, openBookingForSlot]);
+
+  const handleToolbarBlock = useCallback(() => {
+    const slot = buildToolbarActionSlot(date);
+    openBlockForSlot(slot);
+  }, [buildToolbarActionSlot, date, openBlockForSlot]);
+
+  const openQuickAction = useCallback((action: "move" | "duplicate" | "block", targetEvent?: CalEvent | null) => {
+    const eventTarget = targetEvent ?? selectedEvent;
+    if (!eventTarget) return;
     const employeeId =
-      typeof selectedEvent.resource?.employee_id === "string" ? selectedEvent.resource.employee_id : "";
-    const startAt = toInputDateTimeLocal(selectedEvent.start);
-    const endAt = toInputDateTimeLocal(selectedEvent.end);
+      typeof eventTarget.resource?.employee_id === "string" ? eventTarget.resource.employee_id : "";
+    const startAt = toInputDateTimeLocal(eventTarget.start);
+    const endAt = toInputDateTimeLocal(eventTarget.end);
 
     setQuickActionType(action);
     setQuickActionEmployeeId(employeeId);
     setQuickActionStartAt(startAt);
     setQuickActionEndAt(endAt);
     setQuickActionReason(
-      typeof selectedEvent.resource?.reason === "string"
-        ? selectedEvent.resource.reason
+      typeof eventTarget.resource?.reason === "string"
+        ? eventTarget.resource.reason
         : "Blokovaný čas",
     );
     setQuickActionOpen(true);
-  };
+  }, [selectedEvent]);
 
   useEffect(() => {
     const loadCustomerHistory = async () => {
@@ -715,16 +749,20 @@ export default function CalendarPage() {
     }
   };
 
-  const handleStatusChange = async (newStatus: "pending" | "confirmed" | "cancelled" | "completed" | "no_show") => {
-    if (!selectedEvent) return;
+  const handleStatusChange = async (
+    newStatus: "pending" | "confirmed" | "cancelled" | "completed" | "no_show",
+    eventOverride?: CalEvent | null,
+  ) => {
+    const eventTarget = eventOverride ?? selectedEvent;
+    if (!eventTarget) return;
     setUpdatingStatus(true);
     try {
       const result = await adminUpdateBookingStatus({
         business_id: businessId,
-        appointment_id: selectedEvent.id,
+        appointment_id: eventTarget.id,
         status: newStatus,
       });
-      setSelectedEvent((current) => current ? {
+      setSelectedEvent((current) => current && current.id === eventTarget.id ? {
         ...current,
         status: result.status,
         resource: {
@@ -809,15 +847,16 @@ export default function CalendarPage() {
     }
   };
 
-  const handleDeleteBlock = async () => {
-    if (!selectedEvent || selectedEvent.resource?.event_type !== "time_block") return;
+  const handleDeleteBlock = async (eventOverride?: CalEvent | null) => {
+    const eventTarget = eventOverride ?? selectedEvent;
+    if (!eventTarget || eventTarget.resource?.event_type !== "time_block") return;
     setQuickActionSaving(true);
     try {
       await adminCalendarQuickAction({
         business_id: businessId,
         action: "delete_block",
         event_type: "time_block",
-        time_block_id: selectedEvent.id,
+        time_block_id: eventTarget.id,
       });
       toast.success("Blokovaný čas bol odstránený");
       setDetailModal(false);
@@ -829,6 +868,20 @@ export default function CalendarPage() {
       setQuickActionSaving(false);
     }
   };
+
+  const handleLongPressSlot = useCallback((slot: SlotInfo) => {
+    if (!isOwnerOrAdmin) return;
+    setActionMenuTarget({ type: "slot", slot });
+  }, [isOwnerOrAdmin]);
+
+  const handleLongPressEvent = useCallback((event: BookingCalendarEvent) => {
+    if (!isOwnerOrAdmin) return;
+    setActionMenuTarget({ type: "event", event: hydrateSelectedEvent(event) });
+  }, [hydrateSelectedEvent, isOwnerOrAdmin]);
+
+  const closeActionMenu = useCallback(() => {
+    setActionMenuTarget(null);
+  }, []);
 
 
   return (
@@ -928,6 +981,8 @@ export default function CalendarPage() {
           setMode={setView}
           onSelectSlot={handleSelectSlot}
           onSelectEvent={handleSelectEvent}
+          onLongPressSlot={handleLongPressSlot}
+          onLongPressEvent={handleLongPressEvent}
           selectable={isOwnerOrAdmin}
           businessHours={{ hours: openingHours, overrides }}
           resources={visibleResources}
@@ -963,6 +1018,111 @@ export default function CalendarPage() {
           )}
         />
       </div>
+
+      <Drawer open={Boolean(actionMenuTarget)} onOpenChange={(open) => !open && closeActionMenu()}>
+        <DrawerContent className="rounded-t-[28px] border-[#D4AF37]/30 bg-gradient-to-b from-[#fff4cf] to-white px-0 pb-6 pt-2 text-slate-900 sm:max-w-md sm:mx-auto">
+          <DrawerHeader className="relative border-b border-[#D4AF37]/18 px-6 pb-5 pt-3 text-left">
+            <DrawerTitle className="text-[14px] font-black uppercase tracking-[0.12em] text-[#17323b]">
+              Udalosť
+            </DrawerTitle>
+            <DrawerDescription className="sr-only">
+              Rýchle akcie pre vytvorenie alebo správu udalosti v kalendári.
+            </DrawerDescription>
+            <DrawerClose asChild>
+              <button
+                type="button"
+                aria-label="Zavrieť menu udalosti"
+                className="absolute right-5 top-3 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#17323b]/25 text-[#17323b] transition-colors hover:border-[#17323b]/50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </DrawerClose>
+          </DrawerHeader>
+
+          <div className="space-y-3 px-6 pt-6">
+            {actionMenuTarget?.type === "slot" ? (
+              <>
+                <p className="text-sm text-slate-600">
+                  {fmtDate(actionMenuTarget.slot.start, "d. M. yyyy HH:mm", { locale: sk })}
+                  {actionMenuTarget.slot.resourceName ? ` • ${actionMenuTarget.slot.resourceName}` : ""}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    openBookingForSlot(actionMenuTarget.slot);
+                    closeActionMenu();
+                  }}
+                  className="flex min-h-[58px] w-full items-center justify-center gap-3 rounded-[24px] border border-[#D4AF37] bg-[#ffd166] px-5 text-lg font-bold text-[#17323b] shadow-[0_10px_26px_rgba(212,175,55,0.22)] transition-transform hover:scale-[1.01]"
+                >
+                  <CalendarPlus className="h-5 w-5" />
+                  Rezervácia
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    openBlockForSlot(actionMenuTarget.slot);
+                    closeActionMenu();
+                  }}
+                  className="flex min-h-[58px] w-full items-center justify-center gap-3 rounded-[24px] border-2 border-[#D4AF37] bg-white px-5 text-lg font-bold text-[#17323b] transition-colors hover:bg-[#fff7df]"
+                >
+                  <Lock className="h-5 w-5" />
+                  Blokovanie času
+                </button>
+              </>
+            ) : actionMenuTarget?.type === "event" ? (
+              <>
+                <p className="text-sm text-slate-600">
+                  {actionMenuTarget.event.title} • {fmtDate(actionMenuTarget.event.start, "d. M. yyyy HH:mm", { locale: sk })}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    openDetailForEvent(actionMenuTarget.event);
+                    closeActionMenu();
+                  }}
+                  className="flex min-h-[58px] w-full items-center justify-center gap-3 rounded-[24px] border border-[#D4AF37] bg-[#ffd166] px-5 text-lg font-bold text-[#17323b] shadow-[0_10px_26px_rgba(212,175,55,0.22)] transition-transform hover:scale-[1.01]"
+                >
+                  <ExternalLink className="h-5 w-5" />
+                  Detail
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedEvent(actionMenuTarget.event);
+                    setNoteText(typeof actionMenuTarget.event.resource?.note === "string" ? actionMenuTarget.event.resource.note : "");
+                    openQuickAction("move", actionMenuTarget.event);
+                    closeActionMenu();
+                  }}
+                  className="flex min-h-[58px] w-full items-center justify-center gap-3 rounded-[24px] border-2 border-[#D4AF37] bg-white px-5 text-lg font-bold text-[#17323b] transition-colors hover:bg-[#fff7df]"
+                >
+                  <MoveRight className="h-5 w-5" />
+                  Upraviť
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    actionMenuTarget.event.resource?.event_type === "time_block"
+                      ? quickActionSaving
+                      : updatingStatus || !canAdminCancelBooking(actionMenuTarget.event.status)
+                  }
+                  onClick={() => {
+                    if (actionMenuTarget.event.resource?.event_type === "time_block") {
+                      void handleDeleteBlock(actionMenuTarget.event);
+                    } else {
+                      void handleStatusChange("cancelled", actionMenuTarget.event);
+                    }
+                    closeActionMenu();
+                  }}
+                  className="flex min-h-[58px] w-full items-center justify-center gap-3 rounded-[24px] border border-rose-500/35 bg-rose-500/6 px-5 text-lg font-bold text-rose-600 transition-colors hover:bg-rose-500/12 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <Trash2 className="h-5 w-5" />
+                  Zrušiť
+                </button>
+              </>
+            ) : null}
+          </div>
+        </DrawerContent>
+      </Drawer>
 
       {/* Booking Modal */}
       <Dialog open={bookingModal} onOpenChange={setBookingModal}>
