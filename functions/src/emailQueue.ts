@@ -1,6 +1,6 @@
 import { getFirestore } from "firebase-admin/firestore";
 import nodemailer from "nodemailer";
-import { resolvePublicBookingBaseUrl } from "./publicBookingAccess";
+import { normalizePhone, resolvePublicBookingBaseUrl } from "./publicBookingAccess";
 import { readSecret } from "./secretManager";
 
 interface QueueBookingEmailInput {
@@ -99,7 +99,7 @@ type RichEmailTemplate = {
 };
 
 const EMAIL_COLOR_SYSTEM = {
-  canvas: "#000000",
+  canvas: "#f5f2eb",
   cardStart: "rgba(20,17,14,.92)",
   cardEnd: "rgba(10,8,6,.97)",
   cardBorder: "rgba(220,183,115,.34)",
@@ -272,6 +272,11 @@ function dedupeRecipients(recipients: string[]): string[] {
   }
 
   return deduped;
+}
+
+function resolveTelHref(phone?: string | null): string | null {
+  const normalizedPhone = normalizePhone(phone);
+  return normalizedPhone ? `tel:+${normalizedPhone}` : null;
 }
 
 function resolveAdminNotificationRecipients(business: Record<string, any>): string[] {
@@ -470,6 +475,7 @@ function buildMessage(
     )
     .join("");
 
+  const footerPhoneHref = resolveTelHref(context.businessPhone);
   const footerHtml = `
     <div style="margin-top:28px;padding-top:18px;border-top:1px solid ${EMAIL_COLOR_SYSTEM.divider};text-align:center;">
       <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:rgba(220,183,115,.50);margin-bottom:8px;font-weight:700;">
@@ -477,7 +483,7 @@ function buildMessage(
       </div>
       <div style="font-size:14px;line-height:1.7;color:${EMAIL_COLOR_SYSTEM.mutedText};">
         ${context.businessAddress ? `<div>${escapeHtml(context.businessAddress)}</div>` : ""}
-        ${context.businessPhone ? `<div><a href="tel:${escapeAttr(context.businessPhone.replaceAll(/\s+/g, ""))}" style="color:${EMAIL_COLOR_SYSTEM.linkText};text-decoration:none;font-weight:600;">${escapeHtml(context.businessPhone)}</a></div>` : ""}
+        ${footerPhoneHref ? `<div><a href="${escapeAttr(footerPhoneHref)}" style="color:${EMAIL_COLOR_SYSTEM.linkText};text-decoration:none;font-weight:600;">${escapeHtml(context.businessPhone ?? "")}</a></div>` : ""}
         ${context.businessEmail ? `<div><a href="mailto:${escapeAttr(context.businessEmail)}" style="color:${EMAIL_COLOR_SYSTEM.linkText};text-decoration:none;font-weight:600;">${escapeHtml(context.businessEmail)}</a></div>` : ""}
         ${extraFooterLines.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}
       </div>
@@ -491,7 +497,7 @@ function buildMessage(
       </div>
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:${EMAIL_COLOR_SYSTEM.canvas};">
         <tr>
-          <td align="center" style="padding:24px 12px;background:linear-gradient(180deg, rgba(0,0,0,.85) 0%, rgba(24,18,12,.85) 56%, rgba(0,0,0,.95) 100%);">
+          <td align="center" style="padding:24px 12px;background:${EMAIL_COLOR_SYSTEM.canvas};">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:540px;border-collapse:separate;">
               <tr>
                 <td style="position:relative;padding:0 24px 30px;border-radius:24px;background:linear-gradient(180deg, ${EMAIL_COLOR_SYSTEM.cardStart} 0%, ${EMAIL_COLOR_SYSTEM.cardEnd} 100%);border:1px solid ${EMAIL_COLOR_SYSTEM.cardBorder};box-shadow:0 10px 40px rgba(0,0,0,.90), inset 0 1px 2px rgba(255,255,255,.05);">
@@ -609,8 +615,9 @@ export async function queueCustomerBookingEmail(
   }
 
   const bookingUrl = `${resolvePublicBookingBaseUrl()}/booking`;
-  const contactHref = context.businessPhone
-    ? `tel:${context.businessPhone.replaceAll(/\s+/g, "")}`
+  const businessPhoneHref = resolveTelHref(context.businessPhone);
+  const contactHref = businessPhoneHref
+    ? businessPhoneHref
     : context.businessEmail
       ? `mailto:${context.businessEmail}`
       : bookingUrl;
