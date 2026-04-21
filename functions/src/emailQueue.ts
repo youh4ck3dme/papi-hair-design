@@ -425,10 +425,10 @@ function buildMessage(
         .map(
           (row) => `
             <tr>
-              <td style="padding:15px 0;border-bottom:1px solid ${EMAIL_COLOR_SYSTEM.divider};font-size:11px;color:${EMAIL_COLOR_SYSTEM.labelText};text-transform:uppercase;letter-spacing:.16em;width:34%;vertical-align:top;">
+              <td style="padding:18px 18px 18px 22px;border-bottom:1px solid ${EMAIL_COLOR_SYSTEM.divider};font-size:11px;color:${EMAIL_COLOR_SYSTEM.labelText};text-transform:uppercase;letter-spacing:.16em;width:34%;vertical-align:top;">
                 ${escapeHtml(row.label)}
               </td>
-              <td style="padding:15px 0;border-bottom:1px solid ${EMAIL_COLOR_SYSTEM.divider};font-size:17px;line-height:1.5;color:${EMAIL_COLOR_SYSTEM.valueText};font-weight:600;vertical-align:top;">
+              <td style="padding:18px 22px 18px 18px;border-bottom:1px solid ${EMAIL_COLOR_SYSTEM.divider};font-size:17px;line-height:1.5;color:${EMAIL_COLOR_SYSTEM.valueText};font-weight:600;vertical-align:top;">
                 ${escapeHtml(row.value)}
               </td>
             </tr>`
