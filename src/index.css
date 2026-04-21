@@ -121,10 +121,20 @@
 
 @layer base {
   html {
-    font-size: 15px;
+    font-size: 14px;
     overflow-x: hidden;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+  }
+  @media (min-width: 768px) {
+    html {
+      font-size: 13px;
+    }
+  }
+  @media (min-width: 1280px) {
+    html {
+      font-size: 12.75px;
+    }
   }
   body {
     @apply bg-background text-foreground antialiased;
