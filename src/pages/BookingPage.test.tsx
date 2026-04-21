@@ -178,4 +178,12 @@ describe("BookingPage stylist step flow", () => {
 
     expect(screen.getByTestId("date-time-selection")).toBeInTheDocument();
   });
+
+  it("renders the branded booking hero shell with floating logo", () => {
+    render(<BookingPage />);
+
+    expect(screen.getByTestId("booking-hero-shell")).toBeInTheDocument();
+    expect(screen.getByTestId("booking-hero-logo")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Rezervujte si termín/i })).toBeInTheDocument();
+  });
 });

@@ -1,10 +1,10 @@
-import { CalendarDays, CircleDollarSign, House, Phone, Scissors } from "lucide-react";
+import { CircleDollarSign, House, Phone, Scissors, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
 
-type PublicHeaderSection = "home" | "services" | "pricing" | "booking" | null;
+type PublicHeaderSection = "home" | "services" | "pricing" | "account" | null;
 
 interface PublicStickyHeaderProps {
   onPriceAction?: () => void;
@@ -25,21 +25,22 @@ const navigationButtons: NavigationButton[] = [
   { key: "home", label: "Domov", icon: House, action: "navigate", target: "home" },
   { key: "services", label: "Služby", icon: Scissors, action: "navigate", target: "services" },
   { key: "pricing", label: "Cenník", icon: CircleDollarSign, action: "price", target: "pricing" },
-  { key: "booking", label: "Rezervácia", icon: CalendarDays, action: "navigate", target: "booking" },
+  { key: "account", label: "Môj účet", icon: UserRound, action: "navigate", target: "account" },
   { key: "phone", label: "Telefón", icon: Phone, action: "phone", href: "tel:+421949459624" },
 ];
 
 function resolveSection(pathname: string): PublicHeaderSection {
   if (pathname === "/") return "home";
   if (pathname.startsWith("/demo")) return "home";
+  if (pathname.startsWith("/booking")) return "services";
   if (pathname.startsWith("/pricing")) return "pricing";
   if (
-    pathname.startsWith("/booking") ||
+    pathname.startsWith("/my-account") ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/dashboard/history") ||
     pathname.startsWith("/papihairsalon2026")
   ) {
-    return "booking";
+    return "account";
   }
   if (pathname.startsWith("/privacy") || pathname.startsWith("/terms") || pathname.startsWith("/install")) {
     return "pricing";
@@ -55,8 +56,8 @@ function resolveTargetPath(section: Exclude<PublicHeaderSection, null>): string 
       return "/booking";
     case "pricing":
       return "/pricing";
-    case "booking":
-      return "/booking";
+    case "account":
+      return "/my-account";
   }
 }
 

@@ -6,6 +6,7 @@ const OVERFLOW_TOLERANCE_PX = 2;
 const PAGES: { path: string; criticalSelector?: string; criticalLabel?: string }[] = [
   { path: "/", criticalSelector: "[data-testid=\"public-sticky-header\"]", criticalLabel: "sticky header" },
   { path: "/booking", criticalSelector: "text=Vyberte kategóriu", criticalLabel: "booking step" },
+  { path: "/my-account", criticalSelector: "text=Môj účet", criticalLabel: "account heading" },
   { path: "/auth", criticalSelector: "text=Prihlásenie", criticalLabel: "auth heading" },
   { path: "/demo", criticalSelector: "text=Rezervačný systém", criticalLabel: "demo heading" },
 ];

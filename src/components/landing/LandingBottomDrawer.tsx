@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useBookingData } from "@/hooks/useBookingData";
+import { ServicePriceCatalog } from "@/components/pricing/ServicePriceCatalog";
 import type { LandingDrawerType } from "./types";
 
 interface LandingBottomDrawerProps {
@@ -7,17 +9,9 @@ interface LandingBottomDrawerProps {
   onClose: () => void;
 }
 
-const priceList = [
-  { label: "Pánsky strih", price: "25 EUR", note: "Nožnice alebo strojček" },
-  { label: "Úprava brady (Hot towel)", price: "15 EUR", note: "Vrátane horúceho uteráka" },
-  { label: "Komplet (Strih + Brada)", price: "35 EUR", note: "Najobľúbenejšia kombinácia" },
-  { label: "Umytie a styling", price: "5 EUR", note: "Šampón + kondicionér" },
-  { label: "Farbenie", price: "od 30 EUR", note: "Cena závisí od dĺžky" },
-  { label: "Melír / Balayage", price: "od 50 EUR", note: "Konzultácia zdarma" },
-];
-
 export function LandingBottomDrawer({ open, onClose }: LandingBottomDrawerProps) {
   const navigate = useNavigate();
+  const { services, initialLoading } = useBookingData();
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -82,30 +76,8 @@ export function LandingBottomDrawer({ open, onClose }: LandingBottomDrawerProps)
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 md:px-8">
-          <div>
-            <div className="mb-6 space-y-2">
-              {priceList.map((item, index) => (
-                <div
-                  key={item.label}
-                  className="flex cursor-default items-center justify-between gap-4 rounded-xl border border-gold/[0.12] bg-gold/[0.04] p-4 transition-all hover:border-gold/25 hover:bg-gold/[0.08]"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-4 flex-shrink-0 text-[10px] font-bold text-gold/50">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <span className="text-[14px] font-semibold leading-snug text-warm-100 md:text-[15px]">
-                        {item.label}
-                      </span>
-                    </div>
-                    <p className="ml-6 mt-0.5 text-[12px] text-text-note">{item.note}</p>
-                  </div>
-                  <span className="flex-shrink-0 text-[15px] font-bold text-text-gold md:text-[16px]">
-                    {item.price}
-                  </span>
-                </div>
-              ))}
-            </div>
+          <div className="space-y-6">
+            <ServicePriceCatalog services={services} initialLoading={initialLoading} variant="drawer" />
 
             <div className="flex items-center justify-between gap-4 rounded-xl border border-gold/20 bg-gold/[0.06] p-4">
               <p className="text-[13px] leading-snug text-text-hint">

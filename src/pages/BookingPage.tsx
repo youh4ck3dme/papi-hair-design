@@ -11,7 +11,9 @@ import { EmployeeSelection } from "@/components/booking/EmployeeSelection";
 import { DateTimeSelection } from "@/components/booking/DateTimeSelection";
 import { ContactConfirmation } from "@/components/booking/ContactConfirmation";
 import { BookingSuccess } from "@/components/booking/BookingSuccess";
+import { PublicAtmosphereBackground } from "@/components/public/PublicAtmosphereBackground";
 import { getEffectiveIntervals, type BusinessHours } from "@/lib/availability";
+import { APP_LOGO_SRC } from "@/lib/branding";
 
 import { useBookingData } from "@/hooks/useBookingData";
 import { useAvailability } from "@/hooks/useAvailability";
@@ -196,142 +198,210 @@ export default function BookingPage() {
   }
 
   return (
-    <div
-      className="min-h-[100dvh] bg-black text-foreground transition-colors duration-300 safe-x"
+    <main
+      className="relative min-h-[100svh] overflow-hidden bg-black text-foreground transition-colors duration-300 safe-x"
       data-testid="booking-page"
     >
-      <div className="mx-auto w-full max-w-md overflow-x-hidden shadow-2xl lg:max-w-6xl lg:shadow-none">
-        <BookingHeader />
+      <PublicAtmosphereBackground />
 
-        {/* Gold progress bar */}
-        {(() => {
-          const steps = [category, selectedServiceId, selectedEmployeeId, selectedTime].filter(Boolean).length;
-          const pct = (steps / 4) * 100;
-          return steps > 0 ? (
-            <div className="h-0.5 w-full bg-white/5">
-              <div
-                className="h-full bg-[#C9A84C] transition-all duration-500 ease-out"
-                style={{ width: `${pct}%`, boxShadow: "0 0 6px rgba(201,168,76,0.7)" }}
-              />
-            </div>
-          ) : null;
-        })()}
-
-        {selectedService && (
-          <div className="px-4 pt-4 lg:px-6">
-            <div className="grid gap-3 rounded-2xl border border-primary/15 bg-[linear-gradient(180deg,rgba(218,165,32,0.09),rgba(218,165,32,0.03))] p-4 lg:grid-cols-3">
-              <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
-                  {i18n.language === "en" ? "Service" : "Služba"}
-                </p>
-                <p className="mt-1 truncate text-sm font-semibold text-white">{selectedService.name_sk}</p>
-              </div>
-              <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
-                  {i18n.language === "en" ? "Stylist" : "Kaderník"}
-                </p>
-                <p className="mt-1 truncate text-sm font-semibold text-white">
-                  {selectedEmployee?.display_name ?? (i18n.language === "en" ? "Choose stylist" : "Vyber kaderníka")}
-                </p>
-              </div>
-              <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
-                  {i18n.language === "en" ? "Appointment" : "Termín"}
-                </p>
-                <p className="mt-1 truncate text-sm font-semibold text-white">
-                  {selectedFullDate && selectedTime
-                    ? `${format(selectedFullDate, "d. M.", { locale: dateLocale })} • ${selectedTime}`
-                    : i18n.language === "en"
-                      ? "Choose date and time"
-                      : "Vyber dátum a čas"}
-                </p>
-              </div>
-            </div>
+      <div
+        className="relative z-10 flex min-h-[100svh] flex-col"
+        style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}
+      >
+        <div className="px-4 pt-[max(16px,env(safe-area-inset-top))] sm:px-6">
+          <div className="mx-auto max-w-[780px]">
+            <BookingHeader />
           </div>
-        )}
+        </div>
 
-        <div className="pb-24 lg:px-2 lg:pb-12">
-          <ServiceSelection
-            category={category}
-            setCategory={setCategory}
-            subcategory={subcategory}
-            setSubcategory={setSubcategory}
-            subcategoryOptions={subcategoryOptions}
-            showSubcategoryStep={showSubcategoryStep}
-            filteredServices={filteredServices}
-            selectedServiceId={selectedServiceId}
-            setSelectedServiceId={setSelectedServiceId}
-            isBusinessOpenNow={isBusinessOpenNow}
-            onCategoryChange={() => {
-              setSelectedDate(null);
-              setSelectedTime(null);
-            }}
-          />
-
-          {selectedServiceId && (
-            <div
-              className={
-                selectedEmployeeId
-                  ? "lg:grid lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:items-start lg:gap-6"
-                  : undefined
-              }
+        <div className="flex flex-1 px-4 pb-8 pt-6 sm:px-6 sm:pt-8 md:pb-10">
+          <div className="mx-auto flex w-full max-w-[780px] flex-col">
+            <section
+              className="relative mt-10 w-full overflow-visible rounded-3xl border border-border-subtle bg-gradient-to-b from-bg-base/90 to-bg-deep/95 pb-6 pt-16 backdrop-blur-2xl backdrop-saturate-[120%] sm:mt-12 md:pb-8 md:pt-20"
+              style={{ boxShadow: "var(--shadow-card)" }}
+              data-testid="booking-hero-shell"
             >
-              <div className="space-y-1">
-                <div ref={employeeSectionRef}>
-                  <EmployeeSelection
-                    employees={filteredEmployees}
-                    isLoading={initialLoading}
-                    selectedEmployeeId={selectedEmployeeId}
-                    setSelectedEmployeeId={setSelectedEmployeeId}
-                  />
+              <div
+                className="pointer-events-none absolute left-0 right-0 top-0 h-40 rounded-t-3xl bg-gradient-to-b from-gold/10 to-transparent"
+                aria-hidden="true"
+              />
+              <div className="pointer-events-none absolute left-5 top-5 h-8 w-8 rounded-tl-lg border-l border-t border-gold/30" aria-hidden="true" />
+              <div className="pointer-events-none absolute right-5 top-5 h-8 w-8 rounded-tr-lg border-r border-t border-gold/30" aria-hidden="true" />
+              <div className="pointer-events-none absolute bottom-5 left-5 h-8 w-8 rounded-bl-lg border-b border-l border-gold/30" aria-hidden="true" />
+              <div className="pointer-events-none absolute bottom-5 right-5 h-8 w-8 rounded-br-lg border-b border-r border-gold/30" aria-hidden="true" />
+
+              <div
+                className="absolute left-1/2 top-0 z-20 h-[92px] w-[92px] -translate-x-1/2 -translate-y-12 overflow-hidden rounded-full bg-ink-100"
+                style={{ boxShadow: "var(--shadow-medallion)" }}
+                data-testid="booking-hero-logo"
+              >
+                <img src={APP_LOGO_SRC} alt="Papi Hair Design" className="h-full w-full object-cover" />
+              </div>
+
+              <div className="px-6 text-center md:px-10">
+                <p className="mb-3 mt-1 select-none text-center text-[10px] font-semibold uppercase tracking-[0.35em] text-gold/70 sm:text-[11px]">
+                  {currentLang === "en" ? "Online booking" : "Online rezervácia"}
+                </p>
+                <h1
+                  className="text-balance text-center text-[30px] font-bold leading-tight tracking-[0.06em] text-text-primary sm:text-[38px] md:text-[44px]"
+                  style={{ textShadow: "0 2px 12px rgba(0,0,0,0.80)" }}
+                >
+                  {currentLang === "en" ? "Book your appointment" : "Rezervujte si termín"}
+                </h1>
+                <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-text-caption md:text-base">
+                  {currentLang === "en"
+                    ? "Choose women’s, men’s or additional services and continue directly to stylist and time selection in one premium booking flow."
+                    : "Vyberte si dámske, pánske alebo doplnkové služby a pokračujte priamo na výber kaderníka a termínu v jednom plynulom booking flowe."}
+                </p>
+                <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+                  {[
+                    currentLang === "en" ? "Men's services" : "Pánske služby",
+                    currentLang === "en" ? "Women's services" : "Dámske služby",
+                    currentLang === "en" ? "Additional services" : "Doplnkové služby",
+                  ].map((text) => (
+                    <span
+                      key={text}
+                      className="select-none rounded-full border border-gold/30 bg-gold/[0.06] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-label sm:text-[12px]"
+                    >
+                      {text}
+                    </span>
+                  ))}
                 </div>
               </div>
 
-              {selectedEmployeeId && (
-                <div ref={dateTimeSectionRef}>
-                  <DateTimeSelection
-                    calendarMonth={calendarMonth}
-                    setCalendarMonth={setCalendarMonth}
-                    dateLocale={dateLocale}
-                    firstDayOffset={firstDayOffset}
-                    daysInMonth={daysInMonth}
-                    today={today}
-                    maxDays={maxDays}
-                    selectedDate={selectedDate}
-                    setSelectedDate={setSelectedDate}
-                    selectedFullDate={selectedFullDate}
-                    setSelectedTime={setSelectedTime}
-                    isBusinessOpenOnDay={isBusinessOpenOnDay}
-                    loadingSlots={loadingSlots}
-                    availabilityStatus={availabilityStatus}
-                    availableSlots={availableSlots}
-                    selectedTime={selectedTime}
-                    timeGroups={timeGroups}
-                  />
+              {(() => {
+                const steps = [category, selectedServiceId, selectedEmployeeId, selectedTime].filter(Boolean).length;
+                const pct = (steps / 4) * 100;
+                return steps > 0 ? (
+                  <div className="mt-8 px-6 md:px-10">
+                    <div className="h-0.5 w-full bg-white/5">
+                      <div
+                        className="h-full bg-[#C9A84C] transition-all duration-500 ease-out"
+                        style={{ width: `${pct}%`, boxShadow: "0 0 6px rgba(201,168,76,0.7)" }}
+                      />
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              {selectedService && (
+                <div className="px-6 pt-5 md:px-10">
+                  <div className="grid gap-3 rounded-2xl border border-primary/15 bg-[linear-gradient(180deg,rgba(218,165,32,0.09),rgba(218,165,32,0.03))] p-4 lg:grid-cols-3">
+                    <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
+                        {i18n.language === "en" ? "Service" : "Služba"}
+                      </p>
+                      <p className="mt-1 truncate text-sm font-semibold text-white">{selectedService.name_sk}</p>
+                    </div>
+                    <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
+                        {i18n.language === "en" ? "Stylist" : "Kaderník"}
+                      </p>
+                      <p className="mt-1 truncate text-sm font-semibold text-white">
+                        {selectedEmployee?.display_name ?? (i18n.language === "en" ? "Choose stylist" : "Vyber kaderníka")}
+                      </p>
+                    </div>
+                    <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
+                        {i18n.language === "en" ? "Appointment" : "Termín"}
+                      </p>
+                      <p className="mt-1 truncate text-sm font-semibold text-white">
+                        {selectedFullDate && selectedTime
+                          ? `${format(selectedFullDate, "d. M.", { locale: dateLocale })} • ${selectedTime}`
+                          : i18n.language === "en"
+                            ? "Choose date and time"
+                            : "Vyber dátum a čas"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
-            </div>
-          )}
 
-          {selectedEmployeeId && selectedTime && (
-            <div ref={contactSectionRef} className="lg:mx-auto lg:max-w-3xl">
-              <ContactConfirmation
-                formData={formData}
-                setFormData={setFormData}
-                contactErrors={contactErrors}
-                handleCheckAll={handleCheckAll}
-                handleConsentChange={handleConsentChange}
-                selectedService={selectedService}
-                selectedFullDate={selectedFullDate}
-                selectedTime={selectedTime}
-                dateLocale={dateLocale}
-                submitting={submitting}
-                handleSubmit={() => handleSubmit(selectedTime, availableSlots, selectedEmployeeId)}
-              />
-            </div>
-          )}
+              <div className="pb-6 pt-2 md:pb-8">
+                <ServiceSelection
+                  category={category}
+                  setCategory={setCategory}
+                  subcategory={subcategory}
+                  setSubcategory={setSubcategory}
+                  subcategoryOptions={subcategoryOptions}
+                  showSubcategoryStep={showSubcategoryStep}
+                  filteredServices={filteredServices}
+                  selectedServiceId={selectedServiceId}
+                  setSelectedServiceId={setSelectedServiceId}
+                  isBusinessOpenNow={isBusinessOpenNow}
+                  onCategoryChange={() => {
+                    setSelectedDate(null);
+                    setSelectedTime(null);
+                  }}
+                />
+
+                {selectedServiceId && (
+                  <div
+                    className={
+                      selectedEmployeeId
+                        ? "lg:grid lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:items-start lg:gap-6"
+                        : undefined
+                    }
+                  >
+                    <div className="space-y-1">
+                      <div ref={employeeSectionRef}>
+                        <EmployeeSelection
+                          employees={filteredEmployees}
+                          isLoading={initialLoading}
+                          selectedEmployeeId={selectedEmployeeId}
+                          setSelectedEmployeeId={setSelectedEmployeeId}
+                        />
+                      </div>
+                    </div>
+
+                    {selectedEmployeeId && (
+                      <div ref={dateTimeSectionRef}>
+                        <DateTimeSelection
+                          calendarMonth={calendarMonth}
+                          setCalendarMonth={setCalendarMonth}
+                          dateLocale={dateLocale}
+                          firstDayOffset={firstDayOffset}
+                          daysInMonth={daysInMonth}
+                          today={today}
+                          maxDays={maxDays}
+                          selectedDate={selectedDate}
+                          setSelectedDate={setSelectedDate}
+                          selectedFullDate={selectedFullDate}
+                          setSelectedTime={setSelectedTime}
+                          isBusinessOpenOnDay={isBusinessOpenOnDay}
+                          loadingSlots={loadingSlots}
+                          availabilityStatus={availabilityStatus}
+                          availableSlots={availableSlots}
+                          selectedTime={selectedTime}
+                          timeGroups={timeGroups}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {selectedEmployeeId && selectedTime && (
+                  <div ref={contactSectionRef} className="lg:mx-auto lg:max-w-3xl">
+                    <ContactConfirmation
+                      formData={formData}
+                      setFormData={setFormData}
+                      contactErrors={contactErrors}
+                      handleCheckAll={handleCheckAll}
+                      handleConsentChange={handleConsentChange}
+                      selectedService={selectedService}
+                      selectedFullDate={selectedFullDate}
+                      selectedTime={selectedTime}
+                      dateLocale={dateLocale}
+                      submitting={submitting}
+                      handleSubmit={() => handleSubmit(selectedTime, availableSlots, selectedEmployeeId)}
+                    />
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

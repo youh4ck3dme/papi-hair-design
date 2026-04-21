@@ -34,7 +34,7 @@ describe("BookingHeader", () => {
     expect(screen.getByRole("button", { name: "Domov" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Služby" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cenník" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Rezervácia" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Môj účet" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Telefón" })).toHaveAttribute("href", "tel:+421949459624");
   });
 

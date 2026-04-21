@@ -39,6 +39,7 @@ const SalonLoginPage = lazy(() => import("./pages/SalonLoginPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const BootstrapPage = lazy(() => import("./pages/BootstrapPage"));
 const PricingPage = lazy(() => import("./pages/Pricing"));
+const MyAccountPage = lazy(() => import("./pages/MyAccountPage"));
 const InstallPrompt = lazy(() => import("@/components/InstallPrompt"));
 
 const LazyFallback = () => (
@@ -99,6 +100,7 @@ const App = () => {
                   <Route element={<PublicChromeLayout />}>
                     <Route path="/demo" element={<DemoPage />} />
                     <Route path="/pricing" element={<PricingPage />} />
+                    <Route path="/my-account" element={<MyAccountPage />} />
                     <Route path="/auth" element={<AuthPage />} />
                     <Route path="/offline" element={<OfflinePage />} />
                     <Route path="/install" element={<InstallPage />} />

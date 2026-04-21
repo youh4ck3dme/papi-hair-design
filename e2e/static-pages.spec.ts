@@ -19,6 +19,22 @@ test.describe("Static pages", () => {
     await expect(page.getByRole("button", { name: "Domov" })).toBeVisible({ timeout: 10000 });
   });
 
+  test("pricing page renders admin-backed service categories", async ({ page }) => {
+    await page.goto("/pricing");
+    await expect(page.getByRole("heading", { name: /Cenník služieb/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /Pánske služby/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /Dámske služby/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /Doplnkové služby/i })).toBeVisible({ timeout: 10000 });
+  });
+
+  test("my account page renders client zone actions", async ({ page }) => {
+    await page.goto("/my-account");
+    await expect(page.getByRole("heading", { name: /Môj účet/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /^Prihlásenie$/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /^Registrácia$/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /^Moje rezervácie$/i })).toBeVisible({ timeout: 10000 });
+  });
+
   test("terms page renders heading", async ({ page }) => {
     await page.goto("/terms");
     await expect(page.getByRole("heading", { name: /Zmluvné podmienky/i })).toBeVisible({ timeout: 15000 });
