@@ -85,6 +85,7 @@ type RichEmailTemplate = {
   intro: string;
   variant?: EmailVariant;
   introColor?: string;
+  heroNote?: string;
   highlight?: {
     label: string;
     value: string;
@@ -98,33 +99,34 @@ type RichEmailTemplate = {
 };
 
 const EMAIL_COLOR_SYSTEM = {
-  canvas: "#060607",
-  heroStart: "#050505",
-  heroEnd: "#000000",
+  canvas: "#000000",
+  cardStart: "rgba(20,17,14,.92)",
+  cardEnd: "rgba(10,8,6,.97)",
+  cardBorder: "rgba(220,183,115,.34)",
+  cardTopGlow: "rgba(220,183,115,.10)",
   heroTitle: "#ffffff",
-  heroBorder: "rgba(212,175,55,.28)",
-  heroMutedText: "#b7c0cc",
-  heroBadgeBg: "rgba(212,175,55,.10)",
-  heroBadgeBorder: "rgba(212,175,55,.24)",
-  heroBadgeText: "#e7c96d",
-  surface: "#f7f3ea",
-  surfaceBorder: "rgba(212,175,55,.24)",
-  divider: "#ddd2bd",
-  labelText: "#7c7466",
-  valueText: "#181621",
-  bodyText: "#2d2933",
-  mutedText: "#756d7b",
-  linkText: "#8f6f1f",
-  primaryButtonText: "#181510",
-  primaryButtonBg: "linear-gradient(135deg, #f3dd9b 0%, #d5b24e 55%, #b78d25 100%)",
-  secondaryButtonBg: "#f1ede6",
-  secondaryButtonText: "#2a2733",
-  secondaryButtonBorder: "#d6cdbd",
-  highlightBg: "rgba(0,0,0,.90)",
-  highlightBorder: "rgba(212,175,55,.24)",
-  highlightLabel: "#d4af37",
-  highlightText: "#f8f3e4",
-  successText: "#dcb85a",
+  heroMutedText: "#a8a196",
+  heroBadgeBg: "rgba(26,22,18,.80)",
+  heroBadgeBorder: "rgba(220,183,115,.30)",
+  heroBadgeText: "#dcb773",
+  surface: "linear-gradient(180deg, rgba(26,22,18,.60) 0%, rgba(0,0,0,.82) 100%)",
+  surfaceBorder: "rgba(220,183,115,.30)",
+  divider: "rgba(220,183,115,.15)",
+  labelText: "#dcb773",
+  valueText: "#ffffff",
+  bodyText: "#d6d0c4",
+  mutedText: "#b2ab9f",
+  linkText: "#dcb773",
+  primaryButtonText: "#000000",
+  primaryButtonBg: "linear-gradient(90deg, #dcb773 0%, #ffeaa3 100%)",
+  secondaryButtonBg: "linear-gradient(180deg, #1a1612 0%, #0c0a08 100%)",
+  secondaryButtonText: "#dcb773",
+  secondaryButtonBorder: "rgba(220,183,115,.40)",
+  highlightBg: "rgba(5,4,3,.60)",
+  highlightBorder: "rgba(220,183,115,.20)",
+  highlightLabel: "#dcb773",
+  highlightText: "#ffffff",
+  successText: "#dcb773",
   welcomeText: "#f0dca4",
   dangerText: "#d92d20",
 } as const;
@@ -155,37 +157,37 @@ const EMAIL_VARIANTS: Record<
     primaryButtonShadow: "0 10px 24px rgba(157,115,15,.20)",
   },
   success: {
-    introColor: "#cbd2da",
-    badgeBg: "rgba(216,185,92,.12)",
-    badgeBorder: "rgba(216,185,92,.28)",
-    badgeText: "#f1d98a",
-    highlightBorder: "rgba(216,185,92,.24)",
-    highlightLabelColor: "#e1c266",
+    introColor: "#a8a196",
+    badgeBg: "rgba(26,22,18,.80)",
+    badgeBorder: "rgba(220,183,115,.30)",
+    badgeText: "#dcb773",
+    highlightBorder: "rgba(220,183,115,.20)",
+    highlightLabelColor: "#dcb773",
     highlightValueColor: EMAIL_COLOR_SYSTEM.successText,
-    primaryButtonBg: "linear-gradient(135deg, #f7e6af 0%, #ddb95d 55%, #c4932b 100%)",
-    primaryButtonShadow: "0 12px 28px rgba(163,121,22,.24)",
+    primaryButtonBg: "linear-gradient(90deg, #dcb773 0%, #ffeaa3 100%)",
+    primaryButtonShadow: "0 8px 22px rgba(220,183,115,.32)",
   },
   welcome: {
-    introColor: "#d2d7de",
-    badgeBg: "rgba(240,220,164,.12)",
-    badgeBorder: "rgba(240,220,164,.24)",
-    badgeText: "#f5e4b7",
-    highlightBorder: "rgba(240,220,164,.24)",
-    highlightLabelColor: "#ecd694",
+    introColor: "#a8a196",
+    badgeBg: "rgba(26,22,18,.80)",
+    badgeBorder: "rgba(220,183,115,.30)",
+    badgeText: "#dcb773",
+    highlightBorder: "rgba(220,183,115,.20)",
+    highlightLabelColor: "#dcb773",
     highlightValueColor: EMAIL_COLOR_SYSTEM.welcomeText,
-    primaryButtonBg: "linear-gradient(135deg, #f7ebc7 0%, #e5c980 54%, #caa04b 100%)",
-    primaryButtonShadow: "0 12px 30px rgba(176,140,69,.22)",
+    primaryButtonBg: "linear-gradient(90deg, #dcb773 0%, #ffeaa3 100%)",
+    primaryButtonShadow: "0 8px 22px rgba(220,183,115,.32)",
   },
   danger: {
-    introColor: "#aeb7c2",
-    badgeBg: "rgba(217,45,32,.10)",
-    badgeBorder: "rgba(217,45,32,.24)",
-    badgeText: "#ff8d84",
-    highlightBorder: "rgba(217,45,32,.22)",
-    highlightLabelColor: "#ff9a92",
-    highlightValueColor: EMAIL_COLOR_SYSTEM.dangerText,
-    primaryButtonBg: "linear-gradient(135deg, #f4dc9d 0%, #ddb65d 58%, #bc8c2b 100%)",
-    primaryButtonShadow: "0 12px 26px rgba(146,43,31,.18)",
+    introColor: "#a8a196",
+    badgeBg: "rgba(26,22,18,.80)",
+    badgeBorder: "rgba(220,183,115,.30)",
+    badgeText: "#dcb773",
+    highlightBorder: "rgba(220,183,115,.20)",
+    highlightLabelColor: "#dcb773",
+    highlightValueColor: "#e06c53",
+    primaryButtonBg: "linear-gradient(90deg, #dcb773 0%, #ffeaa3 100%)",
+    primaryButtonShadow: "0 8px 22px rgba(220,183,115,.32)",
   },
 };
 
@@ -469,8 +471,8 @@ function buildMessage(
     .join("");
 
   const footerHtml = `
-    <div style="margin-top:28px;padding-top:20px;border-top:1px solid ${EMAIL_COLOR_SYSTEM.divider};">
-      <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:${EMAIL_COLOR_SYSTEM.labelText};margin-bottom:8px;">
+    <div style="margin-top:28px;padding-top:18px;border-top:1px solid ${EMAIL_COLOR_SYSTEM.divider};text-align:center;">
+      <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:rgba(220,183,115,.50);margin-bottom:8px;font-weight:700;">
         ${escapeHtml(context.businessName)}
       </div>
       <div style="font-size:14px;line-height:1.7;color:${EMAIL_COLOR_SYSTEM.mutedText};">
@@ -489,45 +491,45 @@ function buildMessage(
       </div>
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:${EMAIL_COLOR_SYSTEM.canvas};">
         <tr>
-          <td align="center" style="padding:28px 12px;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;border-collapse:separate;">
+          <td align="center" style="padding:24px 12px;background:linear-gradient(180deg, rgba(0,0,0,.85) 0%, rgba(24,18,12,.85) 56%, rgba(0,0,0,.95) 100%);">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:540px;border-collapse:separate;">
               <tr>
-                <td style="padding:32px 30px 22px;border-radius:30px 30px 0 0;background:linear-gradient(180deg, ${EMAIL_COLOR_SYSTEM.heroStart} 0%, ${EMAIL_COLOR_SYSTEM.heroEnd} 100%);border:1px solid ${EMAIL_COLOR_SYSTEM.heroBorder};border-bottom:0;box-shadow:0 20px 48px rgba(0,0,0,.28);">
-                  <div style="text-align:center;padding-bottom:20px;">
+                <td style="position:relative;padding:0 24px 30px;border-radius:24px;background:linear-gradient(180deg, ${EMAIL_COLOR_SYSTEM.cardStart} 0%, ${EMAIL_COLOR_SYSTEM.cardEnd} 100%);border:1px solid ${EMAIL_COLOR_SYSTEM.cardBorder};box-shadow:0 10px 40px rgba(0,0,0,.90), inset 0 1px 2px rgba(255,255,255,.05);">
+                  <div style="height:32px;background:linear-gradient(180deg, ${EMAIL_COLOR_SYSTEM.cardTopGlow} 0%, transparent 100%);border-radius:23px 23px 0 0;"></div>
+                  <div style="text-align:center;margin-top:-30px;padding-bottom:18px;">
+                    <div style="display:inline-block;padding:8px;border-radius:999px;background:linear-gradient(180deg, #14110e 0%, #0a0806 100%);border:1px solid #dcb773;box-shadow:0 4px 10px rgba(0,0,0,.8), inset 0 1px 1px rgba(255,255,255,.05);">
                     <img
                       src="${escapeAttr(logoUrl)}"
-                      width="84"
-                      height="84"
+                      width="72"
+                      height="72"
                       alt="${escapeAttr(context.businessName)}"
-                      style="display:block;margin:0 auto;width:84px;height:84px;border:0;outline:none;text-decoration:none;border-radius:18px;"
+                      style="display:block;margin:0 auto;width:72px;height:72px;border:0;outline:none;text-decoration:none;border-radius:999px;"
                     />
+                    </div>
                   </div>
-                  <div style="display:inline-block;padding:8px 14px;border-radius:999px;background:${variant.badgeBg};border:1px solid ${variant.badgeBorder};font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:${variant.badgeText};">
+                  <div style="display:inline-block;padding:8px 14px;border-radius:999px;background:${variant.badgeBg};border:1px solid ${variant.badgeBorder};font-size:11px;font-weight:700;letter-spacing:.20em;text-transform:uppercase;color:${variant.badgeText};box-shadow:inset 0 1px 1px rgba(255,255,255,.05);">
                     ${escapeHtml(template.eyebrow)}
                   </div>
-                  <h1 style="margin:18px 0 0;font-size:42px;line-height:1.04;color:${EMAIL_COLOR_SYSTEM.heroTitle};font-weight:800;text-wrap:balance;letter-spacing:-.03em;">
+                  ${template.heroNote ? `<div style="margin-top:18px;font-size:13px;text-transform:uppercase;letter-spacing:.26em;color:${EMAIL_COLOR_SYSTEM.heroBadgeText};font-weight:700;text-align:center;">${escapeHtml(template.heroNote)}</div>` : ""}
+                  <h1 style="margin:18px 0 0;font-size:32px;line-height:1.12;color:${EMAIL_COLOR_SYSTEM.heroTitle};font-weight:800;letter-spacing:-.02em;text-align:left;">
                     ${escapeHtml(template.title)}
                   </h1>
-                  <p style="margin:16px 0 0;font-size:16px;line-height:1.8;color:${escapeAttr(template.introColor ?? variant.introColor)};font-weight:400;max-width:560px;">
+                  <p style="margin:16px 0 0;font-size:18px;line-height:1.7;color:${escapeAttr(template.introColor ?? variant.introColor)};font-weight:400;">
                     ${escapeHtml(template.intro)}
                   </p>
                   ${highlightHtml}
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:0 30px 32px;border-left:1px solid ${EMAIL_COLOR_SYSTEM.surfaceBorder};border-right:1px solid ${EMAIL_COLOR_SYSTEM.surfaceBorder};border-bottom:1px solid ${EMAIL_COLOR_SYSTEM.surfaceBorder};border-radius:0 0 30px 30px;background:${EMAIL_COLOR_SYSTEM.surface};">
-                  <div style="padding:26px 0 0;">
+                  <div style="margin-top:26px;padding:0;border-radius:16px;background:${EMAIL_COLOR_SYSTEM.surface};border:1px solid ${EMAIL_COLOR_SYSTEM.surfaceBorder};box-shadow:0 4px 15px rgba(0,0,0,.5), inset 0 1px 1px rgba(255,255,255,.03);">
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                       ${rowsHtml}
                     </table>
                   </div>
-                  <div style="padding:28px 0 6px;">
+                  <div style="padding:28px 0 4px;">
                     ${actionsHtml}
                   </div>
-                  <div style="padding-top:14px;font-size:18px;line-height:1.7;color:${EMAIL_COLOR_SYSTEM.bodyText};">
+                  <div style="padding-top:8px;font-size:16px;line-height:1.9;color:${EMAIL_COLOR_SYSTEM.bodyText};text-align:center;">
                     ${escapeHtml(template.closing)}
                   </div>
-                  ${template.footerNote ? `<div style="padding-top:16px;font-size:14px;line-height:1.75;color:${EMAIL_COLOR_SYSTEM.mutedText};">${escapeHtml(template.footerNote)}</div>` : ""}
+                  ${template.footerNote ? `<div style="padding-top:16px;font-size:14px;line-height:1.8;color:${EMAIL_COLOR_SYSTEM.mutedText};text-align:center;">${escapeHtml(template.footerNote)}</div>` : ""}
                   ${footerHtml}
                 </td>
               </tr>
@@ -607,19 +609,25 @@ export async function queueCustomerBookingEmail(
   }
 
   const bookingUrl = `${resolvePublicBookingBaseUrl()}/booking`;
+  const contactHref = context.businessPhone
+    ? `tel:${context.businessPhone.replaceAll(/\s+/g, "")}`
+    : context.businessEmail
+      ? `mailto:${context.businessEmail}`
+      : bookingUrl;
   const template: RichEmailTemplate = {
     preheader: "Vaša rezervácia je potvrdená a termín je pripravený.",
     eyebrow: "Rezervácia potvrdená",
     subject: "Rezervácia potvrdená",
-    title: "Tešíme sa na vašu návštevu",
+    title: "Vaša rezervácia je potvrdená",
     variant: "success",
+    heroNote: "Papi Hair Design",
     intro: input.customerName
-      ? `Dobrý deň, ${input.customerName}. Vaša rezervácia bola úspešne potvrdená.`
-      : "Vaša rezervácia bola úspešne potvrdená a evidujeme ju v systéme.",
+      ? `Dobrý deň, ${input.customerName}. Ďakujeme, vaša rezervácia bola úspešne potvrdená a termín je pripravený.`
+      : "Ďakujeme, vaša rezervácia bola úspešne potvrdená a termín je pripravený.",
     highlight: {
-      label: "Najbližší termín",
-      value: formatDateTime(input.startAtIso, context.timezone),
-      valueColor: "#f0d27a",
+      label: "Stav rezervácie",
+      value: "Potvrdená",
+      valueColor: "#dcb773",
     },
     rows: buildBookingSummaryRows({
       serviceName: input.serviceName,
@@ -629,11 +637,11 @@ export async function queueCustomerBookingEmail(
     }),
     primaryAction: input.historyAccessUrl
       ? { label: "Moje rezervácie", href: input.historyAccessUrl }
-      : { label: "Rezervovať ďalší termín", href: bookingUrl },
-    secondaryAction: input.historyAccessUrl ? { label: "Rezervovať ďalší termín", href: bookingUrl } : undefined,
+      : { label: "Rezervovať termín", href: bookingUrl },
+    secondaryAction: { label: "Kontakt", href: contactHref },
     closing:
-      "Ak potrebujete zmenu, vráťte sa do histórie rezervácií alebo nás kontaktujte priamo. Termín už na vás čaká a budeme sa tešiť na vašu návštevu.",
-    footerNote: "Rezervácia je potvrdená, uložená v systéme a pripravená na vybraný čas.",
+      "Vaša rezervácia je uložená v systéme a pripravená na vybraný čas. Ak budete potrebovať čokoľvek zmeniť, stačí sa vrátiť do svojich rezervácií alebo nás kontaktovať.",
+    footerNote: "Tešíme sa na vašu návštevu v salóne Papi Hair Design.",
   };
 
   return queueTemplatedMail(
@@ -657,21 +665,27 @@ export async function queueCustomerCancellationEmail(
   }
 
   const bookingUrl = `${resolvePublicBookingBaseUrl()}/booking`;
-  const cancelledByLabel = input.cancelledBy === "admin" ? "prevádzkou" : "vami";
+  const cancelledByAdmin = input.cancelledBy === "admin";
   const template: RichEmailTemplate = {
-    preheader: "Rezervácia bola zrušená a evidujeme to v systéme.",
+    preheader: cancelledByAdmin
+      ? "Rezervácia bola zrušená prevádzkou a evidujeme to v systéme."
+      : "Vaša rezervácia bola úspešne zrušená a termín sa uvoľnil.",
     eyebrow: "Rezervácia zrušená",
-    subject: "Rezervácia zrušená",
+    subject: cancelledByAdmin ? "Rezervácia bola zrušená" : "Rezervácia úspešne zrušená",
     title: "Rezervácia bola zrušená",
     variant: "danger",
-    introColor: "#aeb7c2",
+    heroNote: "Papi Hair Design",
     intro: input.customerName
-      ? `Dobrý deň, ${input.customerName}. Vaša rezervácia bola zrušená ${cancelledByLabel}.`
-      : `Vaša rezervácia bola zrušená ${cancelledByLabel}.`,
+      ? cancelledByAdmin
+        ? `Dobrý deň, ${input.customerName}. Vaša rezervácia bola zrušená prevádzkou.`
+        : `Dobrý deň, ${input.customerName}. Vaša rezervácia bola úspešne zrušená.`
+      : cancelledByAdmin
+        ? `Vaša rezervácia bola zrušená prevádzkou.`
+        : `Vaša rezervácia bola úspešne zrušená.`,
     highlight: {
       label: "Stav rezervácie",
       value: "Zrušená",
-      valueColor: "#ff5c51",
+      valueColor: "#e06c53",
     },
     rows: buildBookingSummaryRows({
       serviceName: input.serviceName,
@@ -681,9 +695,12 @@ export async function queueCustomerCancellationEmail(
     }),
     primaryAction: { label: "Rezervovať nový termín", href: bookingUrl },
     secondaryAction: input.historyAccessUrl ? { label: "Moje rezervácie", href: input.historyAccessUrl } : undefined,
-    closing:
-      "Ak išlo o omyl, vytvorte si nový termín čo najskôr. Ak potrebujete pomoc s novou rezerváciou, radi vám pomôžeme osobne.",
-    footerNote: "Rezervácia bola označená ako zrušená a termín sa opäť uvoľnil pre ďalšie rezervácie.",
+    closing: cancelledByAdmin
+      ? "Ospravedlňujeme sa za vzniknutú zmenu. Ak vám nový termín vyhovuje, odporúčame si ho vytvoriť čo najskôr, prípadne nás kontaktovať a radi vám pomôžeme osobne."
+      : "Vaša rezervácia bola stornovaná a termín je opäť dostupný pre ďalších zákazníkov. Ak si chcete vybrať nový čas, môžete pokračovať hneď nižšie.",
+    footerNote: cancelledByAdmin
+      ? "Rezervácia bola zrušená prevádzkou a termín sa opäť uvoľnil pre nové rezervácie."
+      : "Rezervácia bola úspešne zrušená a termín sa opäť uvoľnil.",
   };
 
   return queueTemplatedMail(
@@ -720,23 +737,25 @@ export async function queueAdminBookingNotificationEmail(
     subject: "Nová rezervácia",
     title: "Prišla nová rezervácia",
     variant: "success",
-    intro: "Do kalendára pribudla nová rezervácia. Nižšie je pripravený rýchly premium prehľad klienta, služby a termínu.",
+    heroNote: "Interná notifikácia",
+    intro: "Do systému pribudol nový termín. Nižšie je pripravený rýchly prehľad klienta, služby a rezervácie pre ďalšie spracovanie.",
     highlight: {
-      label: "Termín",
-      value: formatDateTime(input.startAtIso, context.timezone),
-      valueColor: "#f0d27a",
+      label: "Stav rezervácie",
+      value: "Nová rezervácia",
+      valueColor: "#dcb773",
     },
     rows: [
       { label: "Klient", value: input.customerName ?? "-" },
       { label: "E-mail", value: input.customerEmail ?? "-" },
       { label: "Telefón", value: input.customerPhone ?? "-" },
       { label: "Služba", value: input.serviceName ?? "-" },
+      { label: "Termín", value: formatDateTime(input.startAtIso, context.timezone) },
       { label: "ID rezervácie", value: input.appointmentId },
     ],
-    primaryAction: { label: "Otvoriť kalendár", href: adminCalendarUrl },
-    secondaryAction: { label: "Otvoriť rezervácie", href: adminAppointmentsUrl },
+    primaryAction: { label: "Otvoriť rezervácie", href: adminAppointmentsUrl },
+    secondaryAction: { label: "Kalendár", href: adminCalendarUrl },
     closing:
-      "Rezervácia je pripravená na spracovanie. Ak treba zmenu, otvor kalendár a uprav stav alebo detail rezervácie priamo z administrácie.",
+      "Rezervácia je pripravená na spracovanie. Ak treba termín preveriť alebo upraviť, pokračujte do rezervácií alebo kalendára priamo z administrácie.",
     footerNote: "Interná notifikácia bola odoslaná automaticky po vytvorení novej rezervácie.",
   };
 
@@ -773,17 +792,18 @@ export async function queueAdminCustomerCancellationEmail(
     preheader: cancelledByCustomer
       ? "Zákazník zrušil rezerváciu a termín sa uvoľnil."
       : "Rezervácia bola zrušená adminom.",
-    eyebrow: cancelledByCustomer ? "Zrušenie zákazníkom" : "Zrušenie adminom",
-    subject: cancelledByCustomer ? "Zákazník zrušil rezerváciu" : "Admin zrušil rezerváciu",
-    title: cancelledByCustomer ? "Zákazník zrušil rezerváciu" : "Admin zrušil rezerváciu",
+    eyebrow: "Rezervácia zrušená",
+    subject: cancelledByCustomer ? "Zákazník zrušil rezerváciu" : "Rezervácia bola zrušená adminom",
+    title: "Rezervácia bola zrušená",
     variant: "danger",
+    heroNote: "Interná notifikácia",
     intro: cancelledByCustomer
-      ? "V systéme evidujeme storno zo strany zákazníka. Nižšie je rýchly prehľad termínu, klienta a kontaktu."
-      : "Rezervácia bola zrušená zo strany administrácie. Nižšie je prehľad rezervácie a klienta pre ďalšie spracovanie.",
+      ? "Zákazník zrušil svoju rezerváciu. Nižšie je pripravený prehľad klienta, kontaktu a termínu pre ďalšie spracovanie."
+      : "Rezervácia bola zrušená zo strany administrácie. Nižšie je pripravený prehľad klienta a termínu pre ďalšie kroky.",
     highlight: {
-      label: "Stav",
-      value: cancelledByCustomer ? "Zrušené zákazníkom" : "Zrušené adminom",
-      valueColor: "#ff6b61",
+      label: "Stav rezervácie",
+      value: "Zrušená",
+      valueColor: "#e06c53",
     },
     rows: [
       { label: "Klient", value: input.customerName ?? "-" },
@@ -793,10 +813,10 @@ export async function queueAdminCustomerCancellationEmail(
       { label: "Termín", value: formatDateTime(input.startAtIso, context.timezone) },
       { label: "ID rezervácie", value: input.appointmentId },
     ],
-    primaryAction: { label: "Otvoriť kalendár", href: adminCalendarUrl },
-    secondaryAction: { label: "Otvoriť rezervácie", href: adminAppointmentsUrl },
+    primaryAction: { label: "Otvoriť rezervácie", href: adminAppointmentsUrl },
+    secondaryAction: { label: "Kalendár", href: adminCalendarUrl },
     closing:
-      "Rezervácia bola prepísaná na stav zrušené. Ak chcete termín uvoľniť alebo ihneď znovu obsadiť, pokračujte cez kalendár alebo prehľad rezervácií.",
+      "Rezervácia je prepísaná na stav zrušené. Ak treba termín znovu obsadiť alebo ďalej riešiť klienta, pokračujte cez rezervácie alebo kalendár.",
     footerNote: cancelledByCustomer
       ? "Interná notifikácia bola odoslaná automaticky po storne zákazníkom."
       : "Interná notifikácia bola odoslaná automaticky po storne adminom.",
@@ -826,27 +846,29 @@ export async function queueRegistrationWelcomeEmail(
   const baseUrl = resolvePublicBookingBaseUrl();
   const template: RichEmailTemplate = {
     preheader: "Účet je pripravený a môžete si rezervovať svoj prvý termín.",
-    eyebrow: "Registrácia dokončená",
-    subject: "Vitajte v našom rezervačnom systéme",
-    title: "Vitajte v našom rezervačnom systéme",
+    eyebrow: "Účet vytvorený",
+    subject: "Vitajte v Papi Hair Design",
+    title: "Vitajte v Papi Hair Design",
     variant: "welcome",
+    heroNote: "Registrácia dokončená",
     intro: input.customerName
-      ? `Dobrý deň, ${input.customerName}. Váš účet bol úspešne vytvorený a je pripravený na prvú rezerváciu.`
-      : "Váš účet bol úspešne vytvorený a je pripravený na prvú rezerváciu.",
+      ? `Dobrý deň, ${input.customerName}. Vaše konto bolo úspešne vytvorené a môžete si okamžite rezervovať svoj prvý termín.`
+      : "Vaše konto bolo úspešne vytvorené a môžete si okamžite rezervovať svoj prvý termín.",
     highlight: {
-      label: "E-mail účtu",
-      value: input.customerEmail,
+      label: "Stav účtu",
+      value: "Konto aktívne",
       valueColor: "#f3dfae",
     },
     rows: [
+      { label: "E-mail účtu", value: input.customerEmail },
       { label: "Účet", value: "Aktívny" },
       { label: "Rezervácie", value: "K dispozícii online" },
     ],
     primaryAction: { label: "Rezervovať termín", href: `${baseUrl}/booking` },
-    secondaryAction: { label: "Moje rezervácie", href: `${baseUrl}/dashboard/history` },
+    secondaryAction: { label: "Môj účet", href: `${baseUrl}/my-account` },
     closing:
-      "Ak máte otázky k službám alebo termínom, pokojne nás kontaktujte. Sme radi, že ste s nami a prvý termín si môžete vybrať hneď teraz.",
-    footerNote: "Táto správa bola odoslaná po úspešnej registrácii účtu a aktivácii prístupu.",
+      "Ďakujeme, že ste sa zaregistrovali. Ak máte otázky k službám alebo termínom, pokojne nás kontaktujte a svoj prvý termín si môžete vybrať hneď teraz.",
+    footerNote: "Táto správa bola odoslaná po úspešnej registrácii a aktivácii účtu.",
   };
 
   const customerResult = await queueTemplatedMail(
@@ -873,13 +895,14 @@ export async function queueRegistrationWelcomeEmail(
   const adminTemplate: RichEmailTemplate = {
     preheader: "Do systému sa zaregistroval nový používateľ.",
     eyebrow: "Nová registrácia",
-    subject: "Nová registrácia používateľa",
-    title: "Nový používateľ sa zaregistroval",
+    subject: "Bol vytvorený nový zákaznícky účet",
+    title: "Bol vytvorený nový zákaznícky účet",
     variant: "welcome",
-    intro: "V systéme pribudla nová registrácia. Nižšie nájdete pripravený prehľad používateľa a času registrácie.",
+    heroNote: "Interná notifikácia",
+    intro: "V systéme pribudol nový registrovaný klient. Nižšie nájdete pripravený prehľad používateľa a času registrácie.",
     highlight: {
-      label: "Registrovaný e-mail",
-      value: input.customerEmail,
+      label: "Stav registrácie",
+      value: "Nový klient",
       valueColor: "#f3dfae",
     },
     rows: [
@@ -887,9 +910,9 @@ export async function queueRegistrationWelcomeEmail(
       { label: "E-mail", value: input.customerEmail },
       { label: "Čas registrácie", value: formatDateTime(new Date().toISOString(), context.timezone) },
     ],
-    primaryAction: { label: "Otvoriť zákazníkov", href: `${baseUrl}/admin/customers` },
-    secondaryAction: { label: "Otvoriť rezervácie", href: `${baseUrl}/admin/appointments` },
-    closing: "Používateľ je aktívny a môže ihneď vytvárať rezervácie. Ak chcete skontrolovať profil alebo históriu, pokračujte do administrácie.",
+    primaryAction: { label: "Otvoriť administráciu", href: `${baseUrl}/admin/customers` },
+    secondaryAction: { label: "Zákazníci", href: `${baseUrl}/admin/customers` },
+    closing: "Používateľ je aktívny a môže okamžite vytvárať rezervácie. Ak chcete skontrolovať profil alebo ďalší kontext, pokračujte do administrácie.",
     footerNote: "Interná notifikácia bola odoslaná automaticky po registrácii používateľa.",
   };
 
