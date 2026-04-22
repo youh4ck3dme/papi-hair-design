@@ -33,6 +33,7 @@ export { adminCalendarQuickAction } from "./adminCalendarQuickAction";
 export { lookupBookingHistory } from "./lookupBookingHistory";
 export { cancelCustomerBooking } from "./cancelCustomerBooking";
 export { queueRegistrationWelcomeEmail } from "./queueRegistrationWelcomeEmail";
+export { downloadBookingIcs } from "./calendarInvite";
 export { cleanupExpiredHolds } from "./cleanupExpiredHolds";
 export { cleanupComplianceData } from "./cleanupComplianceData";
 export { rebuildPublicSnapshot } from "./rebuildPublicSnapshot";

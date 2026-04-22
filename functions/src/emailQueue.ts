@@ -1,5 +1,6 @@
 import { getFirestore } from "firebase-admin/firestore";
 import nodemailer from "nodemailer";
+import { buildCustomerCalendarLinks } from "./calendarInvite";
 import { normalizePhone, resolvePublicBookingBaseUrl } from "./publicBookingAccess";
 import { readSecret } from "./secretManager";
 
@@ -10,6 +11,7 @@ interface QueueBookingEmailInput {
   customerName: string | null;
   serviceName: string | null;
   startAtIso: string;
+  endAtIso?: string | null;
   historyAccessUrl?: string | null;
 }
 
@@ -94,6 +96,7 @@ type RichEmailTemplate = {
   rows: EmailRow[];
   primaryAction?: EmailAction;
   secondaryAction?: EmailAction;
+  extraActions?: EmailAction[];
   closing: string;
   footerNote?: string;
 };
@@ -387,6 +390,8 @@ function buildMessage(
     template.title,
     template.intro,
   ];
+  const actions = [template.primaryAction, template.secondaryAction, ...(template.extraActions ?? [])]
+    .filter((action): action is EmailAction => Boolean(action));
 
   if (template.highlight) {
     textParts.push(`${template.highlight.label}: ${template.highlight.value}`);
@@ -399,12 +404,11 @@ function buildMessage(
     });
   }
 
-  if (template.primaryAction) {
-    textParts.push("", `Primárne: ${template.primaryAction.label} — ${template.primaryAction.href}`);
-  }
-
-  if (template.secondaryAction) {
-    textParts.push(`Ďalšie: ${template.secondaryAction.label} — ${template.secondaryAction.href}`);
+  if (actions.length > 0) {
+    textParts.push("");
+    actions.forEach((action, index) => {
+      textParts.push(`${index === 0 ? "Primárne" : "Ďalšie"}: ${action.label} — ${action.href}`);
+    });
   }
 
   textParts.push(
@@ -448,8 +452,7 @@ function buildMessage(
       </div>`
     : "";
 
-  const actionsHtml = [template.primaryAction, template.secondaryAction]
-    .filter((action): action is EmailAction => Boolean(action))
+  const actionsHtml = actions
     .map(
       (action, index) => `
         <a
@@ -621,6 +624,31 @@ export async function queueCustomerBookingEmail(
     : context.businessEmail
       ? `mailto:${context.businessEmail}`
       : bookingUrl;
+  const calendarLinks = buildCustomerCalendarLinks({
+    appointmentId: input.appointmentId,
+    businessName: context.businessName,
+    businessAddress: context.businessAddress,
+    serviceName: input.serviceName,
+    startAtIso: input.startAtIso,
+    endAtIso: input.endAtIso,
+    historyAccessUrl: input.historyAccessUrl,
+  });
+  const actions: EmailAction[] = [
+    input.historyAccessUrl
+      ? { label: "Moje rezervácie", href: input.historyAccessUrl }
+      : { label: "Rezervovať termín", href: bookingUrl },
+  ];
+
+  if (calendarLinks.googleUrl) {
+    actions.push({ label: "Pridať do Google Kalendára", href: calendarLinks.googleUrl });
+  }
+
+  if (calendarLinks.icsUrl) {
+    actions.push({ label: "Stiahnuť do kalendára (.ics)", href: calendarLinks.icsUrl });
+  }
+
+  actions.push({ label: "Kontakt", href: contactHref });
+  const [primaryAction, secondaryAction, ...extraActions] = actions;
   const template: RichEmailTemplate = {
     preheader: "Vaša rezervácia je potvrdená a termín je pripravený.",
     eyebrow: "Rezervácia potvrdená",
@@ -642,10 +670,9 @@ export async function queueCustomerBookingEmail(
       timezone: context.timezone,
       appointmentId: input.appointmentId,
     }),
-    primaryAction: input.historyAccessUrl
-      ? { label: "Moje rezervácie", href: input.historyAccessUrl }
-      : { label: "Rezervovať termín", href: bookingUrl },
-    secondaryAction: { label: "Kontakt", href: contactHref },
+    primaryAction,
+    secondaryAction,
+    extraActions,
     closing:
       "Vaša rezervácia je uložená v systéme a pripravená na vybraný čas. Ak budete potrebovať čokoľvek zmeniť, stačí sa vrátiť do svojich rezervácií alebo nás kontaktovať.",
     footerNote: "Tešíme sa na vašu návštevu v salóne Papi Hair Design.",

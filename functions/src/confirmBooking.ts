@@ -187,6 +187,7 @@ export const confirmBooking = functions.https.onCall(
           customerName,
           serviceName: typeof appt.service_name === "string" ? appt.service_name : null,
           startAtIso: typeof appt.start_at === "string" ? appt.start_at : new Date().toISOString(),
+          endAtIso: typeof appt.end_at === "string" ? appt.end_at : null,
           historyAccessUrl: buildHistoryAccessUrl(appointment_id, historyAccess.token),
         });
       } catch (err) {

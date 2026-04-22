@@ -241,6 +241,7 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
                 customerName: customer_name.trim(),
                 serviceName: typeof service.name_sk === "string" ? service.name_sk : null,
                 startAtIso: startDate.toISOString(),
+                endAtIso: endDate.toISOString(),
                 historyAccessUrl: historyToken ? buildHistoryAccessUrl(appointment.id, historyToken) : null,
             });
         }

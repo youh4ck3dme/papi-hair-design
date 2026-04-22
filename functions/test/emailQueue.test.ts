@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { buildGoogleCalendarUrl } from "../src/calendarInvite";
 import {
   queueAdminBookingNotificationEmail,
   queueAdminCustomerCancellationEmail,
@@ -65,6 +66,7 @@ describe("emailQueue SMTP routing", () => {
     state.business = {
       timezone: "Europe/Bratislava",
       name: "PAPI Hair Design",
+      address: "Hlavná 1, Košice",
       email: "salon@example.com",
       phone: "+421 905 123 456",
       smtp_config: {
@@ -102,6 +104,7 @@ describe("emailQueue SMTP routing", () => {
       customerName: "Klient",
       serviceName: "Strih",
       startAtIso: "2026-04-01T10:00:00.000Z",
+      endAtIso: "2026-04-01T11:00:00.000Z",
       historyAccessUrl: "https://example.com/history",
     });
 
@@ -119,11 +122,24 @@ describe("emailQueue SMTP routing", () => {
       customerName: "Klient",
       serviceName: "Strih",
       startAtIso: "2026-04-01T10:00:00.000Z",
+      endAtIso: "2026-04-01T11:00:00.000Z",
       historyAccessUrl: "https://booking.papihairdesign.sk/dashboard/history?ref=abc&access=def",
     });
 
     const payload = getSentPayload();
     expectHref(payload.html!, "https://booking.papihairdesign.sk/dashboard/history?ref=abc&access=def", "Moje rezervácie");
+    expectHref(payload.html!, buildGoogleCalendarUrl({
+      title: "PAPI Hair Design - Strih",
+      description: "Potvrdená rezervácia služby Strih v salóne PAPI Hair Design.",
+      location: "Hlavná 1, Košice",
+      start: new Date("2026-04-01T10:00:00.000Z"),
+      end: new Date("2026-04-01T11:00:00.000Z"),
+    }), "Pridať do Google Kalendára");
+    expectHref(
+      payload.html!,
+      "https://booking.papihairdesign.sk/calendar/invite.ics?ref=abc&access=def",
+      "Stiahnuť do kalendára (.ics)"
+    );
     expectHref(payload.html!, "tel:+421905123456", "Kontakt");
   });
 
@@ -135,11 +151,20 @@ describe("emailQueue SMTP routing", () => {
       customerName: "Klient",
       serviceName: "Strih",
       startAtIso: "2026-04-01T10:00:00.000Z",
+      endAtIso: "2026-04-01T11:00:00.000Z",
       historyAccessUrl: null,
     });
 
     const payload = getSentPayload();
     expectHref(payload.html!, "https://booking.papihairdesign.sk/booking", "Rezervovať termín");
+    expectHref(payload.html!, buildGoogleCalendarUrl({
+      title: "PAPI Hair Design - Strih",
+      description: "Potvrdená rezervácia služby Strih v salóne PAPI Hair Design.",
+      location: "Hlavná 1, Košice",
+      start: new Date("2026-04-01T10:00:00.000Z"),
+      end: new Date("2026-04-01T11:00:00.000Z"),
+    }), "Pridať do Google Kalendára");
+    expect(payload.html!).not.toContain("Stiahnuť do kalendára (.ics)");
   });
 
   it("uses mailto contact CTA when phone is unavailable", async () => {
@@ -156,6 +181,7 @@ describe("emailQueue SMTP routing", () => {
       customerName: "Klient",
       serviceName: "Strih",
       startAtIso: "2026-04-01T10:00:00.000Z",
+      endAtIso: "2026-04-01T11:00:00.000Z",
       historyAccessUrl: "https://booking.papihairdesign.sk/dashboard/history?ref=abc&access=def",
     });
 
@@ -177,6 +203,7 @@ describe("emailQueue SMTP routing", () => {
       customerName: "Klient",
       serviceName: "Strih",
       startAtIso: "2026-04-01T10:00:00.000Z",
+      endAtIso: "2026-04-01T11:00:00.000Z",
       historyAccessUrl: "https://booking.papihairdesign.sk/dashboard/history?ref=abc&access=def",
     });
 
@@ -198,6 +225,7 @@ describe("emailQueue SMTP routing", () => {
       customerName: "Klient",
       serviceName: "Color",
       startAtIso: "2026-04-01T11:00:00.000Z",
+      endAtIso: "2026-04-01T12:30:00.000Z",
       historyAccessUrl: null,
     });
 
