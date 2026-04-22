@@ -26,28 +26,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
-import { isAdminAllowlisted, normalizeEmail } from "@/lib/adminAllowlist";
+import { isAdminAllowlisted } from "@/lib/adminAllowlist";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { DEFAULT_BUSINESS_ID } from "@/lib/businessIds";
 import { queueRegistrationWelcomeEmail } from "@/integrations/firebase/queueRegistrationWelcomeEmail";
 
-const PUBLIC_BOOKING_URL = "https://booking.papihairdesign.sk/booking";
 const PUBLIC_BOOKING_PATH = "/booking";
-const CROSS_DOMAIN_AUTH_HOST = "booking.papihairdesign.sk";
 
 async function resolvePostAuthPath(
   uid: string | undefined,
   email: string | null | undefined
-): Promise<"/admin" | "/admin/my" | "/booking" | "cross-domain-booking"> {
+): Promise<"/admin" | "/admin/my" | "/booking"> {
   if (isAdminAllowlisted(email)) {
     return "/admin";
   }
 
   if (!uid) {
-    if (typeof window !== "undefined" && normalizeEmail(window.location.hostname) === CROSS_DOMAIN_AUTH_HOST) {
-      return "cross-domain-booking";
-    }
     return "/booking";
   }
 
@@ -66,9 +61,6 @@ async function resolvePostAuthPath(
   if (roles.includes("owner") || roles.includes("admin")) return "/admin";
   if (roles.includes("employee")) return "/admin/my";
 
-  if (typeof window !== "undefined" && normalizeEmail(window.location.hostname) === CROSS_DOMAIN_AUTH_HOST) {
-    return "cross-domain-booking";
-  }
   return "/booking";
 }
 
@@ -78,11 +70,7 @@ async function redirectAfterAuthWithMembership(
   email: string | null | undefined
 ): Promise<void> {
   const target = await resolvePostAuthPath(uid, email);
-  if (target === "cross-domain-booking") {
-    window.location.assign(PUBLIC_BOOKING_URL);
-    return;
-  }
-  navigate(target);
+  navigate(target, { replace: true });
 }
 
 // ---------------------------------------------------------------------------

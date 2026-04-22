@@ -782,7 +782,7 @@ function ContactContent() {
       <a
         href={MAP_URL}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
         className={`group relative mt-2 flex flex-col items-center justify-center rounded-[1.75rem] border border-white/10 bg-black/40 p-6 text-center shadow-[0_22px_48px_-30px_rgba(0,0,0,0.9)] backdrop-blur-md transition-all duration-300 hover:border-primary/20 hover:bg-black/55 ${FOCUS_RING}`}
         aria-label={t("liquid.mapTitle")}
       >

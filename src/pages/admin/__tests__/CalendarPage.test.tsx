@@ -594,14 +594,7 @@ describe("CalendarPage", () => {
 
   it("exports CSV for selected day when events exist", async () => {
     seedInitialFirestore({ withEvent: true });
-    const createObjectURLMock = vi.fn().mockReturnValue("blob:test");
-    const revokeObjectURLMock = vi.fn();
     const clickMock = vi.fn();
-
-    vi.stubGlobal("URL", {
-      createObjectURL: createObjectURLMock,
-      revokeObjectURL: revokeObjectURLMock,
-    });
     const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(clickMock as any);
 
     try {
@@ -612,12 +605,10 @@ describe("CalendarPage", () => {
       const csvBtn = await screen.findByRole("button", { name: /CSV/i });
       fireEvent.click(csvBtn);
 
-      expect(createObjectURLMock).toHaveBeenCalledTimes(1);
       expect(clickMock).toHaveBeenCalledTimes(1);
-      expect(revokeObjectURLMock).toHaveBeenCalledTimes(1);
+      expect(anchorClickSpy.mock.instances[0]?.href).toContain("data:text/csv;charset=utf-8,");
     } finally {
       anchorClickSpy.mockRestore();
-      vi.unstubAllGlobals();
     }
   });
 

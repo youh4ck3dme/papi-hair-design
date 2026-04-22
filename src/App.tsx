@@ -51,7 +51,8 @@ const CANONICAL_HOST = "booking.papihairdesign.sk";
 function useCanonicalHostRedirect() {
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const { hostname, pathname, search, hash, protocol } = window.location;
+    const currentLocation = globalThis.location;
+    const { hostname, protocol } = currentLocation;
 
     if (import.meta.env.DEV) return;
     if (protocol !== "https:") return;
@@ -61,8 +62,7 @@ function useCanonicalHostRedirect() {
       hostname.endsWith(".web.app") || hostname.endsWith(".firebaseapp.com");
     if (!isFirebaseHost) return;
 
-    const targetUrl = `https://${CANONICAL_HOST}${pathname}${search}${hash}`;
-    window.location.replace(targetUrl);
+    currentLocation.hostname = CANONICAL_HOST;
   }, []);
 }
 

@@ -12,6 +12,7 @@ const resolveBookingAccountStateMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/calendarExport", () => ({
   buildBookingCalendarExport: vi.fn((input) => input),
+  buildBookingIcsDownloadUrl: vi.fn((reference: string, accessToken: string) => `/calendar/invite.ics?ref=${reference}&access=${accessToken}`),
   buildBookingIcsFilename: vi.fn(() => "papi-hair-design-damsky-strih.ics"),
   buildGoogleCalendarUrl: vi.fn(() => "https://calendar.google.com/fake"),
   buildIcsContent: vi.fn(() => "BEGIN:VCALENDAR"),
@@ -187,6 +188,27 @@ describe("BookingSuccess", () => {
     );
     const historyLink = screen.getByRole("link", { name: /Moje rezervácie/i });
     expect(historyLink).toHaveAttribute("href", expect.stringContaining("tok-abc"));
+  });
+
+  it("renders ICS download link through the public invite endpoint when history access is available", () => {
+    render(
+      <BookingSuccess
+        bookingResult={makeResult({
+          history_access_token: "tok-ics",
+          history_reference: "REFICS",
+        })}
+        selectedService={makeService()}
+        selectedFullDate={new Date(2026, 3, 20)}
+        selectedTime="10:30"
+        dateLocale={undefined}
+      />,
+      { wrapper }
+    );
+
+    expect(screen.getByRole("link", { name: /Stiahnuť ICS/i })).toHaveAttribute(
+      "href",
+      "/calendar/invite.ics?ref=REFICS&access=tok-ics",
+    );
   });
 
   it("renders new booking button", () => {

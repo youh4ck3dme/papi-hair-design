@@ -1,13 +1,11 @@
+import { buildTextDataUrl } from "./browserDataUrl";
+
 const PRINT_CLEANUP_DELAY_MS = 1500;
 
 export function printHtmlDocument(html: string): boolean {
   if (
     typeof document === "undefined" ||
-    !document.body ||
-    typeof URL === "undefined" ||
-    typeof URL.createObjectURL !== "function" ||
-    typeof URL.revokeObjectURL !== "function" ||
-    typeof Blob === "undefined"
+    !document.body
   ) {
     return false;
   }
@@ -24,12 +22,9 @@ export function printHtmlDocument(html: string): boolean {
   iframe.style.visibility = "hidden";
   iframe.setAttribute("sandbox", "allow-modals");
 
-  const printUrl = URL.createObjectURL(
-    new Blob([html], { type: "text/html;charset=utf-8" }),
-  );
+  const printUrl = buildTextDataUrl(html, "text/html;charset=utf-8");
 
   const cleanup = () => {
-    URL.revokeObjectURL(printUrl);
     iframe.remove();
   };
 

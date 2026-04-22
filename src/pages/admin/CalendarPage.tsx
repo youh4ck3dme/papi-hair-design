@@ -53,6 +53,7 @@ import {
 } from "@/lib/adminBookingStatus";
 import { buildAdminCalendarCsv, buildAdminCalendarPrintHtml } from "@/lib/adminCalendarExport";
 import { printHtmlDocument } from "@/lib/adminCalendarPrint";
+import { buildTextDataUrl } from "@/lib/browserDataUrl";
 import {
   isBlockedByClientError,
   isIgnorableBlockedFirestoreError,
@@ -667,13 +668,12 @@ export default function CalendarPage() {
 
   const handleExportCsv = useCallback(() => {
     const csv = buildAdminCalendarCsv(exportRows);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
+    const url = buildTextDataUrl(csv, "text/csv;charset=utf-8");
     const link = document.createElement("a");
     link.href = url;
     link.download = `kalendar-${fmtDate(date, "yyyy-MM-dd")}.csv`;
+    link.rel = "noopener";
     link.click();
-    URL.revokeObjectURL(url);
   }, [date, exportRows]);
 
   const handlePrintDay = useCallback(() => {

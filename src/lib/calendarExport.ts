@@ -50,6 +50,15 @@ export function buildGoogleCalendarUrl(input: CalendarExportInput): string {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
+export function buildBookingIcsDownloadUrl(reference: string, accessToken: string): string {
+  const params = new URLSearchParams({
+    ref: reference,
+    access: accessToken,
+  });
+
+  return `/calendar/invite.ics?${params.toString()}`;
+}
+
 export function buildIcsContent(input: CalendarExportInput): string {
   const now = input.stamp ?? new Date();
   const uid = input.uid?.trim() || `booking-${input.start.getTime()}@papihairdesign.sk`;

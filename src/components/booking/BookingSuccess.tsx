@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { BookingResult, ServiceRow } from "./types";
 import {
     buildBookingCalendarExport,
+    buildBookingIcsDownloadUrl,
     buildBookingIcsFilename,
     buildGoogleCalendarUrl,
     buildIcsContent,
@@ -15,6 +16,7 @@ import {
     resolveBookingAccountState,
     type BookingAccountState,
 } from "@/integrations/firebase/resolveBookingAccountState";
+import { buildTextDataUrl } from "@/lib/browserDataUrl";
 
 interface BookingSuccessProps {
     bookingResult: BookingResult;
@@ -103,23 +105,15 @@ export function BookingSuccess({
         })
         : null;
 
-    const handleDownloadIcs = () => {
-        if (!calendarExport) return;
-
-        const ics = buildIcsContent(calendarExport);
-
-        const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = buildBookingIcsFilename(selectedService?.name_sk);
-        link.click();
-        URL.revokeObjectURL(url);
-    };
-
     const googleCalendarHref = calendarExport
         ? buildGoogleCalendarUrl(calendarExport)
         : null;
+    const icsDownloadHref = bookingResult.history_access_token && bookingResult.history_reference
+        ? buildBookingIcsDownloadUrl(bookingResult.history_reference, bookingResult.history_access_token)
+        : calendarExport
+            ? buildTextDataUrl(buildIcsContent(calendarExport), "text/calendar;charset=utf-8")
+            : null;
+    const icsDownloadName = buildBookingIcsFilename(selectedService?.name_sk);
 
     return (
         <div className="min-h-screen bg-background" data-testid="booking-success">
@@ -243,18 +237,23 @@ export function BookingSuccess({
                             <a
                                 href={googleCalendarHref}
                                 target="_blank"
-                                rel="noreferrer"
+                                rel="noopener noreferrer"
                                 className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/10"
                             >
                                 {t("booking.addToGoogleCalendar")}
                             </a>
-                            <button
-                                type="button"
-                                onClick={handleDownloadIcs}
+                            <a
+                                href={icsDownloadHref ?? "#"}
+                                download={
+                                    bookingResult.history_access_token && bookingResult.history_reference
+                                        ? undefined
+                                        : icsDownloadName
+                                }
+                                rel="noopener noreferrer"
                                 className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary"
                             >
                                 {t("booking.downloadIcs")}
-                            </button>
+                            </a>
                         </div>
                     )}
                     <a
