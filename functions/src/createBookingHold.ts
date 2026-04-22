@@ -3,10 +3,9 @@ import { getFirestore } from "firebase-admin/firestore";
 import {
   type CallableRequest,
 } from "firebase-functions/v2/https";
-import * as crypto from "crypto";
 import { assignEmployeeForSlot } from "./autoAssignEmployee";
 import { getClientIp } from "./clientIp";
-import { normalizeEmail, normalizePhone } from "./publicBookingAccess";
+import { createOpaqueToken, normalizeEmail, normalizePhone } from "./publicBookingAccess";
 import { checkRateLimit } from "./middleware/rateLimit";
 import { throwBookingError } from "./errors";
 
@@ -30,7 +29,7 @@ function createIdempotencyKey(rawKey: string | undefined): string {
   if (normalized.length > 0) {
     return normalized.slice(0, 200);
   }
-  return crypto.randomUUID();
+  return createOpaqueToken().token;
 }
 
 export const createBookingHold = functions.https.onCall(
@@ -82,7 +81,7 @@ export const createBookingHold = functions.https.onCall(
     const idemKey = createIdempotencyKey(idempotency_key);
     const customerEmail = normalizeEmail(customer_email);
     const customerPhone = normalizePhone(customer_phone);
-    const confirmToken = crypto.randomUUID();
+    const confirmToken = createOpaqueToken().token;
 
     // Idempotency: return existing hold for the same key
     const existingSnap = await db
@@ -92,13 +91,16 @@ export const createBookingHold = functions.https.onCall(
       .get();
     if (!existingSnap.empty) {
       const doc = existingSnap.docs[0];
+      const customerRecordStatus = doc.data().customer_record_status;
       return {
         success: true,
         appointment_id: doc.id,
         reused: true,
         confirm_token: doc.data().confirm_token,
         customer_record_status:
-          doc.data().customer_record_status === "existing" ? "existing" : "created",
+          customerRecordStatus === "existing" || customerRecordStatus === "created"
+            ? customerRecordStatus
+            : undefined,
       };
     }
 

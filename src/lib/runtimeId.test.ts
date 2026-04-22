@@ -1,33 +1,32 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRuntimeId } from "./runtimeId";
 
 describe("createRuntimeId", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-22T12:00:00.000Z"));
+    vi.stubGlobal("performance", {
+      now: vi.fn(() => 12.345),
+    });
+  });
+
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
-  it("uses crypto.randomUUID when it is available", () => {
-    vi.stubGlobal("crypto", {
-      randomUUID: vi.fn(() => "uuid-123"),
-      getRandomValues: vi.fn(),
-    });
+  it("creates prefixed runtime ids from deterministic time entropy", () => {
+    const result = createRuntimeId("booking");
 
-    expect(createRuntimeId("booking")).toBe("booking_uuid-123");
+    expect(result).toMatch(/^booking_[a-z0-9]+-[a-z0-9]+-1$/);
   });
 
-  it("falls back to crypto.getRandomValues without using Math.random", () => {
-    const getRandomValues = vi.fn((array: Uint8Array) => {
-      array.set([0, 1, 2, 3]);
-      return array;
-    });
+  it("returns unique ids across sequential calls without crypto", () => {
+    const first = createRuntimeId("consent");
+    const second = createRuntimeId("consent");
 
-    vi.stubGlobal("crypto", {
-      getRandomValues,
-    });
-
-    const result = createRuntimeId("consent");
-
-    expect(getRandomValues).toHaveBeenCalledTimes(1);
-    expect(result).toMatch(/^consent_[a-z0-9]+-00010203/);
+    expect(first).not.toBe(second);
+    expect(first).toMatch(/^consent_[a-z0-9]+-[a-z0-9]+-[a-z0-9]+$/);
+    expect(second).toMatch(/^consent_[a-z0-9]+-[a-z0-9]+-[a-z0-9]+$/);
   });
 });

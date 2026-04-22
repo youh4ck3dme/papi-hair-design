@@ -5,8 +5,8 @@ import {
     type CallableRequest,
     HttpsError
 } from "firebase-functions/v2/https";
-import * as crypto from "crypto";
 import { getClientIp } from "./clientIp";
+import { hashOpaqueToken } from "./publicBookingAccess";
 
 interface ConsentEventData {
     business_id?: string;
@@ -31,7 +31,7 @@ export const consentEvent = functions.https.onCall({ region: "europe-west1" }, a
 
     const userAgent = rawRequest.headers["user-agent"]?.slice(0, 512) || null;
     const clientIp = getClientIp(rawRequest);
-    const ipHash = clientIp ? crypto.createHash("sha256").update(String(clientIp)).digest("hex") : null;
+    const ipHash = clientIp ? hashOpaqueToken(String(clientIp)) : null;
 
     const event = {
         business_id: business_id || null,

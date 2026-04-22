@@ -1,16 +1,6 @@
 let runtimeIdCounter = 0;
 
-function getCryptoEntropy(byteLength: number): string | null {
-  if (typeof crypto === "undefined" || typeof crypto.getRandomValues !== "function") {
-    return null;
-  }
-
-  const bytes = new Uint8Array(byteLength);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-function getFallbackEntropy(): string {
+function getRuntimeEntropy(): string {
   runtimeIdCounter += 1;
 
   const timestampPart = Date.now().toString(36);
@@ -24,15 +14,5 @@ function getFallbackEntropy(): string {
 
 export function createRuntimeId(prefix?: string): string {
   const normalizedPrefix = prefix ? `${prefix}_` : "";
-
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return `${normalizedPrefix}${crypto.randomUUID()}`;
-  }
-
-  const cryptoEntropy = getCryptoEntropy(16);
-  if (cryptoEntropy) {
-    return `${normalizedPrefix}${Date.now().toString(36)}-${cryptoEntropy}`;
-  }
-
-  return `${normalizedPrefix}${getFallbackEntropy()}`;
+  return `${normalizedPrefix}${getRuntimeEntropy()}`;
 }

@@ -4,15 +4,14 @@ import {
     type CallableRequest,
     HttpsError
 } from "firebase-functions/v2/https";
-import * as crypto from "crypto";
 import { queueAdminBookingNotificationEmail, queueCustomerBookingEmail } from "./emailQueue";
 import { assignEmployeeForSlot } from "./autoAssignEmployee";
 import { getClientIp } from "./clientIp";
 import {
-    buildHistoryAccessUrl,
-    createOpaqueToken,
-    normalizeEmail,
-    normalizePhone,
+  buildHistoryAccessUrl,
+  createOpaqueToken,
+  normalizeEmail,
+  normalizePhone,
 } from "./publicBookingAccess";
 import { requireAuth, requireMembership } from "./guards";
 
@@ -69,7 +68,7 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
     const sanitizedPhone = normalizePhone(customer_phone);
     const sanitizedNote = typeof note === "string" && note.trim().length > 0 ? note.trim() : null;
     const sanitizedPaymentMethod = typeof payment_method === "string" && payment_method.trim().length > 0 ? payment_method.trim() : null;
-    const idemKey = (idempotency_key && idempotency_key.trim()) || crypto.randomUUID();
+    const idemKey = (idempotency_key && idempotency_key.trim()) || createOpaqueToken().token;
     const startDate = new Date(start_at);
     if (isNaN(startDate.getTime())) {
         throw new HttpsError("invalid-argument", "Neplatný dátum");

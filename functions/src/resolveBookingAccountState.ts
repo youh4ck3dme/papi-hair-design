@@ -2,7 +2,9 @@ import * as functions from "firebase-functions/v2";
 import { CallableRequest, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
-import * as crypto from "crypto";
+import { getClientIp } from "./clientIp";
+import { checkRateLimit } from "./middleware/rateLimit";
+import { hashOpaqueToken } from "./publicBookingAccess";
 
 interface ResolveBookingAccountStateInput {
   claim_token: string;
@@ -27,8 +29,11 @@ export const resolveBookingAccountState = functions.https.onCall(
       throw new HttpsError("invalid-argument", "Chýba claim token");
     }
 
+    const ip = getClientIp(request.rawRequest) || "unknown";
+    await checkRateLimit(ip);
+
     const db = getFirestore();
-    const tokenHash = crypto.createHash("sha256").update(claimToken).digest("hex");
+    const tokenHash = hashOpaqueToken(claimToken);
     const claimsSnap = await db.collection("booking_claims")
       .where("token_hash", "==", tokenHash)
       .where("used_at", "==", null)
