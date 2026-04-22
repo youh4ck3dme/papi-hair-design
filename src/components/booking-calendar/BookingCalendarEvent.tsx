@@ -119,18 +119,18 @@ function BookingCalendarEventComponent({
     return baseStyle;
   }, [event, filteredEvents, month, pixelsPerHour]);
 
-  if (!month && !style) return null;
-
-  const isInCurrentMonth = isSameMonth(event.start, date);
-  const animationKey = `${event.id}-${isInCurrentMonth ? "current" : "adjacent"}`;
-  const colorClasses = getEventColorClasses(event.color);
-
   const longPress = useLongPressAction({
     enabled: !month && Boolean(onLongPressEvent),
     onLongPress: () => {
       onLongPressEvent?.(event);
     },
   });
+
+  if (!month && !style) return null;
+
+  const isInCurrentMonth = isSameMonth(event.start, date);
+  const animationKey = `${event.id}-${isInCurrentMonth ? "current" : "adjacent"}`;
+  const colorClasses = getEventColorClasses(event.color);
 
 
   const handleClick = (e: React.MouseEvent) => {

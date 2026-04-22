@@ -1,6 +1,9 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import os from "node:os";
+
+const maxTestWorkers = Math.min(4, Math.max(1, Math.floor(os.availableParallelism() / 2)));
 
 export default defineConfig({
   plugins: [react()],
@@ -9,6 +12,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    maxWorkers: maxTestWorkers,
+    minWorkers: 1,
     coverage: {
       provider: "v8",
       reporter: ["text", "text-summary", "lcov"],

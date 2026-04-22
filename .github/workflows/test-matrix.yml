@@ -1,0 +1,278 @@
+name: Manual Test Matrix
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_lint_and_unit:
+        description: "Lint + typecheck + full Vitest batch suite"
+        required: true
+        default: true
+        type: boolean
+      run_functions_tests:
+        description: "Firebase Functions tests"
+        required: true
+        default: true
+        type: boolean
+      run_build:
+        description: "Production build"
+        required: true
+        default: true
+        type: boolean
+      run_e2e_preview:
+        description: "Preview-safe Playwright suite"
+        required: true
+        default: true
+        type: boolean
+      run_e2e_authenticated:
+        description: "Authenticated Playwright suite (requires admin secrets)"
+        required: true
+        default: false
+        type: boolean
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: manual-test-matrix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-unit:
+    if: ${{ inputs.run_lint_and_unit }}
+    name: Lint, Typecheck & Unit
+    runs-on: ubuntu-latest
+    env:
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+      VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+      VITE_FIREBASE_FUNCTIONS_URL: ${{ secrets.VITE_FIREBASE_FUNCTIONS_URL }}
+      VITE_PAPI_EMAIL: papi@papihairdesign.sk
+      VITE_MISKA_EMAIL: miska@papihairdesign.sk
+      VITE_MATO_EMAIL: mato@papihairdesign.sk
+      VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN: ${{ secrets.VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run Vitest matrix
+        run: npm run test
+
+  functions-tests:
+    if: ${{ inputs.run_functions_tests }}
+    name: Functions Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install functions dependencies
+        run: cd functions && npm ci
+
+      - name: Run functions tests
+        run: cd functions && npm test
+
+  build:
+    if: ${{ inputs.run_build }}
+    name: Build
+    runs-on: ubuntu-latest
+    env:
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+      VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+      VITE_FIREBASE_FUNCTIONS_URL: ${{ secrets.VITE_FIREBASE_FUNCTIONS_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Budget check
+        run: npm run budget
+
+  e2e-preview:
+    if: ${{ inputs.run_e2e_preview }}
+    name: Playwright Preview
+    runs-on: ubuntu-latest
+    env:
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+      VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+      VITE_FIREBASE_FUNCTIONS_URL: ${{ secrets.VITE_FIREBASE_FUNCTIONS_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run preview-safe Playwright suite
+        run: npm run test:e2e:preview
+
+      - name: Upload Playwright preview report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-preview
+          path: |
+            e2e-results/html-report
+            e2e-results/test-results
+          if-no-files-found: ignore
+
+  e2e-authenticated:
+    if: ${{ inputs.run_e2e_authenticated }}
+    name: Playwright Authenticated
+    runs-on: ubuntu-latest
+    env:
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+      VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+      VITE_FIREBASE_FUNCTIONS_URL: ${{ secrets.VITE_FIREBASE_FUNCTIONS_URL }}
+      PLAYWRIGHT_ENABLE_BOOKING_E2E: "1"
+      PLAYWRIGHT_ENABLE_ADMIN_E2E: "1"
+      PLAYWRIGHT_ENABLE_ADMIN_SMOKE_E2E: "1"
+      PLAYWRIGHT_ENABLE_ADMIN_MUTATION_E2E: "1"
+      PLAYWRIGHT_FIREBASE_API_KEY: ${{ secrets.PLAYWRIGHT_FIREBASE_API_KEY }}
+      PLAYWRIGHT_ADMIN_EMAIL: ${{ secrets.PLAYWRIGHT_ADMIN_EMAIL }}
+      PLAYWRIGHT_ADMIN_PASSWORD: ${{ secrets.PLAYWRIGHT_ADMIN_PASSWORD }}
+    steps:
+      - name: Validate authenticated test secrets
+        shell: bash
+        run: |
+          missing=0
+          for name in PLAYWRIGHT_ADMIN_EMAIL PLAYWRIGHT_ADMIN_PASSWORD PLAYWRIGHT_FIREBASE_API_KEY; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::$name is required to run the authenticated Playwright matrix."
+              missing=1
+            fi
+          done
+          if [[ "$missing" -ne 0 ]]; then
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run authenticated Playwright suite
+        run: npm run test:e2e:authenticated
+
+      - name: Upload Playwright authenticated report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-authenticated
+          path: |
+            e2e-results/html-report
+            e2e-results/test-results
+          if-no-files-found: ignore
+
+  summary:
+    name: Manual Matrix Summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - lint-unit
+      - functions-tests
+      - build
+      - e2e-preview
+      - e2e-authenticated
+    steps:
+      - name: Summarize results
+        shell: bash
+        run: |
+          declare -A results=(
+            ["Lint, Typecheck & Unit"]="${{ needs.lint-unit.result || 'skipped' }}"
+            ["Functions Tests"]="${{ needs.functions-tests.result || 'skipped' }}"
+            ["Build"]="${{ needs.build.result || 'skipped' }}"
+            ["Playwright Preview"]="${{ needs.e2e-preview.result || 'skipped' }}"
+            ["Playwright Authenticated"]="${{ needs.e2e-authenticated.result || 'skipped' }}"
+          )
+
+          fail=0
+          for name in "${!results[@]}"; do
+            result="${results[$name]}"
+            echo "$name => $result"
+            if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+              fail=1
+            fi
+          done
+
+          if [[ "$fail" -ne 0 ]]; then
+            echo "::error::One or more selected manual test jobs failed."
+            exit 1
+          fi
+
+          echo "Manual test matrix finished without failing jobs."

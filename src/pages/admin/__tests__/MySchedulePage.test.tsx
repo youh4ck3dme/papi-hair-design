@@ -58,8 +58,8 @@ vi.mock("react-big-calendar", () => ({
           type="button"
           onClick={() =>
             props.onSelectSlot?.({
-              start: new Date("2026-01-15T09:00:00.000Z"),
-              end: new Date("2026-01-15T09:30:00.000Z"),
+              start: new Date(2026, 0, 15, 9, 0, 0, 0),
+              end: new Date(2026, 0, 15, 9, 30, 0, 0),
             })
           }
         >

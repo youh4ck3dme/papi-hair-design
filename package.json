@@ -18,7 +18,7 @@
     "lint": "node ./node_modules/eslint/bin/eslint.js .",
     "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit",
     "preview": "node ./node_modules/vite/bin/vite.js preview",
-    "test": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs run",
+    "test": "node ./scripts/run-vitest-batches.mjs",
     "test:coverage": "node ./node_modules/vitest/vitest.mjs run --coverage",
     "test:watch": "node ./node_modules/vitest/vitest.mjs",
     "test:responsive": "node ./node_modules/@playwright/test/cli.js test --config=e2e/playwright.config.ts",
