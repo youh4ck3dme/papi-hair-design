@@ -415,6 +415,13 @@ describe("CustomersPage", () => {
     expect(emailAction).toHaveAttribute("href", "mailto:jana@example.com");
   });
 
+  it("uses the Slovak e-mail label in customer quick actions", async () => {
+    render(<CustomersPage />);
+    await screen.findByText("Zákazníci");
+
+    expect(screen.getAllByRole("link", { name: /^E-mail$/i })[0]).toHaveAttribute("href", "mailto:jana@example.com");
+  });
+
   it("renders tel link in owner actions", async () => {
     render(<CustomersPage />);
     await screen.findByText("Zákazníci");
@@ -465,8 +472,11 @@ describe("CustomersPage", () => {
     expect(janaRow).toBeTruthy();
     fireEvent.click(within(janaRow as HTMLElement).getByRole("button", { name: /História rezervácií/i }));
 
-    const emailLink = await screen.findByText("E-mail");
-    expect(emailLink.closest("a")).toHaveAttribute("href", "mailto:jana@example.com");
+    await screen.findByText("História zákazníka");
+    const emailLink = screen
+      .getAllByRole("link", { name: /^E-mail$/i })
+      .find((link) => link.getAttribute("href") === "mailto:jana@example.com");
+    expect(emailLink).toHaveAttribute("href", "mailto:jana@example.com");
   });
 
   it("shows phone quick action inside the history dialog", async () => {
@@ -526,6 +536,23 @@ describe("CustomersPage", () => {
     await screen.findByText("Zákazníci");
 
     expect(screen.getByText("Klient zatiaľ nemá vyplnený e-mail ani telefón.")).toBeInTheDocument();
+  });
+
+  it("falls back to a dash when the last visit date is malformed", async () => {
+    fixtures.appointments = [
+      { id: "apt-invalid-1", customer_id: "cust-1", start_at: "not-a-date" },
+      { id: "apt-invalid-2", customer_id: "cust-2", start_at: "2099-01-11T11:00:00.000Z" },
+      { id: "apt-invalid-3", customer_id: "cust-4", start_at: "2099-01-09T11:00:00.000Z" },
+      { id: "apt-invalid-4", customer_id: "cust-4", start_at: "2099-01-08T11:00:00.000Z" },
+      { id: "apt-invalid-5", customer_id: "cust-4", start_at: "2099-01-07T11:00:00.000Z" },
+    ];
+
+    render(<CustomersPage />);
+    await screen.findByText("Zákazníci");
+
+    const janaRow = screen.getByText("Jana Novak").closest("tr");
+    expect(janaRow).toBeTruthy();
+    expect(within(janaRow as HTMLElement).getByText("—")).toBeInTheDocument();
   });
 
   it("search and segment can work together", async () => {

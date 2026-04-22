@@ -108,7 +108,9 @@ function buildInitials(name: string): string {
 
 function formatLastVisit(lastVisitAt: string | null, pattern: string) {
   if (!lastVisitAt) return null;
-  return format(new Date(lastVisitAt), pattern, { locale: sk });
+  const visitDate = new Date(lastVisitAt);
+  if (Number.isNaN(visitDate.getTime())) return null;
+  return format(visitDate, pattern, { locale: sk });
 }
 
 function InsightCard({
@@ -517,6 +519,9 @@ export default function CustomersPage() {
                   const hasEmail = Boolean(customer.email);
                   const hasPhone = Boolean(customer.phone);
                   const hasContact = hasEmail || hasPhone;
+                  const formattedLastVisitDate = formatLastVisit(customer.lastVisitAt, "d. M. yyyy");
+                  const formattedLastVisitTime = formatLastVisit(customer.lastVisitAt, "EEEE · HH:mm");
+                  const hasValidLastVisit = Boolean(formattedLastVisitDate);
 
                   return (
                     <TableRow key={customer.id} className="group hover:bg-primary/5 border-primary/5 transition-colors">
@@ -576,7 +581,7 @@ export default function CustomersPage() {
                             {customer.email && (
                               <Button asChild type="button" variant="outline" size="sm" className="border-primary/10 bg-background/60">
                                 <a href={`mailto:${customer.email}`}>
-                                  <Mail className="h-3.5 w-3.5" /> Email
+                                  <Mail className="h-3.5 w-3.5" /> E-mail
                                 </a>
                               </Button>
                             )}
@@ -609,11 +614,11 @@ export default function CustomersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {customer.lastVisitAt ? (
+                        {customer.lastVisitAt && hasValidLastVisit ? (
                           <div className="flex flex-col items-end">
-                            <span className="text-sm font-medium">{formatLastVisit(customer.lastVisitAt, "d. M. yyyy")}</span>
+                            <span className="text-sm font-medium">{formattedLastVisitDate}</span>
                             <span className="text-[10px] text-muted-foreground capitalize">
-                              {formatLastVisit(customer.lastVisitAt, "EEEE · HH:mm")}
+                              {formattedLastVisitTime}
                             </span>
                           </div>
                         ) : (
