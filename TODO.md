@@ -2,11 +2,24 @@
 
 ## Aktuálna priorita projektu
 ### Dokončiť pred monetizáciou
-1. [ ] Doriešiť `SonarCloud Code Analysis` blocker na `PR #44`
-2. [ ] Potvrdiť finálnu merge readiness všetkých PR checkov
+1. [x] Doriešiť `SonarCloud Code Analysis` blocker na `PR #44`
+   - stav: security hotspots boli reviewed v SonarCloud a quality gate prešiel
+2. [x] Potvrdiť finálnu merge readiness všetkých PR checkov
+   - stav: `PR #44` bol úspešne zmergeovaný do `otvarackapril2026`
 3. [x] Upratať `Firebase-first` vs `Vercel` governance chaos v repozitári
 4. [ ] Dokončiť release safety cleanup okolo Vercel preview vrstvy
 5. [x] Dorobiť posledný veľký `premium states & feedback` polish pass a live smoke
+
+### Post-merge safety
+1. [x] Resetnúť lokálnu `otvarackapril2026` na presný stav `origin/otvarackapril2026`
+   - stav: lokálna base vetva je po reset-e čistá a syncnutá s merge commitom `5a83bbb`
+2. [x] Vytvoriť safety backup branch pred resetom lokálnej base vetvy
+   - branch: `codex/backup-otvarackapril2026-pre-reset-2026-04-23`
+3. [x] Zatiaľ nemaž feature ani backup branch
+   - ponechať pre istotu:
+     - `codex/otvarackapril2026-email-polish`
+     - `codex/backup-otvarackapril2026-pre-reset-2026-04-23`
+   - cleanup riešiť až po ďalšom stabilizačnom kole
 
 ### Až potom riešiť
 1. [ ] Tenant-readiness audit
@@ -17,7 +30,7 @@
 ## Legacy TypeScript cleanup
 1. [x] Pridať `strict: true` do `functions/tsconfig.json`
 2. [x] Pridať `forceConsistentCasingInFileNames: true` do `functions/tsconfig.json`
-3. [ ] Overiť kompiláciu: `cd functions && npm run build`
+3. [x] Overiť kompiláciu: `cd functions && npm run build`
 4. [ ] Reštart TS server vo VSCode
 5. [ ] Overiť zmiznutie chýb
 
@@ -54,24 +67,27 @@
    - Vercel = preview-only diagnostics vrstva, ak zostane
 
 ## PR #44 blockers
-1. [ ] Doriešiť `SonarCloud Code Analysis` blocker
-2. [ ] Po dobehnutí checkov znova potvrdiť merge readiness PR #44
+1. [x] Doriešiť `SonarCloud Code Analysis` blocker
+2. [x] Po dobehnutí checkov znova potvrdiť merge readiness PR #44
+3. [x] Zmergeovať `PR #44` do `otvarackapril2026`
+   - merge commit: `5a83bbb486aed20323b7fe0919b09a6d2f853d3e`
 
 ## Sonar checklist
-1. [ ] Otvoriť SonarCloud PR analýzu pre `PR #44`
-2. [ ] Ísť do `Security Hotspots`
-3. [ ] Nastaviť filter na `Status: To review/Open`
-4. [ ] Nastaviť scope na `New Code`
-5. [ ] Overiť, či Sonar naozaj ukazuje presne `5` hotspotov
-6. [ ] Pri každom hotspot-e zapísať:
-   - [ ] rule name
-   - [ ] file + line
-   - [ ] severity
-   - [ ] či je v `New Code`
-7. [ ] Otvoriť `Quality Gate` summary a zistiť presnú failing podmienku
-8. [ ] Overiť `New Code` definíciu pre projekt/PR
-9. [ ] Zistiť, či sú hotspoty review-only alebo vyžadujú kódový zásah
-10. [ ] Ak sú review-only a technicky bezpečné, označiť ich v Sonare ako reviewed/safe
+1. [x] Otvoriť SonarCloud PR analýzu pre `PR #44`
+2. [x] Ísť do `Security Hotspots`
+3. [x] Nastaviť filter na `Status: To review/Open`
+4. [x] Nastaviť scope na `New Code`
+5. [x] Overiť, či Sonar naozaj ukazuje presne `5` hotspotov
+6. [x] Pri každom hotspot-e zapísať:
+   - [x] rule name
+   - [x] file + line
+   - [x] severity
+   - [x] či je v `New Code`
+7. [x] Otvoriť `Quality Gate` summary a zistiť presnú failing podmienku
+8. [x] Overiť `New Code` definíciu pre projekt/PR
+9. [x] Zistiť, či sú hotspoty review-only alebo vyžadujú kódový zásah
+10. [x] Ak sú review-only a technicky bezpečné, označiť ich v Sonare ako reviewed/safe
+   - výsledok: SonarCloud quality gate pre `PR #44` prešiel
 
 ## Go-to-market decision
 1. [ ] Neísť teraz do rýchleho asset sale rozhodnutia bez krátkeho validačného sprintu
