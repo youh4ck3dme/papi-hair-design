@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cloneElement, isValidElement } from "react";
 import CustomersPage from "../CustomersPage";
 
 const businessState = vi.hoisted(() => ({
@@ -36,11 +37,19 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: any) => <div>{children}</div>,
   DropdownMenuTrigger: ({ children }: any) => <div>{children}</div>,
   DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
-  DropdownMenuItem: ({ children, onClick }: any) => (
-    <button type="button" onClick={onClick}>
-      {children}
-    </button>
-  ),
+  DropdownMenuItem: ({ children, onClick, asChild }: any) => {
+    if (asChild && isValidElement(children)) {
+      return cloneElement(children, {
+        onClick,
+      });
+    }
+
+    return (
+      <button type="button" onClick={onClick}>
+        {children}
+      </button>
+    );
+  },
   DropdownMenuLabel: ({ children }: any) => <div>{children}</div>,
   DropdownMenuSeparator: () => <hr />,
 }));
@@ -98,8 +107,6 @@ describe("CustomersPage", () => {
         writeText: vi.fn().mockResolvedValue(undefined),
       },
     });
-
-    vi.spyOn(window, "open").mockImplementation(() => null);
 
     businessState.value = { businessId: "biz-1" };
     fixtures.customers = [
@@ -400,25 +407,23 @@ describe("CustomersPage", () => {
     });
   });
 
-  it("opens mailto from owner actions", async () => {
+  it("renders mailto link in owner actions", async () => {
     render(<CustomersPage />);
     await screen.findByText("Zákazníci");
 
-    fireEvent.click(screen.getAllByRole("button", { name: /Napísať e-mail/i })[0]);
-
-    expect(window.open).toHaveBeenCalledWith("mailto:jana@example.com", "_self");
+    const emailAction = screen.getAllByRole("link", { name: /Napísať e-mail/i })[0];
+    expect(emailAction).toHaveAttribute("href", "mailto:jana@example.com");
   });
 
-  it("opens tel from owner actions", async () => {
+  it("renders tel link in owner actions", async () => {
     render(<CustomersPage />);
     await screen.findByText("Zákazníci");
 
     const janaRow = screen.getByText("Jana Novak").closest("tr");
     expect(janaRow).toBeTruthy();
 
-    fireEvent.click(within(janaRow as HTMLElement).getByRole("button", { name: /Zavolať klientovi/i }));
-
-    expect(window.open).toHaveBeenCalledWith("tel:+421900111222", "_self");
+    const phoneAction = within(janaRow as HTMLElement).getByRole("link", { name: /Zavolať klientovi/i });
+    expect(phoneAction).toHaveAttribute("href", "tel:+421900111222");
   });
 
   it("shows toast error when clipboard copy fails", async () => {

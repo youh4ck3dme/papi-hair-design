@@ -633,13 +633,17 @@ export default function CustomersPage() {
                               <Calendar className="w-4 h-4 opacity-70" /> História rezervácií
                             </DropdownMenuItem>
                             {customer.email && (
-                              <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => window.open(`mailto:${customer.email}`, "_self")}>
-                                <Mail className="w-4 h-4 opacity-70" /> Napísať e-mail
+                              <DropdownMenuItem asChild>
+                                <a className="flex cursor-pointer items-center gap-2" href={`mailto:${customer.email}`}>
+                                  <Mail className="w-4 h-4 opacity-70" /> Napísať e-mail
+                                </a>
                               </DropdownMenuItem>
                             )}
                             {customer.phone && (
-                              <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => window.open(`tel:${customer.phone}`, "_self")}>
-                                <Phone className="w-4 h-4 opacity-70" /> Zavolať klientovi
+                              <DropdownMenuItem asChild>
+                                <a className="flex cursor-pointer items-center gap-2" href={`tel:${customer.phone}`}>
+                                  <Phone className="w-4 h-4 opacity-70" /> Zavolať klientovi
+                                </a>
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator className="bg-primary/5" />
