@@ -24,6 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2, Plus, Pencil, Trash2, Users, Mail, Phone, Calendar, Briefcase, ChevronRight, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { createRuntimeId } from "@/lib/runtimeId";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { compressProfileImage, readFileAsDataUrl, validateProfileImageFile } from "@/lib/profileImage";
@@ -282,7 +283,7 @@ export default function EmployeesPage() {
     setUploadingPhoto(true);
     try {
       const compressedBlob = await compressProfileImage(croppedBlob);
-      const fileName = `employees/${businessId}/${crypto.randomUUID ? crypto.randomUUID() : Date.now()}.jpg`;
+      const fileName = `employees/${businessId}/${createRuntimeId("employee-photo")}.jpg`;
       const storageRef = ref(storage, fileName);
       await uploadBytes(storageRef, compressedBlob, {
         contentType: compressedBlob.type || "image/jpeg",

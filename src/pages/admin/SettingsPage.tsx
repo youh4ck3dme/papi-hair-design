@@ -18,6 +18,7 @@ import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound, Camera, Trash2
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
 import type { FirebaseError } from "firebase/app";
 import { compressProfileImage, readFileAsDataUrl, validateProfileImageBlob, validateProfileImageFile } from "@/lib/profileImage";
+import { createRuntimeId } from "@/lib/runtimeId";
 import { cn } from "@/lib/utils";
 import {
   getFirebaseErrorCode,
@@ -229,7 +230,7 @@ export default function SettingsPage() {
         toast.error(compressedValidationError);
         return;
       }
-      const fileName = `profiles/${profile.id}/${crypto.randomUUID ? crypto.randomUUID() : Date.now()}.jpg`;
+      const fileName = `profiles/${profile.id}/${createRuntimeId("profile-photo")}.jpg`;
       const storageRef = ref(storage, fileName);
       await uploadBytes(storageRef, compressedBlob, {
         contentType: compressedBlob.type || "image/jpeg",

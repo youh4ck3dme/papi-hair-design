@@ -184,8 +184,6 @@ describe("EmployeesPage", () => {
     fixtures.appointmentsByEmployee = [];
 
     vi.stubGlobal("confirm", vi.fn(() => true));
-    vi.stubGlobal("crypto", { randomUUID: () => "uuid-1" } as any);
-
     firestoreMocks.writeBatch.mockReturnValue(batchMocks);
     batchMocks.commit.mockResolvedValue(undefined);
     firestoreMocks.addDoc.mockResolvedValue({ id: "emp-new" });
