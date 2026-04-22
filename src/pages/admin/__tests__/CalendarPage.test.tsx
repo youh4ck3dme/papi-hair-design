@@ -45,6 +45,7 @@ const firestoreFixtures = vi.hoisted(() => ({
 
 const adminUpdateBookingStatusMock = vi.hoisted(() => vi.fn());
 const adminCalendarQuickActionMock = vi.hoisted(() => vi.fn());
+const printHtmlDocumentMock = vi.hoisted(() => vi.fn(() => true));
 const generateSlotsMock = vi.hoisted(() => vi.fn());
 const calendarEventUtilsMocks = vi.hoisted(() => ({
   toCalendarWallClockDate: vi.fn(),
@@ -131,6 +132,9 @@ vi.mock("@/integrations/firebase/adminUpdateBookingStatus", () => ({
 }));
 vi.mock("@/integrations/firebase/adminCalendarQuickAction", () => ({
   adminCalendarQuickAction: adminCalendarQuickActionMock,
+}));
+vi.mock("@/lib/adminCalendarPrint", () => ({
+  printHtmlDocument: printHtmlDocumentMock,
 }));
 
 vi.mock("@/lib/availability", () => ({
@@ -334,6 +338,8 @@ describe("CalendarPage", () => {
     firestoreMocks.updateDocMock.mockReset();
     adminUpdateBookingStatusMock.mockReset();
     adminCalendarQuickActionMock.mockReset();
+    printHtmlDocumentMock.mockReset();
+    printHtmlDocumentMock.mockReturnValue(true);
     generateSlotsMock.mockReset();
     calendarEventUtilsMocks.toCalendarWallClockDate.mockClear();
     calendarEventUtilsMocks.fromCalendarWallClockDateToUtcIso.mockClear();
@@ -615,14 +621,8 @@ describe("CalendarPage", () => {
     }
   });
 
-  it("opens print window and triggers print", async () => {
+  it("builds printable HTML through the print helper", async () => {
     seedInitialFirestore({ withEvent: true });
-    const printWindowMock = {
-      document: { open: vi.fn(), write: vi.fn(), close: vi.fn() },
-      focus: vi.fn(),
-      print: vi.fn(),
-    };
-    const openSpy = vi.spyOn(window, "open").mockReturnValue(printWindowMock as any);
 
     const { container } = renderCalendarPage();
     await waitFor(() => {
@@ -633,9 +633,8 @@ describe("CalendarPage", () => {
     expect(printButton).toBeTruthy();
     fireEvent.click(printButton!);
 
-    expect(openSpy).toHaveBeenCalled();
-    expect(printWindowMock.document.write).toHaveBeenCalled();
-    expect(printWindowMock.print).toHaveBeenCalled();
+    expect(printHtmlDocumentMock).toHaveBeenCalledTimes(1);
+    expect(String(printHtmlDocumentMock.mock.calls[0][0])).toContain("PAPI HAIR DESIGN - Denný prehľad");
   });
 
   it("changes booking status from detail sheet", async () => {
@@ -778,9 +777,9 @@ describe("CalendarPage", () => {
     expect(firestoreMocks.addDocMock).not.toHaveBeenCalled();
   });
 
-  it("shows print error toast when popup window is blocked", async () => {
+  it("shows print error toast when print helper cannot prepare the document", async () => {
     seedInitialFirestore({ withEvent: true });
-    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    printHtmlDocumentMock.mockReturnValue(false);
 
     const { container } = renderCalendarPage();
     await waitFor(() => {
@@ -791,8 +790,8 @@ describe("CalendarPage", () => {
     expect(printButton).toBeTruthy();
     fireEvent.click(printButton!);
 
-    expect(openSpy).toHaveBeenCalled();
-    expect(toastMocks.error).toHaveBeenCalledWith("Nepodarilo sa otvoriť tlačové okno");
+    expect(printHtmlDocumentMock).toHaveBeenCalledTimes(1);
+    expect(toastMocks.error).toHaveBeenCalledWith("Nepodarilo sa pripraviť tlač");
   });
 
   it("saves note from detail sheet", async () => {

@@ -20,6 +20,15 @@ function escapeCsv(value: string): string {
   return value;
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function buildAdminCalendarCsv(rows: AdminCalendarExportRow[]): string {
   const header = [
     "Referencia",
@@ -54,13 +63,13 @@ export function buildAdminCalendarPrintHtml(dateLabel: string, rows: AdminCalend
   const rowsHtml = rows.map((row) => `
     <tr>
       <td>${format(row.start, "HH:mm")} - ${format(row.end, "HH:mm")}</td>
-      <td>${row.customerName}</td>
-      <td>${row.serviceName ?? "-"}</td>
-      <td>${row.employeeName ?? "-"}</td>
-      <td>${row.customerEmail ?? "-"}</td>
-      <td>${row.customerPhone ?? "-"}</td>
-      <td>${row.status}</td>
-      <td>${row.note ?? "-"}</td>
+      <td>${escapeHtml(row.customerName)}</td>
+      <td>${escapeHtml(row.serviceName ?? "-")}</td>
+      <td>${escapeHtml(row.employeeName ?? "-")}</td>
+      <td>${escapeHtml(row.customerEmail ?? "-")}</td>
+      <td>${escapeHtml(row.customerPhone ?? "-")}</td>
+      <td>${escapeHtml(row.status)}</td>
+      <td>${escapeHtml(row.note ?? "-")}</td>
     </tr>
   `).join("");
 
@@ -69,7 +78,7 @@ export function buildAdminCalendarPrintHtml(dateLabel: string, rows: AdminCalend
     <html lang="sk">
       <head>
         <meta charset="utf-8" />
-        <title>Denny export - ${dateLabel}</title>
+        <title>Denny export - ${escapeHtml(dateLabel)}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 24px; color: #18181b; }
           h1 { margin: 0 0 8px; font-size: 24px; }
@@ -82,7 +91,7 @@ export function buildAdminCalendarPrintHtml(dateLabel: string, rows: AdminCalend
       </head>
       <body>
         <h1>PAPI HAIR DESIGN - Denný prehľad</h1>
-        <p>${dateLabel}</p>
+        <p>${escapeHtml(dateLabel)}</p>
         <div class="meta">Pocet rezervacii: ${rows.length}</div>
         <table>
           <thead>

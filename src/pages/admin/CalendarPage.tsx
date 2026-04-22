@@ -52,6 +52,7 @@ import {
   canAdminMarkNoShow,
 } from "@/lib/adminBookingStatus";
 import { buildAdminCalendarCsv, buildAdminCalendarPrintHtml } from "@/lib/adminCalendarExport";
+import { printHtmlDocument } from "@/lib/adminCalendarPrint";
 import {
   isBlockedByClientError,
   isIgnorableBlockedFirestoreError,
@@ -676,21 +677,15 @@ export default function CalendarPage() {
   }, [date, exportRows]);
 
   const handlePrintDay = useCallback(() => {
-    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1200,height=900");
-    if (!printWindow) {
-      toast.error("Nepodarilo sa otvoriť tlačové okno");
-      return;
-    }
-
     const html = buildAdminCalendarPrintHtml(
       fmtDate(date, "EEEE, d. MMMM yyyy", { locale: sk }),
       exportRows
     );
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+
+    const didQueuePrint = printHtmlDocument(html);
+    if (!didQueuePrint) {
+      toast.error("Nepodarilo sa pripraviť tlač");
+    }
   }, [date, exportRows]);
 
   const handleJumpToday = useCallback(() => {
