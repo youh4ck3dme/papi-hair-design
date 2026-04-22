@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
 import { enGB, sk } from "date-fns/locale";
 import { addDays, format, startOfDay } from "date-fns";
 
@@ -12,6 +12,7 @@ import { DateTimeSelection } from "@/components/booking/DateTimeSelection";
 import { ContactConfirmation } from "@/components/booking/ContactConfirmation";
 import { BookingSuccess } from "@/components/booking/BookingSuccess";
 import { PublicAtmosphereBackground } from "@/components/public/PublicAtmosphereBackground";
+import { PremiumLoadingState } from "@/components/ui/premium-loading-state";
 import { getEffectiveIntervals, type BusinessHours } from "@/lib/availability";
 import { APP_LOGO_SRC } from "@/lib/branding";
 
@@ -199,9 +200,24 @@ export default function BookingPage() {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <main className="relative min-h-[100svh] overflow-hidden bg-black text-foreground safe-x">
+        <PublicAtmosphereBackground />
+        <div className="relative z-10 flex min-h-[100svh] items-center px-4 py-8 sm:px-6">
+          <div className="mx-auto w-full max-w-[780px]">
+            <PremiumLoadingState
+              variant="public"
+              eyebrow={currentLang === "en" ? "Booking" : "Rezervácia"}
+              title={currentLang === "en" ? "Preparing the booking calendar" : "Pripravujeme rezervačný kalendár"}
+              description={
+                currentLang === "en"
+                  ? "We are loading services, stylists and available times so your reservation can stay smooth from the first tap."
+                  : "Načítavame služby, kaderníkov a dostupné termíny, aby vaša rezervácia pokračovala plynulo od prvého kroku."
+              }
+              testId="booking-loading-state"
+            />
+          </div>
+        </div>
+      </main>
     );
   }
 

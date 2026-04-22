@@ -114,4 +114,19 @@ describe("ContactConfirmation", () => {
     fireEvent.click(submitBtn);
     expect(handleSubmit).toHaveBeenCalledTimes(1);
   });
+
+  it("shows a richer pending submit state while booking is being sent", () => {
+    render(
+      <ContactConfirmation
+        {...defaultProps}
+        submitting
+      />,
+      { wrapper }
+    );
+
+    expect(screen.getByRole("button", { name: /Odosielame rezerváciu/i })).toBeDisabled();
+    expect(screen.getByTestId("booking-submit-hint")).toHaveTextContent(
+      "Ešte chvíľu, finalizujeme termín a kontrolujeme poslednú dostupnosť vybraného slotu.",
+    );
+  });
 });

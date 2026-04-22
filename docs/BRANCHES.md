@@ -1,43 +1,64 @@
-# Vetvy a deploy na Vercel
+# Vetvy a release flow
 
-## Rozdelenie vetiev
+Tento dokument je tactical branch/reference vrstva.
+Kanonicky deploy a operations kontext je v [OPERATIONS.md](OPERATIONS.md).
 
-| Vetva | Účel |
-|-------|------|
-| **main** | Vývoj a integrácia. Používa sa pre Lovable – všetky zmeny z Lovable idú sem. |
-| **papihairstudiobooking** | Produkčná vetva pre Vercel. Z tejto vetvy Vercel deployuje production. |
+## Aktualna pravda
 
-## Nastavenie Vercel (jednorazové, ručné)
+- `main`
+  - hlavna integracna vetva repozitara
+  - PR preview buildy a branch automatizacia sa mozu na nu viazat podla platformy
+- `codex/*`
+  - pracovné feature vetvy
+  - typicky idu cez PR a preview checky
+- release do produkcie
+  - canonical production path je **Firebase Hosting + Cloud Functions for Firebase**
+  - nie Vercel production branch flow
 
-Vercel neberie production branch z kódu; nastavuje sa v Dashboard:
+## Co uz neplati
 
-1. Otvor **Vercel Dashboard** → váš projekt (nimble-agenda / booking).
-2. **Settings** → **Git**.
-3. Nájdite **Production Branch** (alebo „Deploy from branch“).
-4. Zmeňte z `main` na **papihairstudiobooking** a uložte.
+Historicky tento repo niesol Vercel-oriented branch model s oddelenou production branch.
+To uz dnes nie je source of truth.
 
-Od tohto momentu platí:
+Ak v starsich poznamkach alebo skriptoch narazis na:
+- `papihairstudiobooking`
+- Vercel production branch routing
+- branch-specific Vercel production deploy disciplinu
 
-- **Production deploy** = push alebo merge do `papihairstudiobooking`.
-- **Preview deployy** = ostatné vetvy / Pull Requesty podľa nastavenia projektu.
+ber to ako legacy operational residue, nie ako aktualny release model.
 
-## Bežný workflow – nasadenie na Vercel
+## Aktualny bezpecny workflow
 
-Keď chcete dostať zmeny z Lovable (main) do produkcie:
-
-1. **Lokálne (príklad):**
+1. Pracovat na feature vetve:
    ```bash
-   git checkout papihairstudiobooking
-   git pull origin papihairstudiobooking
-   git merge main
-   git push origin papihairstudiobooking
+   git switch codex/nazov-zmeny
    ```
+2. Pustit lokalne quality gates:
+   ```bash
+   npm run lint
+   npm run typecheck
+   npm run test
+   npm --prefix functions test
+   npm run build
+   ```
+3. Otvorit alebo aktualizovat PR.
+4. Pockat na CI a preview checky.
+5. Produkcny release robit cez Firebase deploy flow, nie cez branch push do Vercel production.
 
-2. **Alebo cez GitHub:**  
-   Vytvorte **Pull Request** z `main` do `papihairstudiobooking`, schválte a zlúčte. Vercel po merge automaticky spustí production deploy.
+## Preview vrstva
 
-Po pushi alebo merge do `papihairstudiobooking` Vercel nasadí novú verziu na production doménu.
+Vercel moze v tomto repo stale existovat ako:
+- PR preview
+- branch diagnostics
+- doplnkova browser/build signal vrstva
 
-## CI (GitHub Actions)
+Ale:
+- nie je to canonical production deploy path
+- nema to byt dokumentacne zamienane s Firebase release flow
 
-CI beží na vetvách **main**, **uprava22-2** a **papihairstudiobooking** (lint, test, build). Push do `papihairstudiobooking` teda spustí kontrolu pred tým, ako Vercel deployuje.
+## Ked potrebujes release detail
+
+Pouzi:
+- [OPERATIONS.md](OPERATIONS.md)
+- [ROLLBACK-RUNBOOK.md](ROLLBACK-RUNBOOK.md)
+- [POST-RELEASE-SMOKE-CHECKLIST.md](POST-RELEASE-SMOKE-CHECKLIST.md)

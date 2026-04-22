@@ -187,8 +187,14 @@ export function ContactConfirmation({
                 data-testid="booking-submit"
                 className="premium-action-btn w-full min-h-[48px] rounded-xl px-4 py-3 text-base font-semibold tracking-wide transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-                {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t("booking.submitBtn")}
+                <span className="flex items-center justify-center gap-2">
+                    {submitting && <Loader2 className="h-5 w-5 animate-spin" />}
+                    <span>{submitting ? t("booking.submitPending") : t("booking.submitBtn")}</span>
+                </span>
             </button>
+            <p className="mt-3 text-center text-sm leading-6 text-muted-foreground" data-testid="booking-submit-hint">
+                {submitting ? t("booking.submitPendingHint") : t("booking.submitHint")}
+            </p>
         </div>
     );
 }

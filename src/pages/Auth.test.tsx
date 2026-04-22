@@ -133,6 +133,14 @@ vi.mock("react-i18next", () => ({
           "auth.toastRegisterOkBooking": "Registrácia úspešná! Rezervácia bola prepojená s vaším účtom.",
           "auth.toastRegisterOk": "Registrácia úspešná.",
           "auth.toastAccountExists": "Tento email už má účet. Prihláste sa alebo si obnovte heslo.",
+          "auth.loginPending": "Prihlasujeme vás...",
+          "auth.registerPending": "Zakladáme váš účet...",
+          "auth.forgotPending": "Odosielame obnovu hesla...",
+          "auth.googlePending": "Pripájame Google prihlásenie...",
+          "auth.loginPendingHint": "Overujeme vaše členstvá a po úspešnom prihlásení vás presmerujeme na správne miesto.",
+          "auth.registerPendingHint": "Vytvárame klientsky účet a pripravujeme vaše rezervácie pod jedným profilom.",
+          "auth.forgotPendingHint": "Pripravujeme email s odkazom na bezpečnú obnovu hesla.",
+          "auth.googlePendingHint": "Dokončujeme zabezpečené Google prihlásenie a synchronizujeme váš účet.",
           "auth.claimKnownTitle": "Máme vás v systéme",
           "auth.claimKnownRegister": "Ste už evidovaný klient. Dokončite si účet heslom a rezerváciu k nemu pripojíme.",
           "common.or": "alebo",
@@ -236,6 +244,19 @@ describe("AuthPage", () => {
         "Secret123",
       );
     });
+  });
+
+  it("shows contextual pending copy while email sign-in is in progress", () => {
+    authFns.signInWithEmailAndPassword.mockReturnValue(new Promise(() => {}));
+
+    renderAuth("/auth?mode=login");
+
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.sk" } });
+    fireEvent.change(screen.getByLabelText("Heslo"), { target: { value: "Secret123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Prihlásiť sa" }));
+
+    expect(screen.getByRole("button", { name: "Prihlasujeme vás..." })).toBeDisabled();
+    expect(screen.getByText("Overujeme vaše členstvá a po úspešnom prihlásení vás presmerujeme na správne miesto.")).toBeInTheDocument();
   });
 
   it("links anonymous booking guest through Google provider first", async () => {

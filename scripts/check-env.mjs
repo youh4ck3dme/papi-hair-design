@@ -26,7 +26,7 @@ const PLACEHOLDER_TOKENS = [
     'your-app-check-debug-token',
 ];
 
-// Detect CI / Vercel environment
+// Detect CI / preview provider environment
 const isCI = !!(process.env.CI || process.env.VERCEL || process.env.NETLIFY || process.env.GITHUB_ACTIONS);
 
 function checkEnv() {
@@ -65,7 +65,7 @@ function checkEnv() {
             }
         });
     } else {
-        // No .env file — check process.env (Vercel injects vars here)
+        // No .env file — check process.env (CI / preview providers may inject vars here)
         if (isCI) {
             console.log('🚀 CI environment detected — checking process.env...');
         } else {
@@ -84,7 +84,7 @@ function checkEnv() {
             // Vite will pick up env vars from process.env during build
             console.warn('⚠️  Some environment variables not found in check-env script:');
             missing.forEach(v => console.warn(`   - ${v}`));
-            console.warn('   ℹ️  This may be OK if they are set in Vercel dashboard.');
+            console.warn('   ℹ️  This may be OK if they are set in CI or preview environment variables.');
             console.warn('   ℹ️  Continuing build...');
         } else {
             // Local development: fail hard so developer notices

@@ -241,10 +241,11 @@ function useAuthForm() {
   const [mode, setMode] = useState<AuthMode>(
     urlMode === "register" ? "register" : urlMode === "forgot" ? "forgot" : "login"
   );
-  const [loading, setLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<AuthMode | "google" | null>(null);
   const [form, setForm] = useState({ email: urlEmail, password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [rememberMe, setRememberMe] = useState(true);
+  const loading = pendingAction !== null;
 
   const setField = useCallback((key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -278,7 +279,7 @@ function useAuthForm() {
         return;
       }
       setErrors({});
-      setLoading(true);
+      setPendingAction("login");
       try {
         await applyAuthPersistence(rememberMe);
         const credential = await signInWithEmailAndPassword(auth, submittedForm.email, submittedForm.password);
@@ -295,7 +296,7 @@ function useAuthForm() {
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : t("auth.toastLoginFail"));
       } finally {
-        setLoading(false);
+        setPendingAction(null);
       }
     },
     [applyAuthPersistence, claimToken, form, navigate, rememberMe, syncProfile, t]
@@ -314,7 +315,7 @@ function useAuthForm() {
         return;
       }
       setErrors({});
-      setLoading(true);
+      setPendingAction("register");
       try {
         await applyAuthPersistence(rememberMe);
         const credential = auth.currentUser?.isAnonymous
@@ -344,14 +345,14 @@ function useAuthForm() {
         }
         toast.error(err instanceof Error ? err.message : t("auth.toastRegisterFail"));
       } finally {
-        setLoading(false);
+        setPendingAction(null);
       }
     },
     [applyAuthPersistence, claimToken, form, navigate, rememberMe, syncProfile, t]
   );
 
   const handleGoogleLogin = useCallback(async () => {
-    setLoading(true);
+    setPendingAction("google");
     try {
       await applyAuthPersistence(rememberMe);
       const provider = new GoogleAuthProvider();
@@ -382,7 +383,7 @@ function useAuthForm() {
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t("auth.toastGoogleFail"));
     } finally {
-      setLoading(false);
+      setPendingAction(null);
     }
   }, [applyAuthPersistence, claimToken, navigate, rememberMe, syncProfile, t]);
 
@@ -396,7 +397,7 @@ function useAuthForm() {
         setErrors({ email: t("auth.toastEnterEmail") });
         return;
       }
-      setLoading(true);
+      setPendingAction("forgot");
       try {
         await sendPasswordResetEmail(auth, submittedForm.email);
         toast.success(t("auth.toastResetSent"));
@@ -404,7 +405,7 @@ function useAuthForm() {
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : t("auth.toastResetFail"));
       } finally {
-        setLoading(false);
+        setPendingAction(null);
       }
     },
     [form, t]
@@ -427,6 +428,7 @@ function useAuthForm() {
     setField,
     errors,
     loading,
+    pendingAction,
     rememberMe,
     setRememberMePersisted,
     handleFormSubmit,
@@ -513,6 +515,7 @@ export default function AuthPage() {
     setField,
     errors,
     loading,
+    pendingAction,
     rememberMe,
     setRememberMePersisted,
     handleFormSubmit,
@@ -523,6 +526,25 @@ export default function AuthPage() {
   } = useAuthForm();
 
   const showGoogle = mode === "login";
+  const submitButtonLabel =
+    pendingAction === "login"
+      ? t("auth.loginPending")
+      : pendingAction === "register"
+        ? t("auth.registerPending")
+        : pendingAction === "forgot"
+          ? t("auth.forgotPending")
+          : copy.submitText;
+  const pendingMessage =
+    pendingAction === "login"
+      ? t("auth.loginPendingHint")
+      : pendingAction === "register"
+        ? t("auth.registerPendingHint")
+        : pendingAction === "forgot"
+          ? t("auth.forgotPendingHint")
+          : pendingAction === "google"
+            ? t("auth.googlePendingHint")
+            : null;
+  const googleButtonLabel = pendingAction === "google" ? t("auth.googlePending") : t("auth.googleBtn");
 
     return (
       <div
@@ -607,7 +629,7 @@ export default function AuthPage() {
 
               <Button type="submit" className="public-primary-cta w-full" disabled={loading} data-testid="auth-login-btn">
                 {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {copy.submitText}
+                {submitButtonLabel}
               </Button>
 
               {showGoogle && (
@@ -629,11 +651,17 @@ export default function AuthPage() {
                     data-testid="auth-google-btn"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <GoogleIcon />}
-                    {t("auth.googleBtn")}
+                    {googleButtonLabel}
                   </Button>
                 </>
               )}
             </form>
+
+            {pendingMessage && (
+              <p className="rounded-[10px] border border-white/8 bg-white/[0.03] px-4 py-3 text-center text-sm leading-6 text-white/68">
+                {pendingMessage}
+              </p>
+            )}
 
             <div className="text-center text-sm space-y-2">
               <AuthModeLinks mode={mode} onModeChange={setMode} t={t} />

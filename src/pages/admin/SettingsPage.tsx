@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { AvatarCropper } from "@/components/admin/AvatarCropper";
+import { PremiumLoadingState } from "@/components/ui/premium-loading-state";
 import { toast } from "sonner";
 import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound, Camera, Trash2 } from "lucide-react";
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
@@ -77,12 +78,13 @@ function maybeWarnBlockedRequest(err: unknown) {
 }
 
 const settingsCardClassName = "admin-premium-card overflow-hidden";
+type SettingsSaveTarget = "profile" | "business" | "smtp" | "booking" | null;
 
 export default function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
   const { businessId, isOwner, isOwnerOrAdmin } = useBusiness();
   const [business, setBusiness] = useState<any>(null);
-  const [saving, setSaving] = useState(false);
+  const [savingTarget, setSavingTarget] = useState<SettingsSaveTarget>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
@@ -107,6 +109,7 @@ export default function SettingsPage() {
     pass: "",
   });
   const [smtpHasPassword, setSmtpHasPassword] = useState(false);
+  const saving = savingTarget !== null;
 
   useEffect(() => {
     if (profile) {
@@ -163,7 +166,7 @@ export default function SettingsPage() {
 
   const saveProfile = async () => {
     if (!profile) return;
-    setSaving(true);
+    setSavingTarget("profile");
     const previousAvatarUrl = profile.avatar_url ?? null;
     const nextAvatarUrl = profileForm.avatar_url || null;
     try {
@@ -187,7 +190,7 @@ export default function SettingsPage() {
       console.error("SettingsPage: profile save error", err);
       toast.error(friendlyError(err, "Chyba pri ukladaní profilu"));
     } finally {
-      setSaving(false);
+      setSavingTarget(null);
     }
   };
 
@@ -259,7 +262,7 @@ export default function SettingsPage() {
 
   const saveBusiness = async () => {
     if (!business) return;
-    setSaving(true);
+    setSavingTarget("business");
     try {
       await updateDoc(doc(db, "businesses", businessId), {
         name: business.name,
@@ -278,7 +281,7 @@ export default function SettingsPage() {
       console.error("Business save error:", err);
       toast.error(friendlyError(err, "Chyba pri ukladaní"));
     } finally {
-      setSaving(false);
+      setSavingTarget(null);
     }
   };
 
@@ -286,7 +289,7 @@ export default function SettingsPage() {
     setBusiness((b: any) => ({ ...b, [k]: k.includes("minutes") || k.includes("hours") || k.includes("ahead") ? +e.target.value : e.target.value }));
 
   const saveSmtp = async () => {
-    setSaving(true);
+    setSavingTarget("smtp");
     try {
       const saveSmtpConfigFn = httpsCallable<any, any>(functions, "saveSmtpConfig");
       const { data } = await saveSmtpConfigFn({
@@ -311,13 +314,13 @@ export default function SettingsPage() {
       console.error("SMTP save error:", err);
       toast.error(friendlyError(err, "Chyba pri ukladaní SMTP"));
     } finally {
-      setSaving(false);
+      setSavingTarget(null);
     }
   };
 
   const saveBookingSettings = async () => {
     if (!business) return;
-    setSaving(true);
+    setSavingTarget("booking");
     try {
       await updateDoc(doc(db, "businesses", businessId), {
         allow_admin_as_provider: business.allow_admin_as_provider,
@@ -329,7 +332,7 @@ export default function SettingsPage() {
       console.error("Booking settings save error:", err);
       toast.error(friendlyError(err, "Chyba pri ukladaní nastavení booking"));
     } finally {
-      setSaving(false);
+      setSavingTarget(null);
     }
   };
 
@@ -406,6 +409,17 @@ export default function SettingsPage() {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+  const businessSettingsLoadingState = (
+    <PremiumLoadingState
+      variant="admin"
+      compact
+      eyebrow="Settings"
+      title="Načítavame nastavenia salónu"
+      description="Pripravujeme firemné údaje, booking voľby a infra nastavenia, aby ste mohli pokračovať bez zbytočného čakania."
+      testId="settings-loading-state"
+      className="min-h-[240px]"
+    />
+  );
 
   return (
     <div className="admin-premium-page max-w-4xl space-y-6 animate-in fade-in duration-500">
@@ -437,7 +451,7 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="general" className="space-y-6 mt-0">
-          {business && (
+          {business ? (
             <Card className={settingsCardClassName}>
               <CardHeader className="border-b border-primary/5 bg-muted/20">
                 <CardTitle className="text-lg font-bold">Nastavenia firmy</CardTitle>
@@ -477,16 +491,16 @@ export default function SettingsPage() {
                 <div className="pt-4 border-t border-primary/5 flex justify-end">
                   <Button onClick={saveBusiness} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
                     {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Uložiť nastavenia
+                    {savingTarget === "business" ? "Ukladám nastavenia..." : "Uložiť nastavenia"}
                   </Button>
                 </div>
               </CardContent>
             </Card>
-          )}
+          ) : businessSettingsLoadingState}
         </TabsContent>
 
         <TabsContent value="booking" className="space-y-6 mt-0">
-          {business && (
+          {business ? (
             <Card className={settingsCardClassName}>
               <CardHeader className="border-b border-primary/5 bg-muted/20">
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -532,13 +546,13 @@ export default function SettingsPage() {
                   <div className="pt-4 border-t border-primary/5 flex justify-end">
                     <Button onClick={saveBookingSettings} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
                       {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                      Uložiť nastavenia
+                      {savingTarget === "booking" ? "Ukladám booking..." : "Uložiť nastavenia"}
                     </Button>
                   </div>
                 )}
               </CardContent>
             </Card>
-          )}
+          ) : businessSettingsLoadingState}
         </TabsContent>
 
         <TabsContent value="hours" className="mt-0">
@@ -546,6 +560,7 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="smtp" className="space-y-6 mt-0">
+          {business ? (
           <Card className={settingsCardClassName}>
             <CardHeader className="border-b border-primary/5 bg-muted/20">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -608,11 +623,12 @@ export default function SettingsPage() {
               <div className="pt-4 border-t border-primary/5 flex justify-end">
                 <Button onClick={saveSmtp} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                  Uložiť SMTP
+                  {savingTarget === "smtp" ? "Ukladám SMTP..." : "Uložiť SMTP"}
                 </Button>
               </div>
             </CardContent>
           </Card>
+          ) : businessSettingsLoadingState}
         </TabsContent>
 
         <TabsContent value="snapshot" className="space-y-6 mt-0">
@@ -773,7 +789,7 @@ export default function SettingsPage() {
               <div className="pt-4 border-t border-primary/5 flex justify-end">
                 <Button onClick={saveProfile} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                  Uložiť profil
+                  {savingTarget === "profile" ? "Ukladám profil..." : "Uložiť profil"}
                 </Button>
               </div>
             </CardContent>

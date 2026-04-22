@@ -215,6 +215,15 @@ describe("SettingsPage", () => {
     expect(screen.getByDisplayValue("smtp.m1.websupport.sk")).toBeInTheDocument();
   });
 
+  it("shows a loading state before business settings are ready", () => {
+    firestoreMocks.getDoc.mockImplementation(() => new Promise(() => {}));
+
+    render(<SettingsPage />);
+
+    expect(screen.getAllByTestId("settings-loading-state").length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId("settings-loading-state")[0]).toHaveTextContent("Načítavame nastavenia salónu");
+  });
+
   it("saves the profile and refreshes auth data", async () => {
     render(<SettingsPage />);
 
@@ -243,6 +252,8 @@ describe("SettingsPage", () => {
     functionMocks.saveSmtpConfig.mockResolvedValue({ data: { success: true } });
 
     render(<SettingsPage />);
+
+    await screen.findByDisplayValue("smtp.m1.websupport.sk");
 
     const passwordInput = screen.getByPlaceholderText("Zadajte heslo");
     fireEvent.change(passwordInput, { target: { value: "super-secret" } });
