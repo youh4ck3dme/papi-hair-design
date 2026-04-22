@@ -17,7 +17,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { LogoIcon } from "@/components/LogoIcon";
 
-const LAST_UPDATED = "19. apríla 2026";
+const LAST_UPDATED = "22. apríla 2026";
 
 type Highlight = {
   label: string;
@@ -121,7 +121,7 @@ const providers: ProviderCard[] = [
   },
   {
     label: "Sentry",
-    body: "monitorovanie chýb, výkonnostných problémov a stability aplikácie.",
+    body: "nevyhnutné monitorovanie chýb, výkonu a stability aplikácie na ochranu služby.",
   },
 ];
 
@@ -156,6 +156,25 @@ const rights: Bullet[] = [
   {
     title: "Právo podať sťažnosť",
     body: "ak nie ste spokojní so spracúvaním, môžete sa obrátiť na dozorný orgán pre ochranu osobných údajov.",
+  },
+];
+
+const retentionSchedule: Bullet[] = [
+  {
+    title: "Súhlasy s cookies a consent audit",
+    body: "záznamy o prijatí, odmietnutí alebo zmene súhlasu uchovávame 13 mesiacov a potom ich automaticky mažeme.",
+  },
+  {
+    title: "Prístupové linky a claim tokeny",
+    body: "odkazy k histórii rezervácií a claim tokeny držíme po vypršaní ešte najviac 30 dní kvôli diagnostike a potom ich automaticky mažeme.",
+  },
+  {
+    title: "Audit zmeny termínov a kalendárové akcie",
+    body: "auditné záznamy o zmenách stavov rezervácií a admin kalendára držíme 12 mesiacov a následne ich automaticky mažeme.",
+  },
+  {
+    title: "Dočasné ochranné záznamy",
+    body: "krátkodobé rate-limit a antispam záznamy držíme najviac 24 hodín.",
   },
 ];
 
@@ -509,9 +528,16 @@ export default function PrivacyPolicy() {
                 <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
                   <p className="text-sm font-semibold text-white">Ako dlho ich držíme</p>
                   <p className="mt-2 text-sm leading-7 text-white/65">
-                    Rezervačné údaje uchovávame tak dlho, ako je potrebné pre správu termínov a pre zákonné
-                    alebo prevádzkové dôvody. Technické logy držíme kratšie, len na diagnostiku a ochranu služby.
+                    Retenčné lehoty nižšie sú minimum, ktoré systém vynucuje automaticky. Rezervačné a
+                    zákaznícke údaje držíme len po dobu potrebnú na správu termínov, históriu služieb
+                    a splnenie zákonných alebo prevádzkových povinností; ich rozsah pravidelne preverujeme.
                   </p>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-primary/18 bg-[linear-gradient(180deg,rgba(218,165,32,0.12),rgba(218,165,32,0.04))] p-4">
+                <h3 className="text-sm font-semibold text-white">Retenčná matica (automatické minimá)</h3>
+                <div className="mt-3">
+                  <BulletList items={retentionSchedule} accentClass="bg-amber-400" />
                 </div>
               </div>
               <div className="rounded-2xl border border-white/8 bg-black/20 p-4">

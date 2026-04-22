@@ -341,16 +341,16 @@
     "s3Title": "3. Purpose and Legal Basis",
     "s3Body": "Booking management (contract performance, Art. 6(1)(b) GDPR). Marketing communication only with consent (Art. 6(1)(a) GDPR). Legal obligations.",
     "s4Title": "4. Cookies and Consent Audit",
-    "s4Body": "We use functional cookies (login, language setting) and a marketing consent audit table. No analytics or advertising cookies without your consent.",
+    "s4Body": "We use necessary cookies for booking and sign-in, plus optional analytics only after consent. Advertising and remarketing cookies are not used.",
     "s5Title": "5. Sharing and Processors",
     "s5Body": "Google Firebase (cloud database and authentication). Vercel Inc. (hosting). No other third parties without your consent.",
     "s6Title": "6. Retention Period",
-    "s6Body": "Bookings: 3 years from last activity. Marketing consent: until withdrawal. Logs: 90 days.",
+    "s6Body": "Consent records are retained for 13 months. Booking claim and history-access links are removed 30 days after expiry. Appointment and calendar audit logs are retained for 12 months. Short-lived rate-limit records are removed within 24 hours.",
     "s7Title": "7. Your Rights (GDPR)",
-    "s7Body": "Access to data: GET /gdpr/status · Export: GET /gdpr/export · Deletion: DELETE /gdpr/delete. Withdraw consent at any time. Complaint: Office for Personal Data Protection of the Slovak Republic.",
+    "s7Body": "To exercise your rights, contact us by email and we will handle access, correction, deletion or restriction requests in line with applicable law. You may also file a complaint with the Office for Personal Data Protection of the Slovak Republic.",
     "s8Title": "8. Changes",
     "s8Body": "We will inform you of any changes by email or in-app notification.",
-    "lastUpdate": "Last updated: February 2026."
+    "lastUpdate": "Last updated: April 2026."
   },
   "terms": {
     "title": "Zmluvné podmienky",

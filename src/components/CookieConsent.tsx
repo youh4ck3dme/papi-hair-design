@@ -5,7 +5,6 @@ import "@/styles/liquid-cookie.css";
 interface CookiePrefs {
   necessary: true;
   analytics: boolean;
-  marketing: boolean;
   timestamp: string;
 }
 
@@ -19,7 +18,7 @@ function loadPrefs(): CookiePrefs | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const p = JSON.parse(raw);
-    if (p?.necessary !== true || typeof p.analytics !== "boolean" || typeof p.marketing !== "boolean") return null;
+    if (p?.necessary !== true || typeof p.analytics !== "boolean") return null;
     return p as CookiePrefs;
   } catch {
     return null;
@@ -37,9 +36,9 @@ function applyGtagConsent(prefs: Omit<CookiePrefs, "timestamp">) {
 
   gtag("consent", "update", {
     analytics_storage: prefs.analytics ? "granted" : "denied",
-    ad_storage: prefs.marketing ? "granted" : "denied",
-    ad_user_data: prefs.marketing ? "granted" : "denied",
-    ad_personalization: prefs.marketing ? "granted" : "denied",
+    ad_storage: "denied",
+    ad_user_data: "denied",
+    ad_personalization: "denied",
   });
 }
 
@@ -58,7 +57,6 @@ async function trackConsentEvent(prefs: Omit<CookiePrefs, "timestamp">, action: 
   const categories = [
     "necessary",
     ...(prefs.analytics ? ["analytics"] : []),
-    ...(prefs.marketing ? ["marketing"] : []),
   ];
 
   try {
@@ -88,7 +86,6 @@ export default function CookieConsent() {
   const [visible, setVisible] = useState(false);
   const [customize, setCustomize] = useState(false);
   const [analytics, setAnalytics] = useState(false);
-  const [marketing, setMarketing] = useState(false);
   const isHiddenRoute = pathname.startsWith("/papihairsalon2026");
   const cardRef = useRef<HTMLDivElement | null>(null);
 
@@ -146,7 +143,7 @@ export default function CookieConsent() {
   }, [customize]);
 
   const acceptAll = useCallback(() => {
-    const prefs = { necessary: true as const, analytics: true, marketing: true };
+    const prefs = { necessary: true as const, analytics: true };
     savePrefs(prefs);
     applyGtagConsent(prefs);
     void trackConsentEvent(prefs, "accept");
@@ -154,7 +151,7 @@ export default function CookieConsent() {
   }, []);
 
   const rejectAll = useCallback(() => {
-    const prefs = { necessary: true as const, analytics: false, marketing: false };
+    const prefs = { necessary: true as const, analytics: false };
     savePrefs(prefs);
     applyGtagConsent(prefs);
     void trackConsentEvent(prefs, "reject");
@@ -163,17 +160,17 @@ export default function CookieConsent() {
 
   const openCustomize = useCallback(() => {
     const existing = loadPrefs();
-    if (existing) { setAnalytics(existing.analytics); setMarketing(existing.marketing); }
+    if (existing) { setAnalytics(existing.analytics); }
     setCustomize(true);
   }, []);
 
   const saveCustom = useCallback(() => {
-    const prefs = { necessary: true as const, analytics, marketing };
+    const prefs = { necessary: true as const, analytics };
     savePrefs(prefs);
     applyGtagConsent(prefs);
     void trackConsentEvent(prefs, "update");
     setVisible(false);
-  }, [analytics, marketing]);
+  }, [analytics]);
 
   if (!visible || isHiddenRoute) return null;
 
@@ -187,7 +184,7 @@ export default function CookieConsent() {
         </div>
 
         <div className="cookie-body" id="cookie-desc">
-          Používame nevyhnutné cookies a s vaším súhlasom aj analytické a marketingové.
+          Používame nevyhnutné cookies a s vaším súhlasom aj analytické.
           Viac v{" "}
           <Link to="/privacy" className="text-primary underline hover:no-underline">zásadách ochrany osobných údajov</Link>.
           Kliknutím na „Prijať všetko“ súhlasíte s ich použitím.
@@ -224,15 +221,6 @@ export default function CookieConsent() {
               <span className="cookie-toggle-text">
                 <span>Analytické</span>
                 <span className="cookie-toggle-muted">Pomáhajú zlepšiť výkon a používanie</span>
-              </span>
-            </label>
-
-            <label className="cookie-toggle">
-              <input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />
-              <span className="cookie-toggle-ui" />
-              <span className="cookie-toggle-text">
-                <span>Marketingové</span>
-                <span className="cookie-toggle-muted">Personalizované reklamy a obsah</span>
               </span>
             </label>
 

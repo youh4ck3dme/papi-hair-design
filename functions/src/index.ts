@@ -34,6 +34,7 @@ export { lookupBookingHistory } from "./lookupBookingHistory";
 export { cancelCustomerBooking } from "./cancelCustomerBooking";
 export { queueRegistrationWelcomeEmail } from "./queueRegistrationWelcomeEmail";
 export { cleanupExpiredHolds } from "./cleanupExpiredHolds";
+export { cleanupComplianceData } from "./cleanupComplianceData";
 export { rebuildPublicSnapshot } from "./rebuildPublicSnapshot";
 export { bootstrapAdminAccess } from "./bootstrapAdminAccess";
 export { enforceSalonRoles } from "./enforceSalonRoles";

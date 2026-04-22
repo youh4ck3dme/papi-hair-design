@@ -23,6 +23,7 @@ describe("static pages", () => {
 
     expect(screen.getByRole("heading", { name: /Ochrana súkromia/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Vaše práva \(GDPR\)/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Retenčná matica/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Späť/i })).toBeInTheDocument();
   });
 

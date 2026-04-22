@@ -341,16 +341,16 @@
     "s3Title": "3. Účel a právny základ",
     "s3Body": "Správa rezervácií (plnenie zmluvy, čl. 6 ods. 1 písm. b) GDPR). Marketingová komunikácia len so súhlasom (čl. 6 ods. 1 písm. a) GDPR). Zákonné povinnosti.",
     "s4Title": "4. Súbory cookie a audit súhlasu",
-    "s4Body": "Používame funkčné cookies (prihlásenie, jazykové nastavenie) a auditovú tabuľku súhlasov s marketingom. Žiadne analytické ani reklamné cookies bez vášho súhlasu.",
+    "s4Body": "Používame nevyhnutné cookies pre rezerváciu a prihlásenie a analytiku zapíname len po súhlase. Reklamné ani remarketingové cookies nepoužívame.",
     "s5Title": "5. Zdieľanie a spracovatelia",
     "s5Body": "Google Firebase (cloud databáza a autentifikácia). Vercel Inc. (hosting). Žiadne ďalšie tretie strany bez vášho súhlasu.",
     "s6Title": "6. Doba uchovávania",
-    "s6Body": "Rezervácie: 3 roky od poslednej aktivity. Marketingový súhlas: do odvolania. Logy: 90 dní.",
+    "s6Body": "Consent záznamy držíme 13 mesiacov. Booking claim a history-access linky mažeme 30 dní po expiracii. Audit zmien termínov a kalendára držíme 12 mesiacov. Krátkodobé rate-limit záznamy mažeme do 24 hodín.",
     "s7Title": "7. Vaše práva (GDPR minimum runtime)",
-    "s7Body": "Prístup k údajom: GET /gdpr/status · Export: GET /gdpr/export · Vymazanie: DELETE /gdpr/delete. Odvolanie súhlasu kedykoľvek. Sťažnosť: Úrad na ochranu osobných údajov SR.",
+    "s7Body": "Ak si chcete uplatniť svoje práva, kontaktujte nás e-mailom a vybavíme žiadosť o prístup, opravu, výmaz alebo obmedzenie spracúvania v súlade so zákonom. Sťažnosť môžete podať na Úrad na ochranu osobných údajov SR.",
     "s8Title": "8. Zmeny",
     "s8Body": "O zmenách vás budeme informovať e-mailom alebo oznámením v aplikácii.",
-    "lastUpdate": "Posledná aktualizácia: február 2026."
+    "lastUpdate": "Posledná aktualizácia: apríl 2026."
   },
   "terms": {
     "title": "Zmluvné podmienky",
