@@ -79,6 +79,166 @@ function maybeWarnBlockedRequest(err: unknown) {
 
 const settingsCardClassName = "admin-premium-card overflow-hidden";
 type SettingsSaveTarget = "profile" | "business" | "smtp" | "booking" | null;
+type SmtpFormState = {
+  host: string;
+  port: string;
+  user: string;
+  from: string;
+  pass: string;
+};
+
+// Predvolená SMTP pre Papi Hair Design (Websupport) – odosielateľ aj prijemca: booking@papihairdesign.sk
+const DEFAULT_SMTP = {
+  host: "smtp.m1.websupport.sk",
+  port: "465",
+  user: "booking@papihairdesign.sk",
+  from: "booking@papihairdesign.sk",
+};
+
+function buildSmtpForm(rawSmtp: Record<string, unknown> = {}): SmtpFormState {
+  return {
+    host: (rawSmtp.host ?? "").toString().trim() || DEFAULT_SMTP.host,
+    port: (rawSmtp.port ?? "").toString().trim() || DEFAULT_SMTP.port,
+    user: (rawSmtp.user ?? "").toString().trim() || DEFAULT_SMTP.user,
+    from: (rawSmtp.from ?? "").toString().trim() || DEFAULT_SMTP.from,
+    pass: "",
+  };
+}
+
+async function loadBusinessState(businessId: string) {
+  const snap = await getDoc(doc(db, "businesses", businessId));
+  if (!snap.exists()) {
+    return null;
+  }
+
+  const data = snap.data();
+  const smtp = (data.smtp_config as Record<string, unknown> | undefined) ?? {};
+  return {
+    business: { id: snap.id, ...data },
+    licenseKey: typeof data.license_key === "string" ? data.license_key : "",
+    smtpForm: buildSmtpForm(smtp),
+    smtpHasPassword: Boolean(smtp.has_password || smtp.password_secret),
+  };
+}
+
+async function loadSnapshotState(businessId: string) {
+  const [snapshotDoc, healthDoc] = await Promise.all([
+    getDoc(doc(db, "public_snapshots", businessId)),
+    getDoc(doc(db, "ops_health", `snapshot_${businessId}`)),
+  ]);
+
+  return {
+    snapshotInfo: snapshotDoc.exists() ? { id: snapshotDoc.id, ...snapshotDoc.data() } : null,
+    snapshotHealth: healthDoc.exists() ? { id: healthDoc.id, ...healthDoc.data() } : null,
+  };
+}
+
+async function saveProfileDocument(profileId: string, profileForm: { full_name: string; phone: string; avatar_url: string | null }) {
+  await updateDoc(doc(db, "profiles", profileId), {
+    full_name: profileForm.full_name,
+    phone: profileForm.phone || null,
+    avatar_url: profileForm.avatar_url || null,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+async function deletePreviousAvatar(previousAvatarUrl: string | null, nextAvatarUrl: string | null) {
+  if (!previousAvatarUrl || previousAvatarUrl === nextAvatarUrl) {
+    return;
+  }
+
+  try {
+    await deleteObject(ref(storage, previousAvatarUrl));
+  } catch (error) {
+    console.warn("SettingsPage: failed to delete previous avatar", error);
+  }
+}
+
+async function saveBusinessDocument(businessId: string, business: Record<string, any>) {
+  await updateDoc(doc(db, "businesses", businessId), {
+    name: business.name,
+    address: business.address,
+    phone: business.phone,
+    email: business.email,
+    timezone: business.timezone,
+    lead_time_minutes: business.lead_time_minutes,
+    max_days_ahead: business.max_days_ahead,
+    cancellation_hours: business.cancellation_hours,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+async function saveSmtpDocument(businessId: string, smtpForm: SmtpFormState) {
+  const saveSmtpConfigFn = httpsCallable<any, any>(functions, "saveSmtpConfig");
+  return saveSmtpConfigFn({
+    business_id: businessId,
+    host: smtpForm.host,
+    port: Number(smtpForm.port) || 465,
+    user: smtpForm.user,
+    from: smtpForm.from,
+    pass: smtpForm.pass || undefined,
+  });
+}
+
+async function saveBookingDocument(businessId: string, business: Record<string, any>) {
+  await updateDoc(doc(db, "businesses", businessId), {
+    allow_admin_as_provider: business.allow_admin_as_provider,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+async function requestSnapshotRebuild(businessId: string) {
+  const fn = httpsCallable<any, any>(functions, "rebuildPublicSnapshot");
+  return fn({ business_id: businessId });
+}
+
+async function assignLicenseToBusiness(businessId: string, licenseKey: string) {
+  const normalizedKey = licenseKey.trim();
+  const licSnap = await getDoc(doc(db, "licenses", normalizedKey));
+  if (!licSnap.exists()) {
+    return { status: "missing" as const };
+  }
+
+  const lic = licSnap.data() as any;
+  const expires = lic.expires_at instanceof Timestamp ? lic.expires_at.toDate() : null;
+  if (expires && expires.getTime() < Date.now()) {
+    return { status: "expired" as const };
+  }
+
+  await updateDoc(doc(db, "businesses", businessId), {
+    license_key: normalizedKey,
+    license_unlimited: !!lic.unlimited,
+    license_max_seats: lic.max_seats ?? 5,
+    license_assigned_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  return {
+    status: "ok" as const,
+    unlimited: !!lic.unlimited,
+    maxSeats: lic.max_seats ?? 5,
+  };
+}
+
+function createBusinessFieldSetter(setBusiness: React.Dispatch<React.SetStateAction<any>>) {
+  return (key: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue =
+      key.includes("minutes") || key.includes("hours") || key.includes("ahead")
+        ? Number(event.target.value)
+        : event.target.value;
+
+    setBusiness((current: any) => ({ ...current, [key]: nextValue }));
+  };
+}
+
+function getProfileInitials(fullName: string) {
+  return fullName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 export default function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
@@ -94,14 +254,7 @@ export default function SettingsPage() {
   const [licenseState, setLicenseState] = useState<"idle" | "checking" | "ok" | "error">("idle");
   const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
   const [profileForm, setProfileForm] = useState({ full_name: "", phone: "", avatar_url: null as string | null });
-  // Predvolená SMTP pre Papi Hair Design (Websupport) – odosielateľ aj prijemca: booking@papihairdesign.sk
-  const DEFAULT_SMTP = {
-    host: "smtp.m1.websupport.sk",
-    port: "465",
-    user: "booking@papihairdesign.sk",
-    from: "booking@papihairdesign.sk",
-  };
-  const [smtpForm, setSmtpForm] = useState({
+  const [smtpForm, setSmtpForm] = useState<SmtpFormState>({
     host: DEFAULT_SMTP.host,
     port: DEFAULT_SMTP.port,
     user: DEFAULT_SMTP.user,
@@ -122,46 +275,49 @@ export default function SettingsPage() {
   }, [profile]);
 
   useEffect(() => {
-    // Load business WITHOUT smtp_config – passwords should never reach the client
-    const loadBusiness = async () => {
+    let cancelled = false;
+
+    void (async () => {
       try {
-        const docRef = doc(db, "businesses", businessId);
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          setBusiness({ id: snap.id, ...data });
-          if (data.license_key) {
-            setLicenseKey(data.license_key);
-          }
-          const smtp = data.smtp_config as any ?? {};
-          setSmtpForm({
-            host: (smtp.host ?? "").trim() || DEFAULT_SMTP.host,
-            port: String(smtp.port ?? "").trim() || DEFAULT_SMTP.port,
-            user: (smtp.user ?? "").trim() || DEFAULT_SMTP.user,
-            from: (smtp.from ?? "").trim() || DEFAULT_SMTP.from,
-            pass: "", // Never load actual password to client
-          });
-          setSmtpHasPassword(!!(smtp.has_password || smtp.password_secret));
+        const loadedState = await loadBusinessState(businessId);
+        if (!loadedState || cancelled) {
+          return;
         }
+
+        setBusiness(loadedState.business);
+        setLicenseKey(loadedState.licenseKey);
+        setSmtpForm(loadedState.smtpForm);
+        setSmtpHasPassword(loadedState.smtpHasPassword);
       } catch (err) {
         console.error("Error loading business info:", err);
       }
+    })();
+
+    return () => {
+      cancelled = true;
     };
-    loadBusiness();
   }, [businessId]);
 
   useEffect(() => {
-    const loadSnapshot = async () => {
+    let cancelled = false;
+
+    void (async () => {
       try {
-        const snap = await getDoc(doc(db, "public_snapshots", businessId));
-        if (snap.exists()) setSnapshotInfo({ id: snap.id, ...snap.data() });
-        const health = await getDoc(doc(db, "ops_health", `snapshot_${businessId}`));
-        if (health.exists()) setSnapshotHealth({ id: health.id, ...health.data() });
+        const snapshotState = await loadSnapshotState(businessId);
+        if (cancelled) {
+          return;
+        }
+
+        setSnapshotInfo(snapshotState.snapshotInfo);
+        setSnapshotHealth(snapshotState.snapshotHealth);
       } catch (err) {
         console.error("Error loading snapshot:", err);
       }
+    })();
+
+    return () => {
+      cancelled = true;
     };
-    loadSnapshot();
   }, [businessId]);
 
   const saveProfile = async () => {
@@ -170,19 +326,8 @@ export default function SettingsPage() {
     const previousAvatarUrl = profile.avatar_url ?? null;
     const nextAvatarUrl = profileForm.avatar_url || null;
     try {
-      await updateDoc(doc(db, "profiles", profile.id), {
-        full_name: profileForm.full_name,
-        phone: profileForm.phone || null,
-        avatar_url: nextAvatarUrl,
-        updated_at: new Date().toISOString()
-      });
-      if (previousAvatarUrl && previousAvatarUrl !== nextAvatarUrl) {
-        try {
-          await deleteObject(ref(storage, previousAvatarUrl));
-        } catch (error) {
-          console.warn("SettingsPage: failed to delete previous avatar", error);
-        }
-      }
+      await saveProfileDocument(profile.id, profileForm);
+      await deletePreviousAvatar(previousAvatarUrl, nextAvatarUrl);
       await refreshProfile();
       toast.success("Profil aktualizovaný");
     } catch (err) {
@@ -264,17 +409,7 @@ export default function SettingsPage() {
     if (!business) return;
     setSavingTarget("business");
     try {
-      await updateDoc(doc(db, "businesses", businessId), {
-        name: business.name,
-        address: business.address,
-        phone: business.phone,
-        email: business.email,
-        timezone: business.timezone,
-        lead_time_minutes: business.lead_time_minutes,
-        max_days_ahead: business.max_days_ahead,
-        cancellation_hours: business.cancellation_hours,
-        updated_at: new Date().toISOString()
-      });
+      await saveBusinessDocument(businessId, business);
       toast.success("Nastavenia firmy aktualizované");
     } catch (err) {
       maybeWarnBlockedRequest(err);
@@ -285,21 +420,12 @@ export default function SettingsPage() {
     }
   };
 
-  const setB = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setBusiness((b: any) => ({ ...b, [k]: k.includes("minutes") || k.includes("hours") || k.includes("ahead") ? +e.target.value : e.target.value }));
+  const setB = createBusinessFieldSetter(setBusiness);
 
   const saveSmtp = async () => {
     setSavingTarget("smtp");
     try {
-      const saveSmtpConfigFn = httpsCallable<any, any>(functions, "saveSmtpConfig");
-      const { data } = await saveSmtpConfigFn({
-        business_id: businessId,
-        host: smtpForm.host,
-        port: Number(smtpForm.port) || 465,
-        user: smtpForm.user,
-        from: smtpForm.from,
-        pass: smtpForm.pass || undefined, // Only send if user typed a new password
-      });
+      const { data } = await saveSmtpDocument(businessId, smtpForm);
 
       if (!data.success) {
         toast.error("Chyba pri ukladaní SMTP");
@@ -322,10 +448,7 @@ export default function SettingsPage() {
     if (!business) return;
     setSavingTarget("booking");
     try {
-      await updateDoc(doc(db, "businesses", businessId), {
-        allow_admin_as_provider: business.allow_admin_as_provider,
-        updated_at: new Date().toISOString()
-      });
+      await saveBookingDocument(businessId, business);
       toast.success("Nastavenia booking uložené");
     } catch (err) {
       maybeWarnBlockedRequest(err);
@@ -339,8 +462,7 @@ export default function SettingsPage() {
   const rebuildSnapshot = async () => {
     setSnapshotLoading(true);
     try {
-      const fn = httpsCallable<any, any>(functions, "rebuildPublicSnapshot");
-      const { data } = await fn({ business_id: businessId });
+      const { data } = await requestSnapshotRebuild(businessId);
       if (data?.success) {
         toast.success("Snapshot rebuild spustený");
         const snap = await getDoc(doc(db, "public_snapshots", businessId));
@@ -366,33 +488,24 @@ export default function SettingsPage() {
     setLicenseState("checking");
     setLicenseMessage(null);
     try {
-      const licSnap = await getDoc(doc(db, "licenses", licenseKey.trim()));
-      if (!licSnap.exists()) {
+      const licenseResult = await assignLicenseToBusiness(businessId, licenseKey);
+      if (licenseResult.status === "missing") {
         setLicenseState("error");
         setLicenseMessage("Neplatný licenčný kľúč");
         return;
       }
-      const lic = licSnap.data() as any;
-      const expires = lic.expires_at instanceof Timestamp ? lic.expires_at.toDate() : null;
-      if (expires && expires.getTime() < Date.now()) {
+
+      if (licenseResult.status === "expired") {
         setLicenseState("error");
         setLicenseMessage("Licencia expirovala");
         return;
       }
 
-      await updateDoc(doc(db, "businesses", businessId), {
-        license_key: licenseKey.trim(),
-        license_unlimited: !!lic.unlimited,
-        license_max_seats: lic.max_seats ?? 5,
-        license_assigned_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-
       setLicenseState("ok");
       setLicenseMessage(
-        lic.unlimited
+        licenseResult.unlimited
           ? "Licencia aktivovaná: neobmedzené"
-          : `Licencia aktivovaná: limit ${lic.max_seats ?? 5}`
+          : `Licencia aktivovaná: limit ${licenseResult.maxSeats}`
       );
       toast.success("Licencia aktivovaná");
     } catch (err) {
@@ -403,12 +516,7 @@ export default function SettingsPage() {
     }
   };
 
-  const initials = (profileForm.full_name || profile?.full_name || "?")
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const initials = getProfileInitials(profileForm.full_name || profile?.full_name || "?");
   const businessSettingsLoadingState = (
     <PremiumLoadingState
       variant="admin"

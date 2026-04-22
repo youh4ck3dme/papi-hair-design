@@ -35,20 +35,13 @@ async function createAuthTestUser(email: string, password: string) {
     throw new Error(`Unable to create auth test user: ${message || response.statusText}`);
 }
 
-async function reachBookingDetailsStep(page: Page) {
-    await page.goto("/booking");
-    await expect(page.getByTestId("booking-page")).toBeVisible({ timeout: 15000 });
-    await dismissCookieConsent(page);
-
-    const categoryStep = page.getByTestId("booking-step-category");
-    await expect(categoryStep).toBeVisible({ timeout: 10000 });
+async function selectFirstVisibleService(page: Page, categoryStep: ReturnType<Page["getByTestId"]>) {
+    const firstServiceCard = categoryStep.locator("button").filter({ hasText: /min/i }).first();
+    let serviceVisible = await firstServiceCard.isVisible({ timeout: 1000 }).catch(() => false);
     const categoryButtons = [
         categoryStep.getByRole("button", { name: "Dámske Služby" }),
         categoryStep.getByRole("button", { name: "Pánske Služby" }),
     ];
-    const firstServiceCard = categoryStep.locator("button").filter({ hasText: /min/i }).first();
-
-    let serviceVisible = await firstServiceCard.isVisible({ timeout: 1000 }).catch(() => false);
 
     for (const categoryButton of categoryButtons) {
         if (serviceVisible) break;
@@ -90,15 +83,9 @@ async function reachBookingDetailsStep(page: Page) {
 
     await expect(firstServiceCard).toBeVisible({ timeout: 5000 });
     await firstServiceCard.click();
-    const employeeStep = page.getByTestId("booking-step-employee");
-    await expect(employeeStep).toBeVisible({ timeout: 10000 });
+}
 
-    const employeeButtons = employeeStep
-        .locator("button")
-        .filter({ hasText: /Klikni pre výber/i });
-    await expect(employeeButtons.first()).toBeVisible({ timeout: 5000 });
-    await employeeButtons.first().click();
-
+async function selectFirstAvailableDate(page: Page) {
     await expect(page.locator('[data-testid^="date-btn-"]').first()).toBeVisible({ timeout: 10000 });
 
     await page.waitForTimeout(1200);
@@ -108,22 +95,42 @@ async function reachBookingDetailsStep(page: Page) {
         throw new Error("No available date button found");
     }
 
-    let dateWithSlotsFound = false;
     for (let i = 0; i < Math.min(10, dateCount); i++) {
         const dateButton = dateButtons.nth(i);
         await dateButton.scrollIntoViewIfNeeded();
         await dateButton.click();
         await page.waitForTimeout(900);
+
         const slotVisible = await page.getByTestId("time-slot").first().isVisible({ timeout: 1500 }).catch(() => false);
         if (slotVisible) {
-            dateWithSlotsFound = true;
-            break;
+            return;
         }
     }
-    if (!dateWithSlotsFound) {
-        throw new Error("No date with available time slots found");
-    }
 
+    throw new Error("No date with available time slots found");
+}
+
+async function selectFirstAvailableEmployee(page: Page) {
+    const employeeStep = page.getByTestId("booking-step-employee");
+    await expect(employeeStep).toBeVisible({ timeout: 10000 });
+
+    const employeeButtons = employeeStep
+        .locator("button")
+        .filter({ hasText: /Klikni pre výber/i });
+    await expect(employeeButtons.first()).toBeVisible({ timeout: 5000 });
+    await employeeButtons.first().click();
+}
+
+async function reachBookingDetailsStep(page: Page) {
+    await page.goto("/booking");
+    await expect(page.getByTestId("booking-page")).toBeVisible({ timeout: 15000 });
+    await dismissCookieConsent(page);
+
+    const categoryStep = page.getByTestId("booking-step-category");
+    await expect(categoryStep).toBeVisible({ timeout: 10000 });
+    await selectFirstVisibleService(page, categoryStep);
+    await selectFirstAvailableEmployee(page);
+    await selectFirstAvailableDate(page);
     await page.getByTestId("time-slot").first().click();
     await expect(page.getByTestId("booking-step-details")).toBeVisible({ timeout: 5000 });
 }
