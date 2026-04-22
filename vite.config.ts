@@ -10,19 +10,6 @@ export default defineConfig(({ mode }) => {
   return {
     build: {
       sourcemap: true,
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/functions'],
-            'vendor-query': ['@tanstack/react-query'],
-            'vendor-motion': ['framer-motion'],
-            'vendor-charts': ['recharts'],
-            'vendor-ui': ['sonner', 'lucide-react', 'class-variance-authority', 'tailwind-merge'],
-            'vendor-markdown': ['react-markdown', 'react-syntax-highlighter'],
-          },
-        },
-      },
     },
     server: {
       host: "0.0.0.0",
@@ -71,7 +58,7 @@ export default defineConfig(({ mode }) => {
       react(),
 
       VitePWA({
-        registerType: "autoUpdate",
+        registerType: "prompt",
         includeAssets: [
           "favicon.ico",
           "favicon-16x16.png",
@@ -86,8 +73,8 @@ export default defineConfig(({ mode }) => {
         ],
         manifest: false, // use existing site.webmanifest
         workbox: {
-          skipWaiting: true,
-          clientsClaim: true,
+          skipWaiting: false,
+          clientsClaim: false,
           navigateFallbackDenylist: [/^\/__\/auth/],
           runtimeCaching: [
             {

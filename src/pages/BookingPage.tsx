@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2 } from "lucide-react";
+import { Phone } from "lucide-react";
 import { enGB, sk } from "date-fns/locale";
 import { addDays, format, startOfDay } from "date-fns";
 
@@ -12,6 +12,7 @@ import { DateTimeSelection } from "@/components/booking/DateTimeSelection";
 import { ContactConfirmation } from "@/components/booking/ContactConfirmation";
 import { BookingSuccess } from "@/components/booking/BookingSuccess";
 import { PublicAtmosphereBackground } from "@/components/public/PublicAtmosphereBackground";
+import { PremiumLoadingState } from "@/components/ui/premium-loading-state";
 import { getEffectiveIntervals, type BusinessHours } from "@/lib/availability";
 import { APP_LOGO_SRC } from "@/lib/branding";
 
@@ -102,6 +103,17 @@ export default function BookingPage() {
   const employeeSectionRef = useRef<HTMLDivElement | null>(null);
   const dateTimeSectionRef = useRef<HTMLDivElement | null>(null);
   const contactSectionRef = useRef<HTMLDivElement | null>(null);
+  const serviceSectionRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToSection = (target: HTMLElement | null, offset = 112) => {
+    if (!target || typeof window === "undefined") return;
+
+    const top = target.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({
+      top: Math.max(top, 0),
+      behavior: "smooth",
+    });
+  };
 
   useEffect(() => {
     if (!selectedServiceId || selectedDate !== null) return;
@@ -121,11 +133,20 @@ export default function BookingPage() {
   }, [selectedServiceId, selectedDate, today, maxDays, isBusinessOpenOnDay, setCalendarMonth, setSelectedDate]);
 
   useEffect(() => {
+    if (!subcategory || selectedServiceId) return;
+    if (typeof window !== "undefined" && window.innerWidth >= 768) return;
+
+    requestAnimationFrame(() => {
+      scrollToSection(serviceSectionRef.current);
+    });
+  }, [subcategory, selectedServiceId]);
+
+  useEffect(() => {
     if (!selectedServiceId) return;
     if (typeof window !== "undefined" && window.innerWidth >= 768) return;
 
     requestAnimationFrame(() => {
-      employeeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToSection(employeeSectionRef.current);
     });
   }, [selectedServiceId]);
 
@@ -134,7 +155,7 @@ export default function BookingPage() {
     if (typeof window !== "undefined" && window.innerWidth >= 768) return;
 
     requestAnimationFrame(() => {
-      dateTimeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToSection(dateTimeSectionRef.current);
     });
   }, [selectedEmployeeId]);
 
@@ -148,7 +169,7 @@ export default function BookingPage() {
     if (typeof window !== "undefined" && window.innerWidth >= 768) return;
 
     requestAnimationFrame(() => {
-      contactSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToSection(contactSectionRef.current);
     });
   }, [selectedTime]);
 
@@ -179,9 +200,24 @@ export default function BookingPage() {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <main className="relative min-h-[100svh] overflow-hidden bg-black text-foreground safe-x">
+        <PublicAtmosphereBackground />
+        <div className="relative z-10 flex min-h-[100svh] items-center px-4 py-8 sm:px-6">
+          <div className="mx-auto w-full max-w-[780px]">
+            <PremiumLoadingState
+              variant="public"
+              eyebrow={currentLang === "en" ? "Booking" : "Rezervácia"}
+              title={currentLang === "en" ? "Preparing the booking calendar" : "Pripravujeme rezervačný kalendár"}
+              description={
+                currentLang === "en"
+                  ? "We are loading services, stylists and available times so your reservation can stay smooth from the first tap."
+                  : "Načítavame služby, kaderníkov a dostupné termíny, aby vaša rezervácia pokračovala plynulo od prvého kroku."
+              }
+              testId="booking-loading-state"
+            />
+          </div>
+        </div>
+      </main>
     );
   }
 
@@ -217,14 +253,10 @@ export default function BookingPage() {
         <div className="flex flex-1 px-4 pb-8 pt-6 sm:px-6 sm:pt-8 md:pb-10">
           <div className="mx-auto flex w-full max-w-[780px] flex-col">
             <section
-              className="relative mt-10 w-full overflow-visible rounded-3xl border border-border-subtle bg-gradient-to-b from-bg-base/90 to-bg-deep/95 pb-6 pt-16 backdrop-blur-2xl backdrop-saturate-[120%] sm:mt-12 md:pb-8 md:pt-20"
-              style={{ boxShadow: "var(--shadow-card)" }}
+              className="public-premium-shell relative mt-10 w-full pb-6 pt-16 backdrop-blur-2xl backdrop-saturate-[120%] sm:mt-12 md:pb-8 md:pt-20"
               data-testid="booking-hero-shell"
             >
-              <div
-                className="pointer-events-none absolute left-0 right-0 top-0 h-40 rounded-t-3xl bg-gradient-to-b from-gold/10 to-transparent"
-                aria-hidden="true"
-              />
+              <div className="public-premium-topglow" aria-hidden="true" />
               <div className="pointer-events-none absolute left-5 top-5 h-8 w-8 rounded-tl-lg border-l border-t border-gold/30" aria-hidden="true" />
               <div className="pointer-events-none absolute right-5 top-5 h-8 w-8 rounded-tr-lg border-r border-t border-gold/30" aria-hidden="true" />
               <div className="pointer-events-none absolute bottom-5 left-5 h-8 w-8 rounded-bl-lg border-b border-l border-gold/30" aria-hidden="true" />
@@ -248,12 +280,37 @@ export default function BookingPage() {
                 >
                   {currentLang === "en" ? "Book your appointment" : "Rezervujte si termín"}
                 </h1>
-                <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-text-caption md:text-base">
-                  {currentLang === "en"
-                    ? "Choose women’s, men’s or additional services and continue directly to stylist and time selection in one premium booking flow."
-                    : "Vyberte si dámske, pánske alebo doplnkové služby a pokračujte priamo na výber kaderníka a termínu v jednom plynulom booking flowe."}
-                </p>
-                <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+                <div className="public-premium-panel mx-auto mt-5 max-w-2xl px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] md:px-5">
+                  <div className="grid grid-cols-[auto,1fr] items-start gap-x-3 gap-y-3">
+                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/[0.08] text-gold">
+                      <Phone className="h-4 w-4" strokeWidth={1.8} />
+                    </div>
+                    <p
+                      data-testid="booking-papi-consultation-text"
+                      className="min-w-0 text-sm leading-7 text-white/84 md:text-[15px]"
+                    >
+                        {currentLang === "en"
+                          ? 'Appointments with Róbert Papcun "PAPI" require a consultation, which you can arrange by phone.'
+                          : 'Rezervácie k Róbertovi Papcunovi "PAPI" si vyžadujú konzultáciu, ktorú si viete dohodnúť telefonicky.'}
+                    </p>
+                    <div className="col-start-2 flex flex-wrap items-center gap-3">
+                        <a
+                          href="tel:+421949459624"
+                          className="inline-flex min-h-[44px] items-center gap-2 rounded-[7px] border border-gold/35 bg-gold/[0.08] px-4 py-2 text-sm font-semibold text-gold transition-colors hover:border-gold/60 hover:bg-gold/[0.14]"
+                        >
+                          <Phone className="h-4 w-4" strokeWidth={1.9} />
+                          <span>+421 949 459 624</span>
+                        </a>
+                        <a
+                          href="tel:+421949459624"
+                          className="inline-flex min-h-[44px] items-center rounded-[7px] border border-gold/45 bg-gradient-to-b from-ink-700 to-ink-600 px-4 py-2 text-sm font-bold uppercase tracking-[0.16em] text-text-primary transition-colors hover:border-gold/70 hover:from-ink-800 hover:to-ink-700"
+                        >
+                          {currentLang === "en" ? "Call" : "Volať"}
+                        </a>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-5 hidden flex-wrap justify-center gap-2.5 sm:flex">
                   {[
                     currentLang === "en" ? "Men's services" : "Pánske služby",
                     currentLang === "en" ? "Women's services" : "Dámske služby",
@@ -286,14 +343,14 @@ export default function BookingPage() {
 
               {selectedService && (
                 <div className="px-6 pt-5 md:px-10">
-                  <div className="grid gap-3 rounded-2xl border border-primary/15 bg-[linear-gradient(180deg,rgba(218,165,32,0.09),rgba(218,165,32,0.03))] p-4 lg:grid-cols-3">
-                    <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
+                  <div className="public-premium-panel grid gap-3 border-primary/15 bg-[linear-gradient(180deg,rgba(218,165,32,0.09),rgba(218,165,32,0.03))] p-4 lg:grid-cols-3">
+                    <div className="min-w-0 rounded-[16px] border border-white/6 bg-black/20 px-3 py-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
                         {i18n.language === "en" ? "Service" : "Služba"}
                       </p>
                       <p className="mt-1 truncate text-sm font-semibold text-white">{selectedService.name_sk}</p>
                     </div>
-                    <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
+                    <div className="min-w-0 rounded-[16px] border border-white/6 bg-black/20 px-3 py-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
                         {i18n.language === "en" ? "Stylist" : "Kaderník"}
                       </p>
@@ -301,7 +358,7 @@ export default function BookingPage() {
                         {selectedEmployee?.display_name ?? (i18n.language === "en" ? "Choose stylist" : "Vyber kaderníka")}
                       </p>
                     </div>
-                    <div className="min-w-0 rounded-xl border border-white/6 bg-black/20 px-3 py-3">
+                    <div className="min-w-0 rounded-[16px] border border-white/6 bg-black/20 px-3 py-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
                         {i18n.language === "en" ? "Appointment" : "Termín"}
                       </p>
@@ -333,6 +390,7 @@ export default function BookingPage() {
                     setSelectedDate(null);
                     setSelectedTime(null);
                   }}
+                  servicesSectionRef={serviceSectionRef}
                 />
 
                 {selectedServiceId && (

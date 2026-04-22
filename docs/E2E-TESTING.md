@@ -2,6 +2,11 @@
 
 Jedna pravda pre testovanie a CI gate v tomto repozitári.
 
+Poznamka:
+- tento dokument je tactical E2E doplnok
+- canonical quality obraz je v [Testing & Quality](TESTING-QUALITY.md)
+- release a deploy kontext je v [Operations](OPERATIONS.md)
+
 ## Release Gate Poradie
 
 1. `npm run lint`
@@ -11,7 +16,7 @@ Jedna pravda pre testovanie a CI gate v tomto repozitári.
 5. `npm run lockin:check`
 6. `npm run build`
 7. `npm run budget`
-8. `npm run test:responsive`
+8. `npm run test:e2e:preview`
 
 ## Backend Realita
 
@@ -34,9 +39,9 @@ Billing flow používa Firebase Functions endpointy.
 ## Kľúčové Príkazy
 
 ```bash
-npm run test:responsive
+npm run test:e2e:preview
 npm run test:responsive:preview
-npm run test:admin
+npm run test:e2e:authenticated
 ```
 
 ## Súvisiace súbory

@@ -13,11 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { AvatarCropper } from "@/components/admin/AvatarCropper";
+import { PremiumLoadingState } from "@/components/ui/premium-loading-state";
 import { toast } from "sonner";
 import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound, Camera, Trash2 } from "lucide-react";
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
 import type { FirebaseError } from "firebase/app";
 import { compressProfileImage, readFileAsDataUrl, validateProfileImageBlob, validateProfileImageFile } from "@/lib/profileImage";
+import { createRuntimeId } from "@/lib/runtimeId";
+import { cn } from "@/lib/utils";
 import {
   getFirebaseErrorCode,
   getFirebaseErrorMessage,
@@ -74,11 +77,174 @@ function maybeWarnBlockedRequest(err: unknown) {
   }
 }
 
+const settingsCardClassName = "admin-premium-card overflow-hidden";
+type SettingsSaveTarget = "profile" | "business" | "smtp" | "booking" | null;
+type SmtpFormState = {
+  host: string;
+  port: string;
+  user: string;
+  from: string;
+  pass: string;
+};
+
+// Predvolená SMTP pre Papi Hair Design (Websupport) – odosielateľ aj prijemca: booking@papihairdesign.sk
+const DEFAULT_SMTP = {
+  host: "smtp.m1.websupport.sk",
+  port: "465",
+  user: "booking@papihairdesign.sk",
+  from: "booking@papihairdesign.sk",
+};
+
+function buildSmtpForm(rawSmtp: Record<string, unknown> = {}): SmtpFormState {
+  return {
+    host: (rawSmtp.host ?? "").toString().trim() || DEFAULT_SMTP.host,
+    port: (rawSmtp.port ?? "").toString().trim() || DEFAULT_SMTP.port,
+    user: (rawSmtp.user ?? "").toString().trim() || DEFAULT_SMTP.user,
+    from: (rawSmtp.from ?? "").toString().trim() || DEFAULT_SMTP.from,
+    pass: "",
+  };
+}
+
+async function loadBusinessState(businessId: string) {
+  const snap = await getDoc(doc(db, "businesses", businessId));
+  if (!snap.exists()) {
+    return null;
+  }
+
+  const data = snap.data();
+  const smtp = (data.smtp_config as Record<string, unknown> | undefined) ?? {};
+  return {
+    business: { id: snap.id, ...data },
+    licenseKey: typeof data.license_key === "string" ? data.license_key : "",
+    smtpForm: buildSmtpForm(smtp),
+    smtpHasPassword: Boolean(smtp.has_password || smtp.password_secret),
+  };
+}
+
+async function loadSnapshotState(businessId: string) {
+  const [snapshotDoc, healthDoc] = await Promise.all([
+    getDoc(doc(db, "public_snapshots", businessId)),
+    getDoc(doc(db, "ops_health", `snapshot_${businessId}`)),
+  ]);
+
+  return {
+    snapshotInfo: snapshotDoc.exists() ? { id: snapshotDoc.id, ...snapshotDoc.data() } : null,
+    snapshotHealth: healthDoc.exists() ? { id: healthDoc.id, ...healthDoc.data() } : null,
+  };
+}
+
+async function saveProfileDocument(profileId: string, profileForm: { full_name: string; phone: string; avatar_url: string | null }) {
+  await updateDoc(doc(db, "profiles", profileId), {
+    full_name: profileForm.full_name,
+    phone: profileForm.phone || null,
+    avatar_url: profileForm.avatar_url || null,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+async function deletePreviousAvatar(previousAvatarUrl: string | null, nextAvatarUrl: string | null) {
+  if (!previousAvatarUrl || previousAvatarUrl === nextAvatarUrl) {
+    return;
+  }
+
+  try {
+    await deleteObject(ref(storage, previousAvatarUrl));
+  } catch (error) {
+    console.warn("SettingsPage: failed to delete previous avatar", error);
+  }
+}
+
+async function saveBusinessDocument(businessId: string, business: Record<string, any>) {
+  await updateDoc(doc(db, "businesses", businessId), {
+    name: business.name,
+    address: business.address,
+    phone: business.phone,
+    email: business.email,
+    timezone: business.timezone,
+    lead_time_minutes: business.lead_time_minutes,
+    max_days_ahead: business.max_days_ahead,
+    cancellation_hours: business.cancellation_hours,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+async function saveSmtpDocument(businessId: string, smtpForm: SmtpFormState) {
+  const saveSmtpConfigFn = httpsCallable<any, any>(functions, "saveSmtpConfig");
+  return saveSmtpConfigFn({
+    business_id: businessId,
+    host: smtpForm.host,
+    port: Number(smtpForm.port) || 465,
+    user: smtpForm.user,
+    from: smtpForm.from,
+    pass: smtpForm.pass || undefined,
+  });
+}
+
+async function saveBookingDocument(businessId: string, business: Record<string, any>) {
+  await updateDoc(doc(db, "businesses", businessId), {
+    allow_admin_as_provider: business.allow_admin_as_provider,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+async function requestSnapshotRebuild(businessId: string) {
+  const fn = httpsCallable<any, any>(functions, "rebuildPublicSnapshot");
+  return fn({ business_id: businessId });
+}
+
+async function assignLicenseToBusiness(businessId: string, licenseKey: string) {
+  const normalizedKey = licenseKey.trim();
+  const licSnap = await getDoc(doc(db, "licenses", normalizedKey));
+  if (!licSnap.exists()) {
+    return { status: "missing" as const };
+  }
+
+  const lic = licSnap.data() as any;
+  const expires = lic.expires_at instanceof Timestamp ? lic.expires_at.toDate() : null;
+  if (expires && expires.getTime() < Date.now()) {
+    return { status: "expired" as const };
+  }
+
+  await updateDoc(doc(db, "businesses", businessId), {
+    license_key: normalizedKey,
+    license_unlimited: !!lic.unlimited,
+    license_max_seats: lic.max_seats ?? 5,
+    license_assigned_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  return {
+    status: "ok" as const,
+    unlimited: !!lic.unlimited,
+    maxSeats: lic.max_seats ?? 5,
+  };
+}
+
+function createBusinessFieldSetter(setBusiness: React.Dispatch<React.SetStateAction<any>>) {
+  return (key: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue =
+      key.includes("minutes") || key.includes("hours") || key.includes("ahead")
+        ? Number(event.target.value)
+        : event.target.value;
+
+    setBusiness((current: any) => ({ ...current, [key]: nextValue }));
+  };
+}
+
+function getProfileInitials(fullName: string) {
+  return fullName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 export default function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
   const { businessId, isOwner, isOwnerOrAdmin } = useBusiness();
   const [business, setBusiness] = useState<any>(null);
-  const [saving, setSaving] = useState(false);
+  const [savingTarget, setSavingTarget] = useState<SettingsSaveTarget>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
@@ -88,14 +254,7 @@ export default function SettingsPage() {
   const [licenseState, setLicenseState] = useState<"idle" | "checking" | "ok" | "error">("idle");
   const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
   const [profileForm, setProfileForm] = useState({ full_name: "", phone: "", avatar_url: null as string | null });
-  // Predvolená SMTP pre Papi Hair Design (Websupport) – odosielateľ aj prijemca: booking@papihairdesign.sk
-  const DEFAULT_SMTP = {
-    host: "smtp.m1.websupport.sk",
-    port: "465",
-    user: "booking@papihairdesign.sk",
-    from: "booking@papihairdesign.sk",
-  };
-  const [smtpForm, setSmtpForm] = useState({
+  const [smtpForm, setSmtpForm] = useState<SmtpFormState>({
     host: DEFAULT_SMTP.host,
     port: DEFAULT_SMTP.port,
     user: DEFAULT_SMTP.user,
@@ -103,6 +262,7 @@ export default function SettingsPage() {
     pass: "",
   });
   const [smtpHasPassword, setSmtpHasPassword] = useState(false);
+  const saving = savingTarget !== null;
 
   useEffect(() => {
     if (profile) {
@@ -115,67 +275,59 @@ export default function SettingsPage() {
   }, [profile]);
 
   useEffect(() => {
-    // Load business WITHOUT smtp_config – passwords should never reach the client
-    const loadBusiness = async () => {
+    let cancelled = false;
+
+    void (async () => {
       try {
-        const docRef = doc(db, "businesses", businessId);
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          setBusiness({ id: snap.id, ...data });
-          if (data.license_key) {
-            setLicenseKey(data.license_key);
-          }
-          const smtp = data.smtp_config as any ?? {};
-          setSmtpForm({
-            host: (smtp.host ?? "").trim() || DEFAULT_SMTP.host,
-            port: String(smtp.port ?? "").trim() || DEFAULT_SMTP.port,
-            user: (smtp.user ?? "").trim() || DEFAULT_SMTP.user,
-            from: (smtp.from ?? "").trim() || DEFAULT_SMTP.from,
-            pass: "", // Never load actual password to client
-          });
-          setSmtpHasPassword(!!(smtp.has_password || smtp.password_secret));
+        const loadedState = await loadBusinessState(businessId);
+        if (!loadedState || cancelled) {
+          return;
         }
+
+        setBusiness(loadedState.business);
+        setLicenseKey(loadedState.licenseKey);
+        setSmtpForm(loadedState.smtpForm);
+        setSmtpHasPassword(loadedState.smtpHasPassword);
       } catch (err) {
         console.error("Error loading business info:", err);
       }
+    })();
+
+    return () => {
+      cancelled = true;
     };
-    loadBusiness();
   }, [businessId]);
 
   useEffect(() => {
-    const loadSnapshot = async () => {
+    let cancelled = false;
+
+    void (async () => {
       try {
-        const snap = await getDoc(doc(db, "public_snapshots", businessId));
-        if (snap.exists()) setSnapshotInfo({ id: snap.id, ...snap.data() });
-        const health = await getDoc(doc(db, "ops_health", `snapshot_${businessId}`));
-        if (health.exists()) setSnapshotHealth({ id: health.id, ...health.data() });
+        const snapshotState = await loadSnapshotState(businessId);
+        if (cancelled) {
+          return;
+        }
+
+        setSnapshotInfo(snapshotState.snapshotInfo);
+        setSnapshotHealth(snapshotState.snapshotHealth);
       } catch (err) {
         console.error("Error loading snapshot:", err);
       }
+    })();
+
+    return () => {
+      cancelled = true;
     };
-    loadSnapshot();
   }, [businessId]);
 
   const saveProfile = async () => {
     if (!profile) return;
-    setSaving(true);
+    setSavingTarget("profile");
     const previousAvatarUrl = profile.avatar_url ?? null;
     const nextAvatarUrl = profileForm.avatar_url || null;
     try {
-      await updateDoc(doc(db, "profiles", profile.id), {
-        full_name: profileForm.full_name,
-        phone: profileForm.phone || null,
-        avatar_url: nextAvatarUrl,
-        updated_at: new Date().toISOString()
-      });
-      if (previousAvatarUrl && previousAvatarUrl !== nextAvatarUrl) {
-        try {
-          await deleteObject(ref(storage, previousAvatarUrl));
-        } catch (error) {
-          console.warn("SettingsPage: failed to delete previous avatar", error);
-        }
-      }
+      await saveProfileDocument(profile.id, profileForm);
+      await deletePreviousAvatar(previousAvatarUrl, nextAvatarUrl);
       await refreshProfile();
       toast.success("Profil aktualizovaný");
     } catch (err) {
@@ -183,7 +335,7 @@ export default function SettingsPage() {
       console.error("SettingsPage: profile save error", err);
       toast.error(friendlyError(err, "Chyba pri ukladaní profilu"));
     } finally {
-      setSaving(false);
+      setSavingTarget(null);
     }
   };
 
@@ -226,7 +378,7 @@ export default function SettingsPage() {
         toast.error(compressedValidationError);
         return;
       }
-      const fileName = `profiles/${profile.id}/${crypto.randomUUID ? crypto.randomUUID() : Date.now()}.jpg`;
+      const fileName = `profiles/${profile.id}/${createRuntimeId("profile-photo")}.jpg`;
       const storageRef = ref(storage, fileName);
       await uploadBytes(storageRef, compressedBlob, {
         contentType: compressedBlob.type || "image/jpeg",
@@ -255,44 +407,25 @@ export default function SettingsPage() {
 
   const saveBusiness = async () => {
     if (!business) return;
-    setSaving(true);
+    setSavingTarget("business");
     try {
-      await updateDoc(doc(db, "businesses", businessId), {
-        name: business.name,
-        address: business.address,
-        phone: business.phone,
-        email: business.email,
-        timezone: business.timezone,
-        lead_time_minutes: business.lead_time_minutes,
-        max_days_ahead: business.max_days_ahead,
-        cancellation_hours: business.cancellation_hours,
-        updated_at: new Date().toISOString()
-      });
+      await saveBusinessDocument(businessId, business);
       toast.success("Nastavenia firmy aktualizované");
     } catch (err) {
       maybeWarnBlockedRequest(err);
       console.error("Business save error:", err);
       toast.error(friendlyError(err, "Chyba pri ukladaní"));
     } finally {
-      setSaving(false);
+      setSavingTarget(null);
     }
   };
 
-  const setB = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setBusiness((b: any) => ({ ...b, [k]: k.includes("minutes") || k.includes("hours") || k.includes("ahead") ? +e.target.value : e.target.value }));
+  const setB = createBusinessFieldSetter(setBusiness);
 
   const saveSmtp = async () => {
-    setSaving(true);
+    setSavingTarget("smtp");
     try {
-      const saveSmtpConfigFn = httpsCallable<any, any>(functions, "saveSmtpConfig");
-      const { data } = await saveSmtpConfigFn({
-        business_id: businessId,
-        host: smtpForm.host,
-        port: Number(smtpForm.port) || 465,
-        user: smtpForm.user,
-        from: smtpForm.from,
-        pass: smtpForm.pass || undefined, // Only send if user typed a new password
-      });
+      const { data } = await saveSmtpDocument(businessId, smtpForm);
 
       if (!data.success) {
         toast.error("Chyba pri ukladaní SMTP");
@@ -307,33 +440,29 @@ export default function SettingsPage() {
       console.error("SMTP save error:", err);
       toast.error(friendlyError(err, "Chyba pri ukladaní SMTP"));
     } finally {
-      setSaving(false);
+      setSavingTarget(null);
     }
   };
 
   const saveBookingSettings = async () => {
     if (!business) return;
-    setSaving(true);
+    setSavingTarget("booking");
     try {
-      await updateDoc(doc(db, "businesses", businessId), {
-        allow_admin_as_provider: business.allow_admin_as_provider,
-        updated_at: new Date().toISOString()
-      });
+      await saveBookingDocument(businessId, business);
       toast.success("Nastavenia booking uložené");
     } catch (err) {
       maybeWarnBlockedRequest(err);
       console.error("Booking settings save error:", err);
       toast.error(friendlyError(err, "Chyba pri ukladaní nastavení booking"));
     } finally {
-      setSaving(false);
+      setSavingTarget(null);
     }
   };
 
   const rebuildSnapshot = async () => {
     setSnapshotLoading(true);
     try {
-      const fn = httpsCallable<any, any>(functions, "rebuildPublicSnapshot");
-      const { data } = await fn({ business_id: businessId });
+      const { data } = await requestSnapshotRebuild(businessId);
       if (data?.success) {
         toast.success("Snapshot rebuild spustený");
         const snap = await getDoc(doc(db, "public_snapshots", businessId));
@@ -359,33 +488,24 @@ export default function SettingsPage() {
     setLicenseState("checking");
     setLicenseMessage(null);
     try {
-      const licSnap = await getDoc(doc(db, "licenses", licenseKey.trim()));
-      if (!licSnap.exists()) {
+      const licenseResult = await assignLicenseToBusiness(businessId, licenseKey);
+      if (licenseResult.status === "missing") {
         setLicenseState("error");
         setLicenseMessage("Neplatný licenčný kľúč");
         return;
       }
-      const lic = licSnap.data() as any;
-      const expires = lic.expires_at instanceof Timestamp ? lic.expires_at.toDate() : null;
-      if (expires && expires.getTime() < Date.now()) {
+
+      if (licenseResult.status === "expired") {
         setLicenseState("error");
         setLicenseMessage("Licencia expirovala");
         return;
       }
 
-      await updateDoc(doc(db, "businesses", businessId), {
-        license_key: licenseKey.trim(),
-        license_unlimited: !!lic.unlimited,
-        license_max_seats: lic.max_seats ?? 5,
-        license_assigned_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-
       setLicenseState("ok");
       setLicenseMessage(
-        lic.unlimited
+        licenseResult.unlimited
           ? "Licencia aktivovaná: neobmedzené"
-          : `Licencia aktivovaná: limit ${lic.max_seats ?? 5}`
+          : `Licencia aktivovaná: limit ${licenseResult.maxSeats}`
       );
       toast.success("Licencia aktivovaná");
     } catch (err) {
@@ -396,15 +516,21 @@ export default function SettingsPage() {
     }
   };
 
-  const initials = (profileForm.full_name || profile?.full_name || "?")
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const initials = getProfileInitials(profileForm.full_name || profile?.full_name || "?");
+  const businessSettingsLoadingState = (
+    <PremiumLoadingState
+      variant="admin"
+      compact
+      eyebrow="Settings"
+      title="Načítavame nastavenia salónu"
+      description="Pripravujeme firemné údaje, booking voľby a infra nastavenia, aby ste mohli pokračovať bez zbytočného čakania."
+      testId="settings-loading-state"
+      className="min-h-[240px]"
+    />
+  );
 
   return (
-    <div className="space-y-6 max-w-4xl animate-in fade-in duration-500">
+    <div className="admin-premium-page max-w-4xl space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
           Nastavenia
@@ -413,7 +539,12 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue={isOwnerOrAdmin ? "general" : "profile"} className="w-full">
-        <TabsList className={`grid w-full h-auto p-1 bg-muted/30 backdrop-blur-md border border-primary/10 rounded-xl mb-6 ${isOwnerOrAdmin ? "grid-cols-2 md:grid-cols-7" : "grid-cols-1"}`}>
+        <TabsList
+          className={cn(
+            "admin-premium-toolbar mb-6 grid h-auto w-full p-1",
+            isOwnerOrAdmin ? "grid-cols-2 md:grid-cols-7" : "grid-cols-1",
+          )}
+        >
           {isOwnerOrAdmin && (
             <>
               <TabsTrigger value="general" className="rounded-lg py-2.5 data-[state=active]:bg-gold data-[state=active]:text-gold-foreground transition-all">Všeobecné</TabsTrigger>
@@ -428,8 +559,8 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="general" className="space-y-6 mt-0">
-          {business && (
-            <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+          {business ? (
+            <Card className={settingsCardClassName}>
               <CardHeader className="border-b border-primary/5 bg-muted/20">
                 <CardTitle className="text-lg font-bold">Nastavenia firmy</CardTitle>
                 <CardDescription>Základné informácie o vašom podniku</CardDescription>
@@ -468,17 +599,17 @@ export default function SettingsPage() {
                 <div className="pt-4 border-t border-primary/5 flex justify-end">
                   <Button onClick={saveBusiness} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
                     {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Uložiť nastavenia
+                    {savingTarget === "business" ? "Ukladám nastavenia..." : "Uložiť nastavenia"}
                   </Button>
                 </div>
               </CardContent>
             </Card>
-          )}
+          ) : businessSettingsLoadingState}
         </TabsContent>
 
         <TabsContent value="booking" className="space-y-6 mt-0">
-          {business && (
-            <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+          {business ? (
+            <Card className={settingsCardClassName}>
               <CardHeader className="border-b border-primary/5 bg-muted/20">
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
                   <Users className="w-5 h-5 text-primary" />
@@ -489,7 +620,7 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6 pt-6">
-                <div className="flex items-center justify-between p-6 rounded-2xl border border-primary/10 bg-primary/5 group hover:bg-primary/10 transition-colors">
+                <div className="admin-premium-subtle flex items-center justify-between p-6 transition-colors group hover:bg-primary/10">
                   <div className="space-y-1 flex-1">
                     <div className="flex items-center gap-2">
                       <Shield className="w-5 h-5 text-primary" />
@@ -512,7 +643,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 {!isOwner && (
-                  <div className="p-4 rounded-xl bg-muted/50 border border-border text-center">
+                  <div className="admin-premium-subtle p-4 text-center">
                     <p className="text-sm text-muted-foreground italic flex items-center justify-center gap-2">
                       <Shield className="w-4 h-4 opacity-50" />
                       Toto nastavenie môže meniť iba majiteľ salónu.
@@ -523,13 +654,13 @@ export default function SettingsPage() {
                   <div className="pt-4 border-t border-primary/5 flex justify-end">
                     <Button onClick={saveBookingSettings} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
                       {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                      Uložiť nastavenia
+                      {savingTarget === "booking" ? "Ukladám booking..." : "Uložiť nastavenia"}
                     </Button>
                   </div>
                 )}
               </CardContent>
             </Card>
-          )}
+          ) : businessSettingsLoadingState}
         </TabsContent>
 
         <TabsContent value="hours" className="mt-0">
@@ -537,7 +668,8 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="smtp" className="space-y-6 mt-0">
-          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+          {business ? (
+          <Card className={settingsCardClassName}>
             <CardHeader className="border-b border-primary/5 bg-muted/20">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <Mail className="w-5 h-5 text-primary" />
@@ -599,15 +731,16 @@ export default function SettingsPage() {
               <div className="pt-4 border-t border-primary/5 flex justify-end">
                 <Button onClick={saveSmtp} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                  Uložiť SMTP
+                  {savingTarget === "smtp" ? "Ukladám SMTP..." : "Uložiť SMTP"}
                 </Button>
               </div>
             </CardContent>
           </Card>
+          ) : businessSettingsLoadingState}
         </TabsContent>
 
         <TabsContent value="snapshot" className="space-y-6 mt-0">
-          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+          <Card className={settingsCardClassName}>
             <CardHeader className="border-b border-primary/5 bg-muted/20 flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -659,7 +792,7 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="license" className="space-y-6 mt-0">
-          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+          <Card className={settingsCardClassName}>
             <CardHeader className="border-b border-primary/5 bg-muted/20">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <KeyRound className="w-5 h-5 text-primary" />
@@ -697,13 +830,13 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="profile" className="space-y-6 mt-0">
-          <Card className="border-primary/10 bg-card/30 backdrop-blur-xl shadow-2xl shadow-primary/5 rounded-2xl overflow-hidden">
+          <Card className={settingsCardClassName}>
             <CardHeader className="border-b border-primary/5 bg-muted/20">
               <CardTitle className="text-lg font-bold">Môj profil</CardTitle>
               <CardDescription>Osobné informácie správcu</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
-              <div className="flex items-center gap-5 rounded-2xl border border-primary/10 bg-background/40 p-4">
+              <div className="admin-premium-subtle flex items-center gap-5 p-4">
                 <div className="relative group">
                   <Avatar className="w-20 h-20 border-2 border-primary/20 shadow-lg">
                     {profileForm.avatar_url && <AvatarImage src={profileForm.avatar_url} alt="Profilová fotka" />}
@@ -764,7 +897,7 @@ export default function SettingsPage() {
               <div className="pt-4 border-t border-primary/5 flex justify-end">
                 <Button onClick={saveProfile} disabled={saving} className="bg-gold hover:bg-gold/90 text-gold-foreground shadow-lg shadow-gold/20 px-8 transition-all hover:scale-105 active:scale-95">
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                  Uložiť profil
+                  {savingTarget === "profile" ? "Ukladám profil..." : "Uložiť profil"}
                 </Button>
               </div>
             </CardContent>

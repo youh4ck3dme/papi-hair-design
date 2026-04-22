@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { pickBestEmployee } from "../src/autoAssignEmployee";
-import { normalizeEmail, normalizePhone } from "../src/publicBookingAccess";
+import { createOpaqueToken, hashOpaqueToken, normalizeEmail, normalizePhone } from "../src/publicBookingAccess";
 
 describe("publicBookingAccess", () => {
   it("normalizes email aliases", () => {
@@ -11,6 +11,14 @@ describe("publicBookingAccess", () => {
     expect(normalizePhone("+421 905 123 456")).toBe("421905123456");
     expect(normalizePhone("0905 123 456")).toBe("421905123456");
     expect(normalizePhone("905123456")).toBe("421905123456");
+  });
+
+  it("creates opaque tokens with matching sha256 hash", () => {
+    const tokenPair = createOpaqueToken();
+
+    expect(tokenPair.token).toHaveLength(64);
+    expect(tokenPair.tokenHash).toBe(hashOpaqueToken(tokenPair.token));
+    expect(tokenPair.tokenHash).not.toBe(tokenPair.token);
   });
 });
 

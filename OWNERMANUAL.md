@@ -2,6 +2,15 @@
 
 Prakticky navod pre majitela salonu, adminov a zamestnancov po nasadeni systemu na novy pocitac.
 
+Poznamka:
+- tento dokument je prevadzkovy manual pre realne pouzivanie systemu
+- nie je to hlavny technicky source of truth pre architekturu, deploy ani testing
+- pre sirsi kontext pozri:
+  - [Documentation Hub](docs/README.md)
+  - [Architecture](docs/ARCHITECTURE.md)
+  - [Operations](docs/OPERATIONS.md)
+  - [Testing & Quality](docs/TESTING-QUALITY.md)
+
 ## Dolezite adresy
 
 - Verejna rezervacia: `https://booking.papihairdesign.sk/booking`

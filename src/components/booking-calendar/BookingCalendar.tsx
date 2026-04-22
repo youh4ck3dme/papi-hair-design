@@ -18,6 +18,8 @@ export interface BookingCalendarProps {
   setMode: (mode: BookingCalendarMode) => void;
   onSelectSlot?: (slot: SlotInfo) => void;
   onSelectEvent?: (event: BookingCalendarEvent) => void;
+  onLongPressSlot?: (slot: SlotInfo) => void;
+  onLongPressEvent?: (event: BookingCalendarEvent) => void;
   selectable?: boolean;
   businessHours?: any;
   resources?: any[];
@@ -34,6 +36,8 @@ export function BookingCalendar({
   setMode,
   onSelectSlot,
   onSelectEvent,
+  onLongPressSlot,
+  onLongPressEvent,
   selectable = false,
   businessHours,
   resources,
@@ -48,6 +52,8 @@ export function BookingCalendar({
       setMode={setMode}
       onSelectSlot={onSelectSlot}
       onSelectEvent={onSelectEvent}
+      onLongPressSlot={onLongPressSlot}
+      onLongPressEvent={onLongPressEvent}
       selectable={selectable}
       businessHours={businessHours}
       resources={resources}

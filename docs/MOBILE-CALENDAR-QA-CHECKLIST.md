@@ -9,7 +9,7 @@ Spusť v repozitári:
 
 ```powershell
 npm run typecheck
-npm run test:responsive
+npm run test:e2e:preview
 $env:PLAYWRIGHT_ENABLE_ADMIN_E2E='1'; $env:PLAYWRIGHT_ADMIN_EMAIL='papi@papihairdesign.sk'; $env:PLAYWRIGHT_ADMIN_PASSWORD='88888888'; npm run test:admin
 $env:PLAYWRIGHT_ADMIN_EMAIL='papi@papihairdesign.sk'; $env:PLAYWRIGHT_ADMIN_PASSWORD='88888888'; npm run test:calendar-mobile-live
 ```
@@ -66,3 +66,6 @@ Release je OK len ak platí:
 1. Urob screenshot + krátky popis zariadenia a kroku.
 2. Ulož artefakt do `e2e/e2e-results/calendar-mobile-audit-live/`.
 3. Nedeployovať, kým nie je fix + opakovaný zelený gate.
+Poznamka:
+- toto je tactical mobile QA checklist
+- sirsi quality kontext je v [Testing & Quality](TESTING-QUALITY.md)

@@ -12,11 +12,18 @@ import {
     type BookingMainCategory,
     type ServiceSubcategoryRow,
 } from "@/lib/serviceSubcategories";
+import { createRuntimeId } from "@/lib/runtimeId";
 
-const makeIdempotencyKey = () =>
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const makeIdempotencyKey = () => createRuntimeId("booking");
+
+const normalizeEmployeeName = (value: string | null | undefined) =>
+    (value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+
+const isPapiEmployee = (employee: EmployeeRow) => normalizeEmployeeName(employee.display_name).includes("papi");
 
 export function useBookingForm(
     services: ServiceRow[],
@@ -139,7 +146,15 @@ export function useBookingForm(
             });
         }
 
-        return result;
+        return result
+            .map((employee, index) => ({ employee, index }))
+            .sort((left, right) => {
+                const leftIsPapi = isPapiEmployee(left.employee);
+                const rightIsPapi = isPapiEmployee(right.employee);
+                if (leftIsPapi !== rightIsPapi) return leftIsPapi ? -1 : 1;
+                return left.index - right.index;
+            })
+            .map(({ employee }) => employee);
     }, [employees, selectedServiceId, employeeServiceMap, business, memberships]);
 
     useEffect(() => {
@@ -253,6 +268,7 @@ export function useBookingForm(
                 history_reference: confirm.history_reference ?? hold.appointment_id,
                 customer_email: confirm.customer_email ?? formData.email,
                 customer_name: confirm.customer_name ?? `${formData.meno} ${formData.priezvisko}`.trim(),
+                customer_record_status: confirm.customer_record_status ?? hold.customer_record_status ?? null,
             };
 
             setBookingResult(data);

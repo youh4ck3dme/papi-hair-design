@@ -1,5 +1,9 @@
 # reCAPTCHA (Google Cloud / Firebase Auth)
 
+Poznamka:
+- toto je tactical integration dokument pre bot protection
+- pre sirsi security a compliance kontext pozri [Security & Compliance Baseline](SECURITY-COMPLIANCE.md)
+
 Kľúče pre reCAPTCHA môžete získať v **Google Cloud Console** (napr. pri nastavení Firebase Auth / Identity Platform). Po vytvorení môže dokončenie nastavenia (advanced features ako MFA, Account Defender) trvať **cca 1 minútu**.
 
 V projekte sa používa **reCAPTCHA v3** – neviditeľné (žiadny checkbox), overenie prebehne na pozadí pri odoslaní verejnej rezervácie.

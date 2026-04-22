@@ -83,10 +83,6 @@ vi.mock("@/components/ui/checkbox", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/scroll-area", () => ({
-  ScrollArea: ({ children }: any) => <div>{children}</div>,
-}));
-
 vi.mock("firebase/storage", () => ({
   ref: (_storage: unknown, path: string) => ({ path }),
   uploadBytes: storageMocks.uploadBytes,
@@ -188,8 +184,6 @@ describe("EmployeesPage", () => {
     fixtures.appointmentsByEmployee = [];
 
     vi.stubGlobal("confirm", vi.fn(() => true));
-    vi.stubGlobal("crypto", { randomUUID: () => "uuid-1" } as any);
-
     firestoreMocks.writeBatch.mockReturnValue(batchMocks);
     batchMocks.commit.mockResolvedValue(undefined);
     firestoreMocks.addDoc.mockResolvedValue({ id: "emp-new" });
@@ -330,6 +324,34 @@ describe("EmployeesPage", () => {
     expect(toastMocks.error).toHaveBeenCalledWith("Majiteľ musí priradiť aspoň jednu službu.");
   });
 
+  it("uses native scroll containers for employee dialog and restricted services list", async () => {
+    render(<EmployeesPage />);
+    await screen.findByText("Tím");
+
+    fireEvent.click(screen.getByRole("button", { name: /Pridať člena tímu/i }));
+    expect(screen.getByTestId("employee-dialog-scroll-container")).toHaveClass("overflow-y-auto");
+
+    fireEvent.click(screen.getAllByLabelText("switch")[0]);
+    const servicesScroll = await screen.findByTestId("employee-services-scroll-container");
+    expect(servicesScroll).toHaveClass("overflow-y-auto");
+    expect(servicesScroll).toHaveClass("overscroll-contain");
+  });
+
+  it("re-opens restricted services without losing the scrollable service list", async () => {
+    render(<EmployeesPage />);
+    await screen.findByText("Tím");
+
+    const editButtons = screen.getAllByRole("button", { name: /Upraviť profil/i });
+    fireEvent.click(editButtons[0]);
+    await screen.findByTestId("employee-services-scroll-container");
+
+    fireEvent.click(screen.getByRole("button", { name: /Zrušiť/i }));
+    expect(screen.queryByTestId("employee-services-scroll-container")).not.toBeInTheDocument();
+
+    fireEvent.click(editButtons[0]);
+    expect(await screen.findByTestId("employee-services-scroll-container")).toHaveClass("overflow-y-auto");
+  });
+
   it("creates employee and persists schedule + selected services", async () => {
     render(<EmployeesPage />);
     await screen.findByText("Tím");
@@ -341,6 +363,11 @@ describe("EmployeesPage", () => {
 
     await waitFor(() => expect(firestoreMocks.addDoc).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(batchMocks.commit).toHaveBeenCalledTimes(1));
+    expect(batchMocks.set.mock.calls.some(([, payload]) =>
+      payload?.business_id === "biz-1" &&
+      payload?.employee_id === "emp-new" &&
+      payload?.service_id === "srv-1"
+    )).toBe(true);
     expect(toastMocks.success).toHaveBeenCalledWith("Zamestnanec pridaný");
   });
 
@@ -356,6 +383,25 @@ describe("EmployeesPage", () => {
 
     await waitFor(() => expect(firestoreMocks.updateDoc).toHaveBeenCalled());
     expect(toastMocks.success).toHaveBeenCalledWith("Zamestnanec aktualizovaný");
+  });
+
+  it("rewrites selected services for restricted employee edits", async () => {
+    render(<EmployeesPage />);
+    await screen.findByText("Tím");
+    fireEvent.click(screen.getAllByRole("button", { name: /Upraviť profil/i })[0]);
+
+    await waitFor(() => expect(screen.getByLabelText("srv-srv-1")).toBeChecked());
+    fireEvent.click(screen.getByLabelText("srv-srv-1"));
+    fireEvent.click(screen.getByLabelText("srv-srv-2"));
+    fireEvent.click(screen.getByRole("button", { name: /Uložiť zmeny/i }));
+
+    await waitFor(() => expect(batchMocks.commit).toHaveBeenCalled());
+    expect(batchMocks.delete).toHaveBeenCalledWith(expect.objectContaining({ __collection: "employee_services", id: "es-1" }));
+    expect(batchMocks.set.mock.calls.some(([, payload]) =>
+      payload?.business_id === "biz-1" &&
+      payload?.employee_id === "emp-1" &&
+      payload?.service_id === "srv-2"
+    )).toBe(true);
   });
 
   it("loads employee services while opening edit for owner", async () => {

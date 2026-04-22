@@ -13,6 +13,16 @@ import {
 } from "./availability";
 
 describe("getEffectiveIntervals", () => {
+  const weeklyEntries: BusinessHourEntry[] = [
+    { day_of_week: "monday", mode: "open", start_time: "08:00", end_time: "17:00" },
+    { day_of_week: "tuesday", mode: "open", start_time: "08:00", end_time: "17:00" },
+    { day_of_week: "wednesday", mode: "open", start_time: "08:00", end_time: "17:00" },
+    { day_of_week: "thursday", mode: "open", start_time: "08:00", end_time: "17:00" },
+    { day_of_week: "friday", mode: "open", start_time: "08:00", end_time: "17:00" },
+    { day_of_week: "saturday", mode: "closed", start_time: "00:00", end_time: "00:00" },
+    { day_of_week: "sunday", mode: "closed", start_time: "00:00", end_time: "00:00" },
+  ];
+
   it("returns default 08:00-18:00 when no hours configured", () => {
     const d = new Date("2026-02-26");
     expect(getEffectiveIntervals(d)).toEqual([{ start: "08:00", end: "18:00" }]);
@@ -48,6 +58,16 @@ describe("getEffectiveIntervals", () => {
       { day_of_week: "thursday", mode: "closed", start_time: "00:00", end_time: "00:00" },
     ];
     expect(getEffectiveIntervals(d, entries)).toBeNull();
+  });
+
+  it("treats sunday as closed when weekly business hour entries close the day", () => {
+    const sunday = new Date("2026-04-19T10:00:00.000Z");
+    expect(getEffectiveIntervals(sunday, weeklyEntries)).toBeNull();
+  });
+
+  it("returns monday interval when weekly business hour entries open the day", () => {
+    const monday = new Date("2026-04-20T10:00:00.000Z");
+    expect(getEffectiveIntervals(monday, weeklyEntries)).toEqual([{ start: "08:00", end: "17:00" }]);
   });
 
   it("date override closed wins", () => {

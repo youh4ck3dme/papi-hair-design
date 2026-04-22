@@ -4,6 +4,7 @@ import {
   type CallableRequest,
 } from "firebase-functions/v2/https";
 import { queueAdminBookingNotificationEmail, queueCustomerBookingEmail } from "./emailQueue";
+import { getClientIp } from "./clientIp";
 import {
   buildHistoryAccessUrl,
   createOpaqueToken,
@@ -20,16 +21,7 @@ interface ConfirmBookingInput {
   idempotency_key?: string;
 }
 
-function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): string | null {
-  const forwarded = rawRequest.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.trim().length > 0) {
-    return forwarded.split(",")[0].trim();
-  }
-  if (Array.isArray(forwarded) && forwarded.length > 0) {
-    return forwarded[0]?.trim() || null;
-  }
-  return rawRequest.socket.remoteAddress ?? null;
-}
+type CustomerRecordStatus = "existing" | "created" | null;
 
 export const confirmBooking = functions.https.onCall(
   { region: "europe-west1" },
@@ -38,7 +30,7 @@ export const confirmBooking = functions.https.onCall(
     const db = getFirestore();
 
     // Rate limit by IP
-    const ip = extractClientIp(request.rawRequest) || "unknown";
+    const ip = getClientIp(request.rawRequest) || "unknown";
     await checkRateLimit(ip);
 
     if (!appointment_id) {
@@ -76,6 +68,12 @@ export const confirmBooking = functions.https.onCall(
         status: appt.status,
         customer_email: appt.customer_email ?? null,
         customer_name: appt.customer_name ?? null,
+        customer_record_status:
+          appt.customer_record_status === "existing"
+            ? "existing"
+            : appt.customer_record_status === "created"
+              ? "created"
+              : null,
       };
     }
 
@@ -134,6 +132,12 @@ export const confirmBooking = functions.https.onCall(
     const customerEmailRaw = typeof appt.customer_email === "string" ? appt.customer_email : "";
     const customerPhoneRaw = typeof appt.customer_phone === "string" ? appt.customer_phone : null;
     const customerName = typeof appt.customer_name === "string" ? appt.customer_name : null;
+    const customerRecordStatus: CustomerRecordStatus =
+      appt.customer_record_status === "existing"
+        ? "existing"
+        : appt.customer_record_status === "created"
+          ? "created"
+          : null;
 
     if (businessId && customerEmailRaw) {
       const customerEmail = normalizeEmail(customerEmailRaw);
@@ -173,6 +177,7 @@ export const confirmBooking = functions.https.onCall(
           customerName,
           serviceName: typeof appt.service_name === "string" ? appt.service_name : null,
           startAtIso: typeof appt.start_at === "string" ? appt.start_at : new Date().toISOString(),
+          endAtIso: typeof appt.end_at === "string" ? appt.end_at : null,
           historyAccessUrl: buildHistoryAccessUrl(appointment_id, historyAccess.token),
         });
       } catch (err) {
@@ -211,6 +216,7 @@ export const confirmBooking = functions.https.onCall(
       history_reference: appointment_id,
       customer_email: customerEmailRaw || null,
       customer_name: customerName,
+      customer_record_status: customerRecordStatus,
     };
   }
 );

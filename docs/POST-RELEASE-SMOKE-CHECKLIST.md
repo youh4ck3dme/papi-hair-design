@@ -5,6 +5,10 @@ Projekt: `hairchainger-main-876665-176e8`
 
 Tento checklist spustite okamzite po deployi na produkciu.
 
+Poznamka:
+- toto je rychly tactical checklist
+- sirsi release model je v [Operations](OPERATIONS.md)
+
 ## 1. Public booking smoke
 
 1. Otvor `https://booking.papihairdesign.sk/booking`.
@@ -51,5 +55,4 @@ Release sa povazuje za uspesny iba ak:
 2. neobjavi sa nova kriticka 5xx chyba v cloud functions,
 3. Firestore query nehlasi missing index pre produkcne use-case.
 
-Ak niektory bod zlyha, postupuj podla [ROLLBACK-RUNBOOK.md](/C:/Users/42195/Downloads/loveable-PHDbooking-finale-3-3-26/docs/ROLLBACK-RUNBOOK.md).
-
+Ak niektory bod zlyha, postupuj podla [Rollback Runbook](ROLLBACK-RUNBOOK.md).

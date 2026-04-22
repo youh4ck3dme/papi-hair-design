@@ -7,13 +7,17 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  linkWithCredential,
+  linkWithPopup,
+  EmailAuthProvider,
   sendPasswordResetEmail,
   setPersistence,
   browserLocalPersistence,
   browserSessionPersistence,
+  type User,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
-import { collection, getDocs, limit, query, where } from "firebase/firestore";
+import { collection, doc, getDocs, limit, query, setDoc, where } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,28 +26,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
-import { isAdminAllowlisted, normalizeEmail } from "@/lib/adminAllowlist";
+import { isAdminAllowlisted } from "@/lib/adminAllowlist";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { DEFAULT_BUSINESS_ID } from "@/lib/businessIds";
 import { queueRegistrationWelcomeEmail } from "@/integrations/firebase/queueRegistrationWelcomeEmail";
 
-const PUBLIC_BOOKING_URL = "https://booking.papihairdesign.sk/booking";
 const PUBLIC_BOOKING_PATH = "/booking";
-const CROSS_DOMAIN_AUTH_HOST = "booking.papihairdesign.sk";
 
 async function resolvePostAuthPath(
   uid: string | undefined,
   email: string | null | undefined
-): Promise<"/admin" | "/admin/my" | "/booking" | "cross-domain-booking"> {
+): Promise<"/admin" | "/admin/my" | "/booking"> {
   if (isAdminAllowlisted(email)) {
     return "/admin";
   }
 
   if (!uid) {
-    if (typeof window !== "undefined" && normalizeEmail(window.location.hostname) === CROSS_DOMAIN_AUTH_HOST) {
-      return "cross-domain-booking";
-    }
     return "/booking";
   }
 
@@ -62,9 +61,6 @@ async function resolvePostAuthPath(
   if (roles.includes("owner") || roles.includes("admin")) return "/admin";
   if (roles.includes("employee")) return "/admin/my";
 
-  if (typeof window !== "undefined" && normalizeEmail(window.location.hostname) === CROSS_DOMAIN_AUTH_HOST) {
-    return "cross-domain-booking";
-  }
   return "/booking";
 }
 
@@ -74,11 +70,7 @@ async function redirectAfterAuthWithMembership(
   email: string | null | undefined
 ): Promise<void> {
   const target = await resolvePostAuthPath(uid, email);
-  if (target === "cross-domain-booking") {
-    window.location.assign(PUBLIC_BOOKING_URL);
-    return;
-  }
-  navigate(target);
+  navigate(target, { replace: true });
 }
 
 // ---------------------------------------------------------------------------
@@ -102,11 +94,32 @@ function parseZodErrors(error: z.ZodError): Record<string, string> {
   return errs;
 }
 
+function getSubmittedFormValues(
+  event: React.FormEvent<HTMLFormElement>,
+  fallback: { email: string; password: string },
+) {
+  const formData = new FormData(event.currentTarget);
+  const submittedEmail = formData.get("email");
+  const submittedPassword = formData.get("password");
+
+  const email =
+    typeof submittedEmail === "string" && submittedEmail.trim().length > 0
+      ? submittedEmail.trim()
+      : fallback.email.trim();
+  const password =
+    typeof submittedPassword === "string" && submittedPassword.length > 0
+      ? submittedPassword
+      : fallback.password;
+
+  return { email, password };
+}
+
 // ---------------------------------------------------------------------------
 // Auth mode copy
 // ---------------------------------------------------------------------------
 
 export type AuthMode = "login" | "register" | "forgot";
+type AccountHint = "existing_account" | "known_customer" | "new_customer" | null;
 
 // ---------------------------------------------------------------------------
 // Claim booking (shared after register / Google sign-in)
@@ -125,6 +138,75 @@ async function tryClaimBooking(claimToken: string): Promise<boolean> {
     console.warn("Claim booking failed:", err);
     return false;
   }
+}
+
+function normalizeNonEmptyString(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function resolveFirebaseAuthCode(error: unknown): string {
+  if (!error || typeof error !== "object") return "";
+  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  return code.replace(/^functions\//, "");
+}
+
+function isExistingAccountError(error: unknown): boolean {
+  const code = resolveFirebaseAuthCode(error);
+  return (
+    code === "auth/email-already-in-use" ||
+    code === "auth/credential-already-in-use" ||
+    code === "auth/account-exists-with-different-credential"
+  );
+}
+
+async function upsertOwnProfile(user: User, fullNameHint?: string | null): Promise<void> {
+  const fullName = normalizeNonEmptyString(user.displayName) ?? normalizeNonEmptyString(fullNameHint) ?? null;
+  await setDoc(
+    doc(db, "profiles", user.uid),
+    {
+      email: user.email ?? null,
+      full_name: fullName,
+      avatar_url: user.photoURL ?? null,
+      updated_at: new Date().toISOString(),
+    },
+    { merge: true },
+  );
+}
+
+function buildClaimNotice(
+  mode: AuthMode,
+  accountHint: AccountHint,
+  t: (key: string) => string,
+) {
+  if (!accountHint) return null;
+
+  if (accountHint === "existing_account") {
+    if (mode === "forgot") {
+      return {
+        title: t("auth.claimExistingTitle"),
+        body: t("auth.claimExistingReset"),
+      };
+    }
+
+    return {
+      title: t("auth.claimExistingTitle"),
+      body: mode === "register" ? t("auth.claimExistingRegister") : t("auth.claimExistingLogin"),
+    };
+  }
+
+  if (accountHint === "known_customer") {
+    return {
+      title: t("auth.claimKnownTitle"),
+      body: mode === "login" ? t("auth.claimKnownLogin") : t("auth.claimKnownRegister"),
+    };
+  }
+
+  return {
+    title: t("auth.claimNewTitle"),
+    body: mode === "login" ? t("auth.claimNewLogin") : t("auth.claimNewRegister"),
+  };
 }
 
 function getFormSubmitHandler(
@@ -149,14 +231,21 @@ function useAuthForm() {
   const urlMode = searchParams.get("mode");
   const urlEmail = searchParams.get("email") ?? "";
   const claimToken = searchParams.get("claim")?.trim() ?? "";
+  const fullNameHint = searchParams.get("name")?.trim() ?? "";
+  const accountHintRaw = searchParams.get("account")?.trim() ?? "";
+  const accountHint: AccountHint =
+    accountHintRaw === "existing_account" || accountHintRaw === "known_customer" || accountHintRaw === "new_customer"
+      ? accountHintRaw
+      : null;
 
   const [mode, setMode] = useState<AuthMode>(
-    urlMode === "register" ? "register" : "login"
+    urlMode === "register" ? "register" : urlMode === "forgot" ? "forgot" : "login"
   );
-  const [loading, setLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<AuthMode | "google" | null>(null);
   const [form, setForm] = useState({ email: urlEmail, password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [rememberMe, setRememberMe] = useState(true);
+  const loading = pendingAction !== null;
 
   const setField = useCallback((key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -173,48 +262,66 @@ function useAuthForm() {
     );
   }, []);
 
+  const syncProfile = useCallback(async (user: User) => {
+    await upsertOwnProfile(user, fullNameHint);
+  }, [fullNameHint]);
+
   const handleLogin = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      const submittedForm = getSubmittedFormValues(e, form);
+      setForm(submittedForm);
+
       const { loginSchema } = buildSchemas(t);
-      const result = loginSchema.safeParse(form);
+      const result = loginSchema.safeParse(submittedForm);
       if (!result.success) {
         setErrors(parseZodErrors(result.error));
         return;
       }
       setErrors({});
-      setLoading(true);
+      setPendingAction("login");
       try {
         await applyAuthPersistence(rememberMe);
-        const credential = await signInWithEmailAndPassword(auth, form.email, form.password);
+        const credential = await signInWithEmailAndPassword(auth, submittedForm.email, submittedForm.password);
+        await syncProfile(credential.user);
+        const claimed = await tryClaimBooking(claimToken);
+        if (claimed) {
+          toast.success(t("auth.toastLoginOkBooking"));
+        }
         await redirectAfterAuthWithMembership(
           navigate,
           credential.user.uid,
-          credential.user.email ?? form.email
+          credential.user.email ?? submittedForm.email
         );
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : t("auth.toastLoginFail"));
       } finally {
-        setLoading(false);
+        setPendingAction(null);
       }
     },
-    [applyAuthPersistence, form, navigate, rememberMe, t]
+    [applyAuthPersistence, claimToken, form, navigate, rememberMe, syncProfile, t]
   );
 
   const handleRegister = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      const submittedForm = getSubmittedFormValues(e, form);
+      setForm(submittedForm);
+
       const { registerSchema } = buildSchemas(t);
-      const result = registerSchema.safeParse(form);
+      const result = registerSchema.safeParse(submittedForm);
       if (!result.success) {
         setErrors(parseZodErrors(result.error));
         return;
       }
       setErrors({});
-      setLoading(true);
+      setPendingAction("register");
       try {
         await applyAuthPersistence(rememberMe);
-        const credential = await createUserWithEmailAndPassword(auth, form.email, form.password);
+        const credential = auth.currentUser?.isAnonymous
+          ? await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(submittedForm.email, submittedForm.password))
+          : await createUserWithEmailAndPassword(auth, submittedForm.email, submittedForm.password);
+        await syncProfile(credential.user);
         const claimed = await tryClaimBooking(claimToken);
         try {
           await queueRegistrationWelcomeEmail({
@@ -227,24 +334,46 @@ function useAuthForm() {
         await redirectAfterAuthWithMembership(
           navigate,
           credential.user.uid,
-          credential.user.email ?? form.email
+          credential.user.email ?? submittedForm.email
         );
       } catch (err: unknown) {
+        if (isExistingAccountError(err)) {
+          setMode("login");
+          setForm((current) => ({ ...current, password: "" }));
+          toast.error(t("auth.toastAccountExists"));
+          return;
+        }
         toast.error(err instanceof Error ? err.message : t("auth.toastRegisterFail"));
       } finally {
-        setLoading(false);
+        setPendingAction(null);
       }
     },
-    [applyAuthPersistence, claimToken, form, navigate, rememberMe, t]
+    [applyAuthPersistence, claimToken, form, navigate, rememberMe, syncProfile, t]
   );
 
   const handleGoogleLogin = useCallback(async () => {
-    setLoading(true);
+    setPendingAction("google");
     try {
       await applyAuthPersistence(rememberMe);
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      provider.setCustomParameters({ prompt: "select_account" });
+
+      let result;
+      if (auth.currentUser?.isAnonymous) {
+        try {
+          result = await linkWithPopup(auth.currentUser, provider);
+        } catch (error) {
+          if (!isExistingAccountError(error)) {
+            throw error;
+          }
+          result = await signInWithPopup(auth, provider);
+        }
+      } else {
+        result = await signInWithPopup(auth, provider);
+      }
+
       const userEmail = result.user.email;
+      await syncProfile(result.user);
 
       const claimed = await tryClaimBooking(claimToken);
       if (claimed) {
@@ -254,29 +383,32 @@ function useAuthForm() {
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t("auth.toastGoogleFail"));
     } finally {
-      setLoading(false);
+      setPendingAction(null);
     }
-  }, [applyAuthPersistence, claimToken, navigate, rememberMe, t]);
+  }, [applyAuthPersistence, claimToken, navigate, rememberMe, syncProfile, t]);
 
   const handleForgot = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      if (!form.email) {
+      const submittedForm = getSubmittedFormValues(e, form);
+      setForm((current) => ({ ...current, email: submittedForm.email }));
+
+      if (!submittedForm.email) {
         setErrors({ email: t("auth.toastEnterEmail") });
         return;
       }
-      setLoading(true);
+      setPendingAction("forgot");
       try {
-        await sendPasswordResetEmail(auth, form.email);
+        await sendPasswordResetEmail(auth, submittedForm.email);
         toast.success(t("auth.toastResetSent"));
         setMode("login");
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : t("auth.toastResetFail"));
       } finally {
-        setLoading(false);
+        setPendingAction(null);
       }
     },
-    [form.email, t]
+    [form, t]
   );
 
   const handleFormSubmit = getFormSubmitHandler(mode, handleLogin, handleRegister, handleForgot);
@@ -287,6 +419,8 @@ function useAuthForm() {
     forgot: { title: t("auth.forgotTitle"), description: t("auth.forgotDesc"), submitText: t("auth.forgotBtn") },
   }[mode];
 
+  const claimNotice = buildClaimNotice(mode, accountHint, t);
+
   return {
     mode,
     setMode,
@@ -294,11 +428,13 @@ function useAuthForm() {
     setField,
     errors,
     loading,
+    pendingAction,
     rememberMe,
     setRememberMePersisted,
     handleFormSubmit,
     handleGoogleLogin,
     copy,
+    claimNotice,
     t,
   };
 }
@@ -379,48 +515,80 @@ export default function AuthPage() {
     setField,
     errors,
     loading,
+    pendingAction,
     rememberMe,
     setRememberMePersisted,
     handleFormSubmit,
     handleGoogleLogin,
     copy,
+    claimNotice,
     t,
   } = useAuthForm();
 
   const showGoogle = mode === "login";
+  const submitButtonLabel =
+    pendingAction === "login"
+      ? t("auth.loginPending")
+      : pendingAction === "register"
+        ? t("auth.registerPending")
+        : pendingAction === "forgot"
+          ? t("auth.forgotPending")
+          : copy.submitText;
+  const pendingMessage =
+    pendingAction === "login"
+      ? t("auth.loginPendingHint")
+      : pendingAction === "register"
+        ? t("auth.registerPendingHint")
+        : pendingAction === "forgot"
+          ? t("auth.forgotPendingHint")
+          : pendingAction === "google"
+            ? t("auth.googlePendingHint")
+            : null;
+  const googleButtonLabel = pendingAction === "google" ? t("auth.googlePending") : t("auth.googleBtn");
 
     return (
       <div
         className="min-h-[100dvh] flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(201,168,76,0.10),_transparent_32%),linear-gradient(135deg,_#16120e_0%,_#0d0b09_52%,_#080808_100%)] p-4 safe-x safe-y relative overflow-x-hidden"
         data-testid="auth-page"
       >
-        <div className="w-full max-w-md min-w-0">
-        <div className="flex items-center justify-center gap-2 mb-8">
+        <div className="w-full max-w-[440px] min-w-0">
+        <div className="mb-8 flex items-center justify-center gap-2.5">
           <LogoIcon size="md" />
-          <span className="text-2xl font-bold text-foreground">PAPI HAIR DESIGN</span>
+          <span className="text-[26px] font-bold tracking-[0.04em] text-foreground">PAPI HAIR DESIGN</span>
         </div>
 
         <Card
-          className="rounded-[6px] border-[#C9A84C]/18 bg-[#12100d]/88 shadow-[0_24px_70px_-36px_rgba(0,0,0,0.85),0_0_0_1px_rgba(201,168,76,0.08)] backdrop-blur-md"
+          className="public-premium-shell rounded-[24px] border-[#C9A84C]/18 bg-[#12100d]/88 shadow-[0_24px_70px_-36px_rgba(0,0,0,0.85),0_0_0_1px_rgba(201,168,76,0.08)] backdrop-blur-md"
           data-testid="auth-card"
         >
-          <CardHeader>
+          <CardHeader className="space-y-2 px-6 pt-6">
             <CardTitle>{copy.title}</CardTitle>
             <CardDescription>{copy.description}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 px-6 pb-6">
+            {claimNotice && (
+              <div className="rounded-md border border-[#C9A84C]/24 bg-[#C9A84C]/8 px-4 py-3 text-sm text-white/85">
+                <p className="font-semibold text-[#E7CA77]">{claimNotice.title}</p>
+                <p className="mt-1 text-white/70">{claimNotice.body}</p>
+              </div>
+            )}
             <form onSubmit={handleFormSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="email">{t("auth.email")}</Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder={t("auth.emailPlaceholder")}
                   value={form.email}
                   onChange={setField("email")}
                   disabled={loading}
                   data-testid="auth-email-input"
+                  className="min-h-12 rounded-[10px]"
                 />
                 {errors.email && <p className="text-destructive text-xs">{errors.email}</p>}
               </div>
@@ -430,12 +598,17 @@ export default function AuthPage() {
                   <Label htmlFor="password">{t("auth.password")}</Label>
                   <Input
                     id="password"
+                    name="password"
                     type="password"
                     autoComplete={mode === "register" ? "new-password" : "current-password"}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     placeholder="••••••••"
                     value={form.password}
                     onChange={setField("password")}
                     disabled={loading}
+                    className="min-h-12 rounded-[10px]"
                   />
                   {errors.password && <p className="text-destructive text-xs">{errors.password}</p>}
                 </div>
@@ -454,9 +627,9 @@ export default function AuthPage() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading} data-testid="auth-login-btn">
+              <Button type="submit" className="public-primary-cta w-full" disabled={loading} data-testid="auth-login-btn">
                 {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {copy.submitText}
+                {submitButtonLabel}
               </Button>
 
               {showGoogle && (
@@ -472,17 +645,23 @@ export default function AuthPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full"
+                    className="public-primary-cta w-full border-white/12 bg-white/[0.02]"
                     disabled={loading}
                     onClick={handleGoogleLogin}
                     data-testid="auth-google-btn"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <GoogleIcon />}
-                    {t("auth.googleBtn")}
+                    {googleButtonLabel}
                   </Button>
                 </>
               )}
             </form>
+
+            {pendingMessage && (
+              <p className="rounded-[10px] border border-white/8 bg-white/[0.03] px-4 py-3 text-center text-sm leading-6 text-white/68">
+                {pendingMessage}
+              </p>
+            )}
 
             <div className="text-center text-sm space-y-2">
               <AuthModeLinks mode={mode} onModeChange={setMode} t={t} />
@@ -490,7 +669,7 @@ export default function AuthPage() {
           </CardContent>
         </Card>
 
-        <p className="mt-4 space-y-1 text-center text-sm text-muted-foreground">
+        <div className="mt-4 rounded-[18px] border border-white/8 bg-black/15 px-4 py-3 text-center text-sm text-muted-foreground">
           <a href="/demo" className="text-primary hover:underline block">
             {t("auth.demoLink")}
           </a>
@@ -500,7 +679,7 @@ export default function AuthPage() {
               {t("auth.bookingLinkLabel")}
             </a>
           </span>
-        </p>
+        </div>
       </div>
     </div>
   );

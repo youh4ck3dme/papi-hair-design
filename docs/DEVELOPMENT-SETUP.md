@@ -2,6 +2,10 @@
 
 Tento dokument popisuje jediný podporovaný lokálny flow pre tento repozitár.
 
+Poznamka:
+- toto je tactical setup dokument
+- pre celkovy obraz pozri aj [Documentation Hub](README.md), [Architecture](ARCHITECTURE.md) a [Operations](OPERATIONS.md)
+
 ## Požiadavky
 
 - Node.js `>=20.19.0` (odporúčané 22.x)
@@ -83,7 +87,7 @@ npm test
 ## E2E testy
 
 ```powershell
-npm run test:responsive
+npm run test:e2e:preview
 ```
 
 ## Dôležité obmedzenia

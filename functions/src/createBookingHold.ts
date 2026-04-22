@@ -3,9 +3,9 @@ import { getFirestore } from "firebase-admin/firestore";
 import {
   type CallableRequest,
 } from "firebase-functions/v2/https";
-import * as crypto from "crypto";
 import { assignEmployeeForSlot } from "./autoAssignEmployee";
-import { normalizeEmail, normalizePhone } from "./publicBookingAccess";
+import { getClientIp } from "./clientIp";
+import { createOpaqueToken, normalizeEmail, normalizePhone } from "./publicBookingAccess";
 import { checkRateLimit } from "./middleware/rateLimit";
 import { throwBookingError } from "./errors";
 
@@ -20,6 +20,8 @@ interface CreateBookingHoldInput {
   idempotency_key?: string;
 }
 
+type CustomerRecordStatus = "existing" | "created";
+
 const HOLD_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 function createIdempotencyKey(rawKey: string | undefined): string {
@@ -27,18 +29,7 @@ function createIdempotencyKey(rawKey: string | undefined): string {
   if (normalized.length > 0) {
     return normalized.slice(0, 200);
   }
-  return crypto.randomUUID();
-}
-
-function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): string | null {
-  const forwarded = rawRequest.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.trim().length > 0) {
-    return forwarded.split(",")[0].trim();
-  }
-  if (Array.isArray(forwarded) && forwarded.length > 0) {
-    return forwarded[0]?.trim() || null;
-  }
-  return rawRequest.socket.remoteAddress ?? null;
+  return createOpaqueToken().token;
 }
 
 export const createBookingHold = functions.https.onCall(
@@ -48,7 +39,7 @@ export const createBookingHold = functions.https.onCall(
     const db = getFirestore();
 
     // Rate limit by IP
-    const ip = extractClientIp(request.rawRequest) || "unknown";
+    const ip = getClientIp(request.rawRequest) || "unknown";
     await checkRateLimit(ip);
 
     const {
@@ -90,7 +81,7 @@ export const createBookingHold = functions.https.onCall(
     const idemKey = createIdempotencyKey(idempotency_key);
     const customerEmail = normalizeEmail(customer_email);
     const customerPhone = normalizePhone(customer_phone);
-    const confirmToken = crypto.randomUUID();
+    const confirmToken = createOpaqueToken().token;
 
     // Idempotency: return existing hold for the same key
     const existingSnap = await db
@@ -100,7 +91,17 @@ export const createBookingHold = functions.https.onCall(
       .get();
     if (!existingSnap.empty) {
       const doc = existingSnap.docs[0];
-      return { success: true, appointment_id: doc.id, reused: true, confirm_token: doc.data().confirm_token };
+      const customerRecordStatus = doc.data().customer_record_status;
+      return {
+        success: true,
+        appointment_id: doc.id,
+        reused: true,
+        confirm_token: doc.data().confirm_token,
+        customer_record_status:
+          customerRecordStatus === "existing" || customerRecordStatus === "created"
+            ? customerRecordStatus
+            : undefined,
+      };
     }
 
     // Load service and auto-assign eligible employee
@@ -179,14 +180,17 @@ export const createBookingHold = functions.https.onCall(
       .limit(1)
       .get();
     let customerId: string;
+    let customerRecordStatus: CustomerRecordStatus;
     if (!customersSnap.empty) {
       customerId = customersSnap.docs[0].id;
+      customerRecordStatus = "existing";
       await db.collection("customers").doc(customerId).update({
         full_name: customer_name.trim(),
         phone: customerPhone,
         updated_at: new Date().toISOString(),
       });
     } else {
+      customerRecordStatus = "created";
       const newCust = await db.collection("customers").add({
         business_id,
         full_name: customer_name.trim(),
@@ -212,6 +216,7 @@ export const createBookingHold = functions.https.onCall(
       start_at: startDate.toISOString(),
       end_at: endDate.toISOString(),
       status: "hold_created",
+      customer_record_status: customerRecordStatus,
       hold_expires_at: holdExpiresAt.toISOString(),
       confirm_token: confirmToken,
       idempotency_key: idemKey,
@@ -225,6 +230,7 @@ export const createBookingHold = functions.https.onCall(
       confirm_token: confirmToken,
       idempotency_key: idemKey,
       reused: false,
+      customer_record_status: customerRecordStatus,
     };
   }
 );

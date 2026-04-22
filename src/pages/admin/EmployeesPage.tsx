@@ -24,8 +24,8 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2, Plus, Pencil, Trash2, Users, Mail, Phone, Calendar, Briefcase, ChevronRight, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { createRuntimeId } from "@/lib/runtimeId";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { compressProfileImage, readFileAsDataUrl, validateProfileImageFile } from "@/lib/profileImage";
 
@@ -283,7 +283,7 @@ export default function EmployeesPage() {
     setUploadingPhoto(true);
     try {
       const compressedBlob = await compressProfileImage(croppedBlob);
-      const fileName = `employees/${businessId}/${crypto.randomUUID ? crypto.randomUUID() : Date.now()}.jpg`;
+      const fileName = `employees/${businessId}/${createRuntimeId("employee-photo")}.jpg`;
       const storageRef = ref(storage, fileName);
       await uploadBytes(storageRef, compressedBlob, {
         contentType: compressedBlob.type || "image/jpeg",
@@ -436,7 +436,7 @@ export default function EmployeesPage() {
   const formPhotoUrl = resolveEmployeePhotoUrl(form.display_name, form.photo_url);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="admin-premium-page space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
@@ -455,7 +455,7 @@ export default function EmployeesPage() {
           <p className="text-sm text-muted-foreground animate-pulse">Načítavam zoznam tímu...</p>
         </div>
       ) : employees.length === 0 ? (
-        <div className="text-center py-20 border border-dashed border-primary/20 rounded-3xl bg-card/20">
+        <div className="admin-premium-card border border-dashed border-primary/20 py-20 text-center">
           <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="w-10 h-10 text-primary/30" />
           </div>
@@ -478,7 +478,7 @@ export default function EmployeesPage() {
             return (
               <div
                 key={employee.id}
-                className="group relative p-5 rounded-2xl border border-primary/10 bg-card/40 backdrop-blur-xl transition-all hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/30"
+                className="admin-premium-card group relative p-5 transition-all hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5"
               >
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div className="flex gap-3 items-center">
@@ -554,7 +554,7 @@ export default function EmployeesPage() {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl bg-card/95 backdrop-blur-2xl border-primary/20 shadow-2xl max-h-[95vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent className="admin-premium-dialog max-h-[95vh] max-w-2xl flex flex-col overflow-hidden p-0 shadow-2xl">
           <DialogHeader className="p-6 pb-2">
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -567,8 +567,8 @@ export default function EmployeesPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 px-6 py-2">
-            <div className="space-y-6 pb-6 mt-2">
+          <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-2" data-testid="employee-dialog-scroll-container">
+            <div className="mt-2 space-y-6 pb-6">
               <div className="flex flex-col sm:flex-row gap-6">
                 <div className="flex flex-col items-center gap-2">
                   <div
@@ -652,7 +652,7 @@ export default function EmployeesPage() {
                 <Label className="text-sm font-bold flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-primary" /> Pracovné hodiny
                 </Label>
-                <div className="grid gap-3 rounded-2xl bg-muted/30 p-4 border border-primary/5">
+                <div className="admin-premium-subtle grid gap-3 p-4">
                   {DAYS.map(({ key, label }) => {
                     const daySchedule = schedule[key as DayKey];
                     const active = daySchedule?.active ?? false;
@@ -706,7 +706,7 @@ export default function EmployeesPage() {
                   <Label className="text-sm font-bold flex items-center gap-2">
                     <Briefcase className="w-4 h-4 text-primary" /> Priradené služby
                   </Label>
-                  <div className="rounded-2xl border border-primary/10 bg-muted/20 p-4 space-y-3">
+                  <div className="admin-premium-subtle space-y-3 p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <p className="text-sm font-semibold">Iba vybrané služby</p>
@@ -723,7 +723,11 @@ export default function EmployeesPage() {
                   </div>
 
                   {serviceMode === "restricted" ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 rounded-2xl bg-muted/30 p-4 border border-primary/5">
+                    <div
+                      className="admin-premium-subtle max-h-[min(45vh,22rem)] overflow-y-auto overscroll-contain p-4"
+                      data-testid="employee-services-scroll-container"
+                    >
+                      <div className="grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2">
                       {allServices.length === 0 && (
                         <p className="text-xs text-muted-foreground italic col-span-2 py-4 text-center">
                           Najprv vytvorte služby v katalógu.
@@ -749,20 +753,21 @@ export default function EmployeesPage() {
                           </label>
                         </div>
                       ))}
+                      </div>
                     </div>
                   ) : (
-                    <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4 text-sm text-muted-foreground">
+                    <div className="admin-premium-subtle p-4 text-sm text-muted-foreground">
                       Voľný režim je aktívny. Zamestnanec je dostupný pre všetky služby.
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-primary/10 bg-muted/20 p-4 text-sm text-muted-foreground">
+                <div className="admin-premium-subtle p-4 text-sm text-muted-foreground">
                   Priraďovanie služieb k zamestnancom môže meniť iba majiteľ.
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           <DialogFooter className="p-6 border-t border-primary/5 bg-background/80 backdrop-blur-md">
             <Button variant="ghost" onClick={() => setOpen(false)} className="rounded-xl font-semibold">Zrušiť</Button>

@@ -1,11 +1,13 @@
+import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
 import { addMinutes, startOfDay } from "date-fns";
 import { isSameDay } from "date-fns";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { useBookingCalendarContext } from "../calendar-context";
+import { useBookingCalendarContext, type SlotInfo } from "../calendar-context";
 import { BookingCalendarEvent } from "../BookingCalendarEvent";
 import { CalendarBodyHeader } from "./CalendarBodyHeader";
 import { HOURS } from "../calendar-types";
+import { useLongPressAction } from "../useLongPressAction";
 
 interface CalendarBodyDayContentProps {
   date: Date;
@@ -14,13 +16,122 @@ interface CalendarBodyDayContentProps {
   showHeader?: boolean;
 }
 
+interface CalendarBodyDaySlotProps {
+  date: Date;
+  hour: number;
+  closed: boolean;
+  resourceId?: string;
+  resourceName?: string;
+}
+
+function buildSlotFromPointer(
+  date: Date,
+  hour: number,
+  element: HTMLElement,
+  clientY: number,
+  resourceId?: string,
+  resourceName?: string,
+): SlotInfo {
+  const rect = element.getBoundingClientRect();
+  const y = clientY - rect.top;
+  const minutesIntoHour = Math.max(0, Math.min(59.999, (y / rect.height) * 60));
+  const snappedMinutes = minutesIntoHour >= 30 ? 30 : 0;
+  const totalMinutes = hour * 60 + snappedMinutes;
+
+  const start = addMinutes(startOfDay(date), Math.floor(totalMinutes / 30) * 30);
+  return {
+    start,
+    end: addMinutes(start, 30),
+    resourceId,
+    resourceName,
+  };
+}
+
+function buildSlotAtHour(
+  date: Date,
+  hour: number,
+  resourceId?: string,
+  resourceName?: string,
+): SlotInfo {
+  const start = addMinutes(startOfDay(date), Math.floor((hour * 60) / 30) * 30);
+  return {
+    start,
+    end: addMinutes(start, 30),
+    resourceId,
+    resourceName,
+  };
+}
+
+function CalendarBodyDaySlot({
+  date,
+  hour,
+  closed,
+  resourceId,
+  resourceName,
+}: CalendarBodyDaySlotProps) {
+  const {
+    onLongPressSlot,
+    onSelectSlot,
+    pixelsPerHour,
+    selectable,
+  } = useBookingCalendarContext();
+
+  const longPress = useLongPressAction({
+    enabled: selectable && Boolean(onLongPressSlot),
+    onLongPress: ({ element, clientY }) => {
+      if (!onLongPressSlot) return;
+      onLongPressSlot(buildSlotFromPointer(date, hour, element, clientY, resourceId, resourceName));
+    },
+  });
+
+  const handleSlotClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!selectable || !onSelectSlot) return;
+    if (longPress.consumeSuppressedClick()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    onSelectSlot(buildSlotFromPointer(date, hour, event.currentTarget, event.clientY, resourceId, resourceName));
+  };
+
+  const handleSlotKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!selectable || !onSelectSlot) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelectSlot(buildSlotAtHour(date, hour, resourceId, resourceName));
+  };
+
+  return (
+    <div
+      className={cn(
+        "relative border-b border-border/50 group transition-colors",
+        selectable && "cursor-pointer booking-calendar-slot",
+        closed && "bg-muted/30 opacity-60",
+        longPress.isPressing && "bg-gold/10 ring-1 ring-inset ring-gold/30",
+      )}
+      style={{ height: pixelsPerHour }}
+      onClick={handleSlotClick}
+      onKeyDown={handleSlotKeyDown}
+      role={selectable ? "button" : undefined}
+      tabIndex={selectable ? 0 : undefined}
+      aria-label={
+        selectable ? `Vybrať čas okolo ${hour}:00${closed ? " (Zatvorené)" : ""}` : undefined
+      }
+      {...longPress.handlers}
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-dashed border-border/40" />
+    </div>
+  );
+}
+
 export function CalendarBodyDayContent({
   date,
   resourceId,
   resourceName,
   showHeader = true,
 }: CalendarBodyDayContentProps) {
-  const { filteredEvents, onSelectSlot, selectable, businessHours, pixelsPerHour } = useBookingCalendarContext();
+  const { filteredEvents, businessHours } = useBookingCalendarContext();
   const dayEvents = useMemo(
     () =>
       filteredEvents.filter((e) => {
@@ -69,45 +180,6 @@ export function CalendarBodyDayContent({
     return !isOpen;
   };
 
-  const getSlotRange = (hour: number) => {
-
-    const start = addMinutes(
-      startOfDay(date),
-      Math.floor((hour * 60) / 30) * 30
-    );
-    return { start, end: addMinutes(start, 30) };
-  };
-
-  const handleSlotClick = (hour: number, e: React.MouseEvent<HTMLDivElement>) => {
-    if (!selectable || !onSelectSlot) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-
-    // Keep the chosen time stable even near borders/overlays.
-    // We only snap inside the clicked hour to :00 or :30.
-    const minutesIntoHour = Math.max(0, Math.min(59.999, (y / rect.height) * 60));
-    const snappedMinutes = minutesIntoHour >= 30 ? 30 : 0;
-    const totalMinutes = hour * 60 + snappedMinutes;
-
-    const start = addMinutes(
-      startOfDay(date),
-      Math.floor(totalMinutes / 30) * 30
-    );
-    const end = addMinutes(start, 30);
-    onSelectSlot({ start, end });
-  };
-
-  const handleSlotKeyDown = (
-    hour: number,
-    e: React.KeyboardEvent<HTMLDivElement>
-  ) => {
-    if (!selectable || !onSelectSlot) return;
-    if (e.key !== "Enter" && e.key !== " ") return;
-    e.preventDefault();
-    const { start, end } = getSlotRange(hour);
-    onSelectSlot({ start, end });
-  };
-
   return (
     <div className="flex flex-col flex-grow min-w-0">
       {showHeader && <CalendarBodyHeader date={date} resourceName={resourceName} />}
@@ -116,26 +188,14 @@ export function CalendarBodyDayContent({
         {HOURS.map((hour) => {
           const closed = isClosed(hour);
           return (
-            <div
+            <CalendarBodyDaySlot
               key={hour}
-              className={cn(
-                "relative border-b border-border/50 group transition-colors",
-                selectable && "cursor-pointer booking-calendar-slot",
-                closed && "bg-muted/30 opacity-60"
-              )}
-              style={{ height: pixelsPerHour }}
-              onClick={(e) =>
-                selectable && onSelectSlot && handleSlotClick(hour, e)
-              }
-              onKeyDown={(e) => handleSlotKeyDown(hour, e)}
-              role={selectable ? "button" : undefined}
-              tabIndex={selectable ? 0 : undefined}
-              aria-label={
-                selectable ? `Vybrať čas okolo ${hour}:00${closed ? ' (Zatvorené)' : ''}` : undefined
-              }
-            >
-              <div className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-dashed border-border/40" />
-            </div>
+              date={date}
+              hour={hour}
+              closed={closed}
+              resourceId={resourceId}
+              resourceName={resourceName}
+            />
           );
         })}
 

@@ -132,7 +132,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (currentFbUser) => {
       setFbUser(currentFbUser);
 
-      if (currentFbUser) {
+      if (currentFbUser && !currentFbUser.isAnonymous) {
         setUser({
           id: currentFbUser.uid,
           email: currentFbUser.email ?? null

@@ -105,10 +105,10 @@ export function PublicStickyHeader({
       )}
     >
       <div
-        className="mx-auto w-full max-w-[760px] rounded-[28px] border border-gold/10 bg-[linear-gradient(180deg,rgba(9,8,7,0.94),rgba(18,13,9,0.92))] px-3 py-3 shadow-[0_26px_58px_-38px_rgba(0,0,0,0.95)] backdrop-blur-xl"
+        className="mx-auto w-full max-w-[780px] rounded-[30px] border border-gold/10 bg-[linear-gradient(180deg,rgba(9,8,7,0.94),rgba(18,13,9,0.92))] px-3.5 py-3 shadow-[0_26px_58px_-38px_rgba(0,0,0,0.95)] backdrop-blur-xl"
         data-testid="public-sticky-header"
       >
-        <div className="relative flex items-center justify-between gap-2 sm:gap-3">
+        <div className="relative flex items-center justify-between gap-2.5 sm:gap-3">
           <div
             className="pointer-events-none absolute left-3 right-20 top-1/2 hidden h-px -translate-y-1/2 bg-gradient-to-r from-gold/0 via-gold/35 to-gold/0 sm:block"
             aria-hidden="true"

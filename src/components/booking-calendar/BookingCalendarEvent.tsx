@@ -7,6 +7,7 @@ import type { BookingCalendarEvent as EventType } from "./calendar-types";
 import { useBookingCalendarContext } from "./calendar-context";
 import { CALENDAR_END_HOUR, CALENDAR_START_HOUR } from "./calendar-types";
 import { getEventColorClasses } from "./event-color-classes";
+import { useLongPressAction } from "./useLongPressAction";
 
 interface EventPosition {
   left: string;
@@ -98,7 +99,7 @@ function BookingCalendarEventComponent({
   month = false,
   className,
 }: BookingCalendarEventProps) {
-  const { filteredEvents, date, onSelectEvent, pixelsPerHour } = useBookingCalendarContext();
+  const { filteredEvents, date, onLongPressEvent, onSelectEvent, pixelsPerHour } = useBookingCalendarContext();
   const statusLabel = toStatusLabel(typeof event.resource?.status === "string" ? event.resource.status : undefined);
 
   const style = useMemo(() => {
@@ -118,6 +119,13 @@ function BookingCalendarEventComponent({
     return baseStyle;
   }, [event, filteredEvents, month, pixelsPerHour]);
 
+  const longPress = useLongPressAction({
+    enabled: !month && Boolean(onLongPressEvent),
+    onLongPress: () => {
+      onLongPressEvent?.(event);
+    },
+  });
+
   if (!month && !style) return null;
 
   const isInCurrentMonth = isSameMonth(event.start, date);
@@ -126,6 +134,11 @@ function BookingCalendarEventComponent({
 
 
   const handleClick = (e: React.MouseEvent) => {
+    if (longPress.consumeSuppressedClick()) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     e.stopPropagation();
     onSelectEvent?.(event);
   };
@@ -144,12 +157,14 @@ function BookingCalendarEventComponent({
       className={cn(
         "rounded-md overflow-hidden cursor-pointer transition-all duration-300 border booking-calendar-event flex flex-col hover:shadow-md max-w-full min-w-0",
         colorClasses,
+        longPress.isPressing && "ring-2 ring-gold/35 brightness-110",
         month ? "min-h-0 px-1.5 py-0.5 rounded-sm" : "absolute shadow-sm px-2.5 py-1.5",
         className
       )}
       style={style ?? undefined}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
+      {...longPress.handlers}
       initial={month ? { opacity: 0 } : { opacity: 0, y: -3, scale: 0.98 }}
       animate={month ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
       transition={{

@@ -45,6 +45,7 @@ const firestoreFixtures = vi.hoisted(() => ({
 
 const adminUpdateBookingStatusMock = vi.hoisted(() => vi.fn());
 const adminCalendarQuickActionMock = vi.hoisted(() => vi.fn());
+const printHtmlDocumentMock = vi.hoisted(() => vi.fn(() => true));
 const generateSlotsMock = vi.hoisted(() => vi.fn());
 const calendarEventUtilsMocks = vi.hoisted(() => ({
   toCalendarWallClockDate: vi.fn(),
@@ -87,12 +88,34 @@ vi.mock("@/components/booking-calendar", () => ({
         </button>
         <button
           type="button"
+          onClick={() =>
+            props.onLongPressSlot?.({
+              start: new Date("2026-01-15T09:00:00.000Z"),
+              end: new Date("2026-01-15T09:30:00.000Z"),
+              resourceId: "emp-1",
+              resourceName: "Marek",
+            })
+          }
+        >
+          longpress-slot
+        </button>
+        <button
+          type="button"
           onClick={() => {
             const first = props.events?.[0];
             if (first) props.onSelectEvent?.(first);
           }}
         >
           open-event
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const first = props.events?.[0];
+            if (first) props.onLongPressEvent?.(first);
+          }}
+        >
+          longpress-event
         </button>
       </div>
     );
@@ -109,6 +132,9 @@ vi.mock("@/integrations/firebase/adminUpdateBookingStatus", () => ({
 }));
 vi.mock("@/integrations/firebase/adminCalendarQuickAction", () => ({
   adminCalendarQuickAction: adminCalendarQuickActionMock,
+}));
+vi.mock("@/lib/adminCalendarPrint", () => ({
+  printHtmlDocument: printHtmlDocumentMock,
 }));
 
 vi.mock("@/lib/availability", () => ({
@@ -312,6 +338,8 @@ describe("CalendarPage", () => {
     firestoreMocks.updateDocMock.mockReset();
     adminUpdateBookingStatusMock.mockReset();
     adminCalendarQuickActionMock.mockReset();
+    printHtmlDocumentMock.mockReset();
+    printHtmlDocumentMock.mockReturnValue(true);
     generateSlotsMock.mockReset();
     calendarEventUtilsMocks.toCalendarWallClockDate.mockClear();
     calendarEventUtilsMocks.fromCalendarWallClockDateToUtcIso.mockClear();
@@ -511,6 +539,31 @@ describe("CalendarPage", () => {
     expect(await screen.findByRole("heading", { name: "Nová rezervácia" })).toBeInTheDocument();
   });
 
+  it("opens long press create menu for free slot and routes reservation action into existing booking flow", async () => {
+    seedInitialFirestore();
+    renderCalendarPage();
+
+    fireEvent.click(await screen.findByText("longpress-slot"));
+    expect(await screen.findByRole("heading", { name: "Udalosť" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rezervácia" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Blokovanie času" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Rezervácia" }));
+    expect(await screen.findByRole("heading", { name: "Nová rezervácia" })).toBeInTheDocument();
+    expect(screen.getAllByLabelText("employee-select")[1]).toHaveValue("emp-1");
+  });
+
+  it("opens long press create menu for free slot and routes block action into existing block flow", async () => {
+    seedInitialFirestore();
+    renderCalendarPage();
+
+    fireEvent.click(await screen.findByText("longpress-slot"));
+    fireEvent.click(await screen.findByRole("button", { name: "Blokovanie času" }));
+
+    expect(await screen.findByRole("heading", { name: "Blokovať čas" })).toBeInTheDocument();
+    expect(screen.getAllByLabelText("employee-select")[1]).toHaveValue("emp-1");
+  });
+
   it("disables selectability for non-admin user", async () => {
     businessState.value = {
       businessId: "biz-1",
@@ -541,14 +594,7 @@ describe("CalendarPage", () => {
 
   it("exports CSV for selected day when events exist", async () => {
     seedInitialFirestore({ withEvent: true });
-    const createObjectURLMock = vi.fn().mockReturnValue("blob:test");
-    const revokeObjectURLMock = vi.fn();
     const clickMock = vi.fn();
-
-    vi.stubGlobal("URL", {
-      createObjectURL: createObjectURLMock,
-      revokeObjectURL: revokeObjectURLMock,
-    });
     const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(clickMock as any);
 
     try {
@@ -559,23 +605,15 @@ describe("CalendarPage", () => {
       const csvBtn = await screen.findByRole("button", { name: /CSV/i });
       fireEvent.click(csvBtn);
 
-      expect(createObjectURLMock).toHaveBeenCalledTimes(1);
       expect(clickMock).toHaveBeenCalledTimes(1);
-      expect(revokeObjectURLMock).toHaveBeenCalledTimes(1);
+      expect(anchorClickSpy.mock.instances[0]?.href).toContain("data:text/csv;charset=utf-8,");
     } finally {
       anchorClickSpy.mockRestore();
-      vi.unstubAllGlobals();
     }
   });
 
-  it("opens print window and triggers print", async () => {
+  it("builds printable HTML through the print helper", async () => {
     seedInitialFirestore({ withEvent: true });
-    const printWindowMock = {
-      document: { open: vi.fn(), write: vi.fn(), close: vi.fn() },
-      focus: vi.fn(),
-      print: vi.fn(),
-    };
-    const openSpy = vi.spyOn(window, "open").mockReturnValue(printWindowMock as any);
 
     const { container } = renderCalendarPage();
     await waitFor(() => {
@@ -586,9 +624,8 @@ describe("CalendarPage", () => {
     expect(printButton).toBeTruthy();
     fireEvent.click(printButton!);
 
-    expect(openSpy).toHaveBeenCalled();
-    expect(printWindowMock.document.write).toHaveBeenCalled();
-    expect(printWindowMock.print).toHaveBeenCalled();
+    expect(printHtmlDocumentMock).toHaveBeenCalledTimes(1);
+    expect(String(printHtmlDocumentMock.mock.calls[0][0])).toContain("PAPI HAIR DESIGN - Denný prehľad");
   });
 
   it("changes booking status from detail sheet", async () => {
@@ -603,6 +640,46 @@ describe("CalendarPage", () => {
         business_id: "biz-1",
         appointment_id: "apt-1",
         status: "confirmed",
+      });
+    });
+  });
+
+  it("opens long press manage menu for occupied event and detail action shows existing detail sheet", async () => {
+    seedInitialFirestore({ withEvent: true });
+    renderCalendarPage();
+
+    fireEvent.click(await screen.findByText("longpress-event"));
+    expect(await screen.findByRole("heading", { name: "Udalosť" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Detail" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upraviť" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Zrušiť" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Detail" }));
+    expect(await screen.findByRole("heading", { name: "Detail rezervácie" })).toBeInTheDocument();
+  });
+
+  it("opens move quick action from occupied event long press edit action", async () => {
+    seedInitialFirestore({ withEvent: true });
+    renderCalendarPage();
+
+    fireEvent.click(await screen.findByText("longpress-event"));
+    fireEvent.click(await screen.findByRole("button", { name: "Upraviť" }));
+
+    expect(await screen.findByRole("heading", { name: "Presun termínu" })).toBeInTheDocument();
+  });
+
+  it("runs cancel flow from occupied event long press action", async () => {
+    seedInitialFirestore({ withEvent: true });
+    renderCalendarPage();
+
+    fireEvent.click(await screen.findByText("longpress-event"));
+    fireEvent.click(await screen.findByRole("button", { name: "Zrušiť" }));
+
+    await waitFor(() => {
+      expect(adminUpdateBookingStatusMock).toHaveBeenCalledWith({
+        business_id: "biz-1",
+        appointment_id: "apt-1",
+        status: "cancelled",
       });
     });
   });
@@ -691,9 +768,9 @@ describe("CalendarPage", () => {
     expect(firestoreMocks.addDocMock).not.toHaveBeenCalled();
   });
 
-  it("shows print error toast when popup window is blocked", async () => {
+  it("shows print error toast when print helper cannot prepare the document", async () => {
     seedInitialFirestore({ withEvent: true });
-    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    printHtmlDocumentMock.mockReturnValue(false);
 
     const { container } = renderCalendarPage();
     await waitFor(() => {
@@ -704,8 +781,8 @@ describe("CalendarPage", () => {
     expect(printButton).toBeTruthy();
     fireEvent.click(printButton!);
 
-    expect(openSpy).toHaveBeenCalled();
-    expect(toastMocks.error).toHaveBeenCalledWith("Nepodarilo sa otvoriť tlačové okno");
+    expect(printHtmlDocumentMock).toHaveBeenCalledTimes(1);
+    expect(toastMocks.error).toHaveBeenCalledWith("Nepodarilo sa pripraviť tlač");
   });
 
   it("saves note from detail sheet", async () => {

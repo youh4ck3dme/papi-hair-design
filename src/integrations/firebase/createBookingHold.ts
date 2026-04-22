@@ -21,6 +21,7 @@ export interface CreateBookingHoldResponse {
   confirm_token?: string;
   idempotency_key?: string;
   reused?: boolean;
+  customer_record_status?: "existing" | "created" | null;
 }
 
 export async function createBookingHold(

@@ -4,14 +4,14 @@ import {
     type CallableRequest,
     HttpsError
 } from "firebase-functions/v2/https";
-import * as crypto from "crypto";
 import { queueAdminBookingNotificationEmail, queueCustomerBookingEmail } from "./emailQueue";
 import { assignEmployeeForSlot } from "./autoAssignEmployee";
+import { getClientIp } from "./clientIp";
 import {
-    buildHistoryAccessUrl,
-    createOpaqueToken,
-    normalizeEmail,
-    normalizePhone,
+  buildHistoryAccessUrl,
+  createOpaqueToken,
+  normalizeEmail,
+  normalizePhone,
 } from "./publicBookingAccess";
 import { requireAuth, requireMembership } from "./guards";
 
@@ -40,17 +40,6 @@ interface CreatePublicBookingResult {
     reused: boolean;
 }
 
-function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): string | null {
-    const forwarded = rawRequest.headers["x-forwarded-for"];
-    if (typeof forwarded === "string" && forwarded.trim().length > 0) {
-        return forwarded.split(",")[0].trim();
-    }
-    if (Array.isArray(forwarded) && forwarded.length > 0) {
-        return forwarded[0]?.trim() || null;
-    }
-    return rawRequest.socket.remoteAddress ?? null;
-}
-
 import { checkRateLimit } from "./middleware/rateLimit";
 
 export const createPublicBooking = functions.https.onCall({ region: "europe-west1" }, async (request: CallableRequest<CreatePublicBookingData>) => {
@@ -58,7 +47,7 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
     const db = getFirestore();
 
     // Rate limit by IP
-    const ip = extractClientIp(request.rawRequest) || "unknown";
+    const ip = getClientIp(request.rawRequest) || "unknown";
     const adminMode = request.data?.admin_mode === true;
     if (!adminMode) {
         await checkRateLimit(ip);
@@ -79,7 +68,7 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
     const sanitizedPhone = normalizePhone(customer_phone);
     const sanitizedNote = typeof note === "string" && note.trim().length > 0 ? note.trim() : null;
     const sanitizedPaymentMethod = typeof payment_method === "string" && payment_method.trim().length > 0 ? payment_method.trim() : null;
-    const idemKey = (idempotency_key && idempotency_key.trim()) || crypto.randomUUID();
+    const idemKey = (idempotency_key && idempotency_key.trim()) || createOpaqueToken().token;
     const startDate = new Date(start_at);
     if (isNaN(startDate.getTime())) {
         throw new HttpsError("invalid-argument", "Neplatný dátum");
@@ -241,6 +230,7 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
                 customerName: customer_name.trim(),
                 serviceName: typeof service.name_sk === "string" ? service.name_sk : null,
                 startAtIso: startDate.toISOString(),
+                endAtIso: endDate.toISOString(),
                 historyAccessUrl: historyToken ? buildHistoryAccessUrl(appointment.id, historyToken) : null,
             });
         }

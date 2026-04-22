@@ -206,6 +206,86 @@ describe("useBookingForm", () => {
     });
   });
 
+  it("allows Papi to stay available for every service in all-services mode", async () => {
+    const services = [
+      makeService({ id: "svc-cut", name_sk: "Dámsky strih", category: "damske", subcategory: null }),
+      makeService({ id: "svc-color", name_sk: "Melír", category: "damske", subcategory: null }),
+    ];
+    const employees = [
+      makeEmployee({ id: "papi", display_name: "Papi", service_mode: "all" }),
+      makeEmployee({ id: "mato", display_name: "Mato", service_mode: "restricted" }),
+    ];
+    const employeeServiceMap = {
+      mato: ["svc-cut"],
+    };
+
+    const { result } = renderHook(() =>
+      useBookingForm(services, serviceSubcategories, employees, baseBusiness, employeeServiceMap, memberships)
+    );
+
+    act(() => {
+      result.current.setSelectedServiceId("svc-color");
+    });
+
+    await waitFor(() => {
+      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual(["Papi"]);
+    });
+  });
+
+  it("keeps Mato available only for explicitly assigned services", async () => {
+    const services = [
+      makeService({ id: "svc-cut", name_sk: "Dámsky strih", category: "damske", subcategory: null }),
+      makeService({ id: "svc-beard", name_sk: "Melír", category: "damske", subcategory: null }),
+    ];
+    const employees = [
+      makeEmployee({ id: "mato", display_name: "Mato", service_mode: "restricted" }),
+      makeEmployee({ id: "papi", display_name: "Papi", service_mode: "all" }),
+    ];
+    const employeeServiceMap = {
+      mato: ["svc-cut"],
+    };
+
+    const { result } = renderHook(() =>
+      useBookingForm(services, serviceSubcategories, employees, baseBusiness, employeeServiceMap, memberships)
+    );
+
+    act(() => {
+      result.current.setSelectedServiceId("svc-cut");
+    });
+
+    await waitFor(() => {
+      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual(["Papi", "Mato"]);
+    });
+
+    act(() => {
+      result.current.setSelectedServiceId("svc-beard");
+    });
+
+    await waitFor(() => {
+      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual(["Papi"]);
+    });
+  });
+
+  it("hides Miska completely in restricted mode when she has no assigned services", async () => {
+    const services = [makeService({ id: "svc-cut", name_sk: "Dámsky strih" })];
+    const employees = [
+      makeEmployee({ id: "miska", display_name: "Miska", service_mode: "restricted" }),
+      makeEmployee({ id: "papi", display_name: "Papi", service_mode: "all" }),
+    ];
+
+    const { result } = renderHook(() =>
+      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
+    );
+
+    act(() => {
+      result.current.setSelectedServiceId("svc-cut");
+    });
+
+    await waitFor(() => {
+      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual(["Papi"]);
+    });
+  });
+
   it("auto-selects the only available managed subcategory and filters services by it", async () => {
     const services = [
       makeService({ id: "svc-1", name_sk: "Dámsky strih", subcategory: "Strih", subcategory_id: "sub-1" }),
@@ -232,5 +312,30 @@ describe("useBookingForm", () => {
     });
 
     expect(result.current.filteredServices.map((service) => service.id)).toEqual(["svc-1"]);
+  });
+
+  it("keeps Papi first whenever he is available alongside other stylists", async () => {
+    const services = [makeService({ id: "svc-cut", name_sk: "Dámsky strih" })];
+    const employees = [
+      makeEmployee({ id: "mato", display_name: "Mato", service_mode: "all" }),
+      makeEmployee({ id: "papi", display_name: "Papi", service_mode: "all" }),
+      makeEmployee({ id: "miska", display_name: "Miska", service_mode: "all" }),
+    ];
+
+    const { result } = renderHook(() =>
+      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
+    );
+
+    act(() => {
+      result.current.setSelectedServiceId("svc-cut");
+    });
+
+    await waitFor(() => {
+      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual([
+        "Papi",
+        "Mato",
+        "Miska",
+      ]);
+    });
   });
 });

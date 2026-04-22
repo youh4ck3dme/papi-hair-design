@@ -1,5 +1,9 @@
 # Vlastná doména: booking.papihairdesign.sk
 
+Poznamka:
+- toto je tactical domain setup dokument
+- pre sirsi deploy a operations kontext pozri [Operations](OPERATIONS.md)
+
 V projekte je nastavená produkčná doména **https://booking.papihairdesign.sk**.
 
 ## Čo je v kóde
@@ -23,11 +27,16 @@ V projekte je nastavená produkčná doména **https://booking.papihairdesign.sk
    - **Hodnota:** `hairchainger-main-876665-176e8.web.app` (bez `https://`).
 4. Po uložení DNS počkať na propagáciu (minúty až hodiny). V Firebase Console → Hosting → Vlastné domény skontrolovať stav; po overení Firebase doménu aktivuje a vydá SSL.
 
-### Vercel
+### Vercel preview caveat
 
-1. Vercel → váš projekt → **Settings** → **Domains**.
-2. Pridajte `booking.papihairdesign.sk`.
-3. Nastavte u poskytovateľa DNS CNAME: `booking` → `cname.vercel-dns.com` (alebo hodnotu, ktorú Vercel zobrazí).
+Repo je stale napojene aj na Vercel preview deploymenty, ale:
+- Vercel tu nie je canonical production hosting
+- custom production domena ma ostat naviazana na Firebase Hosting flow
+- ak sa na Verceli zobrazi preview deployment URL, nema sa zamienat s produkcnou domenou `booking.papihairdesign.sk`
+
+Preto:
+- production custom domain ries cez Firebase
+- Vercel domain settings ber len ako preview-layer diagnostiku, nie ako source of truth
 
 ## Firebase Auth (redirecty)
 

@@ -5,6 +5,10 @@ Projekt: `hairchainger-main-876665-176e8`
 
 Tento runbook je urceny pre rychly a bezpecny rollback pri regresii po release.
 
+Poznamka:
+- toto je tactical rollback dokument
+- release disciplina a deploy model su popisane sirsie v [Operations](OPERATIONS.md)
+
 ## 1. Kedy rollbackovat
 
 Rollback spustit, ak nastane aspon jedna z podmienok:
@@ -60,4 +64,3 @@ Po kazdom rollbacku zapis:
 3. symptom (presna chyba),
 4. potvrdenie smoke testu po rollbacku,
 5. plan naslednej opravy.
-

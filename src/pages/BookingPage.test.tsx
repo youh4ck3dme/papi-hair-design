@@ -148,6 +148,10 @@ describe("BookingPage stylist step flow", () => {
       ...availabilityState.value,
       selectedTime: null,
     };
+    bookingDataState.value = {
+      ...bookingDataState.value,
+      initialLoading: false,
+    };
   });
 
   it("never skips stylist step and does not render date/time before stylist selection", () => {
@@ -185,5 +189,41 @@ describe("BookingPage stylist step flow", () => {
     expect(screen.getByTestId("booking-hero-shell")).toBeInTheDocument();
     expect(screen.getByTestId("booking-hero-logo")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Rezervujte si termín/i })).toBeInTheDocument();
+  });
+
+  it("renders a premium loading state while booking data is bootstrapping", () => {
+    bookingDataState.value = {
+      ...bookingDataState.value,
+      initialLoading: true,
+    };
+
+    render(<BookingPage />);
+
+    expect(screen.getByTestId("booking-loading-state")).toHaveTextContent("Pripravujeme rezervačný kalendár");
+    expect(screen.getByTestId("booking-loading-state")).toHaveTextContent("Načítavame služby, kaderníkov a dostupné termíny");
+  });
+
+  it("renders the PAPI consultation info block with direct call actions", () => {
+    render(<BookingPage />);
+
+    const consultationText = screen.getByTestId("booking-papi-consultation-text");
+    expect(consultationText).toBeInTheDocument();
+    expect(consultationText.className).toContain("text-white/84");
+    const phoneLink = screen.getByRole("link", { name: /\+421 949 459 624/i });
+    const callLink = screen.getByRole("link", { name: /Volať/i });
+
+    expect(phoneLink).toHaveAttribute("href", "tel:+421949459624");
+    expect(callLink).toHaveAttribute("href", "tel:+421949459624");
+    expect(phoneLink.className).toContain("rounded-[7px]");
+    expect(callLink.className).toContain("rounded-[7px]");
+    expect(screen.queryByText(/tel\. č\.: \+421 949 459 624/i)).not.toBeInTheDocument();
+  });
+
+  it("hides the top category pills on mobile-first layout to prioritize subcategories", () => {
+    render(<BookingPage />);
+
+    const menPill = screen.getByText(/Pánske služby/i);
+    expect(menPill.parentElement?.className).toContain("hidden");
+    expect(menPill.parentElement?.className).toContain("sm:flex");
   });
 });
