@@ -11,6 +11,8 @@ const authState = vi.hoisted(() => ({
 const resolveBookingAccountStateMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/calendarExport", () => ({
+  buildBookingCalendarExport: vi.fn((input) => input),
+  buildBookingIcsFilename: vi.fn(() => "papi-hair-design-damsky-strih.ics"),
   buildGoogleCalendarUrl: vi.fn(() => "https://calendar.google.com/fake"),
   buildIcsContent: vi.fn(() => "BEGIN:VCALENDAR"),
 }));

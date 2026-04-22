@@ -4,6 +4,17 @@ export interface CalendarExportInput {
   location?: string | null;
   start: Date;
   end: Date;
+  uid?: string | null;
+  stamp?: Date | null;
+}
+
+interface BookingCalendarExportInput {
+  appointmentId?: string | null;
+  businessName: string;
+  serviceName?: string | null;
+  location?: string | null;
+  start: Date;
+  end: Date;
 }
 
 function pad(value: number): string {
@@ -40,8 +51,8 @@ export function buildGoogleCalendarUrl(input: CalendarExportInput): string {
 }
 
 export function buildIcsContent(input: CalendarExportInput): string {
-  const now = new Date();
-  const uid = `booking-${input.start.getTime()}@papihairdesign.sk`;
+  const now = input.stamp ?? new Date();
+  const uid = input.uid?.trim() || `booking-${input.start.getTime()}@papihairdesign.sk`;
 
   return [
     "BEGIN:VCALENDAR",
@@ -59,4 +70,33 @@ export function buildIcsContent(input: CalendarExportInput): string {
     "END:VEVENT",
     "END:VCALENDAR",
   ].join("\r\n");
+}
+
+function slugifySegment(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+}
+
+export function buildBookingCalendarExport(input: BookingCalendarExportInput): CalendarExportInput {
+  const businessName = input.businessName.trim() || "PAPI Hair Design";
+  const serviceName = input.serviceName?.trim() || "Rezervácia";
+
+  return {
+    title: `${businessName} - ${serviceName}`,
+    description: `Potvrdená rezervácia služby ${serviceName} v salóne ${businessName}.`,
+    location: input.location?.trim() || null,
+    start: input.start,
+    end: input.end,
+    uid: input.appointmentId?.trim() ? `booking-${input.appointmentId.trim()}@papihairdesign.sk` : null,
+  };
+}
+
+export function buildBookingIcsFilename(serviceName?: string | null): string {
+  const serviceSegment = slugifySegment(serviceName?.trim() || "booking");
+  return `papi-hair-design-${serviceSegment || "booking"}.ics`;
 }

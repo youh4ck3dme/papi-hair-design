@@ -3,7 +3,12 @@ import { Check, CalendarCheck2, Clock4, Loader2, Scissors } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { BookingResult, ServiceRow } from "./types";
-import { buildGoogleCalendarUrl, buildIcsContent } from "@/lib/calendarExport";
+import {
+    buildBookingCalendarExport,
+    buildBookingIcsFilename,
+    buildGoogleCalendarUrl,
+    buildIcsContent,
+} from "@/lib/calendarExport";
 import { PublicStickyHeader } from "@/components/public/PublicStickyHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -87,39 +92,33 @@ export function BookingSuccess({
     const appointmentEnd = appointmentStart && selectedService
         ? new Date(appointmentStart.getTime() + (selectedService.duration_minutes + (selectedService.buffer_minutes ?? 0)) * 60 * 1000)
         : null;
-
-    const handleDownloadIcs = () => {
-        if (!appointmentStart || !appointmentEnd) return;
-
-        const ics = buildIcsContent({
-      title: `PAPI HAIR DESIGN - ${selectedService?.name_sk ?? t("booking.confirmTitle")}`,
-            description: t("booking.calendarDescription", {
-                service: selectedService?.name_sk ?? t("booking.confirmTitle"),
-            }),
+    const calendarExport = appointmentStart && appointmentEnd
+        ? buildBookingCalendarExport({
+            appointmentId: bookingResult.appointment_id,
+            businessName: "PAPI Hair Design",
+            serviceName: selectedService?.name_sk ?? t("booking.confirmTitle"),
             location: t("index.address"),
             start: appointmentStart,
             end: appointmentEnd,
-        });
+        })
+        : null;
+
+    const handleDownloadIcs = () => {
+        if (!calendarExport) return;
+
+        const ics = buildIcsContent(calendarExport);
 
         const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = "fyzio-fit-booking.ics";
+        link.download = buildBookingIcsFilename(selectedService?.name_sk);
         link.click();
         URL.revokeObjectURL(url);
     };
 
-    const googleCalendarHref = appointmentStart && appointmentEnd
-        ? buildGoogleCalendarUrl({
-      title: `PAPI HAIR DESIGN - ${selectedService?.name_sk ?? t("booking.confirmTitle")}`,
-            description: t("booking.calendarDescription", {
-                service: selectedService?.name_sk ?? t("booking.confirmTitle"),
-            }),
-            location: t("index.address"),
-            start: appointmentStart,
-            end: appointmentEnd,
-        })
+    const googleCalendarHref = calendarExport
+        ? buildGoogleCalendarUrl(calendarExport)
         : null;
 
     return (
