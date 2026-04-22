@@ -124,4 +124,77 @@ describe("BookingHistoryPage", () => {
     await waitFor(() => expect(lookupBookingHistory).toHaveBeenCalled());
     expect(toast.error).toHaveBeenCalledWith("Históriu rezervácií sa nepodarilo načítať.");
   });
+
+  it("does not show cancel action for completed or past bookings", async () => {
+    lookupBookingHistory.mockResolvedValue({
+      success: true,
+      customer_email: "user@example.com",
+      appointments: [
+        {
+          id: "done-1",
+          service_name: "Completed",
+          start_at: "2099-03-01T09:00:00.000Z",
+          status: "completed",
+        },
+        {
+          id: "past-1",
+          service_name: "Past confirmed",
+          start_at: "2020-03-01T09:00:00.000Z",
+          status: "confirmed",
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard/history?access=token123&ref=done-1"]}>
+        <BookingHistoryPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("Completed")).toBeInTheDocument();
+    expect(screen.getByText("Past confirmed")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Zrušiť rezerváciu/i })).not.toBeInTheDocument();
+  });
+
+  it("shows callable error message when cancellation fails and keeps current history intact", async () => {
+    lookupBookingHistory.mockResolvedValue({
+      success: true,
+      customer_email: "user@example.com",
+      customer_phone: "+421905123456",
+      reference: "ref-1",
+      appointments: [
+        {
+          id: "ref-1",
+          service_name: "Express",
+          start_at: "2099-03-01T09:00:00.000Z",
+          status: "confirmed",
+          is_reference: true,
+        },
+      ],
+    });
+    cancelCustomerBooking.mockRejectedValue(new Error("Storningu momentálne bráni server."));
+
+    render(
+      <MemoryRouter initialEntries={[{
+        pathname: "/dashboard/history",
+        state: {
+          bookingHistoryAccess: {
+            accessToken: "token123",
+            reference: "ref-1",
+          },
+        },
+      }]}>
+        <BookingHistoryPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByRole("button", { name: /Zrušiť rezerváciu/i });
+    fireEvent.click(screen.getByRole("button", { name: /Zrušiť rezerváciu/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Áno, zrušiť/i }));
+
+    await waitFor(() => expect(cancelCustomerBooking).toHaveBeenCalledTimes(1));
+    expect(toast.error).toHaveBeenCalledWith("Storningu momentálne bráni server.");
+    expect(lookupBookingHistory).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Express")).toBeInTheDocument();
+  });
 });

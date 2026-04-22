@@ -2,12 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [main, uprava22-2, papihairstudiobooking]
+    branches: [main, uprava22-2, papihairstudiobooking, otvarackapril2026]
   pull_request:
-    branches: [main, papihairstudiobooking]
+    branches: [main, papihairstudiobooking, otvarackapril2026]
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint-and-test:
@@ -147,22 +152,39 @@ jobs:
     name: E2E (Authenticated Mutations)
     runs-on: ubuntu-latest
     needs: build
-    if: ${{ secrets.PLAYWRIGHT_ADMIN_EMAIL != '' && secrets.PLAYWRIGHT_ADMIN_PASSWORD != '' && secrets.PLAYWRIGHT_FIREBASE_API_KEY != '' }}
 
     steps:
+      - name: Detect authenticated mutation availability
+        id: auth-e2e
+        shell: bash
+        env:
+          PLAYWRIGHT_ADMIN_EMAIL: ${{ secrets.PLAYWRIGHT_ADMIN_EMAIL }}
+          PLAYWRIGHT_ADMIN_PASSWORD: ${{ secrets.PLAYWRIGHT_ADMIN_PASSWORD }}
+          PLAYWRIGHT_FIREBASE_API_KEY: ${{ secrets.PLAYWRIGHT_FIREBASE_API_KEY }}
+        run: |
+          if [[ -n "$PLAYWRIGHT_ADMIN_EMAIL" && -n "$PLAYWRIGHT_ADMIN_PASSWORD" && -n "$PLAYWRIGHT_FIREBASE_API_KEY" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout
+        if: steps.auth-e2e.outputs.enabled == 'true'
         uses: actions/checkout@v5
 
       - name: Setup Node.js
+        if: steps.auth-e2e.outputs.enabled == 'true'
         uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
       - name: Install dependencies
+        if: steps.auth-e2e.outputs.enabled == 'true'
         run: npm ci
 
       - name: Build
+        if: steps.auth-e2e.outputs.enabled == 'true'
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
@@ -175,9 +197,11 @@ jobs:
         run: npm run build
 
       - name: Install Playwright browsers
+        if: steps.auth-e2e.outputs.enabled == 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Run gated authenticated mutation suite
+        if: steps.auth-e2e.outputs.enabled == 'true'
         env:
           PLAYWRIGHT_ENABLE_BOOKING_E2E: "1"
           PLAYWRIGHT_ENABLE_ADMIN_E2E: "1"
@@ -188,8 +212,12 @@ jobs:
           PLAYWRIGHT_ADMIN_PASSWORD: ${{ secrets.PLAYWRIGHT_ADMIN_PASSWORD }}
         run: npm run test:e2e:authenticated
 
+      - name: Skip gated authenticated mutation suite
+        if: steps.auth-e2e.outputs.enabled != 'true'
+        run: echo "Authenticated mutation E2E skipped because required secrets are not configured."
+
       - name: Upload mutation Playwright report
-        if: always()
+        if: always() && steps.auth-e2e.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-authenticated-mutations
@@ -197,3 +225,35 @@ jobs:
             e2e-results/html-report
             e2e-results/test-results
           if-no-files-found: ignore
+
+  merge-readiness:
+    name: Merge Readiness
+    runs-on: ubuntu-latest
+    needs:
+      - lint-and-test
+      - build
+      - e2e
+      - e2e-authenticated-mutations
+    if: always()
+
+    steps:
+      - name: Verify required jobs passed
+        shell: bash
+        run: |
+          declare -A results=(
+            ["Lint & Test"]="${{ needs.lint-and-test.result }}"
+            ["Build"]="${{ needs.build.result }}"
+            ["E2E (Playwright Full Suite)"]="${{ needs.e2e.result }}"
+            ["E2E (Authenticated Mutations)"]="${{ needs.e2e-authenticated-mutations.result }}"
+          )
+
+          for name in "${!results[@]}"; do
+            result="${results[$name]}"
+            echo "$name => $result"
+            if [[ "$result" != "success" ]]; then
+              echo "::error::$name finished with '$result'"
+              exit 1
+            fi
+          done
+
+          echo "All required merge checks passed."
