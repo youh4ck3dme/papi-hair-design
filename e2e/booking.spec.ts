@@ -42,44 +42,63 @@ async function reachBookingDetailsStep(page: Page) {
 
     const categoryStep = page.getByTestId("booking-step-category");
     await expect(categoryStep).toBeVisible({ timeout: 10000 });
-    const categoryButtons = categoryStep.locator("div.relative.flex").first().locator("button");
-    const firstServiceDirect = categoryStep.locator('button:has-text("min")').first();
-    const categoryCount = await categoryButtons.count();
-    let categoryReady = false;
+    const categoryButtons = [
+        categoryStep.getByRole("button", { name: "Dámske Služby" }),
+        categoryStep.getByRole("button", { name: "Pánske Služby" }),
+    ];
+    const firstServiceCard = categoryStep.locator("button").filter({ hasText: /min/i }).first();
 
-    if (await firstServiceDirect.isVisible({ timeout: 1500 }).catch(() => false)) {
-        categoryReady = true;
-    }
+    let serviceVisible = await firstServiceCard.isVisible({ timeout: 1000 }).catch(() => false);
 
-    for (let i = 0; i < Math.min(2, categoryCount); i++) {
-        if (categoryReady) break;
-        const categoryButton = categoryButtons.nth(i);
+    for (const categoryButton of categoryButtons) {
+        if (serviceVisible) break;
         if (!(await categoryButton.isVisible({ timeout: 1000 }).catch(() => false))) {
             continue;
         }
 
         await categoryButton.click();
-        await page.waitForTimeout(800);
+        await page.waitForTimeout(600);
 
-        if (await firstServiceDirect.isVisible({ timeout: 1500 }).catch(() => false)) {
-            categoryReady = true;
-            break;
-        }
+        const subcategoryHeading = categoryStep.getByText("Vyberte podkategóriu");
+        const subcategorySectionVisible = await subcategoryHeading.isVisible({ timeout: 1200 }).catch(() => false);
+        if (subcategorySectionVisible) {
+            const subcategoryButtons = categoryStep.locator("button").filter({
+                hasNot: categoryStep.locator('span:text-matches("\\\\d+ min", "i")'),
+            });
 
-        const firstSubcategory = page.locator('button[class*="uppercase"][class*="tracking-wider"]').first();
-        if (await firstSubcategory.isVisible({ timeout: 1500 }).catch(() => false)) {
-            await firstSubcategory.click();
-            categoryReady = true;
-            break;
+            const subcategoryCount = await subcategoryButtons.count();
+            for (let i = 0; i < subcategoryCount; i++) {
+                const button = subcategoryButtons.nth(i);
+                const label = (await button.textContent())?.trim() ?? "";
+                if (!label || label === "Dámske Služby" || label === "Pánske Služby") {
+                    continue;
+                }
+
+                await button.click();
+                await page.waitForTimeout(600);
+                serviceVisible = await firstServiceCard.isVisible({ timeout: 1200 }).catch(() => false);
+                if (serviceVisible) break;
+            }
+        } else {
+            serviceVisible = await firstServiceCard.isVisible({ timeout: 1200 }).catch(() => false);
         }
     }
 
-    if (!categoryReady) {
-        throw new Error("No category with visible services found");
+    if (!serviceVisible) {
+        throw new Error("No category/subcategory combination with visible services found");
     }
 
-    await expect(firstServiceDirect).toBeVisible({ timeout: 5000 });
-    await firstServiceDirect.click();
+    await expect(firstServiceCard).toBeVisible({ timeout: 5000 });
+    await firstServiceCard.click();
+    const employeeStep = page.getByTestId("booking-step-employee");
+    await expect(employeeStep).toBeVisible({ timeout: 10000 });
+
+    const employeeButtons = employeeStep
+        .locator("button")
+        .filter({ hasText: /Klikni pre výber/i });
+    await expect(employeeButtons.first()).toBeVisible({ timeout: 5000 });
+    await employeeButtons.first().click();
+
     await expect(page.locator('[data-testid^="date-btn-"]').first()).toBeVisible({ timeout: 10000 });
 
     await page.waitForTimeout(1200);
@@ -205,7 +224,7 @@ test.describe("Booking Flow", () => {
 
         await privacyLink.click();
         await expect(page).toHaveURL(/\/privacy/i, { timeout: 10000 });
-        await expect(page.getByRole("heading", { name: /Zásady ochrany osobných údajov/i })).toBeVisible({ timeout: 10000 });
+        await expect(page.getByRole("heading", { name: /Ochrana súkromia/i })).toBeVisible({ timeout: 10000 });
 
         await page.goto("/booking");
         await reachBookingDetailsStep(page);

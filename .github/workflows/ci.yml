@@ -186,7 +186,7 @@ jobs:
           PLAYWRIGHT_FIREBASE_API_KEY: ${{ secrets.PLAYWRIGHT_FIREBASE_API_KEY }}
           PLAYWRIGHT_ADMIN_EMAIL: ${{ secrets.PLAYWRIGHT_ADMIN_EMAIL }}
           PLAYWRIGHT_ADMIN_PASSWORD: ${{ secrets.PLAYWRIGHT_ADMIN_PASSWORD }}
-        run: npx playwright test e2e/booking.spec.ts e2e/admin-calendar.spec.ts e2e/admin-smoke.spec.ts e2e/admin-mutations.spec.ts --config=e2e/playwright.config.preview.ts
+        run: npm run test:e2e:authenticated
 
       - name: Upload mutation Playwright report
         if: always()

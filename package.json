@@ -24,6 +24,7 @@
     "test:responsive": "node ./node_modules/@playwright/test/cli.js test --config=e2e/playwright.config.ts",
     "test:responsive:preview": "npm run build && node ./node_modules/@playwright/test/cli.js test --config=e2e/playwright.config.preview.ts e2e/responsiveness.spec.ts",
     "test:e2e:preview": "npm run build && node ./node_modules/@playwright/test/cli.js test --config=e2e/playwright.config.preview.ts",
+    "test:e2e:authenticated": "node ./node_modules/@playwright/test/cli.js test e2e/booking.spec.ts e2e/admin-calendar.spec.ts e2e/admin-smoke.spec.ts e2e/admin-mutations.spec.ts --config=e2e/playwright.config.preview.ts",
     "test:admin": "node ./node_modules/@playwright/test/cli.js test e2e/admin-calendar.spec.ts --config=e2e/playwright.config.ts",
     "test:booking-mobile-live": "node scripts/booking-mobile-audit-live.mjs",
     "test:admin-employees-live": "node scripts/admin-employees-live-smoke.mjs",
