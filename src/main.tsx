@@ -6,6 +6,7 @@ import "@/styles/phd-design-system.css";
 import "@/i18n";
 import { ensureStorageAndServiceWorker } from "@/lib/indexed-db-available";
 import { initAnalytics } from "@/lib/analytics";
+import { createServiceWorkerRegisterOptions } from "@/lib/serviceWorkerRegistration";
 import { registerSW } from "virtual:pwa-register";
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
@@ -84,12 +85,13 @@ function initServiceWorker() {
     return;
   }
 
-  registerSW({
-    immediate: true,
-    onRegisterError(error) {
-      console.warn("Service worker registration skipped:", error);
-    },
-  });
+  const serviceWorkerState: {
+    updateServiceWorker?: (reloadPage?: boolean) => Promise<void>;
+  } = {};
+
+  serviceWorkerState.updateServiceWorker = registerSW(
+    createServiceWorkerRegisterOptions(() => serviceWorkerState.updateServiceWorker),
+  );
 }
 
 async function bootstrap() {

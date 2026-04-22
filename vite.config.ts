@@ -58,7 +58,7 @@ export default defineConfig(({ mode }) => {
       react(),
 
       VitePWA({
-        registerType: "autoUpdate",
+        registerType: "prompt",
         includeAssets: [
           "favicon.ico",
           "favicon-16x16.png",
@@ -73,8 +73,8 @@ export default defineConfig(({ mode }) => {
         ],
         manifest: false, // use existing site.webmanifest
         workbox: {
-          skipWaiting: true,
-          clientsClaim: true,
+          skipWaiting: false,
+          clientsClaim: false,
           navigateFallbackDenylist: [/^\/__\/auth/],
           runtimeCaching: [
             {
