@@ -1,5 +1,9 @@
 # Analytics – čo máte a kde to nájdete
 
+Poznamka:
+- tento dokument je prakticky analytics-specific doplnok
+- canonical product, operations a compliance kontext najdes v [README.md](../README.md), [Operations](OPERATIONS.md) a [Security & Compliance Baseline](SECURITY-COMPLIANCE.md)
+
 Máte **jednu** Google Analytics 4 (GA4) vlastnosť. Je rovnaká či ju otvoríte z **Firebase** alebo z **Google Analytics**.
 
 ---

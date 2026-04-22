@@ -5,6 +5,10 @@ Projekt: `hairchainger-main-876665-176e8`
 
 Tento checklist pokryva prvych 24 hodin po release.
 
+Poznamka:
+- toto je post-release monitoring doplnok
+- sirsia operational logika je v [Operations](OPERATIONS.md)
+
 ## 1. Casove checkpointy
 
 Skontroluj produkciu v tychto bodoch:
@@ -51,5 +55,4 @@ Release sa povazuje za stabilizovany, ak:
 2. nie su otvorene P0/P1 incidenty,
 3. booking/admin smoke je stale green.
 
-Ak exit criteria nie su splnene, otvor hotfix branch a postupuj podla [ROLLBACK-RUNBOOK.md](/C:/Users/42195/Downloads/loveable-PHDbooking-finale-3-3-26/docs/ROLLBACK-RUNBOOK.md).
-
+Ak exit criteria nie su splnene, otvor hotfix branch a postupuj podla [Rollback Runbook](ROLLBACK-RUNBOOK.md).

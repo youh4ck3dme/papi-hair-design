@@ -1,5 +1,9 @@
 # Vlastná doména: booking.papihairdesign.sk
 
+Poznamka:
+- toto je tactical domain setup dokument
+- pre sirsi deploy a operations kontext pozri [Operations](OPERATIONS.md)
+
 V projekte je nastavená produkčná doména **https://booking.papihairdesign.sk**.
 
 ## Čo je v kóde
