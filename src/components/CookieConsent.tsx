@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "@/styles/liquid-cookie.css";
 import { applyAnalyticsConsent } from "@/lib/analytics";
+import { createRuntimeId } from "@/lib/runtimeId";
 
 interface CookiePrefs {
   necessary: true;
@@ -37,10 +38,7 @@ function applyConsent(prefs: Omit<CookiePrefs, "timestamp">) {
 function getConsentSubjectId() {
   const existing = localStorage.getItem(CONSENT_SUBJECT_KEY);
   if (existing) return existing;
-  const next =
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
+  const next = createRuntimeId("consent");
   localStorage.setItem(CONSENT_SUBJECT_KEY, next);
   return next;
 }

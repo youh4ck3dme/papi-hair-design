@@ -12,11 +12,9 @@ import {
     type BookingMainCategory,
     type ServiceSubcategoryRow,
 } from "@/lib/serviceSubcategories";
+import { createRuntimeId } from "@/lib/runtimeId";
 
-const makeIdempotencyKey = () =>
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const makeIdempotencyKey = () => createRuntimeId("booking");
 
 const normalizeEmployeeName = (value: string | null | undefined) =>
     (value ?? "")

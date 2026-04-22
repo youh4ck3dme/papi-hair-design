@@ -45,7 +45,7 @@ export function printHtmlDocument(html: string): boolean {
       frameWindow.addEventListener("afterprint", cleanup, { once: true });
       frameWindow.focus();
       frameWindow.print();
-      window.setTimeout(cleanup, PRINT_CLEANUP_DELAY_MS);
+      globalThis.setTimeout(cleanup, PRINT_CLEANUP_DELAY_MS);
     },
     { once: true },
   );
