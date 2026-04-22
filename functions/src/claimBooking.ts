@@ -4,7 +4,7 @@ import {
     type CallableRequest,
     HttpsError
 } from "firebase-functions/v2/https";
-import * as crypto from "crypto";
+import { hashOpaqueToken } from "./publicBookingAccess";
 
 interface ClaimBookingData {
     claim_token: string;
@@ -26,7 +26,7 @@ export const claimBooking = functions.https.onCall({ region: "europe-west1" }, a
     const userId = auth.uid;
 
     // Hash the provided token
-    const tokenHash = crypto.createHash("sha256").update(claim_token).digest("hex");
+    const tokenHash = hashOpaqueToken(claim_token);
 
     // Find the claim
     const claimsSnap = await db.collection("booking_claims")

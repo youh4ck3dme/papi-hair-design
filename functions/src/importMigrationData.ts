@@ -5,6 +5,7 @@ import {
     type CallableRequest,
     HttpsError
 } from "firebase-functions/v2/https";
+import { timingSafeEqual } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -42,6 +43,18 @@ interface ImportMigrationDataRequest {
 
 interface ImportResult {
     [collection: string]: number;
+}
+
+export function hasMatchingAdminSecret(providedSecret: string | undefined, expectedSecret: string): boolean {
+    const normalizedProvided = typeof providedSecret === "string" ? providedSecret.trim() : "";
+    const providedBuffer = Buffer.from(normalizedProvided, "utf8");
+    const expectedBuffer = Buffer.from(expectedSecret, "utf8");
+
+    if (providedBuffer.length !== expectedBuffer.length) {
+        return false;
+    }
+
+    return timingSafeEqual(providedBuffer, expectedBuffer);
 }
 
 function cleanItemForFirestore(item: Record<string, unknown>): Record<string, unknown> {
@@ -108,7 +121,7 @@ export const importMigrationData = functions.https.onCall(
                 "Import is disabled: IMPORT_MIGRATION_SECRET is not configured. Set it in Firebase Functions config to enable."
             );
         }
-        if (request.data?.adminSecret !== secret) {
+        if (!hasMatchingAdminSecret(request.data?.adminSecret, secret)) {
             throw new HttpsError("permission-denied", "Admin secret required to run import");
         }
 

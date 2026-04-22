@@ -1,11 +1,12 @@
 import { getDB, type OfflineAppointment, type QueueItem } from "./db";
+import { createRuntimeId } from "@/lib/runtimeId";
 
 function isoNow() {
   return new Date().toISOString();
 }
 
 function makeKey(prefix: string) {
-  return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  return createRuntimeId(prefix);
 }
 
 export async function upsertLocalAppointment(appt: OfflineAppointment) {

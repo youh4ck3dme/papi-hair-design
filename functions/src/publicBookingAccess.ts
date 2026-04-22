@@ -2,6 +2,10 @@ import * as crypto from "crypto";
 
 const DEFAULT_PUBLIC_BOOKING_BASE_URL = "https://booking.papihairdesign.sk";
 
+function sha256Hex(value: string): string {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
 export function normalizeEmail(email: string): string {
   const [localRaw, domain] = email.toLowerCase().trim().split("@");
   if (!domain) return email.toLowerCase().trim();
@@ -32,12 +36,12 @@ export function normalizePhone(phone?: string | null): string | null {
 
 export function createOpaqueToken(): { token: string; tokenHash: string } {
   const token = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const tokenHash = hashOpaqueToken(token);
   return { token, tokenHash };
 }
 
 export function hashOpaqueToken(token: string): string {
-  return crypto.createHash("sha256").update(token).digest("hex");
+  return sha256Hex(token);
 }
 
 export function resolvePublicBookingBaseUrl(): string {
