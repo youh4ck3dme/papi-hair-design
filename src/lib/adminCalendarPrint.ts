@@ -1,7 +1,14 @@
 const PRINT_CLEANUP_DELAY_MS = 1500;
 
 export function printHtmlDocument(html: string): boolean {
-  if (typeof document === "undefined" || !document.body) {
+  if (
+    typeof document === "undefined" ||
+    !document.body ||
+    typeof URL === "undefined" ||
+    typeof URL.createObjectURL !== "function" ||
+    typeof URL.revokeObjectURL !== "function" ||
+    typeof Blob === "undefined"
+  ) {
     return false;
   }
 
@@ -15,9 +22,14 @@ export function printHtmlDocument(html: string): boolean {
   iframe.style.height = "0";
   iframe.style.border = "0";
   iframe.style.visibility = "hidden";
-  iframe.setAttribute("sandbox", "allow-modals allow-same-origin");
+  iframe.setAttribute("sandbox", "allow-modals");
+
+  const printUrl = URL.createObjectURL(
+    new Blob([html], { type: "text/html;charset=utf-8" }),
+  );
 
   const cleanup = () => {
+    URL.revokeObjectURL(printUrl);
     iframe.remove();
   };
 
@@ -38,7 +50,7 @@ export function printHtmlDocument(html: string): boolean {
     { once: true },
   );
 
-  iframe.srcdoc = html;
+  iframe.src = printUrl;
   document.body.appendChild(iframe);
   return true;
 }

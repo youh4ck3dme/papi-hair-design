@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "@/styles/liquid-cookie.css";
+import { applyAnalyticsConsent } from "@/lib/analytics";
 
 interface CookiePrefs {
   necessary: true;
@@ -29,17 +30,8 @@ function savePrefs(prefs: Omit<CookiePrefs, "timestamp">) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...prefs, timestamp: new Date().toISOString() }));
 }
 
-function applyGtagConsent(prefs: Omit<CookiePrefs, "timestamp">) {
-  if (typeof window === "undefined") return;
-  const gtag = (window as any).gtag;
-  if (typeof gtag !== "function") return;
-
-  gtag("consent", "update", {
-    analytics_storage: prefs.analytics ? "granted" : "denied",
-    ad_storage: "denied",
-    ad_user_data: "denied",
-    ad_personalization: "denied",
-  });
+function applyConsent(prefs: Omit<CookiePrefs, "timestamp">) {
+  void applyAnalyticsConsent(prefs.analytics);
 }
 
 function getConsentSubjectId() {
@@ -95,7 +87,7 @@ export default function CookieConsent() {
       setVisible(true);
       return;
     }
-    applyGtagConsent(existing);
+    applyConsent(existing);
   }, []);
 
   useEffect(() => {
@@ -145,7 +137,7 @@ export default function CookieConsent() {
   const acceptAll = useCallback(() => {
     const prefs = { necessary: true as const, analytics: true };
     savePrefs(prefs);
-    applyGtagConsent(prefs);
+    applyConsent(prefs);
     void trackConsentEvent(prefs, "accept");
     setVisible(false);
   }, []);
@@ -153,7 +145,7 @@ export default function CookieConsent() {
   const rejectAll = useCallback(() => {
     const prefs = { necessary: true as const, analytics: false };
     savePrefs(prefs);
-    applyGtagConsent(prefs);
+    applyConsent(prefs);
     void trackConsentEvent(prefs, "reject");
     setVisible(false);
   }, []);
@@ -167,7 +159,7 @@ export default function CookieConsent() {
   const saveCustom = useCallback(() => {
     const prefs = { necessary: true as const, analytics };
     savePrefs(prefs);
-    applyGtagConsent(prefs);
+    applyConsent(prefs);
     void trackConsentEvent(prefs, "update");
     setVisible(false);
   }, [analytics]);
