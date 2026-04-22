@@ -3,6 +3,7 @@ import { expect, type Page } from "@playwright/test";
 export const ENABLE_ADMIN_E2E = process.env.PLAYWRIGHT_ENABLE_ADMIN_E2E === "1";
 export const ENABLE_ADMIN_SMOKE_E2E =
   process.env.PLAYWRIGHT_ENABLE_ADMIN_SMOKE_E2E === "1" || ENABLE_ADMIN_E2E;
+export const ENABLE_ADMIN_MUTATION_E2E = process.env.PLAYWRIGHT_ENABLE_ADMIN_MUTATION_E2E === "1";
 export const ADMIN_EMAIL =
   process.env.PLAYWRIGHT_ADMIN_EMAIL?.trim() ||
   process.env.VITE_PAPI_EMAIL?.trim() ||
@@ -12,7 +13,7 @@ export const ADMIN_PASSWORD =
   process.env.PLAYWRIGHT_ROLE_PASSWORD?.trim() ||
   "88888888";
 
-if ((ENABLE_ADMIN_E2E || ENABLE_ADMIN_SMOKE_E2E) && (!ADMIN_EMAIL || !ADMIN_PASSWORD)) {
+if ((ENABLE_ADMIN_E2E || ENABLE_ADMIN_SMOKE_E2E || ENABLE_ADMIN_MUTATION_E2E) && (!ADMIN_EMAIL || !ADMIN_PASSWORD)) {
   throw new Error(
     "PLAYWRIGHT_ADMIN_EMAIL and PLAYWRIGHT_ADMIN_PASSWORD are required when admin Playwright E2E is enabled.",
   );

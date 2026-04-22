@@ -182,10 +182,11 @@ jobs:
           PLAYWRIGHT_ENABLE_BOOKING_E2E: "1"
           PLAYWRIGHT_ENABLE_ADMIN_E2E: "1"
           PLAYWRIGHT_ENABLE_ADMIN_SMOKE_E2E: "1"
+          PLAYWRIGHT_ENABLE_ADMIN_MUTATION_E2E: "1"
           PLAYWRIGHT_FIREBASE_API_KEY: ${{ secrets.PLAYWRIGHT_FIREBASE_API_KEY }}
           PLAYWRIGHT_ADMIN_EMAIL: ${{ secrets.PLAYWRIGHT_ADMIN_EMAIL }}
           PLAYWRIGHT_ADMIN_PASSWORD: ${{ secrets.PLAYWRIGHT_ADMIN_PASSWORD }}
-        run: npx playwright test e2e/booking.spec.ts e2e/admin-calendar.spec.ts e2e/admin-smoke.spec.ts --config=e2e/playwright.config.preview.ts
+        run: npx playwright test e2e/booking.spec.ts e2e/admin-calendar.spec.ts e2e/admin-smoke.spec.ts e2e/admin-mutations.spec.ts --config=e2e/playwright.config.preview.ts
 
       - name: Upload mutation Playwright report
         if: always()
