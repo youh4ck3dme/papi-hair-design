@@ -5,6 +5,7 @@ import {
 } from "firebase-functions/v2/https";
 import * as crypto from "crypto";
 import { assignEmployeeForSlot } from "./autoAssignEmployee";
+import { getClientIp } from "./clientIp";
 import { normalizeEmail, normalizePhone } from "./publicBookingAccess";
 import { checkRateLimit } from "./middleware/rateLimit";
 import { throwBookingError } from "./errors";
@@ -32,17 +33,6 @@ function createIdempotencyKey(rawKey: string | undefined): string {
   return crypto.randomUUID();
 }
 
-function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): string | null {
-  const forwarded = rawRequest.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.trim().length > 0) {
-    return forwarded.split(",")[0].trim();
-  }
-  if (Array.isArray(forwarded) && forwarded.length > 0) {
-    return forwarded[0]?.trim() || null;
-  }
-  return rawRequest.socket.remoteAddress ?? null;
-}
-
 export const createBookingHold = functions.https.onCall(
   { region: "europe-west1" },
   async (request: CallableRequest<CreateBookingHoldInput>) => {
@@ -50,7 +40,7 @@ export const createBookingHold = functions.https.onCall(
     const db = getFirestore();
 
     // Rate limit by IP
-    const ip = extractClientIp(request.rawRequest) || "unknown";
+    const ip = getClientIp(request.rawRequest) || "unknown";
     await checkRateLimit(ip);
 
     const {

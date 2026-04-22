@@ -4,6 +4,7 @@ import {
   type CallableRequest,
 } from "firebase-functions/v2/https";
 import { queueAdminBookingNotificationEmail, queueCustomerBookingEmail } from "./emailQueue";
+import { getClientIp } from "./clientIp";
 import {
   buildHistoryAccessUrl,
   createOpaqueToken,
@@ -22,17 +23,6 @@ interface ConfirmBookingInput {
 
 type CustomerRecordStatus = "existing" | "created" | null;
 
-function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): string | null {
-  const forwarded = rawRequest.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.trim().length > 0) {
-    return forwarded.split(",")[0].trim();
-  }
-  if (Array.isArray(forwarded) && forwarded.length > 0) {
-    return forwarded[0]?.trim() || null;
-  }
-  return rawRequest.socket.remoteAddress ?? null;
-}
-
 export const confirmBooking = functions.https.onCall(
   { region: "europe-west1" },
   async (request: CallableRequest<ConfirmBookingInput>) => {
@@ -40,7 +30,7 @@ export const confirmBooking = functions.https.onCall(
     const db = getFirestore();
 
     // Rate limit by IP
-    const ip = extractClientIp(request.rawRequest) || "unknown";
+    const ip = getClientIp(request.rawRequest) || "unknown";
     await checkRateLimit(ip);
 
     if (!appointment_id) {

@@ -7,6 +7,7 @@ import {
 import * as crypto from "crypto";
 import { queueAdminBookingNotificationEmail, queueCustomerBookingEmail } from "./emailQueue";
 import { assignEmployeeForSlot } from "./autoAssignEmployee";
+import { getClientIp } from "./clientIp";
 import {
     buildHistoryAccessUrl,
     createOpaqueToken,
@@ -40,17 +41,6 @@ interface CreatePublicBookingResult {
     reused: boolean;
 }
 
-function extractClientIp(rawRequest: CallableRequest<unknown>["rawRequest"]): string | null {
-    const forwarded = rawRequest.headers["x-forwarded-for"];
-    if (typeof forwarded === "string" && forwarded.trim().length > 0) {
-        return forwarded.split(",")[0].trim();
-    }
-    if (Array.isArray(forwarded) && forwarded.length > 0) {
-        return forwarded[0]?.trim() || null;
-    }
-    return rawRequest.socket.remoteAddress ?? null;
-}
-
 import { checkRateLimit } from "./middleware/rateLimit";
 
 export const createPublicBooking = functions.https.onCall({ region: "europe-west1" }, async (request: CallableRequest<CreatePublicBookingData>) => {
@@ -58,7 +48,7 @@ export const createPublicBooking = functions.https.onCall({ region: "europe-west
     const db = getFirestore();
 
     // Rate limit by IP
-    const ip = extractClientIp(request.rawRequest) || "unknown";
+    const ip = getClientIp(request.rawRequest) || "unknown";
     const adminMode = request.data?.admin_mode === true;
     if (!adminMode) {
         await checkRateLimit(ip);
