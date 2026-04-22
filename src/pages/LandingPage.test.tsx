@@ -119,4 +119,22 @@ describe("LandingPage", () => {
 
     expect(screen.getByText("Booking route")).toBeInTheDocument();
   });
+
+  it("renders local structured data for the homepage", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+    expect(scripts.length).toBeGreaterThanOrEqual(2);
+
+    const payload = scripts.map((script) => script.textContent ?? "");
+    expect(payload.some((entry) => entry.includes('"@type":"HairSalon"'))).toBe(true);
+    expect(payload.some((entry) => entry.includes('"addressLocality":"Košice"'))).toBe(true);
+    expect(payload.some((entry) => entry.includes('"telephone":"+421949459624"'))).toBe(true);
+  });
 });

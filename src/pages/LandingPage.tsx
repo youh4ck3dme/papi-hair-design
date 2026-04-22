@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { LandingInstallPrompt } from "@/components/landing/LandingInstallPrompt";
 import { LandingMainCard } from "@/components/landing/LandingMainCard";
 import { LandingOpeningHours } from "@/components/landing/LandingOpeningHours";
+import { HomeStructuredData } from "@/components/seo/StructuredData";
 import { LandingSplashScreen } from "@/components/landing/LandingSplashScreen";
 import { LandingTopNav } from "@/components/landing/LandingTopNav";
 import { PublicAtmosphereBackground } from "@/components/public/PublicAtmosphereBackground";
@@ -37,6 +38,7 @@ export default function LandingPage() {
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden bg-black text-white md:min-h-screen">
+      <HomeStructuredData />
       {!splashDone && <LandingSplashScreen onFinish={handleSplashFinish} />}
 
       <div
