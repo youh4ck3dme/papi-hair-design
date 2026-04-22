@@ -19,6 +19,97 @@ type AccountPanelContent = {
   icon: typeof LogIn;
 };
 
+type AccountPanelSummary = {
+  key: AccountPanelKey;
+  label: string;
+  description: string;
+};
+
+function buildHistoryDescription(isEnglish: boolean, hasUser: boolean): string {
+  if (hasUser) {
+    return isEnglish
+      ? "You are signed in. Open your booking history to review appointments, confirmations and cancellations."
+      : "Ste prihlásený. Otvorte si históriu rezervácií a skontrolujte termíny, potvrdenia aj zrušenia.";
+  }
+
+  return isEnglish
+    ? "Open the client dashboard with your reservation history. If you are not signed in yet, continue to login first."
+    : "Otvorte klientsky dashboard so svojou históriou rezervácií. Ak ešte nie ste prihlásený, pokračujte najprv na login.";
+}
+
+function buildAccountPanels(isEnglish: boolean, hasUser: boolean): Record<AccountPanelKey, AccountPanelContent> {
+  return {
+    login: {
+      eyebrow: isEnglish ? "Returning client" : "Vracajúci sa klient",
+      title: isEnglish ? "Log in" : "Prihlásenie",
+      description: isEnglish
+        ? "Open your account and continue to booking history, confirmations and booking management."
+        : "Otvorte si svoj účet a pokračujte na históriu rezervácií, potvrdenia a správu termínov.",
+      actionLabel: isEnglish ? "Go to login" : "Prejsť na login",
+      actionPath: "/auth?mode=login",
+      icon: LogIn,
+    },
+    register: {
+      eyebrow: isEnglish ? "New client" : "Nový klient",
+      title: isEnglish ? "Create account" : "Registrácia",
+      description: isEnglish
+        ? "Register once and keep your reservations, confirmations and customer details together in one place."
+        : "Zaregistrujte sa raz a majte svoje rezervácie, potvrdenia aj klientske údaje prehľadne na jednom mieste.",
+      actionLabel: isEnglish ? "Start registration" : "Spustiť registráciu",
+      actionPath: "/auth?mode=register",
+      icon: UserPlus,
+    },
+    history: {
+      eyebrow: isEnglish ? "Client dashboard" : "Klientsky dashboard",
+      title: isEnglish ? "My bookings" : "Moje rezervácie",
+      description: buildHistoryDescription(isEnglish, hasUser),
+      actionLabel: hasUser
+        ? isEnglish
+          ? "Open dashboard"
+          : "Otvoriť dashboard"
+        : isEnglish
+          ? "Log in first"
+          : "Najprv sa prihlásiť",
+      actionPath: hasUser ? "/dashboard/history" : "/auth?mode=login",
+      icon: CalendarClock,
+    },
+  };
+}
+
+function buildAccountTabs(isEnglish: boolean): readonly [AccountPanelKey, string][] {
+  return [
+    ["login", isEnglish ? "Login" : "Prihlásenie"],
+    ["register", isEnglish ? "Register" : "Registrácia"],
+    ["history", isEnglish ? "My bookings" : "Moje rezervácie"],
+  ];
+}
+
+function buildAccountSummaries(isEnglish: boolean): AccountPanelSummary[] {
+  return [
+    {
+      key: "login",
+      label: isEnglish ? "Secure sign-in" : "Bezpečné prihlásenie",
+      description: isEnglish
+        ? "Fast access to your customer account and saved reservations."
+        : "Rýchly vstup do vášho klientskeho účtu a uložených rezervácií.",
+    },
+    {
+      key: "register",
+      label: isEnglish ? "Quick registration" : "Rýchla registrácia",
+      description: isEnglish
+        ? "Create your account once and keep future bookings organised."
+        : "Vytvorte si účet raz a majte budúce rezervácie prehľadne pod kontrolou.",
+    },
+    {
+      key: "history",
+      label: isEnglish ? "Booking dashboard" : "Dashboard rezervácií",
+      description: isEnglish
+        ? "Review appointments, confirmations and cancellations from one client place."
+        : "Skontrolujte si termíny, potvrdenia aj zrušenia z jedného klientskeho miesta.",
+    },
+  ];
+}
+
 export default function MyAccountPage() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
@@ -26,57 +117,16 @@ export default function MyAccountPage() {
   const [activePanel, setActivePanel] = useState<AccountPanelKey>("login");
 
   const isEnglish = i18n.language === "en";
+  const hasUser = Boolean(user);
 
   useEffect(() => {
     if (loading) return;
-    setActivePanel(user ? "history" : "login");
-  }, [loading, user]);
+    setActivePanel(hasUser ? "history" : "login");
+  }, [hasUser, loading]);
 
-  const panelCopy = useMemo<Record<AccountPanelKey, AccountPanelContent>>(
-    () => ({
-      login: {
-        eyebrow: isEnglish ? "Returning client" : "Vracajúci sa klient",
-        title: isEnglish ? "Log in" : "Prihlásenie",
-        description: isEnglish
-          ? "Open your account and continue to booking history, confirmations and booking management."
-          : "Otvorte si svoj účet a pokračujte na históriu rezervácií, potvrdenia a správu termínov.",
-        actionLabel: isEnglish ? "Go to login" : "Prejsť na login",
-        actionPath: "/auth?mode=login",
-        icon: LogIn,
-      },
-      register: {
-        eyebrow: isEnglish ? "New client" : "Nový klient",
-        title: isEnglish ? "Create account" : "Registrácia",
-        description: isEnglish
-          ? "Register once and keep your reservations, confirmations and customer details together in one place."
-          : "Zaregistrujte sa raz a majte svoje rezervácie, potvrdenia aj klientske údaje prehľadne na jednom mieste.",
-        actionLabel: isEnglish ? "Start registration" : "Spustiť registráciu",
-        actionPath: "/auth?mode=register",
-        icon: UserPlus,
-      },
-      history: {
-        eyebrow: isEnglish ? "Client dashboard" : "Klientsky dashboard",
-        title: isEnglish ? "My bookings" : "Moje rezervácie",
-        description: user
-          ? isEnglish
-            ? "You are signed in. Open your booking history to review appointments, confirmations and cancellations."
-            : "Ste prihlásený. Otvorte si históriu rezervácií a skontrolujte termíny, potvrdenia aj zrušenia."
-          : isEnglish
-            ? "Open the client dashboard with your reservation history. If you are not signed in yet, continue to login first."
-            : "Otvorte klientsky dashboard so svojou históriou rezervácií. Ak ešte nie ste prihlásený, pokračujte najprv na login.",
-        actionLabel: user
-          ? isEnglish
-            ? "Open dashboard"
-            : "Otvoriť dashboard"
-          : isEnglish
-            ? "Log in first"
-            : "Najprv sa prihlásiť",
-        actionPath: user ? "/dashboard/history" : "/auth?mode=login",
-        icon: CalendarClock,
-      },
-    }),
-    [isEnglish, user],
-  );
+  const panelCopy = useMemo(() => buildAccountPanels(isEnglish, hasUser), [hasUser, isEnglish]);
+  const accountTabs = useMemo(() => buildAccountTabs(isEnglish), [isEnglish]);
+  const accountSummaries = useMemo(() => buildAccountSummaries(isEnglish), [isEnglish]);
 
   const currentPanel = panelCopy[activePanel];
   const CurrentIcon = currentPanel.icon;
@@ -127,11 +177,7 @@ export default function MyAccountPage() {
                 </p>
 
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
-                  {([
-                    ["login", isEnglish ? "Login" : "Prihlásenie"],
-                    ["register", isEnglish ? "Register" : "Registrácia"],
-                    ["history", isEnglish ? "My bookings" : "Moje rezervácie"],
-                  ] as const).map(([key, label]) => {
+                  {accountTabs.map(([key, label]) => {
                     const isActive = activePanel === key;
                     return (
                       <button
@@ -191,29 +237,7 @@ export default function MyAccountPage() {
                       </div>
 
                       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                        {([
-                          {
-                            key: "login",
-                            label: isEnglish ? "Secure sign-in" : "Bezpečné prihlásenie",
-                            description: isEnglish
-                              ? "Fast access to your customer account and saved reservations."
-                              : "Rýchly vstup do vášho klientskeho účtu a uložených rezervácií.",
-                          },
-                          {
-                            key: "register",
-                            label: isEnglish ? "Quick registration" : "Rýchla registrácia",
-                            description: isEnglish
-                              ? "Create your account once and keep future bookings organised."
-                              : "Vytvorte si účet raz a majte budúce rezervácie prehľadne pod kontrolou.",
-                          },
-                          {
-                            key: "history",
-                            label: isEnglish ? "Booking dashboard" : "Dashboard rezervácií",
-                            description: isEnglish
-                              ? "Review appointments, confirmations and cancellations from one client place."
-                              : "Skontrolujte si termíny, potvrdenia aj zrušenia z jedného klientskeho miesta.",
-                          },
-                        ] as const).map((item) => {
+                        {accountSummaries.map((item) => {
                           const isActive = activePanel === item.key;
                           return (
                             <button

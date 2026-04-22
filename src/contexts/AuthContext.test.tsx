@@ -75,7 +75,7 @@ function Consumer() {
       <div data-testid="user-email">{user?.email ?? "none"}</div>
       <div data-testid="profile-name">{profile?.full_name ?? "none"}</div>
       <div data-testid="membership-roles">{memberships.map((membership) => membership.role).join(",") || "none"}</div>
-      <button onClick={() => void signOut()}>sign-out</button>
+      <button onClick={() => { signOut(); }}>sign-out</button>
     </div>
   );
 }
