@@ -21,6 +21,15 @@ Tento dokument je prevadzkovy source of truth pre lokalny vyvoj, build, deploy, 
 - data na Firestore
 - produkcna domena: `https://booking.papihairdesign.sk`
 
+### Vercel preview layer
+- repo je zaroven napojene na Vercel preview deploymenty
+- aktualne existuju dva Vercel projekty pre to iste GitHub repo:
+  - `papi-hair-design`
+  - `papi-hair-design-69td`
+- oba maju `productionBranch = main`, takze push na feature branch nespusta automaticky production promote
+- Vercel je tu treba chapat ako preview and PR diagnostics vrstvu, nie ako canonical production release path
+- stale plati, ze owner s pristupom do Vercel dashboardu vie manualne spravit promote, preto je vhodne drzat iba jeden preview source of truth
+
 ## 3. Local setup
 
 ### Prvy start
@@ -147,6 +156,7 @@ Prakticke pravidla:
 - drzat hashovane assety a kontrolovany update flow
 - po vacsom release spravit browser smoke aj na uz otvorenom klientovi
 - pri rizikovom release zvazit staged overenie cez owner/admin smoke skor, nez sa release bude povazovat za hotovy
+- pri Vercel preview projektoch neplietť preview health so skutocnym Firebase production deploy stavom
 
 ## 9. Monitoring and observability
 

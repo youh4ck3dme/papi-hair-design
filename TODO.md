@@ -8,7 +8,15 @@
 5. [ ] Overiť zmiznutie chýb
 
 ## Release safety
-1. [ ] Overiť, či nehrozí nechcený production promote vo Vercel prepojení
+1. [x] Overiť, či nehrozí nechcený production promote vo Vercel prepojení
+   - zistenie: feature branch `codex/*` ide na Verceli do `preview`, nie automaticky do `production`
+   - zistenie: oba Vercel projekty maju `productionBranch = main`
+   - caveat: stale existuje manualny owner-level promote risk cez Vercel dashboard
+2. [ ] Upratať duplicitné Vercel preview projekty pre `youh4ck3dme/papi-hair-design`
+   - `papi-hair-design`
+   - `papi-hair-design-69td`
+3. [ ] Rozhodnúť, ktorý Vercel projekt má zostať ako preview-only source of truth
+4. [ ] Po cleanup-e znova potvrdiť, že custom production domény ostávajú výhradne na Firebase deploy flowe
 
 ## PR #44 blockers
 1. [ ] Doriešiť `SonarCloud Code Analysis` blocker
