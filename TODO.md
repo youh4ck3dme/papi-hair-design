@@ -126,6 +126,11 @@
 4. [x] Po cleanup-e znova potvrdiť, že custom production domény ostávajú výhradne na Firebase deploy flowe
    - zistenie: pod Vercel accountom sa nenašli žiadne custom domény pre tieto preview projekty
 5. [ ] Voliteľne: po ďalšom stabilizačnom kole zvážiť úplné zmazanie aj ponechaného manuálneho preview projektu, ak Vercel už netreba ani na diagnostics
+6. [x] Zapečatiť canonical production deploy path na `otvarackapril2026`
+   - stav: deploy workflowy pre hosting aj functions teraz počúvajú len branch `otvarackapril2026`
+   - stav: pridaný repo-side branch guard `scripts/assert-production-branch.mjs`
+   - stav: staré deploy triggre pre `main`, `uprava22-2` a `papihairstudiobooking` boli odstránené
+   - caveat: mimo repa vie deploy stále spraviť iba človek s priamym Firebase prístupom, ale official CI path je zamknutý
 
 ## Repo governance cleanup
 1. [x] Upratať `Firebase-first` vs. staré `Vercel` artefakty v repozitári

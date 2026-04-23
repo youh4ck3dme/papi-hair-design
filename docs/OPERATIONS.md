@@ -20,6 +20,11 @@ Tento dokument je prevadzkovy source of truth pre lokalny vyvoj, build, deploy, 
 - backend na Cloud Functions for Firebase
 - data na Firestore
 - produkcna domena: `https://booking.papihairdesign.sk`
+- canonical production branch: `otvarackapril2026`
+- repo-side production deploy lock:
+  - deploy workflowy su viazane len na `otvarackapril2026`
+  - deploy workflowy maju explicitny branch guard `npm run guard:production-branch`
+  - stare deploy triggre pre `main`, `uprava22-2` a `papihairstudiobooking` uz nie su povolene
 
 ### Vercel preview layer
 - zostal uz iba jeden projekt:
@@ -124,6 +129,14 @@ Prakticky caveat:
 ### Deployment workflows
 - `.github/workflows/deploy-hosting.yml`
 - `.github/workflows/deploy-functions.yml`
+
+Oba workflowy su production-locked na:
+- push do `otvarackapril2026`
+- alebo manualny `workflow_dispatch`, ktory aj tak prejde cez branch guard
+
+Poctiva hranica:
+- clovek s priamym manualnym pristupom do Firebase CLI alebo Firebase konzoly vie stale mimo repa urobit deploy
+- official repo a CI release path je vsak teraz zapecateny na `otvarackapril2026`
 
 ### Static analysis
 - `.github/workflows/codeql.yml`

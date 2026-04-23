@@ -2,11 +2,14 @@ name: Deploy Cloud Functions
 
 on:
   push:
-    branches: [main, uprava22-2, papihairstudiobooking]
+    branches: [otvarackapril2026]
     paths:
       - 'functions/**'
       - 'firestore.rules'
       - 'firestore.indexes.json'
+      - 'scripts/assert-production-branch.mjs'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -16,6 +19,9 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-functions-production
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -31,6 +37,11 @@ jobs:
 
       - name: Install dependencies
         run: cd functions && npm ci
+
+      - name: Verify production branch lock
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: npm run guard:production-branch
 
       - name: Build functions
         run: cd functions && npm run build
