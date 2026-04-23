@@ -79,6 +79,16 @@ function RouteInstallPrompt() {
   return <InstallPrompt />;
 }
 
+function RouteCookieConsent() {
+  const location = useLocation();
+
+  if (location.pathname === "/platform") {
+    return null;
+  }
+
+  return <CookieConsent />;
+}
+
 function RetiredDemoRoute() {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -105,7 +115,7 @@ const App = () => {
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Suspense fallback={<LazyFallback />}>
             <RouteInstallPrompt />
-            <CookieConsent />
+            <RouteCookieConsent />
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/demo/*" element={<RetiredDemoRoute />} />

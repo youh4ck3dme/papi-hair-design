@@ -399,40 +399,84 @@
   "platform": {
     "metaTitle": "Managed booking & operations platform",
     "back": "Späť",
-    "badge": "Súkromný pilotný surface",
-    "eyebrow": "Managed booking & operations",
-    "title": "Oddelený managed produkt pre salóny, ktoré chcú výsledok, nie ďalšiu appku",
-    "subtitle": "Toto je buyer-facing platform surface pre budúci white-label smer. Nie je to salónny cenník PAPI služieb a nemá zasahovať do produkčného customer flow.",
-    "note": "Route zostáva defaultne vypnutá cez feature flag, aby PAPI produkcia ostala čistá. Slúži ako bezpečný scaffold pre commercial messaging a platform pricing.",
-    "whatYouGetEyebrow": "Čo je v tom",
-    "whatYouGetTitle": "Managed delivery namiesto self-serve chaosu",
-    "features": {
-      "setupTitle": "Nastavenie a migrácia",
-      "setupBody": "Import služieb, základný branding, konfigurácia tímu a prvé ostré spustenie riešime manuálne a kontrolovane.",
-      "bookingTitle": "Online rezervácie",
-      "bookingBody": "Customer-facing booking flow, e-mailové potvrdenia, kalendár exporty a účet klienta zostávajú súčasťou dodávky.",
-      "opsTitle": "Admin a prevádzka",
-      "opsBody": "Kalendár, zamestnanci, služby, zákazníci a prevádzkové nastavenia riešime ako managed produkt, nie surový panel bez podpory.",
-      "securityTitle": "Bezpečnosť a dohľad",
-      "securityBody": "Retencia, auditné logy, produkčné diagnostiky a release guardy držíme pod kontrolou ešte pred rozširovaním na ďalších tenantov."
-    },
-    "pricingEyebrow": "Commercial pilot model",
-    "pricingTitle": "Jednoduchý model pre pilot a prvé prevádzky",
-    "pricing": {
-      "setupLabel": "Setup fee",
-      "setupValue": "€199–€490",
-      "setupBody": "Jednorazové nastavenie novej prevádzky podľa rozsahu, dát a onboarding potreby.",
-      "monthlyLabel": "Mesačný retainer",
-      "monthlyValue": "€29–€79 / prevádzka",
-      "monthlyBody": "Prevádzka, drobné zmeny, monitoring a priebežná podpora bez enterprise divadla.",
-      "pilotLabel": "Pilot",
-      "pilotValue": "Individuálne",
-      "pilotBody": "Prvý pilot vieme riešiť manuálne s jasným scope, onboardingom a spätnou väzbou pred plnou komercializáciou."
-    },
-    "ctaTitle": "Chcete prejsť pilot?",
-    "ctaBody": "Aktuálne je onboarding stále managed a výber partnerov robíme ručne. To je zámer: najprv opakovaný výsledok, až potom self-serve vrstva.",
+    "badge": "Private buyer surface",
+    "navCta": "Pilot",
+    "eyebrow": "Managed booking OS pre salóny",
+    "title": "Managed booking system, ktorý sa predáva ako výsledok",
+    "subtitle": "Čistý white-label smer pre salóny, ktoré nechcú ďalšiu appku. Dostanú nastavený booking, prevádzkový panel, support a jasný launch proces.",
     "ctaPrimary": "Požiadať o pilotný call",
-    "ctaSecondary": "Späť na živú ukážku salóna",
+    "ctaSecondary": "Pozrieť živý salón",
+    "signalEyebrow": "Investor signal",
+    "signalTitle": "Nie demo. Opakovateľný delivery systém.",
+    "metrics": {
+      "launch": {
+        "value": "14 dní",
+        "label": "cieľ pre managed pilot launch"
+      },
+      "model": {
+        "value": "€199–€490",
+        "label": "setup fee pred mesačným retainerom"
+      },
+      "safety": {
+        "value": "Firebase-first",
+        "label": "produkčný path bez Vercel chaosu"
+      }
+    },
+    "features": {
+      "managed": {
+        "title": "Managed onboarding",
+        "body": "Služby, tím, branding a prvé nastavenie riešime ručne, kým nie je výsledok opakovateľný."
+      },
+      "booking": {
+        "title": "Booking flow pripravený na prevádzku",
+        "body": "Rezervácie, e-maily, klientsky účet, kalendár exporty a admin sú jeden jasný surface."
+      },
+      "security": {
+        "title": "Guardrails pred škálovaním",
+        "body": "Chránený deploy path, diagnostika, retencia a access model držia základ bezpečný."
+      },
+      "theme": {
+        "title": "White-label theme smer",
+        "body": "Budúci color picker má generovať tokeny, nie rozbiť CSS ručným prefarbovaním."
+      }
+    },
+    "pricingEyebrow": "Commercial model",
+    "pricingTitle": "Jednoduchá ponuka, ktorú salón pochopí za minútu",
+    "pricing": {
+      "setup": {
+        "title": "€199–€490 setup",
+        "body": "Jednorazové nastavenie prevádzky podľa počtu služieb, tímu, dát a brandingu."
+      },
+      "retainer": {
+        "title": "€29–€79 mesačne",
+        "body": "Prevádzka, monitoring, drobné zmeny a support bez enterprise divadla."
+      },
+      "pilot": {
+        "title": "Pilot s jasným scope",
+        "body": "Prvý externý salón riešime manuálne, meriame feedback a až potom automatizujeme."
+      }
+    },
+    "launchEyebrow": "Launch system",
+    "launchTitle": "Tri kroky namiesto chaosu",
+    "launch": {
+      "audit": {
+        "title": "Audit prevádzky",
+        "body": "Zistíme služby, tím, otváracie hodiny, existujúce rezervácie a kritické blokery."
+      },
+      "configure": {
+        "title": "Nastavenie šablóny",
+        "body": "Pripravíme booking, admin, emaily, základný brand a bezpečný owner access."
+      },
+      "launch": {
+        "title": "Ostrý pilot",
+        "body": "Spustíme prevádzku, sledujeme diagnostiku a zbierame feedback pred ďalším scalingom."
+      }
+    },
+    "themeEyebrow": "Theme lab",
+    "themeTitle": "Color picker, ktorý nepôsobí lacno",
+    "themeBody": "Budúci white-label editor má po výbere jednej farby navrhnúť celý vizuálny systém: accent, CTA, surface, statusy a kontrastné texty.",
+    "themeTokenLabel": "brand token set",
+    "themeGuardrail": "Guardrail: toto ostáva mimo PAPI produkčného surface, kým nie je hotový tenant-safe onboarding a neutral demo tenant.",
     "mailSubject": "Záujem o managed booking pilot"
   }
 }

@@ -399,40 +399,84 @@
   "platform": {
     "metaTitle": "Managed booking & operations platform",
     "back": "Back",
-    "badge": "Private pilot surface",
-    "eyebrow": "Managed booking & operations",
-    "title": "A separate managed product for salons that want outcomes, not another app",
-    "subtitle": "This is a buyer-facing platform surface for the future white-label direction. It is not the PAPI salon service price list and should not interfere with the production customer flow.",
-    "note": "The route stays disabled by default behind a feature flag so PAPI production remains clean. It exists as a safe scaffold for commercial messaging and platform pricing.",
-    "whatYouGetEyebrow": "What is included",
-    "whatYouGetTitle": "Managed delivery instead of self-serve chaos",
-    "features": {
-      "setupTitle": "Setup and migration",
-      "setupBody": "We handle service import, baseline branding, team configuration, and first launch manually and carefully.",
-      "bookingTitle": "Online booking",
-      "bookingBody": "The customer-facing booking flow, email confirmations, calendar exports, and client account remain part of the delivery.",
-      "opsTitle": "Admin and operations",
-      "opsBody": "Calendar, employees, services, customers, and operating settings are delivered as a managed product, not as a raw panel without support.",
-      "securityTitle": "Security and oversight",
-      "securityBody": "Retention, audit logs, production diagnostics, and release guards are kept under control before expanding to more tenants."
-    },
-    "pricingEyebrow": "Commercial pilot model",
-    "pricingTitle": "A simple model for pilots and early locations",
-    "pricing": {
-      "setupLabel": "Setup fee",
-      "setupValue": "€199–€490",
-      "setupBody": "One-off setup for a new location based on scope, data readiness, and onboarding needs.",
-      "monthlyLabel": "Monthly retainer",
-      "monthlyValue": "€29–€79 / location",
-      "monthlyBody": "Operations, small changes, monitoring, and ongoing support without enterprise theater.",
-      "pilotLabel": "Pilot",
-      "pilotValue": "Custom",
-      "pilotBody": "The first pilot can be handled manually with clear scope, onboarding, and feedback before full commercialization."
-    },
-    "ctaTitle": "Want to explore a pilot?",
-    "ctaBody": "For now onboarding is still managed and partner selection is manual on purpose. First we prove repeatable outcomes, then we build the self-serve layer.",
+    "badge": "Private buyer surface",
+    "navCta": "Pilot",
+    "eyebrow": "Managed booking OS for salons",
+    "title": "A managed booking system sold as an outcome",
+    "subtitle": "A clean white-label direction for salons that do not want another app. They get configured booking, an operations panel, support, and a clear launch process.",
     "ctaPrimary": "Request a pilot call",
-    "ctaSecondary": "Back to the live salon example",
+    "ctaSecondary": "View the live salon",
+    "signalEyebrow": "Investor signal",
+    "signalTitle": "Not a demo. A repeatable delivery system.",
+    "metrics": {
+      "launch": {
+        "value": "14 days",
+        "label": "target for a managed pilot launch"
+      },
+      "model": {
+        "value": "€199–€490",
+        "label": "setup fee before monthly retainer"
+      },
+      "safety": {
+        "value": "Firebase-first",
+        "label": "production path without Vercel chaos"
+      }
+    },
+    "features": {
+      "managed": {
+        "title": "Managed onboarding",
+        "body": "Services, team, branding, and the first setup stay manual until the result is repeatable."
+      },
+      "booking": {
+        "title": "Operations-ready booking flow",
+        "body": "Bookings, emails, client account, calendar exports, and admin live as one clear surface."
+      },
+      "security": {
+        "title": "Guardrails before scaling",
+        "body": "Protected deploy path, diagnostics, retention, and access model keep the base safe."
+      },
+      "theme": {
+        "title": "White-label theme direction",
+        "body": "The future color picker should generate tokens, not break CSS through manual repainting."
+      }
+    },
+    "pricingEyebrow": "Commercial model",
+    "pricingTitle": "A simple offer a salon can understand in one minute",
+    "pricing": {
+      "setup": {
+        "title": "€199–€490 setup",
+        "body": "One-off setup based on services, team size, data readiness, and branding needs."
+      },
+      "retainer": {
+        "title": "€29–€79 monthly",
+        "body": "Operations, monitoring, small changes, and support without enterprise theater."
+      },
+      "pilot": {
+        "title": "Pilot with clear scope",
+        "body": "The first external salon stays manual, measured, and feedback-driven before automation."
+      }
+    },
+    "launchEyebrow": "Launch system",
+    "launchTitle": "Three steps instead of chaos",
+    "launch": {
+      "audit": {
+        "title": "Location audit",
+        "body": "Map services, team, opening hours, existing booking habits, and critical blockers."
+      },
+      "configure": {
+        "title": "Template setup",
+        "body": "Prepare booking, admin, emails, baseline brand, and safe owner access."
+      },
+      "launch": {
+        "title": "Live pilot",
+        "body": "Launch the location, watch diagnostics, and collect feedback before scaling further."
+      }
+    },
+    "themeEyebrow": "Theme lab",
+    "themeTitle": "A color picker that does not feel cheap",
+    "themeBody": "The future white-label editor should turn one selected color into a full visual system: accent, CTA, surface, statuses, and contrast-safe text.",
+    "themeTokenLabel": "brand token set",
+    "themeGuardrail": "Guardrail: this stays outside the PAPI production surface until tenant-safe onboarding and a neutral demo tenant are ready.",
     "mailSubject": "Interest in managed booking pilot"
   }
 }

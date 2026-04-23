@@ -223,6 +223,7 @@
    - progress: service pricing ostáva na `/pricing` bez zásahu do PAPI customer surface
    - progress: buyer-facing scaffold je pripravený na `/platform`, ale defaultne zostáva vypnutý cez `VITE_ENABLE_PLATFORM_PAGE=false`
    - progress: `TermsPage` bola očistená od starej SaaS/dev-workspace copy, aby produkčný PAPI surface ostal dôveryhodný
+   - progress: lokálny showcase pass mení `/platform` na čistejší buyer/investor surface s managed positioningom, pilot pricingom, launch systémom a bezpečným theme-lab teaserom
 2. [ ] Week 2: billing + externý pilot
    - výstupy: recurring billing decision, pilot onboarding flow, prvý externý pilot shortlist
 3. [ ] Week 3: tenantization + canonical booking surface
