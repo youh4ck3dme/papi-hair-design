@@ -10,6 +10,8 @@ describe("clientDiagnostics helpers", () => {
     expect(sanitizeDiagnosticRoute("https://booking.papihairdesign.sk/booking?token=123#frag")).toBe("/booking");
     expect(sanitizeDiagnosticRoute("/admin/calendar?view=day")).toBe("/admin/calendar");
     expect(sanitizeDiagnosticRoute("not-a-route")).toBe("/not-a-route");
+    expect(sanitizeDiagnosticRoute("mailto:owner@example.com")).toBeNull();
+    expect(sanitizeDiagnosticRoute("javascript:alert(1)")).toBeNull();
   });
 
   it("keeps only primitive metadata values and truncates strings", () => {

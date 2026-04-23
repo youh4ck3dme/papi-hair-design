@@ -19,7 +19,10 @@ export const recordClientDiagnostic = functions.https.onCall(
         ? `client_diagnostic_ip_${hashOpaqueToken(String(clientIp))}`
         : "client_diagnostic_anon";
 
-    await checkRateLimit(rateLimitKey);
+    await checkRateLimit(rateLimitKey, {
+      exceededMessage:
+        "Príliš veľa diagnostických hlásení. Skúste to, prosím, znova neskôr.",
+    });
 
     const payload = buildClientDiagnosticWritePayload(request);
     const ipHash = clientIp ? hashOpaqueToken(String(clientIp)) : null;

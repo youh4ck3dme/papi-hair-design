@@ -1,4 +1,5 @@
 import { type CallableRequest, HttpsError } from "firebase-functions/v2/https";
+import { APP_PUBLIC_BOOKING_BASE_URL } from "./brandConfig";
 import { hashOpaqueToken } from "./publicBookingAccess";
 
 const MESSAGE_MAX_LENGTH = 500;
@@ -9,6 +10,7 @@ const SESSION_ID_MAX_LENGTH = 80;
 const METADATA_KEY_MAX_LENGTH = 40;
 const METADATA_VALUE_MAX_LENGTH = 160;
 const MAX_METADATA_ENTRIES = 12;
+const ROUTE_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
 
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
 
@@ -42,6 +44,12 @@ export interface ClientDiagnosticRecord {
   fingerprint: string;
 }
 
+function normalizePathname(pathname: string): string | null {
+  const normalized = pathname.trim() || "/";
+  const withLeadingSlash = normalized.startsWith("/") ? normalized : `/${normalized}`;
+  return withLeadingSlash.slice(0, ROUTE_MAX_LENGTH) || "/";
+}
+
 function sanitizeText(
   value: unknown,
   maxLength: number,
@@ -73,15 +81,24 @@ export function sanitizeDiagnosticRoute(value: unknown): string | null {
     return null;
   }
 
-  try {
-    const parsed = new URL(trimmed, "https://booking.papihairdesign.sk");
-    return parsed.pathname.slice(0, ROUTE_MAX_LENGTH) || "/";
-  } catch {
-    const route = trimmed.split(/[?#]/, 1)[0];
-    if (!route.startsWith("/")) {
+  if (ROUTE_SCHEME_PATTERN.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return null;
+      }
+      return normalizePathname(parsed.pathname);
+    } catch {
       return null;
     }
-    return route.slice(0, ROUTE_MAX_LENGTH) || "/";
+  }
+
+  try {
+    const parsed = new URL(trimmed, APP_PUBLIC_BOOKING_BASE_URL);
+    return normalizePathname(parsed.pathname);
+  } catch {
+    const route = trimmed.split(/[?#]/, 1)[0];
+    return normalizePathname(route);
   }
 }
 

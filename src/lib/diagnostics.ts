@@ -11,6 +11,7 @@ const STACK_MAX_LENGTH = 1800;
 const SOURCE_MAX_LENGTH = 120;
 const MAX_METADATA_ENTRIES = 10;
 const METADATA_VALUE_MAX_LENGTH = 120;
+const MAX_SENT_FINGERPRINTS = 100;
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
 
 let diagnosticsInstalled = false;
@@ -105,6 +106,21 @@ function getSessionId(): string {
   return diagnosticsSessionId;
 }
 
+function rememberFingerprint(fingerprint: string): void {
+  if (sentFingerprints.has(fingerprint)) {
+    return;
+  }
+
+  if (sentFingerprints.size >= MAX_SENT_FINGERPRINTS) {
+    const oldestFingerprint = sentFingerprints.values().next().value;
+    if (oldestFingerprint) {
+      sentFingerprints.delete(oldestFingerprint);
+    }
+  }
+
+  sentFingerprints.add(fingerprint);
+}
+
 export function resetDiagnosticsForTests(): void {
   diagnosticsInstalled = false;
   diagnosticsSessionId = null;
@@ -137,7 +153,7 @@ export async function reportClientDiagnostic(input: ClientDiagnosticInput): Prom
     return false;
   }
 
-  sentFingerprints.add(fingerprint);
+  rememberFingerprint(fingerprint);
   const result = await recordClientDiagnostic(payload);
   return Boolean(result?.ok);
 }

@@ -91,4 +91,31 @@ describe("diagnostics helpers", () => {
       }),
     );
   });
+
+  it("bounds remembered fingerprints so long sessions do not grow forever", async () => {
+    for (let index = 0; index < 100; index += 1) {
+      await reportClientDiagnostic({
+        category: "runtime_error",
+        message: `Test failure ${index}`,
+        route: "/booking",
+        source: "window.error",
+      });
+    }
+
+    await reportClientDiagnostic({
+      category: "runtime_error",
+      message: "Test failure 100",
+      route: "/booking",
+      source: "window.error",
+    });
+
+    await reportClientDiagnostic({
+      category: "runtime_error",
+      message: "Test failure 0",
+      route: "/booking",
+      source: "window.error",
+    });
+
+    expect(diagnosticsMocks.recordClientDiagnostic).toHaveBeenCalledTimes(102);
+  });
 });
