@@ -11,22 +11,18 @@ describe("adminAllowlist env aliases", () => {
     vi.resetModules();
   });
 
-  it("accepts the generic primary owner alias", async () => {
-    vi.stubEnv("VITE_PRIMARY_OWNER_EMAIL", "owner@example.com");
-    vi.stubEnv("VITE_PAPI_EMAIL", "");
-
-    const module = await importAllowlistModule();
-
-    expect(module.isAdminAllowlisted("OWNER@example.com")).toBe(true);
-  });
-
-  it("falls back to legacy owner alias when the generic alias is empty", async () => {
-    vi.stubEnv("VITE_PRIMARY_OWNER_EMAIL", " ");
-    vi.stubEnv("VITE_PAPI_EMAIL", "legacy-owner@example.com");
-
-    const module = await importAllowlistModule();
-
-    expect(module.isAdminAllowlisted("legacy-owner@example.com")).toBe(true);
+  it.each([
+    {
+      env: { VITE_PRIMARY_OWNER_EMAIL: "owner@example.com", VITE_PAPI_EMAIL: "" },
+      email: "OWNER@example.com",
+    },
+    {
+      env: { VITE_PRIMARY_OWNER_EMAIL: " ", VITE_PAPI_EMAIL: "legacy-owner@example.com" },
+      email: "legacy-owner@example.com",
+    },
+  ])("allows configured owner alias %#", async ({ env, email }) => {
+    Object.entries(env).forEach(([key, value]) => vi.stubEnv(key, value));
+    expect((await importAllowlistModule()).isAdminAllowlisted(email)).toBe(true);
   });
 
   it("merges employee csv aliases with legacy employee emails", async () => {
@@ -36,9 +32,13 @@ describe("adminAllowlist env aliases", () => {
 
     const module = await importAllowlistModule();
 
-    expect(module.isEmployeeAllowlisted("first@example.com")).toBe(true);
-    expect(module.isEmployeeAllowlisted("second@example.com")).toBe(true);
-    expect(module.isEmployeeAllowlisted("legacy-one@example.com")).toBe(true);
-    expect(module.isEmployeeAllowlisted("legacy-two@example.com")).toBe(true);
+    for (const email of [
+      "first@example.com",
+      "second@example.com",
+      "legacy-one@example.com",
+      "legacy-two@example.com",
+    ]) {
+      expect(module.isEmployeeAllowlisted(email)).toBe(true);
+    }
   });
 });

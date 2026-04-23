@@ -1,5 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const CONFIG_ENV_KEYS = [
+  "PRIMARY_BUSINESS_ID",
+  "PRIMARY_BUSINESS_NAME",
+  "BOOTSTRAP_OWNER_EMAILS",
+  "PRIMARY_OWNER_EMAIL",
+  "BOOTSTRAP_EMPLOYEE_EMAILS",
+  "VITE_EMPLOYEE_EMAILS",
+  "VITE_PAPI_EMAIL",
+  "VITE_MATO_EMAIL",
+  "VITE_MISKA_EMAIL",
+];
+
 async function importBusinessConfig() {
   vi.resetModules();
   return await import("../src/businessConfig");
@@ -7,23 +19,16 @@ async function importBusinessConfig() {
 
 describe("businessConfig", () => {
   afterEach(() => {
-    delete process.env.PRIMARY_BUSINESS_ID;
-    delete process.env.PRIMARY_BUSINESS_NAME;
-    delete process.env.BOOTSTRAP_OWNER_EMAILS;
-    delete process.env.PRIMARY_OWNER_EMAIL;
-    delete process.env.BOOTSTRAP_EMPLOYEE_EMAILS;
-    delete process.env.VITE_EMPLOYEE_EMAILS;
-    delete process.env.VITE_PAPI_EMAIL;
-    delete process.env.VITE_MATO_EMAIL;
-    delete process.env.VITE_MISKA_EMAIL;
+    CONFIG_ENV_KEYS.forEach((key) => delete process.env[key]);
     vi.resetModules();
   });
 
   it("uses generic env aliases for the default business and owner config", async () => {
-    process.env.PRIMARY_BUSINESS_ID = "tenant-main";
-    process.env.PRIMARY_BUSINESS_NAME = "Tenant Studio";
-    process.env.PRIMARY_OWNER_EMAIL = "Owner@Example.com";
-    delete process.env.VITE_PAPI_EMAIL;
+    Object.assign(process.env, {
+      PRIMARY_BUSINESS_ID: "tenant-main",
+      PRIMARY_BUSINESS_NAME: "Tenant Studio",
+      PRIMARY_OWNER_EMAIL: "Owner@Example.com",
+    });
 
     const module = await importBusinessConfig();
 
@@ -34,10 +39,12 @@ describe("businessConfig", () => {
   });
 
   it("merges employee aliases across generic and legacy env vars", async () => {
-    process.env.BOOTSTRAP_EMPLOYEE_EMAILS = "alpha@example.com";
-    process.env.VITE_EMPLOYEE_EMAILS = "beta@example.com,alpha@example.com";
-    process.env.VITE_MATO_EMAIL = "mato@example.com";
-    process.env.VITE_MISKA_EMAIL = "miska@example.com";
+    Object.assign(process.env, {
+      BOOTSTRAP_EMPLOYEE_EMAILS: "alpha@example.com",
+      VITE_EMPLOYEE_EMAILS: "beta@example.com,alpha@example.com",
+      VITE_MATO_EMAIL: "mato@example.com",
+      VITE_MISKA_EMAIL: "miska@example.com",
+    });
 
     const module = await importBusinessConfig();
 
