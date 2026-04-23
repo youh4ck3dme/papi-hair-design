@@ -80,6 +80,7 @@ Canonical docs pre aktualny stav:
 - [Testing & Quality](docs/TESTING-QUALITY.md)
 - [Security & Compliance Baseline](docs/SECURITY-COMPLIANCE.md)
 - [Product & SaaS Direction](docs/PRODUCT-SAAS.md)
+- [Asset Inventory](docs/ASSET-INVENTORY.md)
 - [Technical Due Diligence Brief](docs/TECHNICAL-DUE-DILIGENCE.md)
 - [Owner Manual](OWNERMANUAL.md)
 - [Backlog / TODO](TODO.md)

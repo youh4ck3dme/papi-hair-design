@@ -141,10 +141,11 @@
    - blocker: public booking a demo vrstva stále stoja na `DEFAULT_BUSINESS_ID` / `papi-hair-design-main`, takže onboarding nového tenanta ešte nie je self-serve
    - blocker: bootstrap, allowlist a role-enforcement flowy sú stále PAPI-specific
    - blocker: email branding, calendar export UID a public base URL sú stále brand-specific pre `papihairdesign.sk`
-4. [ ] Vytvoriť `asset inventory`:
+4. [x] Vytvoriť `asset inventory`:
    - čo sa predáva ako produkt
    - čo je špecifické len pre PAPI
    - čo treba odtenantizovať
+   - výstup: [docs/ASSET-INVENTORY.md](docs/ASSET-INVENTORY.md)
 5. [ ] Pripraviť neutral demo tenant:
    - názov bez väzby na PAPI
    - demo data
