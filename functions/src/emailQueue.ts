@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import { buildCustomerCalendarLinks } from "./calendarInvite";
 import { normalizePhone, resolvePublicBookingBaseUrl } from "./publicBookingAccess";
 import { readSecret } from "./secretManager";
+import { APP_BRAND_NAME } from "./brandConfig";
 
 interface QueueBookingEmailInput {
   businessId: string;
@@ -306,7 +307,7 @@ async function resolveBusinessMailContext(businessId: string): Promise<BusinessM
 
   const business = businessSnap.data() as Record<string, any>;
   const timezone = safeString(business.timezone) ?? "Europe/Bratislava";
-  const businessName = safeString(business.name) ?? "PAPI HAIR DESIGN";
+  const businessName = safeString(business.name) ?? APP_BRAND_NAME;
 
   return {
     business,
@@ -655,7 +656,7 @@ export async function queueCustomerBookingEmail(
     subject: "Rezervácia potvrdená",
     title: "Vaša rezervácia je potvrdená",
     variant: "success",
-    heroNote: "Papi Hair Design",
+    heroNote: context.businessName,
     intro: input.customerName
       ? `Dobrý deň, ${input.customerName}. Ďakujeme, vaša rezervácia bola úspešne potvrdená a termín je pripravený.`
       : "Ďakujeme, vaša rezervácia bola úspešne potvrdená a termín je pripravený.",
@@ -675,7 +676,7 @@ export async function queueCustomerBookingEmail(
     extraActions,
     closing:
       "Vaša rezervácia je uložená v systéme a pripravená na vybraný čas. Ak budete potrebovať čokoľvek zmeniť, stačí sa vrátiť do svojich rezervácií alebo nás kontaktovať.",
-    footerNote: "Tešíme sa na vašu návštevu v salóne Papi Hair Design.",
+    footerNote: `Tešíme sa na vašu návštevu v salóne ${context.businessName}.`,
   };
 
   return queueTemplatedMail(
@@ -708,7 +709,7 @@ export async function queueCustomerCancellationEmail(
     subject: cancelledByAdmin ? "Rezervácia bola zrušená" : "Rezervácia úspešne zrušená",
     title: "Rezervácia bola zrušená",
     variant: "danger",
-    heroNote: "Papi Hair Design",
+    heroNote: context.businessName,
     intro: input.customerName
       ? cancelledByAdmin
         ? `Dobrý deň, ${input.customerName}. Vaša rezervácia bola zrušená prevádzkou.`
@@ -881,8 +882,8 @@ export async function queueRegistrationWelcomeEmail(
   const template: RichEmailTemplate = {
     preheader: "Účet je pripravený a môžete si rezervovať svoj prvý termín.",
     eyebrow: "Účet vytvorený",
-    subject: "Vitajte v Papi Hair Design",
-    title: "Vitajte v Papi Hair Design",
+    subject: `Vitajte v ${context.businessName}`,
+    title: `Vitajte v ${context.businessName}`,
     variant: "welcome",
     heroNote: "Registrácia dokončená",
     intro: input.customerName

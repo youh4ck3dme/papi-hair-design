@@ -10,9 +10,20 @@ function parseEnvEmailList(raw: string | undefined): string[] {
     .filter((entry) => entry.length > 0);
 }
 
+function firstNonEmptyEnvEmail(...values: Array<string | undefined>): string {
+  for (const value of values) {
+    const normalized = normalizeEmail(value);
+    if (normalized.length > 0) return normalized;
+  }
+  return "";
+}
+
 function readAdminAllowlistFromEnv(): Set<string> {
   const envEntries = parseEnvEmailList(import.meta.env.VITE_ADMIN_ALLOWLIST as string | undefined);
-  const ownerEntry = normalizeEmail(import.meta.env.VITE_PAPI_EMAIL as string | undefined);
+  const ownerEntry = firstNonEmptyEnvEmail(
+    import.meta.env.VITE_PRIMARY_OWNER_EMAIL as string | undefined,
+    import.meta.env.VITE_PAPI_EMAIL as string | undefined,
+  );
   const profileEntries = ownerEntry.length > 0 ? [ownerEntry] : [];
 
   return new Set<string>([...envEntries, ...profileEntries]);
@@ -25,9 +36,10 @@ export function isAdminAllowlisted(email: string | null | undefined): boolean {
 }
 
 function readEmployeeAllowlistFromEnv(): Set<string> {
+  const csvEntries = parseEnvEmailList(import.meta.env.VITE_EMPLOYEE_EMAILS as string | undefined);
   const miskaEmail = normalizeEmail(import.meta.env.VITE_MISKA_EMAIL as string | undefined);
   const matoEmail = normalizeEmail(import.meta.env.VITE_MATO_EMAIL as string | undefined);
-  return new Set<string>([miskaEmail, matoEmail].filter((e) => e.length > 0));
+  return new Set<string>([...csvEntries, miskaEmail, matoEmail].filter((e) => e.length > 0));
 }
 
 export const EMPLOYEE_EMAIL_ALLOWLIST = readEmployeeAllowlistFromEnv();

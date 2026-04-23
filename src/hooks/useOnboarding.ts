@@ -3,6 +3,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/integrations/firebase/config";
 import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/contexts/AuthContext";
+import { DEFAULT_BUSINESS_ID } from "@/lib/businessIds";
 
 /**
  * Hook that checks if onboarding is completed for the current business.
@@ -16,8 +17,8 @@ export function useOnboarding() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Demo ID placeholder or no user should not trigger network heavy checks
-    if (!user || !isOwnerOrAdmin || businessId === "papi-hair-design-main") {
+    // The primary PAPI business is already provisioned, so skip tenant-onboarding checks there.
+    if (!user || !isOwnerOrAdmin || businessId === DEFAULT_BUSINESS_ID) {
       setNeedsOnboarding(false);
       setLoading(false);
       return;

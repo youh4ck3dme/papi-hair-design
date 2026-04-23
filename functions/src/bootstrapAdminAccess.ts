@@ -3,21 +3,18 @@ import { CallableRequest, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { requireAuth } from "./guards";
 import { buildAndWriteSnapshot } from "./publicSnapshotBuilder";
+import { DEFAULT_BUSINESS_ID, DEFAULT_BUSINESS_NAME, isBootstrapOwnerEmail } from "./businessConfig";
 
 interface BootstrapAdminAccessData {
   business_id?: string;
 }
 
-const DEFAULT_BUSINESS_ID = "papi-hair-design-main";
 type BootstrapRole = "owner" | "admin";
-const BOOTSTRAP_OWNER_EMAILS = new Set([
-  "papi@papihairdesign.sk",
-]);
 
 function buildDisplayName(email: string | null | undefined) {
-  if (!email) return "Papi Hair Design";
+  if (!email) return DEFAULT_BUSINESS_NAME;
   const name = email.split("@")[0]?.trim();
-  return name ? name.charAt(0).toUpperCase() + name.slice(1) : "Papi Hair Design";
+  return name ? name.charAt(0).toUpperCase() + name.slice(1) : DEFAULT_BUSINESS_NAME;
 }
 
 export function resolveBootstrapRole(
@@ -45,7 +42,7 @@ export const bootstrapAdminAccess = functions.https.onCall(
     const db = getFirestore();
 
     const now = new Date().toISOString();
-    const emailAllowedForBootstrap = !!email && BOOTSTRAP_OWNER_EMAILS.has(email);
+    const emailAllowedForBootstrap = isBootstrapOwnerEmail(email);
     const membershipRef = db.collection("memberships").doc(`${uid}_${businessId}`);
     const membershipSnap = await membershipRef.get();
 
@@ -87,7 +84,7 @@ export const bootstrapAdminAccess = functions.https.onCall(
     batch.set(
       businessRef,
       {
-        name: "Papi Hair Design",
+        name: DEFAULT_BUSINESS_NAME,
         updated_at: new Date().toISOString(),
       },
       { merge: true }

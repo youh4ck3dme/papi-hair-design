@@ -12,6 +12,7 @@ import {
     isIgnorableBlockedFirestoreError,
     warnBlockedByClientOnce,
 } from "@/lib/firebaseClientErrors";
+import { DEFAULT_BUSINESS_ID } from "@/lib/businessIds";
 
 type BootstrapStatus = { type: "success" | "error"; msg: string };
 
@@ -62,7 +63,7 @@ export default function BootstrapPage() {
         setLoading(true);
         setStatus(null);
 
-        const businessId = "papi-hair-design-main";
+        const businessId = DEFAULT_BUSINESS_ID;
 
         try {
             await currentUser.getIdToken(true);
@@ -100,7 +101,7 @@ export default function BootstrapPage() {
         setStatus(null);
         try {
             const batch = writeBatch(db);
-            const bizId = "papi-hair-design-main";
+            const bizId = DEFAULT_BUSINESS_ID;
 
             // 1. Business Hours
             const hours = [

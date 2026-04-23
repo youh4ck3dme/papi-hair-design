@@ -25,4 +25,3 @@ export function withBusinessIdFallbacks(primary?: string | null): string[] {
 
   return [...unique];
 }
-
