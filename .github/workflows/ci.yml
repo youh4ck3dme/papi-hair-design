@@ -27,6 +27,11 @@ jobs:
       VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
       VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
       VITE_FIREBASE_FUNCTIONS_URL: ${{ secrets.VITE_FIREBASE_FUNCTIONS_URL }}
+      PRIMARY_BUSINESS_ID: papi-hair-design-main
+      PRIMARY_OWNER_EMAIL: papi@papihairdesign.sk
+      BOOTSTRAP_EMPLOYEE_EMAILS: mato@papihairdesign.sk,miska@papihairdesign.sk
+      VITE_PRIMARY_OWNER_EMAIL: papi@papihairdesign.sk
+      VITE_EMPLOYEE_EMAILS: mato@papihairdesign.sk,miska@papihairdesign.sk
       VITE_PAPI_EMAIL: papi@papihairdesign.sk
       VITE_MISKA_EMAIL: miska@papihairdesign.sk
       VITE_MATO_EMAIL: mato@papihairdesign.sk
