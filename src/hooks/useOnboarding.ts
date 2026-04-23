@@ -17,7 +17,7 @@ export function useOnboarding() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Demo ID placeholder or no user should not trigger network heavy checks
+    // The primary PAPI business is already provisioned, so skip tenant-onboarding checks there.
     if (!user || !isOwnerOrAdmin || businessId === DEFAULT_BUSINESS_ID) {
       setNeedsOnboarding(false);
       setLoading(false);

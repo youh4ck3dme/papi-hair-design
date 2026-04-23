@@ -31,19 +31,19 @@ export const enforceSalonRoles = functions.https.onCall(
     const db = getFirestore();
     const now = new Date().toISOString();
 
-    const ownerEmail = [...BOOTSTRAP_OWNER_EMAILS][0] ?? null;
-    if (!ownerEmail) {
+    if (BOOTSTRAP_OWNER_EMAILS.size === 0) {
       throw new HttpsError("failed-precondition", "No bootstrap owner email is configured.");
     }
 
-    const ownerProfileId = await findAuthUidByEmail(ownerEmail);
-    if (!ownerProfileId) {
-      throw new HttpsError("failed-precondition", `Owner auth user for ${ownerEmail} not found.`);
-    }
+    const targetProfiles: Array<{ profileId: string; role: "owner" | "employee" }> = [];
 
-    const targetProfiles: Array<{ profileId: string; role: "owner" | "employee" }> = [
-      { profileId: ownerProfileId, role: "owner" },
-    ];
+    for (const ownerEmail of BOOTSTRAP_OWNER_EMAILS) {
+      const ownerProfileId = await findAuthUidByEmail(ownerEmail);
+      if (!ownerProfileId) {
+        throw new HttpsError("failed-precondition", `Owner auth user for ${ownerEmail} not found.`);
+      }
+      targetProfiles.push({ profileId: ownerProfileId, role: "owner" });
+    }
 
     for (const employeeEmail of BOOTSTRAP_EMPLOYEE_EMAILS) {
       const profileId = await findAuthUidByEmail(employeeEmail);

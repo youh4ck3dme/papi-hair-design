@@ -8,7 +8,7 @@ function normalizeValue(value: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function normalizeEmail(value: string | null | undefined): string | null {
+export function normalizeBootstrapEmail(value: string | null | undefined): string | null {
   const normalized = normalizeValue(value);
   return normalized ? normalized.toLowerCase() : null;
 }
@@ -20,7 +20,7 @@ function readEmailList(...values: Array<string | undefined>): string[] {
     if (!raw) continue;
 
     for (const item of raw.split(",")) {
-      const email = normalizeEmail(item);
+      const email = normalizeBootstrapEmail(item);
       if (email) unique.add(email);
     }
   }
@@ -48,3 +48,8 @@ export const BOOTSTRAP_EMPLOYEE_EMAILS = readEmailList(
   process.env.VITE_MATO_EMAIL,
   process.env.VITE_MISKA_EMAIL,
 );
+
+export function isBootstrapOwnerEmail(email: string | null | undefined): boolean {
+  const normalized = normalizeBootstrapEmail(email);
+  return normalized ? BOOTSTRAP_OWNER_EMAILS.has(normalized) : false;
+}

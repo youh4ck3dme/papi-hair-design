@@ -3,7 +3,7 @@ import { CallableRequest, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { requireAuth } from "./guards";
 import { buildAndWriteSnapshot } from "./publicSnapshotBuilder";
-import { BOOTSTRAP_OWNER_EMAILS, DEFAULT_BUSINESS_ID, DEFAULT_BUSINESS_NAME } from "./businessConfig";
+import { DEFAULT_BUSINESS_ID, DEFAULT_BUSINESS_NAME, isBootstrapOwnerEmail } from "./businessConfig";
 
 interface BootstrapAdminAccessData {
   business_id?: string;
@@ -42,7 +42,7 @@ export const bootstrapAdminAccess = functions.https.onCall(
     const db = getFirestore();
 
     const now = new Date().toISOString();
-    const emailAllowedForBootstrap = !!email && BOOTSTRAP_OWNER_EMAILS.has(email);
+    const emailAllowedForBootstrap = isBootstrapOwnerEmail(email);
     const membershipRef = db.collection("memberships").doc(`${uid}_${businessId}`);
     const membershipSnap = await membershipRef.get();
 

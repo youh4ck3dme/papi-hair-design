@@ -30,6 +30,7 @@ describe("businessConfig", () => {
     expect(module.DEFAULT_BUSINESS_ID).toBe("tenant-main");
     expect(module.DEFAULT_BUSINESS_NAME).toBe("Tenant Studio");
     expect([...module.BOOTSTRAP_OWNER_EMAILS]).toEqual(["owner@example.com"]);
+    expect(module.isBootstrapOwnerEmail("OWNER@example.com")).toBe(true);
   });
 
   it("merges employee aliases across generic and legacy env vars", async () => {

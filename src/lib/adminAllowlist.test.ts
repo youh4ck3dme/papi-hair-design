@@ -20,6 +20,15 @@ describe("adminAllowlist env aliases", () => {
     expect(module.isAdminAllowlisted("OWNER@example.com")).toBe(true);
   });
 
+  it("falls back to legacy owner alias when the generic alias is empty", async () => {
+    vi.stubEnv("VITE_PRIMARY_OWNER_EMAIL", " ");
+    vi.stubEnv("VITE_PAPI_EMAIL", "legacy-owner@example.com");
+
+    const module = await importAllowlistModule();
+
+    expect(module.isAdminAllowlisted("legacy-owner@example.com")).toBe(true);
+  });
+
   it("merges employee csv aliases with legacy employee emails", async () => {
     vi.stubEnv("VITE_EMPLOYEE_EMAILS", "first@example.com,second@example.com");
     vi.stubEnv("VITE_MISKA_EMAIL", "legacy-one@example.com");

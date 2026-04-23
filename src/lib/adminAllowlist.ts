@@ -10,11 +10,19 @@ function parseEnvEmailList(raw: string | undefined): string[] {
     .filter((entry) => entry.length > 0);
 }
 
+function firstNonEmptyEnvEmail(...values: Array<string | undefined>): string {
+  for (const value of values) {
+    const normalized = normalizeEmail(value);
+    if (normalized.length > 0) return normalized;
+  }
+  return "";
+}
+
 function readAdminAllowlistFromEnv(): Set<string> {
   const envEntries = parseEnvEmailList(import.meta.env.VITE_ADMIN_ALLOWLIST as string | undefined);
-  const ownerEntry = normalizeEmail(
-    (import.meta.env.VITE_PRIMARY_OWNER_EMAIL as string | undefined) ??
-    (import.meta.env.VITE_PAPI_EMAIL as string | undefined),
+  const ownerEntry = firstNonEmptyEnvEmail(
+    import.meta.env.VITE_PRIMARY_OWNER_EMAIL as string | undefined,
+    import.meta.env.VITE_PAPI_EMAIL as string | undefined,
   );
   const profileEntries = ownerEntry.length > 0 ? [ownerEntry] : [];
 
