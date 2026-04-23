@@ -49,7 +49,8 @@
    - progress: customer a registration email fallbacky už používajú business-aware branding namiesto natvrdo vpísaného `Papi Hair Design`
    - progress: `branding / hardcodes stage 3` doplnil shared owner/business env aliasy aj pre backend, CI a live smoke skripty (`PRIMARY_OWNER_EMAIL`, `PRIMARY_BUSINESS_ID`, `BOOTSTRAP_EMPLOYEE_EMAILS`, `VITE_PRIMARY_OWNER_EMAIL`)
    - progress: admin SMTP fallback v settings už číta centralizovaný `APP_BOOKING_EMAIL` namiesto lokálneho literal hardcodu
-   - next: dotiahnuť posledné PAPI-specific surface kúsky v salon login route/profile shelli a v owner-facing static copy
+   - progress: `branding / hardcodes stage 4` zaviedol generickú canonical salon login route `/team-login` a staré `papihairsalon2026` nechal už len ako legacy redirect alias
+   - next: dotiahnuť zvyšné PAPI-specific profile shell/defaulty a owner-facing static copy
 2. [ ] Billing flow
    - stav: základ existuje
    - verdict: nie je ready

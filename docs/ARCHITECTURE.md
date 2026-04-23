@@ -81,7 +81,7 @@ Hlavna zodpovednost:
 - `/`
 - `/offline`
 - `/install`
-- `/papihairsalon2026`
+- `/team-login`
 - `/privacy`
 - `/privacy-policy`
 - `/terms`

@@ -2,6 +2,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import { isAdminAllowlisted } from "@/lib/adminAllowlist";
+import { SALON_LOGIN_PATH } from "@/lib/salonLoginRoute";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -34,7 +35,7 @@ export default function ProtectedRoute({ children, requireAdmin = false, allowed
 
   if (!user) {
     if (pathname.startsWith("/admin")) {
-      return <Navigate to="/papihairsalon2026" replace />;
+      return <Navigate to={SALON_LOGIN_PATH} replace />;
     }
     return <Navigate to="/auth" replace />;
   }
