@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { APP_BRAND_NAME, APP_CONTACT_PHONE, APP_CONTACT_PHONE_DISPLAY } from "@/lib/brandConfig";
 import { APP_LOGO_SRC } from "@/lib/branding";
 
 interface LandingMainCardProps {
@@ -58,7 +59,7 @@ export function LandingMainCard({ onOpenPrice }: LandingMainCardProps) {
         style={{ boxShadow: "var(--shadow-medallion)" }}
         aria-hidden="true"
       >
-        <img src={APP_LOGO_SRC} alt="Papi Hair Design" className="h-full w-full object-cover" />
+        <img src={APP_LOGO_SRC} alt={APP_BRAND_NAME} className="h-full w-full object-cover" />
       </div>
 
       <p className="mb-4 mt-1 select-none text-center text-[10px] font-semibold uppercase tracking-[0.35em] text-gold/70 sm:text-[11px]">
@@ -190,15 +191,15 @@ export function LandingMainCard({ onOpenPrice }: LandingMainCardProps) {
 
         {showPhone ? (
           <a
-            href="tel:+421949459624"
+            href={`tel:${APP_CONTACT_PHONE}`}
             className="flex flex-col items-center gap-1.5 rounded-xl border border-gold/55 bg-gold/[0.10] p-3 transition-all duration-200 active:scale-95 md:p-4"
-            aria-label="Zavolať +421 949 459 624"
+            aria-label={`Zavolať ${APP_CONTACT_PHONE_DISPLAY}`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-status-open" aria-hidden="true">
               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
             </svg>
             <span className="whitespace-nowrap text-center text-[10px] font-bold leading-tight tracking-wide text-status-open">
-              +421 949 459 624
+              {APP_CONTACT_PHONE_DISPLAY}
             </span>
           </a>
         ) : (

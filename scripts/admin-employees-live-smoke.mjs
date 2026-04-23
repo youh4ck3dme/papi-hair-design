@@ -3,11 +3,15 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "https://booking.papihairdesign.sk";
-const ownerEmail = process.env.PLAYWRIGHT_OWNER_EMAIL?.trim() || process.env.VITE_PAPI_EMAIL?.trim() || "papi@papihairdesign.sk";
+const ownerEmail = process.env.PLAYWRIGHT_OWNER_EMAIL?.trim() || process.env.VITE_PRIMARY_OWNER_EMAIL?.trim() || process.env.PRIMARY_OWNER_EMAIL?.trim() || process.env.VITE_PAPI_EMAIL?.trim();
 const ownerPassword =
   process.env.PLAYWRIGHT_ROLE_PASSWORD?.trim() ||
-  process.env.PLAYWRIGHT_ADMIN_PASSWORD?.trim() ||
-  "88888888";
+  process.env.PLAYWRIGHT_ADMIN_PASSWORD?.trim();
+
+if (!ownerEmail || !ownerPassword) {
+  console.error("Missing live smoke credentials. Set PLAYWRIGHT_OWNER_EMAIL and PLAYWRIGHT_ROLE_PASSWORD explicitly.");
+  process.exit(1);
+}
 
 const outDir = path.join(process.cwd(), "e2e", "e2e-results", "admin-employees-live-smoke");
 await fs.mkdir(outDir, { recursive: true });

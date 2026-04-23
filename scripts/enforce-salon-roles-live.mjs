@@ -72,8 +72,14 @@ async function callEnforceSalonRoles({ projectId, region, idToken, businessId })
 const envFile = readEnvFile();
 const env = { ...envFile, ...process.env };
 
-const ownerEmail = (env.PLAYWRIGHT_OWNER_EMAIL || env.VITE_PAPI_EMAIL || "").trim();
-const ownerPassword = (env.PLAYWRIGHT_ROLE_PASSWORD || env.PLAYWRIGHT_ADMIN_PASSWORD || "88888888").trim();
+const ownerEmail = (
+  env.PLAYWRIGHT_OWNER_EMAIL ||
+  env.VITE_PRIMARY_OWNER_EMAIL ||
+  env.PRIMARY_OWNER_EMAIL ||
+  env.VITE_PAPI_EMAIL ||
+  ""
+).trim();
+const ownerPassword = (env.PLAYWRIGHT_ROLE_PASSWORD || env.PLAYWRIGHT_ADMIN_PASSWORD || "").trim();
 const apiKey = (env.VITE_FIREBASE_API_KEY || "").trim();
 const projectId = (env.VITE_FIREBASE_PROJECT_ID || "").trim();
 const region = (env.VITE_FIREBASE_FUNCTIONS_REGION || "europe-west1").trim();

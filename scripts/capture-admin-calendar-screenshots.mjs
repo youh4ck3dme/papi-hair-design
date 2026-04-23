@@ -4,7 +4,12 @@ import { chromium } from "playwright";
 
 const baseUrl = process.env.BASE_URL ?? "http://127.0.0.1:5678";
 const outputDir = path.resolve("docs", "screenshots");
-const adminPassword = process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? "88888888";
+const adminPassword = process.env.PLAYWRIGHT_ADMIN_PASSWORD?.trim();
+
+if (!adminPassword) {
+  console.error("Missing PLAYWRIGHT_ADMIN_PASSWORD for admin calendar screenshot capture.");
+  process.exit(1);
+}
 
 async function maybeClick(locator) {
   if ((await locator.count()) === 0) return false;

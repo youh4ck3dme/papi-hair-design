@@ -349,7 +349,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                     <Input
                       value={bizForm.name}
                       onChange={(e) => setBizForm((f) => ({ ...f, name: e.target.value }))}
-                      placeholder="Papi Hair Studio"
+                      placeholder="Salon Studio"
                     />
                   </div>
                   <div className="space-y-1.5">

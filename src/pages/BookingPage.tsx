@@ -14,6 +14,7 @@ import { BookingSuccess } from "@/components/booking/BookingSuccess";
 import { PublicAtmosphereBackground } from "@/components/public/PublicAtmosphereBackground";
 import { PremiumLoadingState } from "@/components/ui/premium-loading-state";
 import { getEffectiveIntervals, type BusinessHours } from "@/lib/availability";
+import { APP_BRAND_NAME, APP_CONTACT_PHONE, APP_CONTACT_PHONE_DISPLAY } from "@/lib/brandConfig";
 import { APP_LOGO_SRC } from "@/lib/branding";
 
 import { useBookingData } from "@/hooks/useBookingData";
@@ -267,7 +268,7 @@ export default function BookingPage() {
                 style={{ boxShadow: "var(--shadow-medallion)" }}
                 data-testid="booking-hero-logo"
               >
-                <img src={APP_LOGO_SRC} alt="Papi Hair Design" className="h-full w-full object-cover" />
+                <img src={APP_LOGO_SRC} alt={APP_BRAND_NAME} className="h-full w-full object-cover" />
               </div>
 
               <div className="px-6 text-center md:px-10">
@@ -295,14 +296,14 @@ export default function BookingPage() {
                     </p>
                     <div className="col-start-2 flex flex-wrap items-center gap-3">
                         <a
-                          href="tel:+421949459624"
+                          href={`tel:${APP_CONTACT_PHONE}`}
                           className="inline-flex min-h-[44px] items-center gap-2 rounded-[7px] border border-gold/35 bg-gold/[0.08] px-4 py-2 text-sm font-semibold text-gold transition-colors hover:border-gold/60 hover:bg-gold/[0.14]"
                         >
                           <Phone className="h-4 w-4" strokeWidth={1.9} />
-                          <span>+421 949 459 624</span>
+                          <span>{APP_CONTACT_PHONE_DISPLAY}</span>
                         </a>
                         <a
-                          href="tel:+421949459624"
+                          href={`tel:${APP_CONTACT_PHONE}`}
                           className="inline-flex min-h-[44px] items-center rounded-[7px] border border-gold/45 bg-gradient-to-b from-ink-700 to-ink-600 px-4 py-2 text-sm font-bold uppercase tracking-[0.16em] text-text-primary transition-colors hover:border-gold/70 hover:from-ink-800 hover:to-ink-700"
                         >
                           {currentLang === "en" ? "Call" : "Volať"}

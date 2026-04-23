@@ -4,6 +4,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { StepHeader } from "./BookingUI";
 import { ServiceRow } from "./types";
+import { APP_BRAND_NAME } from "@/lib/brandConfig";
 
 interface ContactConfirmationProps {
     formData: any;
@@ -72,7 +73,7 @@ export function ContactConfirmation({
                             <CalendarCheck2 size={13} className="text-primary" />
                         </div>
                         <span className="text-muted-foreground">{t("booking.confirmBrand")}</span>
-                        <span className="font-semibold text-foreground ml-auto">PAPI HAIR DESIGN</span>
+                        <span className="font-semibold text-foreground ml-auto">{APP_BRAND_NAME}</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                         <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">

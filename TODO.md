@@ -50,6 +50,7 @@
    - progress: `branding / hardcodes stage 3` doplnil shared owner/business env aliasy aj pre backend, CI a live smoke skripty (`PRIMARY_OWNER_EMAIL`, `PRIMARY_BUSINESS_ID`, `BOOTSTRAP_EMPLOYEE_EMAILS`, `VITE_PRIMARY_OWNER_EMAIL`)
    - progress: admin SMTP fallback v settings už číta centralizovaný `APP_BOOKING_EMAIL` namiesto lokálneho literal hardcodu
    - progress: `branding / hardcodes stage 4` zaviedol generickú canonical salon login route `/team-login` a staré `papihairsalon2026` nechal už len ako legacy redirect alias
+   - progress: final surface pass centralizuje brand/phone fallbacky v public/admin booking UI cez `brandConfig` a odstraňuje tiché live smoke credential fallbacky
    - next: dotiahnuť zvyšné PAPI-specific profile shell/defaulty a owner-facing static copy
 2. [ ] Billing flow
    - stav: základ existuje
@@ -61,6 +62,7 @@
    - stav: funkčný pre PAPI
    - verdict: nie je tenant-safe
    - progress: onboarding guard a bootstrap page už nevisia na natvrdo vpísanom business ID, ale stále ostávajú single-tenant v samotnom provisioning flowe
+   - progress: onboarding wizard placeholder už nie je PAPI-specific, ale samotné provisioning pravidlá ešte nie sú tenant-safe
 5. [x] Access model
    - stav: silný
    - verdict: treba chrániť a ďalej rozširovať, nie rozbiť pri tenantizácii

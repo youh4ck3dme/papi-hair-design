@@ -2,6 +2,7 @@ import { CircleDollarSign, House, Phone, Scissors, UserRound } from "lucide-reac
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { APP_CONTACT_PHONE } from "@/lib/brandConfig";
 import { isSalonLoginRoute } from "@/lib/salonLoginRoute";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +28,7 @@ const navigationButtons: NavigationButton[] = [
   { key: "services", label: "Služby", icon: Scissors, action: "navigate", target: "services" },
   { key: "pricing", label: "Cenník", icon: CircleDollarSign, action: "price", target: "pricing" },
   { key: "account", label: "Môj účet", icon: UserRound, action: "navigate", target: "account" },
-  { key: "phone", label: "Telefón", icon: Phone, action: "phone", href: "tel:+421949459624" },
+  { key: "phone", label: "Telefón", icon: Phone, action: "phone", href: `tel:${APP_CONTACT_PHONE}` },
 ];
 
 function resolveSection(pathname: string): PublicHeaderSection {
