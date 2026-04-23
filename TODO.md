@@ -303,6 +303,11 @@
 4. [ ] Nevracať do produkčnej PAPI appky verejný demo feeling
    - PAPI ostáva reálna prevádzka
    - neutral demo tenant sa rieši oddelene
+5. [ ] Navrhnúť white-label theme system až po oddelení PAPI vrstvy
+   - idea: jednoduchý color picker, ktorý po výbere hlavnej farby automaticky upraví šablónu
+   - výstup: generovať brand tokeny pre primárnu farbu, accent, pozadie, CTA, statusy a kontrastné texty
+   - guardrail: nenasadzovať ako customer-facing editor v PAPI produkcii, kým nie je hotový tenant-safe onboarding a neutral demo tenant
+   - cieľ: rýchle vizuálne prispôsobenie pre pilot salón bez ručného prepisovania CSS a bez rozbitia accessibility kontrastu
 
 ## 30–45 dňový validation sprint
 ### Fáza 1: product readiness
