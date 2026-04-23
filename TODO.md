@@ -7,7 +7,10 @@
 2. [x] Potvrdiť finálnu merge readiness všetkých PR checkov
    - stav: `PR #44` bol úspešne zmergeovaný do `otvarackapril2026`
 3. [x] Upratať `Firebase-first` vs `Vercel` governance chaos v repozitári
-4. [ ] Dokončiť release safety cleanup okolo Vercel preview vrstvy
+4. [x] Dokončiť release safety cleanup okolo Vercel preview vrstvy
+   - stav: duplicitny projekt `papi-hair-design-69td` bol zmazany
+   - stav: ponechany projekt `papi-hair-design` ma `gitProviderOptions.createDeployments = disabled`
+   - stav: Firebase ostava jediny canonical production deploy path
 5. [x] Dorobiť posledný veľký `premium states & feedback` polish pass a live smoke
 
 ### Post-merge safety
@@ -38,15 +41,18 @@
 1. [x] Overiť, či nehrozí nechcený production promote vo Vercel prepojení
    - zistenie: feature branch `codex/*` ide na Verceli do `preview`, nie automaticky do `production`
    - zistenie: oba Vercel projekty maju `productionBranch = main`
-   - caveat: stale existuje manualny owner-level promote risk cez Vercel dashboard
-2. [ ] Upratať duplicitné Vercel preview projekty pre `youh4ck3dme/papi-hair-design`
-   - `papi-hair-design`
-   - `papi-hair-design-69td`
+   - update: ponechany projekt `papi-hair-design` ma po cleanup-e `gitProviderOptions.createDeployments = disabled`, takze nove Git pushy uz nespustaju automaticke Vercel deploye
+   - caveat: stare historicke `vercel.app` aliasy mozu stale existovat pre uz vytvorene deploye, ale nie su canonical production path
+2. [x] Upratať duplicitné Vercel preview projekty pre `youh4ck3dme/papi-hair-design`
+   - zmazany projekt: `papi-hair-design-69td`
+   - ponechany projekt: `papi-hair-design`
 3. [x] Rozhodnúť, ktorý Vercel projekt má zostať ako preview-only source of truth
-   - odporucenie: ponechat `papi-hair-design` ako preview-only kandidat
-   - dovod: cistejsi nazov, starsi projekt a rovnaky preview signal ako `papi-hair-design-69td`
+   - rozhodnutie: ponechat `papi-hair-design` ako manualny diagnostics shell
+   - dovod: cistejsi nazov a mensi operational surface po zmazani duplikatu
+   - hardening: automatic Git deploymenty su vypnute
 4. [x] Po cleanup-e znova potvrdiť, že custom production domény ostávajú výhradne na Firebase deploy flowe
    - zistenie: pod Vercel accountom sa nenasli ziadne custom domény pre tieto preview projekty
+5. [ ] Volitelne: po dalsom stabilizacnom kole zvazit uplne zmazanie aj ponechaneho manual preview projektu, ak Vercel uz netreba ani na diagnostics
 
 ## Repo governance cleanup
 1. [x] Upratať `Firebase-first` vs. staré `Vercel` artefakty v repozitári
