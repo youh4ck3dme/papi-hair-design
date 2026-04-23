@@ -224,6 +224,10 @@
    - progress: buyer-facing scaffold je pripravený na `/platform`, ale defaultne zostáva vypnutý cez `VITE_ENABLE_PLATFORM_PAGE=false`
    - progress: `TermsPage` bola očistená od starej SaaS/dev-workspace copy, aby produkčný PAPI surface ostal dôveryhodný
    - progress: lokálny showcase pass mení `/platform` na čistejší buyer/investor surface s managed positioningom, pilot pricingom, launch systémom a bezpečným theme-lab teaserom
+   - progress: `/platform` má samostatný univerzálny katalóg 22 white-label vertikál bez zásahu do PAPI booking kategórií
+   - progress: landing je prekopaný na buyer-grade štruktúru: proof, mobile reality, grouped vertical matrix, conversion radar, managed launch a finálne pilot CTA
+   - progress: Next.js smer je zatiaľ zdokumentovaný ako samostatný white-label marketing shell blueprint v `docs/NEXTJS-WHITELABEL-BLUEPRINT.md`, nie ako okamžitá migrácia PAPI runtime
+   - progress: branch `codex/nextjs-whitelabel-builder-brief` obsahuje root prompt `CODEX_NEXTJS_WHITELABEL_PROMPT.md`, aby ďalší Codex vedel pokračovať bez chat histórie
 2. [ ] Week 2: billing + externý pilot
    - výstupy: recurring billing decision, pilot onboarding flow, prvý externý pilot shortlist
 3. [ ] Week 3: tenantization + canonical booking surface
@@ -432,6 +436,7 @@
 - ide o buduci expansion shortlist, ked bude tenantization / white-label vrstva realne hotova
 
 ### Kandidátne vertikály
+0. [x] Vytvoriť platformový shortlist ako oddelený buyer/white-label katalóg mimo PAPI production booking flow
 1. [ ] Osetrenie
 2. [ ] Vsetky osetrenia
 3. [ ] Vlasy a styling

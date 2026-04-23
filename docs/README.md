@@ -18,6 +18,7 @@ Citaj v tomto poradi:
 6. [Testing & Quality](TESTING-QUALITY.md)
 7. [Asset Inventory](ASSET-INVENTORY.md)
 8. [Platform Blueprint](PLATFORM-BLUEPRINT.md)
+9. [Next.js White-label Blueprint](NEXTJS-WHITELABEL-BLUEPRINT.md)
 
 ### Ked robis technical review, hiring review alebo due diligence
 Citaj v tomto poradi:
@@ -29,6 +30,7 @@ Citaj v tomto poradi:
 6. [Security & Compliance Baseline](SECURITY-COMPLIANCE.md)
 7. [Asset Inventory](ASSET-INVENTORY.md)
 8. [Platform Blueprint](PLATFORM-BLUEPRINT.md)
+9. [Next.js White-label Blueprint](NEXTJS-WHITELABEL-BLUEPRINT.md)
 
 ### Ked pozeras produktovo alebo obchodne, ci sa to da predavat a rozvijat
 Citaj v tomto poradi:
@@ -40,6 +42,7 @@ Citaj v tomto poradi:
 6. [Owner Manual](../OWNERMANUAL.md)
 7. [Asset Inventory](ASSET-INVENTORY.md)
 8. [Platform Blueprint](PLATFORM-BLUEPRINT.md)
+9. [Next.js White-label Blueprint](NEXTJS-WHITELABEL-BLUEPRINT.md)
 
 ## Core canonical docs
 
@@ -53,9 +56,11 @@ Citaj v tomto poradi:
 - [Product & SaaS Direction](PRODUCT-SAAS.md)
 - [Asset Inventory](ASSET-INVENTORY.md)
 - [Platform Blueprint](PLATFORM-BLUEPRINT.md)
+- [Next.js White-label Blueprint](NEXTJS-WHITELABEL-BLUEPRINT.md)
 - [Technical Due Diligence Brief](TECHNICAL-DUE-DILIGENCE.md)
 - [Owner Manual](../OWNERMANUAL.md)
 - [Backlog / TODO](../TODO.md)
+- [Codex Next.js White-label Prompt](../CODEX_NEXTJS_WHITELABEL_PROMPT.md)
 
 ## Co je v ktorej dokumentacii
 
@@ -86,6 +91,16 @@ Citaj v tomto poradi:
   - aktualna scorecard kritickych kategorii
   - execution poradie
   - definition of done pre branding, onboarding, billing, demo tenant a buyer materials
+
+- [Next.js White-label Blueprint](NEXTJS-WHITELABEL-BLUEPRINT.md)
+  - buduci marketing/white-label shell smer
+  - App Router route mapa pre platform, pricing, verticals a pilot lead flow
+  - guardrails, aby sa PAPI production runtime nemigroval nasilu
+
+- [Codex Next.js White-label Prompt](../CODEX_NEXTJS_WHITELABEL_PROMPT.md)
+  - samostatny build prompt pre dalsieho Codex agenta
+  - obsahuje wireframe, data model, analytics eventy, pilot form a acceptance criteria
+  - ma umoznit pokracovat bez citania celej chat historie
 
 - [Technical Due Diligence Brief](TECHNICAL-DUE-DILIGENCE.md)
   - rychly, poctivy technicko-produktovy verdict

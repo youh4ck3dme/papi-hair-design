@@ -401,11 +401,11 @@
     "back": "Späť",
     "badge": "Private buyer surface",
     "navCta": "Pilot",
-    "eyebrow": "Managed booking OS pre salóny",
-    "title": "Managed booking system, ktorý sa predáva ako výsledok",
-    "subtitle": "Čistý white-label smer pre salóny, ktoré nechcú ďalšiu appku. Dostanú nastavený booking, prevádzkový panel, support a jasný launch proces.",
+    "eyebrow": "Managed booking OS pre služby",
+    "title": "Rezervačný systém, ktorý predáva výsledok",
+    "subtitle": "Univerzálny white-label smer pre služby, ktoré nechcú ďalšiu appku. Dostanú nastavený booking, prevádzkový panel, launch proces, diagnostiku a podporu v jednom čistom balíku.",
     "ctaPrimary": "Požiadať o pilotný call",
-    "ctaSecondary": "Pozrieť živý salón",
+    "ctaSecondary": "Pozrieť živú prevádzku",
     "signalEyebrow": "Investor signal",
     "signalTitle": "Nie demo. Opakovateľný delivery systém.",
     "metrics": {
@@ -418,8 +418,8 @@
         "label": "setup fee pred mesačným retainerom"
       },
       "safety": {
-        "value": "Firebase-first",
-        "label": "produkčný path bez Vercel chaosu"
+        "value": "22 vertikál",
+        "label": "platformový shortlist mimo PAPI flow"
       }
     },
     "features": {
@@ -440,8 +440,72 @@
         "body": "Budúci color picker má generovať tokeny, nie rozbiť CSS ručným prefarbovaním."
       }
     },
+    "proofTitle": "Postavené pre realitu, nie pre screenshot",
+    "proofBody": "Najbližší rozdiel medzi peknou PWA a predajným produktom je meranie, mobilná realita a jasný update flow. Preto landing ukazuje produkt ako prevádzkový systém, nie ako galériu obrazoviek.",
+    "proof": {
+      "conversion": {
+        "title": "Conversion intelligence",
+        "body": "CTA, pricing, funnel a pilot ponuka sú navrhnuté tak, aby buyer pochopil výsledok pred technológiou."
+      },
+      "mobile": {
+        "title": "Mobile-first realita",
+        "body": "PWA sa bude používať hlavne z mobilu. Landing preto predáva rýchlosť, QR/PWA správanie a jednoduchý first booking."
+      },
+      "analytics": {
+        "title": "Merateľný proof layer",
+        "body": "Diagnostika a budúce funnel eventy majú ukázať, kde zákazník odpadáva a čo reálne prináša rezervácie."
+      }
+    },
+    "verticals": {
+      "eyebrow": "Univerzálne vertikály",
+      "title": "Jedna booking šablóna, viac typov služieb",
+      "body": "Platformový smer musí vedieť obslúžiť krásu, wellness, zdravie, fitness aj konzultácie bez toho, aby sa tváril ako ďalší PAPI salón. Toto je shortlist segmentov pre budúci neutral demo tenant.",
+      "guardrail": "Guardrail: toto je platformový katalóg pre buyer landing a plánovanie. Produkčný PAPI booking flow zatiaľ zostáva oddelený, aby sme nerozbili reálnu prevádzku.",
+      "groups": {
+        "beauty": {
+          "title": "Beauty & appearance",
+          "body": "Krása, styling a high-frequency návštevy."
+        },
+        "wellness": {
+          "title": "Wellness & recovery",
+          "body": "Služby, kde rozhoduje pokoj, čas a dôvera."
+        },
+        "health": {
+          "title": "Health-adjacent care",
+          "body": "Citlivejšie segmenty s vyšším compliance rizikom."
+        },
+        "lifestyle": {
+          "title": "Lifestyle & expertise",
+          "body": "Špecialisti, tréneri, tvorcovia a poradenstvo."
+        }
+      },
+      "items": {
+        "treatments": "Ošetrenie",
+        "allTreatments": "Všetky ošetrenia",
+        "hairStyling": "Vlasy a styling",
+        "nails": "Nechty",
+        "hairRemoval": "Odstraňovanie chĺpkov",
+        "browsLashes": "Obočie a riasy",
+        "faceSkinCare": "Starostlivosť o tvár a pleť",
+        "massage": "Masážny salón",
+        "makeup": "Make-up",
+        "aesthetics": "Estetika",
+        "barbershop": "Holičstvo",
+        "spaWellness": "Kúpele a wellness",
+        "bodySkin": "Telo a pleť",
+        "tattooPiercing": "Tetovanie a piercing",
+        "holisticHealth": "Holistické zdravie",
+        "dentalCare": "Zubná starostlivosť",
+        "medical": "Lekárske",
+        "pets": "Domáci miláčikovia",
+        "fitness": "Fitness",
+        "physiotherapy": "Fyzioterapia",
+        "counsellingTherapy": "Poradenstvo a terapia",
+        "other": "Ostatné"
+      }
+    },
     "pricingEyebrow": "Commercial model",
-    "pricingTitle": "Jednoduchá ponuka, ktorú salón pochopí za minútu",
+    "pricingTitle": "Jednoduchá ponuka, ktorú prevádzka pochopí za minútu",
     "pricing": {
       "setup": {
         "title": "€199–€490 setup",
@@ -453,7 +517,7 @@
       },
       "pilot": {
         "title": "Pilot s jasným scope",
-        "body": "Prvý externý salón riešime manuálne, meriame feedback a až potom automatizujeme."
+        "body": "Prvú externú prevádzku riešime manuálne, meriame feedback a až potom automatizujeme."
       }
     },
     "launchEyebrow": "Launch system",
@@ -472,11 +536,33 @@
         "body": "Spustíme prevádzku, sledujeme diagnostiku a zbierame feedback pred ďalším scalingom."
       }
     },
+    "conversionEyebrow": "Revenue radar",
+    "conversionTitle": "Čo budeme merať od prvého pilotu",
+    "conversion": {
+      "funnel": {
+        "title": "Funnel",
+        "body": "Návšteva, CTA, výber vertikály, pricing záujem a pilot call musia byť merateľné."
+      },
+      "retention": {
+        "title": "Retention",
+        "body": "Nie len prvá rezervácia. Sledujeme návraty, opakovanie a dôvody, prečo sa klient vracia."
+      },
+      "versioning": {
+        "title": "Update safety",
+        "body": "PWA update flow musí ostať kontrolovaný, aby deploy nezničil rozpracovanú reláciu."
+      }
+    },
     "themeEyebrow": "Theme lab",
     "themeTitle": "Color picker, ktorý nepôsobí lacno",
     "themeBody": "Budúci white-label editor má po výbere jednej farby navrhnúť celý vizuálny systém: accent, CTA, surface, statusy a kontrastné texty.",
     "themeTokenLabel": "brand token set",
     "themeGuardrail": "Guardrail: toto ostáva mimo PAPI produkčného surface, kým nie je hotový tenant-safe onboarding a neutral demo tenant.",
+    "finalCta": {
+      "eyebrow": "Next move",
+      "title": "Najprv pilot. Potom automatizácia.",
+      "body": "Produkt bude silný vtedy, keď spojí premium dizajn, rýchly managed setup, mobilnú realitu a merateľné výsledky. Nie keď sa bude tváriť ako self-serve SaaS skôr, než má dôkaz.",
+      "button": "Naplánovať pilot"
+    },
     "mailSubject": "Záujem o managed booking pilot"
   }
 }

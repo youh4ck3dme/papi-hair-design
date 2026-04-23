@@ -84,6 +84,8 @@ Canonical docs pre aktualny stav:
 - [Technical Due Diligence Brief](docs/TECHNICAL-DUE-DILIGENCE.md)
 - [Owner Manual](OWNERMANUAL.md) - prevadzkovy manual a owner-facing delivery context
 - [Backlog / TODO](TODO.md)
+- [Codex Next.js White-label Prompt](CODEX_NEXTJS_WHITELABEL_PROMPT.md) - samostatny builder prompt pre buducu Next.js white-label vetvu
+- [Next.js White-label Blueprint](docs/NEXTJS-WHITELABEL-BLUEPRINT.md) - architektonicky blueprint pre marketing/platform shell
 
 Tactical docs, ktore ostavaju platne, ale nie su hlavny source of truth:
 - `docs/DEVELOPMENT-SETUP.md`

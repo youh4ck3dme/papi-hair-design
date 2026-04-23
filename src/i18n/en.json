@@ -401,11 +401,11 @@
     "back": "Back",
     "badge": "Private buyer surface",
     "navCta": "Pilot",
-    "eyebrow": "Managed booking OS for salons",
-    "title": "A managed booking system sold as an outcome",
-    "subtitle": "A clean white-label direction for salons that do not want another app. They get configured booking, an operations panel, support, and a clear launch process.",
+    "eyebrow": "Managed booking OS for service businesses",
+    "title": "A booking system sold as an outcome",
+    "subtitle": "A universal white-label direction for service businesses that do not want another app. They get configured booking, an operations panel, launch process, diagnostics, and support in one clean package.",
     "ctaPrimary": "Request a pilot call",
-    "ctaSecondary": "View the live salon",
+    "ctaSecondary": "View the live location",
     "signalEyebrow": "Investor signal",
     "signalTitle": "Not a demo. A repeatable delivery system.",
     "metrics": {
@@ -418,8 +418,8 @@
         "label": "setup fee before monthly retainer"
       },
       "safety": {
-        "value": "Firebase-first",
-        "label": "production path without Vercel chaos"
+        "value": "22 verticals",
+        "label": "platform shortlist outside the PAPI flow"
       }
     },
     "features": {
@@ -440,8 +440,72 @@
         "body": "The future color picker should generate tokens, not break CSS through manual repainting."
       }
     },
+    "proofTitle": "Built for reality, not screenshots",
+    "proofBody": "The gap between a pretty PWA and a sellable product is measurement, mobile reality, and a controlled update flow. The landing sells the product as an operating system, not a gallery of screens.",
+    "proof": {
+      "conversion": {
+        "title": "Conversion intelligence",
+        "body": "CTA, pricing, funnel, and pilot offer are structured so the buyer understands the outcome before the technology."
+      },
+      "mobile": {
+        "title": "Mobile-first reality",
+        "body": "The PWA will be used mostly from phones. The landing sells speed, QR/PWA behavior, and a simple first booking."
+      },
+      "analytics": {
+        "title": "Measurable proof layer",
+        "body": "Diagnostics and future funnel events should show where users drop off and what actually creates bookings."
+      }
+    },
+    "verticals": {
+      "eyebrow": "Universal verticals",
+      "title": "One booking template, many service businesses",
+      "body": "The platform direction needs to support beauty, wellness, health, fitness, and consultation workflows without pretending every buyer is another PAPI salon. This is the shortlist for the future neutral demo tenant.",
+      "guardrail": "Guardrail: this is a platform catalog for the buyer landing and planning layer. The production PAPI booking flow stays separate for now so the real location remains safe.",
+      "groups": {
+        "beauty": {
+          "title": "Beauty & appearance",
+          "body": "Beauty, styling, and high-frequency visits."
+        },
+        "wellness": {
+          "title": "Wellness & recovery",
+          "body": "Services where calm, timing, and trust matter."
+        },
+        "health": {
+          "title": "Health-adjacent care",
+          "body": "More sensitive segments with higher compliance risk."
+        },
+        "lifestyle": {
+          "title": "Lifestyle & expertise",
+          "body": "Specialists, trainers, creators, and consulting."
+        }
+      },
+      "items": {
+        "treatments": "Treatments",
+        "allTreatments": "All treatments",
+        "hairStyling": "Hair and styling",
+        "nails": "Nails",
+        "hairRemoval": "Hair removal",
+        "browsLashes": "Brows and lashes",
+        "faceSkinCare": "Face and skin care",
+        "massage": "Massage salon",
+        "makeup": "Make-up",
+        "aesthetics": "Aesthetics",
+        "barbershop": "Barbershop",
+        "spaWellness": "Spa and wellness",
+        "bodySkin": "Body and skin",
+        "tattooPiercing": "Tattoo and piercing",
+        "holisticHealth": "Holistic health",
+        "dentalCare": "Dental care",
+        "medical": "Medical",
+        "pets": "Pets",
+        "fitness": "Fitness",
+        "physiotherapy": "Physiotherapy",
+        "counsellingTherapy": "Counselling and therapy",
+        "other": "Other"
+      }
+    },
     "pricingEyebrow": "Commercial model",
-    "pricingTitle": "A simple offer a salon can understand in one minute",
+    "pricingTitle": "A simple offer a location can understand in one minute",
     "pricing": {
       "setup": {
         "title": "€199–€490 setup",
@@ -453,7 +517,7 @@
       },
       "pilot": {
         "title": "Pilot with clear scope",
-        "body": "The first external salon stays manual, measured, and feedback-driven before automation."
+        "body": "The first external location stays manual, measured, and feedback-driven before automation."
       }
     },
     "launchEyebrow": "Launch system",
@@ -472,11 +536,33 @@
         "body": "Launch the location, watch diagnostics, and collect feedback before scaling further."
       }
     },
+    "conversionEyebrow": "Revenue radar",
+    "conversionTitle": "What we measure from the first pilot",
+    "conversion": {
+      "funnel": {
+        "title": "Funnel",
+        "body": "Visit, CTA, vertical selection, pricing interest, and pilot call need to be measurable."
+      },
+      "retention": {
+        "title": "Retention",
+        "body": "Not only the first booking. Track returns, repeats, and the reasons clients come back."
+      },
+      "versioning": {
+        "title": "Update safety",
+        "body": "The PWA update flow must stay controlled so deploys do not break active sessions."
+      }
+    },
     "themeEyebrow": "Theme lab",
     "themeTitle": "A color picker that does not feel cheap",
     "themeBody": "The future white-label editor should turn one selected color into a full visual system: accent, CTA, surface, statuses, and contrast-safe text.",
     "themeTokenLabel": "brand token set",
     "themeGuardrail": "Guardrail: this stays outside the PAPI production surface until tenant-safe onboarding and a neutral demo tenant are ready.",
+    "finalCta": {
+      "eyebrow": "Next move",
+      "title": "Pilot first. Automation second.",
+      "body": "The product gets strong when it combines premium design, fast managed setup, mobile reality, and measurable outcomes. Not when it pretends to be self-serve SaaS before proof exists.",
+      "button": "Plan the pilot"
+    },
     "mailSubject": "Interest in managed booking pilot"
   }
 }
