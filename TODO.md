@@ -202,6 +202,16 @@
 - toto nie je okamžitá produkčná priorita pred dokončením platform cleanupu
 - je to pripravený revenue blueprint, aby sme po stabilizácii neštartovali od nuly
 
+### Týždňový execution track
+1. [ ] Week 1: managed positioning + platform pricing
+   - výstupy: managed messaging, software pricing page blueprint, setup fee + monthly retainer návrh
+2. [ ] Week 2: billing + externý pilot
+   - výstupy: recurring billing decision, pilot onboarding flow, prvý externý pilot shortlist
+3. [ ] Week 3: tenantization + canonical booking surface
+   - výstupy: hardcode cleanup stage 2, single booking truth, tenant-safe bootstrap smer
+4. [ ] Week 4: reporting + compliance + buyer materials
+   - výstupy: KPI/reporting scope, compliance pack scope, buyer-facing materials pack
+
 ### Rýchle výhry do 14 dní
 1. [ ] Prepnúť positioning z `self-serve SaaS` na `managed booking & operations produkt`
    - dopad: vysoký
