@@ -7,7 +7,10 @@
 2. [x] Potvrdiť finálnu merge readiness všetkých PR checkov
    - stav: `PR #44` bol úspešne zmergeovaný do `otvarackapril2026`
 3. [x] Upratať `Firebase-first` vs `Vercel` governance chaos v repozitári
-4. [ ] Dokončiť release safety cleanup okolo Vercel preview vrstvy
+4. [x] Dokončiť release safety cleanup okolo Vercel preview vrstvy
+   - stav: duplicitný projekt `papi-hair-design-69td` bol zmazaný
+   - stav: ponechaný projekt `papi-hair-design` má `gitProviderOptions.createDeployments = disabled`
+   - stav: Firebase ostáva jediný canonical production deploy path
 5. [x] Dorobiť posledný veľký `premium states & feedback` polish pass a live smoke
 
 ### Post-merge safety
@@ -37,16 +40,19 @@
 ## Release safety
 1. [x] Overiť, či nehrozí nechcený production promote vo Vercel prepojení
    - zistenie: feature branch `codex/*` ide na Verceli do `preview`, nie automaticky do `production`
-   - zistenie: oba Vercel projekty maju `productionBranch = main`
-   - caveat: stale existuje manualny owner-level promote risk cez Vercel dashboard
-2. [ ] Upratať duplicitné Vercel preview projekty pre `youh4ck3dme/papi-hair-design`
-   - `papi-hair-design`
-   - `papi-hair-design-69td`
+   - zistenie: oba Vercel projekty majú `productionBranch = main`
+   - update: ponechaný projekt `papi-hair-design` má po cleanup-e `gitProviderOptions.createDeployments = disabled`, takže nové Git pushy už nespúšťajú automatické Vercel deploye
+   - caveat: staré historické `vercel.app` aliasy môžu stále existovať pre už vytvorené deploye, ale nie sú canonical production path
+2. [x] Upratať duplicitné Vercel preview projekty pre `youh4ck3dme/papi-hair-design`
+   - zmazaný projekt: `papi-hair-design-69td`
+   - ponechaný projekt: `papi-hair-design`
 3. [x] Rozhodnúť, ktorý Vercel projekt má zostať ako preview-only source of truth
-   - odporucenie: ponechat `papi-hair-design` ako preview-only kandidat
-   - dovod: cistejsi nazov, starsi projekt a rovnaky preview signal ako `papi-hair-design-69td`
+   - rozhodnutie: ponechať `papi-hair-design` ako manuálny diagnostics shell
+   - dôvod: čistejší názov a menší operational surface po zmazaní duplikátu
+   - hardening: automatic Git deploymenty sú vypnuté
 4. [x] Po cleanup-e znova potvrdiť, že custom production domény ostávajú výhradne na Firebase deploy flowe
-   - zistenie: pod Vercel accountom sa nenasli ziadne custom domény pre tieto preview projekty
+   - zistenie: pod Vercel accountom sa nenašli žiadne custom domény pre tieto preview projekty
+5. [ ] Voliteľne: po ďalšom stabilizačnom kole zvážiť úplné zmazanie aj ponechaného manuálneho preview projektu, ak Vercel už netreba ani na diagnostics
 
 ## Repo governance cleanup
 1. [x] Upratať `Firebase-first` vs. staré `Vercel` artefakty v repozitári
@@ -209,3 +215,38 @@
    - predaj kódu/assetov
    - predaj produktizovaného systému
    - predaj fungujúceho mikro-SaaS
+
+## White-label expansion backlog
+### Poznámka
+- toto nie je aktualna implementacna priorita
+- ide o buduci expansion shortlist, ked bude tenantization / white-label vrstva realne hotova
+
+### Kandidátne vertikály
+1. [ ] Osetrenie
+2. [ ] Vsetky osetrenia
+3. [ ] Vlasy a styling
+4. [ ] Nechty
+5. [ ] Odstranovanie chlpkov
+6. [ ] Obočie a riasy
+7. [ ] Starostlivost o tvar a plet
+8. [ ] Masazny salon
+9. [ ] Make-up
+10. [ ] Estetika
+11. [ ] Holicstvo
+12. [ ] Kupele a wellness
+13. [ ] Telo a plet
+14. [ ] Tetovanie a piercing
+15. [ ] Holisticke zdravie
+16. [ ] Zubna starostlivost
+17. [ ] Lekarske
+18. [ ] Domaci milacikovia
+19. [ ] Fitness
+20. [ ] Fyzioterapia
+21. [ ] Poradenstvo a terapia
+22. [ ] Ostatne
+
+### Pred rozšírením do ďalších vertikál vždy potvrdiť
+1. [ ] ze booking domain model vie obsluzit inu logiku sluzieb, trvania a staff assignmentu bez hardcodov na hair salon flow
+2. [ ] ze texty, emaily, metadata a onboarding flow nie su salon-specific
+3. [ ] ze admin flow vie fungovat aj pre vertikaly bez klasickych casovych slotov alebo so specialnymi obmedzeniami
+4. [ ] ze reporting, compliance a retention model sedia aj pre citlivejsie vertikaly ako lekarske, zubne alebo terapia

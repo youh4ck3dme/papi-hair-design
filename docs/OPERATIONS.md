@@ -22,13 +22,16 @@ Tento dokument je prevadzkovy source of truth pre lokalny vyvoj, build, deploy, 
 - produkcna domena: `https://booking.papihairdesign.sk`
 
 ### Vercel preview layer
-- repo je zaroven napojene na Vercel preview deploymenty
-- aktualne existuju dva Vercel projekty pre to iste GitHub repo:
+- zostal uz iba jeden projekt:
   - `papi-hair-design`
-  - `papi-hair-design-69td`
-- oba maju `productionBranch = main`, takze push na feature branch nespusta automaticky production promote
-- Vercel je tu treba chapat ako preview and PR diagnostics vrstvu, nie ako canonical production release path
-- stale plati, ze owner s pristupom do Vercel dashboardu vie manualne spravit promote, preto je vhodne drzat iba jeden preview source of truth
+- duplicitny projekt `papi-hair-design-69td` bol zmazany pocas release safety cleanupu
+- ponechany projekt ma `gitProviderOptions.createDeployments = disabled`
+- prakticky dosledok:
+  - nove Git pushy uz nespustaju automaticke Vercel preview ani production deploymenty
+  - Vercel tu ostava iba ako manualna diagnostics vrstva, ak je este potrebna
+- Vercel nie je canonical production release path
+- canonical production release path ostava Firebase Hosting + Cloud Functions
+- stale plati, ze owner s pristupom do Vercel dashboardu vie manualne vytvorit alebo promotnut deploy, preto to treba brat ako volitelny ops surface, nie aktivnu release pipeline
 
 ## 3. Local setup
 
