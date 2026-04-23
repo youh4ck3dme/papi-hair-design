@@ -111,6 +111,7 @@ Aktivny backlog source of truth je:
    - restart TS server vo VS Code
    - potvrdit, ze editor-only TypeScript chyby zmizli
 2. `Tenant-readiness audit`
+   - konkretne findings a oddelenie product-core vs PAPI-specific vrstvy su v [Asset Inventory](ASSET-INVENTORY.md)
 3. `Demo tenant`
 4. `Outreach / validation sprint`
 5. `Monetizacia / Stripe` az neskor, nie teraz

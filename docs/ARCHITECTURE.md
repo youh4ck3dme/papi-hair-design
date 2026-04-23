@@ -79,7 +79,6 @@ Hlavna zodpovednost:
 
 #### Public and semi-public
 - `/`
-- `/demo`
 - `/offline`
 - `/install`
 - `/papihairsalon2026`

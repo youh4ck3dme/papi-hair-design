@@ -670,9 +670,6 @@ export default function AuthPage() {
         </Card>
 
         <div className="mt-4 rounded-[18px] border border-white/8 bg-black/15 px-4 py-3 text-center text-sm text-muted-foreground">
-          <a href="/demo" className="text-primary hover:underline block">
-            {t("auth.demoLink")}
-          </a>
           <span>
             {t("auth.bookingLink")}{" "}
             <a href="/booking" className="text-primary hover:underline">

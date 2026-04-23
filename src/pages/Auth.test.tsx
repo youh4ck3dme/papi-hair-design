@@ -118,7 +118,6 @@ vi.mock("react-i18next", () => ({
           "auth.hasAccount": "Máte účet?",
           "auth.backToLogin": "Späť na prihlásenie",
           "auth.googleBtn": "Pokračovať cez Google",
-          "auth.demoLink": "Demo",
           "auth.bookingLink": "Online rezervácia",
           "auth.bookingLinkLabel": "Otvoriť booking",
           "auth.invalidEmail": "Neplatný email",

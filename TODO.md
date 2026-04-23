@@ -27,6 +27,8 @@
 ### Až potom riešiť
 1. [ ] Tenant-readiness audit
 2. [ ] Demo tenant
+   - poznámka: verejná `/demo` route bola odstránená z produkčnej PAPI appky
+   - budúci demo tenant musí byť separátny a neutrálne brandovaný
 3. [ ] Outreach / validation sprint
 4. [ ] Monetizácia / Stripe
 
@@ -103,6 +105,7 @@
    - productized operating system value
    - skutočný micro-SaaS value s MRR
 4. [ ] Pripraviť neutral demo tenant mimo `PAPI Hair Design`
+   - nevkladať späť do produkčnej PAPI appky ako verejnú `/demo` sekciu
 5. [ ] Pripraviť onboarding SOP: nastavenie nového salónu do `30 min`
 6. [ ] Spraviť outreach list prvých `10–20` salónov v Košiciach/SK
 7. [ ] Validovať záujem ešte pred plným billing hardeningom:
@@ -117,27 +120,41 @@
 
 ## 30–45 dňový validation sprint
 ### Fáza 1: product readiness
-1. [ ] Auditnúť git históriu na únik credentials:
+1. [x] Auditnúť git históriu na únik credentials:
    - `git log --all --full-history -- .env`
    - skontrolovať aj staré `.env*`, service account JSON a exporty
-2. [ ] Znova potvrdiť auth/route bezpečnosť bez predpokladov:
+   - výsledok: automatizovaný git history audit nenašiel žiadne tracked raw `.env`
+   - výsledok: nenašli sa tracked `firebase-adminsdk` / service account JSON súbory
+   - výsledok: `extensions/firestore-send-email.env` používa Secret Manager referenciu, nie raw SMTP heslo
+2. [x] Znova potvrdiť auth/route bezpečnosť bez predpokladov:
    - owner/admin guardy
    - employee guardy
    - public callable flows
-3. [ ] Spraviť tenant-readiness audit:
+   - výsledok: `ProtectedRoute` už nepúšťa allowlisted employee email do employee/admin route bez membership dokumentu
+   - výsledok: admin callable flowy zostávajú viazané na `requireAuth` + `requireMembership`
+   - výsledok: public booking/history callable flowy zostávajú token/rate-limit based a nevyžadujú falošný auth bypass
+3. [x] Spraviť tenant-readiness audit:
    - business isolation vo Firestore rules
    - business-aware queries
    - business-aware functions
    - business-aware email flows
-4. [ ] Vytvoriť `asset inventory`:
+   - výsledok: hlavné admin callable flowy sú business-scoped cez `requireMembership(...)`
+   - výsledok: Firestore rules ostávajú vo väčšine jadrových kolekcií business-aware, vrátane canonical membership documentu `${uid}_${businessId}`
+   - výsledok: `page_views` rules boli dotiahnuté, aby zápis šiel len za vlastného usera v rámci jeho business membershipu a čítanie ostalo len pre owner/admin
+   - blocker: public booking a demo vrstva stále stoja na `DEFAULT_BUSINESS_ID` / `papi-hair-design-main`, takže onboarding nového tenanta ešte nie je self-serve
+   - blocker: bootstrap, allowlist a role-enforcement flowy sú stále PAPI-specific
+   - blocker: email branding, calendar export UID a public base URL sú stále brand-specific pre `papihairdesign.sk`
+4. [x] Vytvoriť `asset inventory`:
    - čo sa predáva ako produkt
    - čo je špecifické len pre PAPI
    - čo treba odtenantizovať
+   - výstup: [docs/ASSET-INVENTORY.md](docs/ASSET-INVENTORY.md)
 5. [ ] Pripraviť neutral demo tenant:
    - názov bez väzby na PAPI
    - demo data
    - demo branding
    - demo users/roles
+   - oddelene od produkčného PAPI brand surface
 6. [ ] Nahrať krátke demo video:
    - landing
    - booking

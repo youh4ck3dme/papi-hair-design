@@ -1,6 +1,13 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Static pages", () => {
+  test("/demo redirects back to the production home shell", async ({ page }) => {
+    await page.goto("/demo");
+    await expect(page).toHaveURL(/\/$/, { timeout: 10000 });
+    await expect(page.getByTestId("public-sticky-header")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: /PAPI HAIR/i }).last()).toBeVisible({ timeout: 10000 });
+  });
+
   test("privacy page renders core heading and GDPR section", async ({ page }) => {
     await page.goto("/privacy");
     await expect(page.getByRole("heading", { name: /Ochrana súkromia/i })).toBeVisible({ timeout: 15000 });
@@ -11,12 +18,6 @@ test.describe("Static pages", () => {
     await page.goto("/privacy");
     await expect(page.getByTestId("public-sticky-header")).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("link", { name: /Rezervovať termín/i }).last()).toBeVisible({ timeout: 10000 });
-  });
-
-  test("demo page renders sticky header shell", async ({ page }) => {
-    await page.goto("/demo");
-    await expect(page.getByTestId("public-sticky-header")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("button", { name: "Domov" })).toBeVisible({ timeout: 10000 });
   });
 
   test("pricing page renders admin-backed service categories", async ({ page }) => {

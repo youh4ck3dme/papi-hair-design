@@ -8,7 +8,6 @@ const PAGES: { path: string; criticalSelector?: string; criticalLabel?: string }
   { path: "/booking", criticalSelector: "text=Vyberte kategóriu", criticalLabel: "booking step" },
   { path: "/my-account", criticalSelector: "text=Môj účet", criticalLabel: "account heading" },
   { path: "/auth", criticalSelector: "text=Prihlásenie", criticalLabel: "auth heading" },
-  { path: "/demo", criticalSelector: "text=Rezervačný systém", criticalLabel: "demo heading" },
 ];
 
 async function gotoWithWarmRetry(page: import("@playwright/test").Page, path: string) {
