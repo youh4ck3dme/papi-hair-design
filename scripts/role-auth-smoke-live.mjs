@@ -4,7 +4,7 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "https://booking.papihairdesi
 const sharedPassword =
   process.env.PLAYWRIGHT_ROLE_PASSWORD?.trim() ||
   process.env.PLAYWRIGHT_ADMIN_PASSWORD?.trim() ||
-  "88888888";
+  "";
 
 const accounts = [
   {
@@ -13,18 +13,17 @@ const accounts = [
       process.env.PLAYWRIGHT_OWNER_EMAIL?.trim() ||
       process.env.VITE_PRIMARY_OWNER_EMAIL?.trim() ||
       process.env.PRIMARY_OWNER_EMAIL?.trim() ||
-      process.env.VITE_PAPI_EMAIL?.trim() ||
-      "papi@papihairdesign.sk",
+      process.env.VITE_PAPI_EMAIL?.trim(),
     expectedEmployeesAccess: true,
   },
   {
     key: "mato",
-    email: process.env.PLAYWRIGHT_MATO_EMAIL?.trim() || process.env.VITE_MATO_EMAIL?.trim() || "mato@papihairdesign.sk",
+    email: process.env.PLAYWRIGHT_MATO_EMAIL?.trim() || process.env.VITE_MATO_EMAIL?.trim(),
     expectedEmployeesAccess: false,
   },
   {
     key: "miska",
-    email: process.env.PLAYWRIGHT_MISKA_EMAIL?.trim() || process.env.VITE_MISKA_EMAIL?.trim() || "miska@papihairdesign.sk",
+    email: process.env.PLAYWRIGHT_MISKA_EMAIL?.trim() || process.env.VITE_MISKA_EMAIL?.trim(),
     expectedEmployeesAccess: false,
   },
 ];
@@ -32,6 +31,11 @@ const accounts = [
 const missingEmail = accounts.find((account) => !account.email);
 if (missingEmail) {
   console.error(`Missing email for ${missingEmail.key}. Set PLAYWRIGHT_*_EMAIL env vars.`);
+  process.exit(1);
+}
+
+if (!sharedPassword) {
+  console.error("Missing shared password. Set PLAYWRIGHT_ROLE_PASSWORD or PLAYWRIGHT_ADMIN_PASSWORD.");
   process.exit(1);
 }
 

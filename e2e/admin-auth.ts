@@ -4,20 +4,30 @@ export const ENABLE_ADMIN_E2E = process.env.PLAYWRIGHT_ENABLE_ADMIN_E2E === "1";
 export const ENABLE_ADMIN_SMOKE_E2E =
   process.env.PLAYWRIGHT_ENABLE_ADMIN_SMOKE_E2E === "1" || ENABLE_ADMIN_E2E;
 export const ENABLE_ADMIN_MUTATION_E2E = process.env.PLAYWRIGHT_ENABLE_ADMIN_MUTATION_E2E === "1";
-export const ADMIN_EMAIL =
-  process.env.PLAYWRIGHT_ADMIN_EMAIL?.trim() ||
-  process.env.VITE_PRIMARY_OWNER_EMAIL?.trim() ||
-  process.env.PRIMARY_OWNER_EMAIL?.trim() ||
-  process.env.VITE_PAPI_EMAIL?.trim() ||
-  "papi@papihairdesign.sk";
-export const ADMIN_PASSWORD =
-  process.env.PLAYWRIGHT_ADMIN_PASSWORD?.trim() ||
-  process.env.PLAYWRIGHT_ROLE_PASSWORD?.trim() ||
-  "88888888";
+
+function readFirstNonEmptyEnv(...values: Array<string | undefined>) {
+  for (const value of values) {
+    const normalized = value?.trim();
+    if (normalized) return normalized;
+  }
+  return "";
+}
+
+export const ADMIN_EMAIL = readFirstNonEmptyEnv(
+  process.env.PLAYWRIGHT_ADMIN_EMAIL,
+  process.env.PLAYWRIGHT_OWNER_EMAIL,
+  process.env.VITE_PRIMARY_OWNER_EMAIL,
+  process.env.PRIMARY_OWNER_EMAIL,
+  process.env.VITE_PAPI_EMAIL,
+);
+export const ADMIN_PASSWORD = readFirstNonEmptyEnv(
+  process.env.PLAYWRIGHT_ADMIN_PASSWORD,
+  process.env.PLAYWRIGHT_ROLE_PASSWORD,
+);
 
 if ((ENABLE_ADMIN_E2E || ENABLE_ADMIN_SMOKE_E2E || ENABLE_ADMIN_MUTATION_E2E) && (!ADMIN_EMAIL || !ADMIN_PASSWORD)) {
   throw new Error(
-    "PLAYWRIGHT_ADMIN_EMAIL and PLAYWRIGHT_ADMIN_PASSWORD are required when admin Playwright E2E is enabled.",
+    "Admin Playwright E2E requires explicit credentials. Set PLAYWRIGHT_ADMIN_EMAIL/PLAYWRIGHT_ADMIN_PASSWORD or owner-based fallbacks PLAYWRIGHT_OWNER_EMAIL/PLAYWRIGHT_ROLE_PASSWORD.",
   );
 }
 
