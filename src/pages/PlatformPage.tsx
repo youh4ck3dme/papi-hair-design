@@ -25,6 +25,8 @@ type PlatformPriceCard = {
   body: string;
 };
 
+const FEATURE_CARD_ICONS = [Building2, CalendarRange, Check, ShieldCheck];
+
 function useNoIndexPage(title: string) {
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -157,8 +159,7 @@ export default function PlatformPage() {
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 {featureCards.map((card, index) => {
-                  const icons = [Building2, CalendarRange, Check, ShieldCheck];
-                  const Icon = icons[index] ?? Check;
+                  const Icon = FEATURE_CARD_ICONS[index] ?? Check;
 
                   return (
                     <div

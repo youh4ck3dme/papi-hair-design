@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { ArrowLeft, ChevronRight, FileText, Mail, ShieldCheck } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { APP_BOOKING_EMAIL, APP_BRAND_NAME } from "@/lib/brandConfig";
@@ -11,7 +11,6 @@ type TermsSection = {
 };
 
 export default function TermsPage() {
-  const navigate = useNavigate();
   const { t } = useTranslation();
 
   const sections = useMemo<TermsSection[]>(
@@ -30,19 +29,19 @@ export default function TermsPage() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(201,168,76,0.10),transparent_30%),linear-gradient(180deg,#080706_0%,#0d0b09_48%,#060505_100%)] px-4 py-8 text-white selection:bg-primary/80 selection:text-black">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 flex items-center justify-between gap-3">
-          <button
-            onClick={() => navigate(-1)}
+          <Link
+            to="/"
             className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white/78 transition-all hover:border-primary/25 hover:bg-white/[0.06] hover:text-white"
           >
             <ArrowLeft size={16} />
             {t("terms.back")}
-          </button>
+          </Link>
 
           <Link
             to="/booking"
             className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8860b,#daa520,#f2cf60)] px-4 py-2 text-sm font-black uppercase tracking-[0.18em] text-black shadow-[0_16px_34px_-22px_rgba(218,165,32,0.9)] transition-transform hover:scale-[1.01]"
           >
-            Rezervovať
+            {t("index.bookBtn")}
             <ChevronRight size={16} />
           </Link>
         </div>
