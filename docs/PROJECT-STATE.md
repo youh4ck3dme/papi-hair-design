@@ -57,6 +57,15 @@ Ak chce niekto pokracovat od cisteho stavu, source of truth je:
 
 Ak ma niekto lokalny chaos, najprv si ma overit, ci nepracuje na starej feature vetve alebo na lokalnej vetve odchylenej od `origin/otvarackapril2026`.
 
+### Effort snapshot
+Priblizny odhad odvedenej prace na tomto stabilizacnom a produktovom kole je:
+- hlavne aktivne obdobie: `2026-02-19` az `2026-04-23`
+- priblizne `40` aktivnych vyvojovych dni
+- realisticky odhad: `180-220 hodin`
+- orientacny priemer pri pohlade na `60` dni: priblizne `3.0-3.7 hodiny denne`
+
+Tento odhad nie je time-tracker export. Je to poctivy pracovny odhad z Git historie, testovania, deployov, debugingu, dokumentacie a release hygiene prace.
+
 ## 4. Deployment and release truth
 
 ### Canonical production deploy path

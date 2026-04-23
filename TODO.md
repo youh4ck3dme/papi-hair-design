@@ -25,12 +25,57 @@
    - cleanup riešiť až po ďalšom stabilizačnom kole
 
 ### Až potom riešiť
-1. [ ] Tenant-readiness audit
-2. [ ] Demo tenant
+1. [x] Tenant-readiness audit
+2. [ ] Zmergeovať production diagnostics baseline do `otvarackapril2026`
+   - branch: `codex/production-diagnostics`
+   - stav: lightweight diagnostics vrstva je commitnutá, pushnutá a nasadená na produkciu
+   - stav: `recordClientDiagnostic` bol produkčne overený reálnym smoke testom a zapisuje do kolekcie `app_diagnostics`
+3. [ ] Demo tenant
    - poznámka: verejná `/demo` route bola odstránená z produkčnej PAPI appky
    - budúci demo tenant musí byť separátny a neutrálne brandovaný
-3. [ ] Outreach / validation sprint
-4. [ ] Monetizácia / Stripe
+4. [ ] Outreach / validation sprint
+5. [ ] Monetizácia / Stripe
+
+## Delivery and owner context
+1. [x] Zapisat realisticky effort snapshot do kanonickej docs vrstvy
+   - stav: orientacny odhad je zapisany v `docs/PROJECT-STATE.md`
+   - odhad: `180-220 hodin` celkovo, priblizne `3.0-3.7 hodiny denne` pri pohlade na `60` dni
+2. [x] Doplniť owner-facing poznamku, ze PAPI instalacia je custom production nasadenie
+   - stav: owner manual vysvetluje, ze nejde o verejny demo surface ani potichy plateny self-serve SaaS panel
+3. [x] Nechat verejny README bez zbytocneho billing textu
+   - stav: README iba odkazuje, kde je effort a owner context zdokumentovany
+
+## Production diagnostics
+1. [x] Pridať minimal production diagnostics layer bez over-engineeringu
+   - frontend:
+     - globálne `runtime_error`
+     - globálne `unhandled_rejection`
+     - `bootstrap_error`
+   - backend:
+     - callable `recordClientDiagnostic`
+     - rate limit
+     - payload sanitizácia
+     - dedupe fingerprint
+     - kolekcia `app_diagnostics`
+2. [x] Zaviesť retention pre `app_diagnostics`
+   - stav: retention je `30 dní`
+   - cleanup ide cez existujúci `cleanupComplianceData`
+3. [x] Nasadiť diagnostics vrstvu na produkciu
+4. [x] Overiť live write do Firestore
+   - výsledok: smoke test vytvoril dokument v `app_diagnostics`
+   - dôkaz: `recordClientDiagnostic` vrátil `ok: true` a dokument bol následne prečítaný späť z Firestore
+5. [ ] Doplniť custom funnel eventy
+   - `booking_started`
+   - `booking_step_completed`
+   - `booking_completed`
+   - `booking_failed`
+6. [ ] Ujasniť, či chceme samostatný owner/admin diagnostics prehľad
+   - len read-only
+   - bez PII bordelu
+   - s business-safe filtrom
+7. [ ] Zvážiť upgrade `firebase-functions` v `functions/package.json` na latest
+   - deploy neblokuje
+   - ale Firebase CLI hlási outdated warning
 
 ## Legacy TypeScript cleanup
 1. [x] Pridať `strict: true` do `functions/tsconfig.json`
