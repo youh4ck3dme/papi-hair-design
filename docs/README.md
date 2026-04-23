@@ -17,6 +17,7 @@ Citaj v tomto poradi:
 5. [Operations](OPERATIONS.md)
 6. [Testing & Quality](TESTING-QUALITY.md)
 7. [Asset Inventory](ASSET-INVENTORY.md)
+8. [Platform Blueprint](PLATFORM-BLUEPRINT.md)
 
 ### Ked robis technical review, hiring review alebo due diligence
 Citaj v tomto poradi:
@@ -27,6 +28,7 @@ Citaj v tomto poradi:
 5. [Testing & Quality](TESTING-QUALITY.md)
 6. [Security & Compliance Baseline](SECURITY-COMPLIANCE.md)
 7. [Asset Inventory](ASSET-INVENTORY.md)
+8. [Platform Blueprint](PLATFORM-BLUEPRINT.md)
 
 ### Ked pozeras produktovo alebo obchodne, ci sa to da predavat a rozvijat
 Citaj v tomto poradi:
@@ -37,6 +39,7 @@ Citaj v tomto poradi:
 5. [Security & Compliance Baseline](SECURITY-COMPLIANCE.md)
 6. [Owner Manual](../OWNERMANUAL.md)
 7. [Asset Inventory](ASSET-INVENTORY.md)
+8. [Platform Blueprint](PLATFORM-BLUEPRINT.md)
 
 ## Core canonical docs
 
@@ -49,6 +52,7 @@ Citaj v tomto poradi:
 - [Security & Compliance Baseline](SECURITY-COMPLIANCE.md)
 - [Product & SaaS Direction](PRODUCT-SAAS.md)
 - [Asset Inventory](ASSET-INVENTORY.md)
+- [Platform Blueprint](PLATFORM-BLUEPRINT.md)
 - [Technical Due Diligence Brief](TECHNICAL-DUE-DILIGENCE.md)
 - [Owner Manual](../OWNERMANUAL.md)
 - [Backlog / TODO](../TODO.md)
@@ -77,6 +81,11 @@ Citaj v tomto poradi:
   - co je uz produktove jadro
   - co je stale PAPI-specific
   - co blokuje tenantization a white-label smer
+
+- [Platform Blueprint](PLATFORM-BLUEPRINT.md)
+  - aktualna scorecard kritickych kategorii
+  - execution poradie
+  - definition of done pre branding, onboarding, billing, demo tenant a buyer materials
 
 - [Technical Due Diligence Brief](TECHNICAL-DUE-DILIGENCE.md)
   - rychly, poctivy technicko-produktovy verdict

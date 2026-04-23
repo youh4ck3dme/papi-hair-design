@@ -25,12 +25,86 @@
    - cleanup riešiť až po ďalšom stabilizačnom kole
 
 ### Až potom riešiť
-1. [ ] Tenant-readiness audit
-2. [ ] Demo tenant
+1. [x] Tenant-readiness audit
+2. [ ] Zmergeovať production diagnostics baseline do `otvarackapril2026`
+   - branch: `codex/production-diagnostics`
+   - stav: lightweight diagnostics vrstva je commitnutá, pushnutá a nasadená na produkciu
+   - stav: `recordClientDiagnostic` bol produkčne overený reálnym smoke testom a zapisuje do kolekcie `app_diagnostics`
+3. [ ] Demo tenant
    - poznámka: verejná `/demo` route bola odstránená z produkčnej PAPI appky
    - budúci demo tenant musí byť separátny a neutrálne brandovaný
-3. [ ] Outreach / validation sprint
-4. [ ] Monetizácia / Stripe
+4. [ ] Outreach / validation sprint
+5. [ ] Monetizácia / Stripe
+
+## Platform readiness scorecard
+1. [ ] Branding a hardcody
+   - stav: slabé
+   - verdict: treba odtenantizovať
+   - progress: prvý centralizačný pass je hotový cez `src/lib/brandConfig.ts` a `functions/src/brandConfig.ts`
+   - progress: canonical host, site URL, contact údaje a ICS brand fallbacky už nie sú roztrúsené po core súboroch
+   - next: oddeliť tenant config od PAPI-specific defaultov a odstrániť zvyšné bootstrap/business hardcody
+2. [ ] Billing flow
+   - stav: základ existuje
+   - verdict: nie je ready
+3. [x] Pricing page
+   - stav: hotová
+   - verdict: je to service pricing, nie platform pricing
+4. [ ] Onboarding
+   - stav: funkčný pre PAPI
+   - verdict: nie je tenant-safe
+5. [x] Access model
+   - stav: silný
+   - verdict: treba chrániť a ďalej rozširovať, nie rozbiť pri tenantizácii
+6. [ ] Demo tenant
+   - stav: ešte nie
+   - verdict: musí byť oddelený od produkčnej PAPI identity
+7. [ ] Buyer materials
+   - stav: technické áno, sales nie
+   - verdict: buyer-facing komerčná vrstva ešte nie je uzavretá
+8. [x] Spísať execution blueprint pre tieto kategórie
+   - výstup: `docs/PLATFORM-BLUEPRINT.md`
+   - cieľ: zrýchliť ďalšie rozhodovanie a držať jednotné poradie prác
+
+## Delivery and owner context
+1. [x] Zapisat realisticky effort snapshot do kanonickej docs vrstvy
+   - stav: orientacny odhad je zapisany v `docs/PROJECT-STATE.md`
+   - odhad: `180-220 hodin` celkovo, priblizne `3.0-3.7 hodiny denne` pri pohlade na `60` dni
+2. [x] Doplniť owner-facing poznamku, ze PAPI instalacia je custom production nasadenie
+   - stav: owner manual vysvetluje, ze nejde o verejny demo surface ani potichy plateny self-serve SaaS panel
+3. [x] Nechat verejny README bez zbytocneho billing textu
+   - stav: README iba odkazuje, kde je effort a owner context zdokumentovany
+
+## Production diagnostics
+1. [x] Pridať minimal production diagnostics layer bez over-engineeringu
+   - frontend:
+     - globálne `runtime_error`
+     - globálne `unhandled_rejection`
+     - `bootstrap_error`
+   - backend:
+     - callable `recordClientDiagnostic`
+     - rate limit
+     - payload sanitizácia
+     - dedupe fingerprint
+     - kolekcia `app_diagnostics`
+2. [x] Zaviesť retention pre `app_diagnostics`
+   - stav: retention je `30 dní`
+   - cleanup ide cez existujúci `cleanupComplianceData`
+3. [x] Nasadiť diagnostics vrstvu na produkciu
+4. [x] Overiť live write do Firestore
+   - výsledok: smoke test vytvoril dokument v `app_diagnostics`
+   - dôkaz: `recordClientDiagnostic` vrátil `ok: true` a dokument bol následne prečítaný späť z Firestore
+5. [ ] Doplniť custom funnel eventy
+   - `booking_started`
+   - `booking_step_completed`
+   - `booking_completed`
+   - `booking_failed`
+6. [ ] Ujasniť, či chceme samostatný owner/admin diagnostics prehľad
+   - len read-only
+   - bez PII bordelu
+   - s business-safe filtrom
+7. [ ] Zvážiť upgrade `firebase-functions` v `functions/package.json` na latest
+   - deploy neblokuje
+   - ale Firebase CLI hlási outdated warning
 
 ## Legacy TypeScript cleanup
 1. [x] Pridať `strict: true` do `functions/tsconfig.json`
@@ -55,6 +129,11 @@
 4. [x] Po cleanup-e znova potvrdiť, že custom production domény ostávajú výhradne na Firebase deploy flowe
    - zistenie: pod Vercel accountom sa nenašli žiadne custom domény pre tieto preview projekty
 5. [ ] Voliteľne: po ďalšom stabilizačnom kole zvážiť úplné zmazanie aj ponechaného manuálneho preview projektu, ak Vercel už netreba ani na diagnostics
+6. [x] Zapečatiť canonical production deploy path na `otvarackapril2026`
+   - stav: deploy workflowy pre hosting aj functions teraz počúvajú len branch `otvarackapril2026`
+   - stav: pridaný repo-side branch guard `scripts/assert-production-branch.mjs`
+   - stav: staré deploy triggre pre `main`, `uprava22-2` a `papihairstudiobooking` boli odstránené
+   - caveat: mimo repa vie deploy stále spraviť iba človek s priamym Firebase prístupom, ale official CI path je zamknutý
 
 ## Repo governance cleanup
 1. [x] Upratať `Firebase-first` vs. staré `Vercel` artefakty v repozitári
@@ -118,6 +197,92 @@
    - pivotnúť positioning
    - alebo to predať ako asset/product
 
+## Monetization track pre white-label produkt
+### Poznámka
+- toto nie je okamžitá produkčná priorita pred dokončením platform cleanupu
+- je to pripravený revenue blueprint, aby sme po stabilizácii neštartovali od nuly
+
+### Týždňový execution track
+1. [ ] Week 1: managed positioning + platform pricing
+   - výstupy: managed messaging, software pricing page blueprint, setup fee + monthly retainer návrh
+2. [ ] Week 2: billing + externý pilot
+   - výstupy: recurring billing decision, pilot onboarding flow, prvý externý pilot shortlist
+3. [ ] Week 3: tenantization + canonical booking surface
+   - výstupy: hardcode cleanup stage 2, single booking truth, tenant-safe bootstrap smer
+4. [ ] Week 4: reporting + compliance + buyer materials
+   - výstupy: KPI/reporting scope, compliance pack scope, buyer-facing materials pack
+
+### Rýchle výhry do 14 dní
+1. [ ] Prepnúť positioning z `self-serve SaaS` na `managed booking & operations produkt`
+   - dopad: vysoký
+   - náročnosť: nízka
+   - dôvod: predávame výsledok a onboarding, nie len ďalšiu appku
+2. [ ] Spraviť samostatnú software pricing page oddelenú od salónového cenníka
+   - dopad: vysoký
+   - náročnosť: nízka
+   - blocker dnes: buyer vidí service pricing, nie platform pricing
+3. [ ] Navrhnúť jednoduchý model `setup fee + mesačný retainer`
+   - návrh: `€199–€490 setup + €29–€79 / mesiac / prevádzka`
+   - dopad: vysoký
+   - náročnosť: nízka
+   - poznámka: lepšie sedí na SK/CZ realitu než enterprise pricing fikcia
+4. [ ] Spustiť prvých `10–20` direct outreachov na salóny alebo agentúry
+   - dopad: vysoký
+   - náročnosť: stredná
+   - poznámka: bez outreachu sú valuácie len hypotéza
+
+### Kroky do 30 dní
+1. [ ] Zapnúť reálny billing flow alebo aspoň overiteľné recurring fakturovanie
+   - dopad: vysoký
+   - náročnosť: stredná
+   - blocker dnes: máme základ, ale nie overiteľný recurring revenue flow
+2. [ ] Získať `1` externý pilot mimo PAPI
+   - dopad: veľmi vysoký
+   - náročnosť: stredná
+   - poznámka: jeden reálny pilot má väčšiu hodnotu než ďalšie docs
+3. [ ] Upratať single-salon hardcody
+   - dopad: stredný
+   - náročnosť: stredná
+   - väzba: nadväzuje na `branding a hardcody` a `tenant-readiness`
+4. [ ] Zavrieť otázku `Bookio/Booqme vs. vlastný systém`
+   - dopad: stredný
+   - náročnosť: nízka
+   - cieľ: jeden produkt, jeden canonical booking surface, žiadny positioning chaos
+
+### Kroky do 90 dní
+1. [ ] Získať `3–5` platiacich salónov
+   - dopad: veľmi vysoký
+   - náročnosť: vysoká
+   - poznámka: tu sa z assetu začína rodiť skutočný biznis
+2. [ ] Zaviesť automatizovaný tenant provisioning
+   - dopad: vysoký
+   - náročnosť: vysoká
+   - väzba: znižuje founder dependency a zvyšuje salability
+3. [ ] Doplniť reporting vrstvu:
+   - bookings
+   - no-shows
+   - active staff
+   - retention
+4. [ ] Pripraviť compliance pack:
+   - DPA
+   - export
+   - offboarding
+   - data termination flow
+
+### White-label monetization guardrails
+1. [ ] Nepredávať to zatiaľ ako hotový self-serve SaaS, kým onboarding, billing a tenant provisioning nie sú reálne uzavreté
+2. [ ] Držať oddelené dve pricing vrstvy:
+   - salon service pricing pre koncových zákazníkov
+   - platform pricing pre buyerov / pilot prevádzky
+3. [ ] Každý revenue krok viazať na dôkaz:
+   - pilot
+   - recurring billing
+   - platiaci tenant
+   - usage reporting
+4. [ ] Nevracať do produkčnej PAPI appky verejný demo feeling
+   - PAPI ostáva reálna prevádzka
+   - neutral demo tenant sa rieši oddelene
+
 ## 30–45 dňový validation sprint
 ### Fáza 1: product readiness
 1. [x] Auditnúť git históriu na únik credentials:
@@ -143,7 +308,7 @@
    - výsledok: `page_views` rules boli dotiahnuté, aby zápis šiel len za vlastného usera v rámci jeho business membershipu a čítanie ostalo len pre owner/admin
    - blocker: public booking a demo vrstva stále stoja na `DEFAULT_BUSINESS_ID` / `papi-hair-design-main`, takže onboarding nového tenanta ešte nie je self-serve
    - blocker: bootstrap, allowlist a role-enforcement flowy sú stále PAPI-specific
-   - blocker: email branding, calendar export UID a public base URL sú stále brand-specific pre `papihairdesign.sk`
+   - blocker: email branding, calendar export UID a public base URL sú stále brand-specific pre `papihairdesign.sk`, aj keď už sú centralizované v brand config vrstve
 4. [x] Vytvoriť `asset inventory`:
    - čo sa predáva ako produkt
    - čo je špecifické len pre PAPI

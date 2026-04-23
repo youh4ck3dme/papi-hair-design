@@ -2,7 +2,7 @@ name: Deploy Firebase Hosting
 
 on:
   push:
-    branches: [main, uprava22-2, papihairstudiobooking]
+    branches: [otvarackapril2026]
     paths:
       - "src/**"
       - "public/**"
@@ -15,7 +15,9 @@ on:
       - "tsconfig*.json"
       - "firebase.json"
       - "scripts/check-env.mjs"
+      - "scripts/assert-production-branch.mjs"
       - ".github/workflows/deploy-hosting.yml"
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -24,6 +26,9 @@ jobs:
   deploy-hosting:
     name: Build and Deploy Hosting
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-hosting-production
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -36,6 +41,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify production branch lock
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: npm run guard:production-branch
 
       - name: Build web app
         env:

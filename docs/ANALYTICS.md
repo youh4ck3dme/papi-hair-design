@@ -36,10 +36,12 @@ Oba prístupy ukazujú na **tú istú** GA4 vlastnosť; Firebase len odkazuje na
 
 ## Čo v projekte posiela dáta do GA4
 
-1. **Google tag (gtag.js)** v `index.html` – načíta sa pri každom načítaní stránky, posiela page_view a ďalšie udalosti.
-2. **Firebase Analytics** v `main.tsx` (`initFirebaseAnalytics()`) – používa ten istý `measurementId` z Firebase konfigurácie, takže dáta idú do toho istého GA4 streamu.
+1. **Google tag / Firebase Analytics** cez `src/lib/analytics.ts` – consent-aware GA4 baseline pre page analytics.
+2. **Sentry** v `src/main.tsx` – runtime error tracking, tracing a replay pre produkciu.
+3. **App diagnostics callable** – lightweight produkčná diagnostics vrstva pre kritické klientské chyby (`runtime_error`, `unhandled_rejection`, `bootstrap_error`), zapisovaná do kolekcie `app_diagnostics` s retenčným cleanupom.
 
-Obe metódy používajú **G-RQR6XKDKT4**, takže máte jednu GA4 vlastnosť, nie dve.
+GA4 stále používa **G-RQR6XKDKT4**, takže máte jednu GA4 vlastnosť, nie dve.
+Diagnostická vrstva (`Sentry` + `app_diagnostics`) je od GA4 oddelená a slúži skôr na debugging a incident review než na marketing analytics.
 
 ---
 

@@ -11,7 +11,7 @@
     "dev": "node ./node_modules/vite/bin/vite.js --port 5678 --strictPort",
     "dev:clean": "npm run kill-dev && npm run dev",
     "kill-dev": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$ports = 5678,5679,8080,8081,8082; $connections = Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Object { $ports -contains $_.LocalPort }; $connections | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }\"",
-    "sync": "npm run lint && npm run build && git add . && (git commit -m 'fix: final Firebase migration and cleanup' || echo 'No changes to commit') && git push origin main",
+    "sync": "npm run lint && npm run build && git add . && (git commit -m 'chore: sync guarded changes' || echo 'No changes to commit') && git push origin otvarackapril2026",
     "prebuild": "node ./scripts/check-env.mjs && node ./scripts/lockin-check.mjs",
     "build": "node ./node_modules/vite/bin/vite.js build",
     "build:dev": "node ./node_modules/vite/bin/vite.js build --mode development",
@@ -32,7 +32,8 @@
     "test:branding-regression": "npm run test -- src/components/LogoIcon.test.tsx src/components/booking/BookingHeader.test.tsx src/components/booking/BookingSuccess.test.tsx src/components/booking/EmployeeSelection.test.tsx src/pages/admin/__tests__/EmployeesPage.test.tsx && npm run test:booking-mobile-live && npm run test:admin-employees-live && node scripts/role-auth-smoke-live.mjs",
     "backfill:service-subcategories": "node ./node_modules/tsx/dist/cli.mjs ./scripts/backfill-service-subcategories.ts",
     "budget": "node scripts/budget-check.mjs",
-    "lockin:check": "node scripts/lockin-check.mjs"
+    "lockin:check": "node scripts/lockin-check.mjs",
+    "guard:production-branch": "node scripts/assert-production-branch.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -73,7 +73,7 @@ Inymi slovami: zaklad pre SaaS tu je, ale treba ho produktizovat, nie len prehla
 
 Canonical docs pre aktualny stav:
 - [Documentation Hub](docs/README.md)
-- [Project State and Handoff](docs/PROJECT-STATE.md)
+- [Project State and Handoff](docs/PROJECT-STATE.md) - aktualny stav, release truth a orientacny effort snapshot
 - [Developer Handbook](docs/DEVELOPER-HANDBOOK.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Operations](docs/OPERATIONS.md)
@@ -82,7 +82,7 @@ Canonical docs pre aktualny stav:
 - [Product & SaaS Direction](docs/PRODUCT-SAAS.md)
 - [Asset Inventory](docs/ASSET-INVENTORY.md)
 - [Technical Due Diligence Brief](docs/TECHNICAL-DUE-DILIGENCE.md)
-- [Owner Manual](OWNERMANUAL.md)
+- [Owner Manual](OWNERMANUAL.md) - prevadzkovy manual a owner-facing delivery context
 - [Backlog / TODO](TODO.md)
 
 Tactical docs, ktore ostavaju platne, ale nie su hlavny source of truth:

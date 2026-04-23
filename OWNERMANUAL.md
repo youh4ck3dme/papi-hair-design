@@ -11,6 +11,23 @@ Poznamka:
   - [Operations](docs/OPERATIONS.md)
   - [Testing & Quality](docs/TESTING-QUALITY.md)
 
+## Pokojna poznamka pre majitela
+
+Tato PAPI verzia systemu je vedena ako:
+- custom nasadenie pre jednu realnu prevadzku
+- produkcny salon system, nie verejna demo maketa
+- prevadzkova aplikacia pre booking, admin a tim
+
+Pre aktualnu PAPI prevadzku je dolezite toto:
+- aplikacia dnes nie je prezentovana ako verejny self-serve plateny SaaS panel pre ownera
+- buduce white-label alebo platformove smerovanie sa riesi oddelene od dnesnej prevadzky salonu
+- ak bolo nasadenie dohodnute bez licencneho poplatku, samotna aplikacia neobsahuje ziadny mechanizmus, ktory by ownerovi sam od seba zacal uctovat predplatne
+
+Prakticky preklad:
+- majitel moze pokojne pouzivat system pre svoju prevadzku
+- ostre testovanie timu a realne rezervacie su normalna a ocakavana sucast nasadenia
+- pripadne buduce produktove alebo komercne rozsirenia sa maju riesit samostatnou dohodou, nie potichu v pozadi tejto PAPI instalacie
+
 ## Dolezite adresy
 
 - Verejna rezervacia: `https://booking.papihairdesign.sk/booking`
