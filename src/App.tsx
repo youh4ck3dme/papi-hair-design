@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import { APP_CANONICAL_HOST } from "@/lib/brandConfig";
 
 import { lazy, Suspense, useEffect } from "react";
 import { Loader2 } from "lucide-react";
@@ -45,8 +46,6 @@ const LazyFallback = () => (
   </div>
 );
 
-const CANONICAL_HOST = "booking.papihairdesign.sk";
-
 function useCanonicalHostRedirect() {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -55,13 +54,13 @@ function useCanonicalHostRedirect() {
 
     if (import.meta.env.DEV) return;
     if (protocol !== "https:") return;
-    if (hostname === CANONICAL_HOST) return;
+    if (hostname === APP_CANONICAL_HOST) return;
 
     const isFirebaseHost =
       hostname.endsWith(".web.app") || hostname.endsWith(".firebaseapp.com");
     if (!isFirebaseHost) return;
 
-    currentLocation.hostname = CANONICAL_HOST;
+    currentLocation.hostname = APP_CANONICAL_HOST;
   }, []);
 }
 

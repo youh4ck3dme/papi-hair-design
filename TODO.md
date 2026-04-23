@@ -40,6 +40,9 @@
 1. [ ] Branding a hardcody
    - stav: slabé
    - verdict: treba odtenantizovať
+   - progress: prvý centralizačný pass je hotový cez `src/lib/brandConfig.ts` a `functions/src/brandConfig.ts`
+   - progress: canonical host, site URL, contact údaje a ICS brand fallbacky už nie sú roztrúsené po core súboroch
+   - next: oddeliť tenant config od PAPI-specific defaultov a odstrániť zvyšné bootstrap/business hardcody
 2. [ ] Billing flow
    - stav: základ existuje
    - verdict: nie je ready
@@ -219,7 +222,7 @@
    - výsledok: `page_views` rules boli dotiahnuté, aby zápis šiel len za vlastného usera v rámci jeho business membershipu a čítanie ostalo len pre owner/admin
    - blocker: public booking a demo vrstva stále stoja na `DEFAULT_BUSINESS_ID` / `papi-hair-design-main`, takže onboarding nového tenanta ešte nie je self-serve
    - blocker: bootstrap, allowlist a role-enforcement flowy sú stále PAPI-specific
-   - blocker: email branding, calendar export UID a public base URL sú stále brand-specific pre `papihairdesign.sk`
+   - blocker: email branding, calendar export UID a public base URL sú stále brand-specific pre `papihairdesign.sk`, aj keď už sú centralizované v brand config vrstve
 4. [x] Vytvoriť `asset inventory`:
    - čo sa predáva ako produkt
    - čo je špecifické len pre PAPI

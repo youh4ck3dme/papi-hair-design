@@ -1,6 +1,5 @@
 import * as crypto from "crypto";
-
-const DEFAULT_PUBLIC_BOOKING_BASE_URL = "https://booking.papihairdesign.sk";
+import { APP_PUBLIC_BOOKING_BASE_URL } from "./brandConfig";
 
 function sha256Hex(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -48,7 +47,7 @@ export function resolvePublicBookingBaseUrl(): string {
   const raw =
     process.env.PUBLIC_BOOKING_BASE_URL?.trim() ||
     process.env.PUBLIC_APP_URL?.trim() ||
-    DEFAULT_PUBLIC_BOOKING_BASE_URL;
+    APP_PUBLIC_BOOKING_BASE_URL;
 
   return raw.replace(/\/+$/g, "");
 }

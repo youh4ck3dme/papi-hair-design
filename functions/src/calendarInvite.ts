@@ -5,6 +5,7 @@ import {
   resolveHistoryContext,
   type HistoryVisibleAppointment,
 } from "./bookingHistoryAccess";
+import { APP_BRAND_NAME, APP_ICS_DOMAIN } from "./brandConfig";
 import { resolvePublicBookingBaseUrl } from "./publicBookingAccess";
 
 export interface CalendarExportInput {
@@ -83,12 +84,12 @@ export function buildGoogleCalendarUrl(input: CalendarExportInput): string {
 
 export function buildIcsContent(input: CalendarExportInput): string {
   const now = input.stamp ?? new Date();
-  const uid = input.uid?.trim() || `booking-${input.start.getTime()}@papihairdesign.sk`;
+  const uid = input.uid?.trim() || `booking-${input.start.getTime()}@${APP_ICS_DOMAIN}`;
 
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//PAPI HAIR DESIGN//Booking//SK",
+    `PRODID:-//${APP_BRAND_NAME}//Booking//SK`,
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:${escapeIcs(uid)}`,
@@ -138,7 +139,7 @@ export function buildBookingCalendarInvite(input: BookingCalendarInviteInput): C
     return null;
   }
 
-  const businessName = input.businessName.trim() || "PAPI HAIR DESIGN";
+  const businessName = input.businessName.trim() || APP_BRAND_NAME;
   const serviceName = input.serviceName?.trim() || "Rezervácia";
 
   return {
@@ -147,7 +148,7 @@ export function buildBookingCalendarInvite(input: BookingCalendarInviteInput): C
     location: input.businessAddress?.trim() || null,
     start,
     end,
-    uid: `booking-${input.appointmentId}@papihairdesign.sk`,
+    uid: `booking-${input.appointmentId}@${APP_ICS_DOMAIN}`,
   };
 }
 
@@ -223,7 +224,7 @@ export const downloadBookingIcs = onRequest({ region: "europe-west1" }, async (r
     const business = businessSnap.data() as { name?: string | null; address?: string | null };
     const invite = buildBookingCalendarInvite({
       appointmentId: reference,
-      businessName: business.name?.trim() || "PAPI HAIR DESIGN",
+      businessName: business.name?.trim() || APP_BRAND_NAME,
       businessAddress: business.address ?? null,
       serviceName: appointment.service_name ?? null,
       startAtIso: appointment.start_at ?? "",

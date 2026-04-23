@@ -1,1 +1,1 @@
-export const APP_LOGO_SRC = "/phd-logo.png";
+export { APP_LOGO_SRC } from "./brandConfig";

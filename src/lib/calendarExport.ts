@@ -1,3 +1,5 @@
+import { APP_BRAND_NAME, APP_ICS_DOMAIN } from "@/lib/brandConfig";
+
 export interface CalendarExportInput {
   title: string;
   description?: string | null;
@@ -61,12 +63,12 @@ export function buildBookingIcsDownloadUrl(reference: string, accessToken: strin
 
 export function buildIcsContent(input: CalendarExportInput): string {
   const now = input.stamp ?? new Date();
-  const uid = input.uid?.trim() || `booking-${input.start.getTime()}@papihairdesign.sk`;
+  const uid = input.uid?.trim() || `booking-${input.start.getTime()}@${APP_ICS_DOMAIN}`;
 
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//PAPI HAIR DESIGN//Booking//SK",
+    `PRODID:-//${APP_BRAND_NAME}//Booking//SK`,
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:${uid}`,
@@ -92,7 +94,7 @@ function slugifySegment(value: string): string {
 }
 
 export function buildBookingCalendarExport(input: BookingCalendarExportInput): CalendarExportInput {
-  const businessName = input.businessName.trim() || "PAPI Hair Design";
+  const businessName = input.businessName.trim() || APP_BRAND_NAME;
   const serviceName = input.serviceName?.trim() || "Rezervácia";
 
   return {
@@ -101,7 +103,7 @@ export function buildBookingCalendarExport(input: BookingCalendarExportInput): C
     location: input.location?.trim() || null,
     start: input.start,
     end: input.end,
-    uid: input.appointmentId?.trim() ? `booking-${input.appointmentId.trim()}@papihairdesign.sk` : null,
+    uid: input.appointmentId?.trim() ? `booking-${input.appointmentId.trim()}@${APP_ICS_DOMAIN}` : null,
   };
 }
 

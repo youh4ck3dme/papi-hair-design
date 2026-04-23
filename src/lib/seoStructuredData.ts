@@ -1,12 +1,11 @@
-const SITE_URL = "https://booking.papihairdesign.sk";
-const SITE_NAME = "PAPI HAIR DESIGN";
-const STREET_ADDRESS = "Tr. SNP 61A";
-const LOCALITY = "Košice";
-const COUNTRY_CODE = "SK";
-const PHONE = "+421949459624";
-const EMAIL = "papihairdesign@gmail.com";
-const MAP_URL =
-  "https://www.google.com/maps/search/?api=1&query=Tr.%20SNP%2061A%2C%20Spolo%C4%8Densk%C3%BD%20pavil%C3%B3n%2C%20Ko%C5%A1ice";
+import {
+  APP_ADDRESS,
+  APP_BRAND_NAME,
+  APP_CONTACT_EMAIL,
+  APP_CONTACT_PHONE,
+  APP_MAP_URL,
+  APP_SITE_URL,
+} from "@/lib/brandConfig";
 
 type JsonLd = Record<string, unknown>;
 
@@ -15,40 +14,40 @@ export function buildHomeStructuredData(): JsonLd[] {
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
-      "@id": `${SITE_URL}/#website`,
-      url: `${SITE_URL}/`,
-      name: SITE_NAME,
+      "@id": `${APP_SITE_URL}/#website`,
+      url: `${APP_SITE_URL}/`,
+      name: APP_BRAND_NAME,
       inLanguage: "sk-SK",
     },
     {
       "@context": "https://schema.org",
       "@type": "HairSalon",
-      "@id": `${SITE_URL}/#localbusiness`,
-      name: SITE_NAME,
-      url: `${SITE_URL}/`,
-      image: `${SITE_URL}/icon-512x512.png`,
-      logo: `${SITE_URL}/phd-logo.png`,
-      telephone: PHONE,
-      email: EMAIL,
+      "@id": `${APP_SITE_URL}/#localbusiness`,
+      name: APP_BRAND_NAME,
+      url: `${APP_SITE_URL}/`,
+      image: `${APP_SITE_URL}/icon-512x512.png`,
+      logo: `${APP_SITE_URL}/phd-logo.png`,
+      telephone: APP_CONTACT_PHONE,
+      email: APP_CONTACT_EMAIL,
       priceRange: "$$",
       currenciesAccepted: "EUR",
       address: {
         "@type": "PostalAddress",
-        streetAddress: STREET_ADDRESS,
-        addressLocality: LOCALITY,
-        addressCountry: COUNTRY_CODE,
+        streetAddress: APP_ADDRESS.street,
+        addressLocality: APP_ADDRESS.locality,
+        addressCountry: APP_ADDRESS.countryCode,
       },
       areaServed: {
         "@type": "City",
-        name: LOCALITY,
+        name: APP_ADDRESS.locality,
       },
-      hasMap: MAP_URL,
+      hasMap: APP_MAP_URL,
       contactPoint: [
         {
           "@type": "ContactPoint",
-          telephone: PHONE,
+          telephone: APP_CONTACT_PHONE,
           contactType: "customer service",
-          areaServed: COUNTRY_CODE,
+          areaServed: APP_ADDRESS.countryCode,
           availableLanguage: ["sk", "en"],
         },
       ],
@@ -77,4 +76,3 @@ export function buildHomeStructuredData(): JsonLd[] {
 export function serializeStructuredData(data: JsonLd): string {
   return JSON.stringify(data);
 }
-
