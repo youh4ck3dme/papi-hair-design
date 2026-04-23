@@ -11,30 +11,34 @@ Toto je kanonicka dokumentacna vrstva projektu. Ciel je mat dokumentaciu, ktora 
 ### Ked si developer alebo novy technicky collaborator
 Citaj v tomto poradi:
 1. [Root README](../README.md)
-2. [Developer Handbook](DEVELOPER-HANDBOOK.md)
-3. [Architecture](ARCHITECTURE.md)
-4. [Operations](OPERATIONS.md)
-5. [Testing & Quality](TESTING-QUALITY.md)
+2. [Project State and Handoff](PROJECT-STATE.md)
+3. [Developer Handbook](DEVELOPER-HANDBOOK.md)
+4. [Architecture](ARCHITECTURE.md)
+5. [Operations](OPERATIONS.md)
+6. [Testing & Quality](TESTING-QUALITY.md)
 
 ### Ked robis technical review, hiring review alebo due diligence
 Citaj v tomto poradi:
 1. [Root README](../README.md)
-2. [Technical Due Diligence Brief](TECHNICAL-DUE-DILIGENCE.md)
-3. [Architecture](ARCHITECTURE.md)
-4. [Testing & Quality](TESTING-QUALITY.md)
-5. [Security & Compliance Baseline](SECURITY-COMPLIANCE.md)
+2. [Project State and Handoff](PROJECT-STATE.md)
+3. [Technical Due Diligence Brief](TECHNICAL-DUE-DILIGENCE.md)
+4. [Architecture](ARCHITECTURE.md)
+5. [Testing & Quality](TESTING-QUALITY.md)
+6. [Security & Compliance Baseline](SECURITY-COMPLIANCE.md)
 
 ### Ked pozeras produktovo alebo obchodne, ci sa to da predavat a rozvijat
 Citaj v tomto poradi:
 1. [Root README](../README.md)
-2. [Product & SaaS Direction](PRODUCT-SAAS.md)
-3. [Technical Due Diligence Brief](TECHNICAL-DUE-DILIGENCE.md)
-4. [Security & Compliance Baseline](SECURITY-COMPLIANCE.md)
-5. [Owner Manual](../OWNERMANUAL.md)
+2. [Project State and Handoff](PROJECT-STATE.md)
+3. [Product & SaaS Direction](PRODUCT-SAAS.md)
+4. [Technical Due Diligence Brief](TECHNICAL-DUE-DILIGENCE.md)
+5. [Security & Compliance Baseline](SECURITY-COMPLIANCE.md)
+6. [Owner Manual](../OWNERMANUAL.md)
 
 ## Core canonical docs
 
 - [Root README](../README.md)
+- [Project State and Handoff](PROJECT-STATE.md)
 - [Developer Handbook](DEVELOPER-HANDBOOK.md)
 - [Architecture](ARCHITECTURE.md)
 - [Operations](OPERATIONS.md)
@@ -43,6 +47,7 @@ Citaj v tomto poradi:
 - [Product & SaaS Direction](PRODUCT-SAAS.md)
 - [Technical Due Diligence Brief](TECHNICAL-DUE-DILIGENCE.md)
 - [Owner Manual](../OWNERMANUAL.md)
+- [Backlog / TODO](../TODO.md)
 
 ## Co je v ktorej dokumentacii
 
@@ -52,6 +57,12 @@ Citaj v tomto poradi:
   - komu to sluzi
   - co je dnes realita
   - preco to ma potencial ako vertical platform
+
+- [Project State and Handoff](PROJECT-STATE.md)
+  - kde je canonical repo a branch pravda
+  - co je po poslednom stabilizacnom kole hotove
+  - aka je release a deployment realita
+  - co je dnes top backlog a na co nezabudnut
 
 - [Product & SaaS Direction](PRODUCT-SAAS.md)
   - ako to poziciovat produktovo
