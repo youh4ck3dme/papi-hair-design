@@ -177,4 +177,22 @@ describe("ProtectedRoute", () => {
     expect(screen.getByText("SECRET")).toBeInTheDocument();
     expect(screen.queryByText("BOOTSTRAP_PAGE")).not.toBeInTheDocument();
   });
+
+  it("does not allow allowlisted employee email into employee routes without membership", () => {
+    setAuthState({
+      user: { id: "u8", email: "mato@papihairdesign.sk" },
+      memberships: [],
+      loading: false,
+    });
+
+    renderWithRoutes(
+      <ProtectedRoute allowedRoles={["employee"]}>
+        <div>SECRET</div>
+      </ProtectedRoute>,
+      "/protected"
+    );
+
+    expect(screen.getByText("BOOKING_PAGE")).toBeInTheDocument();
+    expect(screen.queryByText("SECRET")).not.toBeInTheDocument();
+  });
 });

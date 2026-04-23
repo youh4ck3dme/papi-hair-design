@@ -117,13 +117,19 @@
 
 ## 30–45 dňový validation sprint
 ### Fáza 1: product readiness
-1. [ ] Auditnúť git históriu na únik credentials:
+1. [x] Auditnúť git históriu na únik credentials:
    - `git log --all --full-history -- .env`
    - skontrolovať aj staré `.env*`, service account JSON a exporty
-2. [ ] Znova potvrdiť auth/route bezpečnosť bez predpokladov:
+   - výsledok: automatizovaný git history audit nenašiel žiadne tracked raw `.env`
+   - výsledok: nenašli sa tracked `firebase-adminsdk` / service account JSON súbory
+   - výsledok: `extensions/firestore-send-email.env` používa Secret Manager referenciu, nie raw SMTP heslo
+2. [x] Znova potvrdiť auth/route bezpečnosť bez predpokladov:
    - owner/admin guardy
    - employee guardy
    - public callable flows
+   - výsledok: `ProtectedRoute` už nepúšťa allowlisted employee email do employee/admin route bez membership dokumentu
+   - výsledok: admin callable flowy zostávajú viazané na `requireAuth` + `requireMembership`
+   - výsledok: public booking/history callable flowy zostávajú token/rate-limit based a nevyžadujú falošný auth bypass
 3. [ ] Spraviť tenant-readiness audit:
    - business isolation vo Firestore rules
    - business-aware queries
