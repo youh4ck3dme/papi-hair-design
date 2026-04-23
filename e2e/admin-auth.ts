@@ -6,6 +6,8 @@ export const ENABLE_ADMIN_SMOKE_E2E =
 export const ENABLE_ADMIN_MUTATION_E2E = process.env.PLAYWRIGHT_ENABLE_ADMIN_MUTATION_E2E === "1";
 export const ADMIN_EMAIL =
   process.env.PLAYWRIGHT_ADMIN_EMAIL?.trim() ||
+  process.env.VITE_PRIMARY_OWNER_EMAIL?.trim() ||
+  process.env.PRIMARY_OWNER_EMAIL?.trim() ||
   process.env.VITE_PAPI_EMAIL?.trim() ||
   "papi@papihairdesign.sk";
 export const ADMIN_PASSWORD =

@@ -9,7 +9,12 @@ const sharedPassword =
 const accounts = [
   {
     key: "owner",
-    email: process.env.PLAYWRIGHT_OWNER_EMAIL?.trim() || process.env.VITE_PAPI_EMAIL?.trim() || "papi@papihairdesign.sk",
+    email:
+      process.env.PLAYWRIGHT_OWNER_EMAIL?.trim() ||
+      process.env.VITE_PRIMARY_OWNER_EMAIL?.trim() ||
+      process.env.PRIMARY_OWNER_EMAIL?.trim() ||
+      process.env.VITE_PAPI_EMAIL?.trim() ||
+      "papi@papihairdesign.sk",
     expectedEmployeesAccess: true,
   },
   {

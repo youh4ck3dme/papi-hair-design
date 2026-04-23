@@ -47,7 +47,9 @@
    - progress: frontend allowlist už podporuje generické aliasy `VITE_PRIMARY_OWNER_EMAIL` a `VITE_EMPLOYEE_EMAILS` bez rozbitia legacy PAPI env premenných
    - progress: bootstrap flow a onboarding guard už používajú zdieľaný `DEFAULT_BUSINESS_ID` namiesto priamo vypísaného `papi-hair-design-main`
    - progress: customer a registration email fallbacky už používajú business-aware branding namiesto natvrdo vpísaného `Papi Hair Design`
-   - next: dotiahnuť zvyšné PAPI-specific hardcody v bootstrap/role enforcement flowe a owner email branding layeri
+   - progress: `branding / hardcodes stage 3` doplnil shared owner/business env aliasy aj pre backend, CI a live smoke skripty (`PRIMARY_OWNER_EMAIL`, `PRIMARY_BUSINESS_ID`, `BOOTSTRAP_EMPLOYEE_EMAILS`, `VITE_PRIMARY_OWNER_EMAIL`)
+   - progress: admin SMTP fallback v settings už číta centralizovaný `APP_BOOKING_EMAIL` namiesto lokálneho literal hardcodu
+   - next: dotiahnuť posledné PAPI-specific surface kúsky v salon login route/profile shelli a v owner-facing static copy
 2. [ ] Billing flow
    - stav: základ existuje
    - verdict: nie je ready
@@ -219,7 +221,8 @@
 3. [ ] Week 3: tenantization + canonical booking surface
    - výstupy: hardcode cleanup stage 2, single booking truth, tenant-safe bootstrap smer
    - progress: `branding / hardcodes stage 2` batch je implementovaný a lokálne overený testami/buildom
-   - progress: ešte ho treba dostať cez samostatný PR do `otvarackapril2026`
+   - progress: stage 2 už je zmergeovaný cez `PR #54`
+   - progress: stage 3 doplnil generic env identity layer pre backend/CI/live smoke, ale salon login surface a static owner copy ešte ostávajú
 4. [ ] Week 4: reporting + compliance + buyer materials
    - výstupy: KPI/reporting scope, compliance pack scope, buyer-facing materials pack
 

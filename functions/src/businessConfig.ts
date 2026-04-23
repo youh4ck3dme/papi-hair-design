@@ -29,21 +29,27 @@ function readEmailList(...values: Array<string | undefined>): string[] {
 }
 
 export const DEFAULT_BUSINESS_ID =
-  normalizeValue(process.env.PRIMARY_BUSINESS_ID) ?? LEGACY_FALLBACK_BUSINESS_ID;
+  normalizeValue(process.env.PRIMARY_BUSINESS_ID) ??
+  normalizeValue(process.env.VITE_PRIMARY_BUSINESS_ID) ??
+  LEGACY_FALLBACK_BUSINESS_ID;
 
 export const DEFAULT_BUSINESS_NAME =
-  normalizeValue(process.env.PRIMARY_BUSINESS_NAME) ?? APP_BRAND_NAME;
+  normalizeValue(process.env.PRIMARY_BUSINESS_NAME) ??
+  normalizeValue(process.env.VITE_PRIMARY_BUSINESS_NAME) ??
+  APP_BRAND_NAME;
 
 export const BOOTSTRAP_OWNER_EMAILS = new Set<string>(
   readEmailList(
     process.env.BOOTSTRAP_OWNER_EMAILS,
     process.env.PRIMARY_OWNER_EMAIL,
+    process.env.VITE_PRIMARY_OWNER_EMAIL,
     process.env.VITE_PAPI_EMAIL,
   ),
 );
 
 export const BOOTSTRAP_EMPLOYEE_EMAILS = readEmailList(
   process.env.BOOTSTRAP_EMPLOYEE_EMAILS,
+  process.env.EMPLOYEE_EMAILS,
   process.env.VITE_EMPLOYEE_EMAILS,
   process.env.VITE_MATO_EMAIL,
   process.env.VITE_MISKA_EMAIL,

@@ -3,9 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const CONFIG_ENV_KEYS = [
   "PRIMARY_BUSINESS_ID",
   "PRIMARY_BUSINESS_NAME",
+  "VITE_PRIMARY_BUSINESS_ID",
+  "VITE_PRIMARY_BUSINESS_NAME",
   "BOOTSTRAP_OWNER_EMAILS",
   "PRIMARY_OWNER_EMAIL",
+  "VITE_PRIMARY_OWNER_EMAIL",
   "BOOTSTRAP_EMPLOYEE_EMAILS",
+  "EMPLOYEE_EMAILS",
   "VITE_EMPLOYEE_EMAILS",
   "VITE_PAPI_EMAIL",
   "VITE_MATO_EMAIL",
@@ -33,9 +37,9 @@ describe("businessConfig", () => {
 
   it("uses generic env aliases for the default business and owner config", async () => {
     Object.assign(process.env, {
-      PRIMARY_BUSINESS_ID: "tenant-main",
-      PRIMARY_BUSINESS_NAME: "Tenant Studio",
-      PRIMARY_OWNER_EMAIL: "Owner@Example.com",
+      VITE_PRIMARY_BUSINESS_ID: "tenant-main",
+      VITE_PRIMARY_BUSINESS_NAME: "Tenant Studio",
+      VITE_PRIMARY_OWNER_EMAIL: "Owner@Example.com",
     });
 
     const module = await importBusinessConfig();
@@ -49,6 +53,7 @@ describe("businessConfig", () => {
   it("merges employee aliases across generic and legacy env vars", async () => {
     Object.assign(process.env, {
       BOOTSTRAP_EMPLOYEE_EMAILS: "alpha@example.com",
+      EMPLOYEE_EMAILS: "ops@example.com",
       VITE_EMPLOYEE_EMAILS: "beta@example.com,alpha@example.com",
       VITE_MATO_EMAIL: "mato@example.com",
       VITE_MISKA_EMAIL: "miska@example.com",
@@ -58,6 +63,7 @@ describe("businessConfig", () => {
 
     expect(module.BOOTSTRAP_EMPLOYEE_EMAILS).toEqual([
       "alpha@example.com",
+      "ops@example.com",
       "beta@example.com",
       "mato@example.com",
       "miska@example.com",

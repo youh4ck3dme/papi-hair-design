@@ -27,6 +27,7 @@ import {
   isBlockedByClientError,
   warnBlockedByClientOnce,
 } from "@/lib/firebaseClientErrors";
+import { APP_BOOKING_EMAIL } from "@/lib/brandConfig";
 
 function friendlyError(err: unknown, fallback: string): string {
   const e = err as Partial<FirebaseError> | undefined;
@@ -87,12 +88,12 @@ type SmtpFormState = {
   pass: string;
 };
 
-// Predvolená SMTP pre Papi Hair Design (Websupport) – odosielateľ aj prijemca: booking@papihairdesign.sk
+// Predvolená SMTP fallback identita ide cez centralizovaný brand config, nie cez lokálny hardcode.
 const DEFAULT_SMTP = {
   host: "smtp.m1.websupport.sk",
   port: "465",
-  user: "booking@papihairdesign.sk",
-  from: "booking@papihairdesign.sk",
+  user: APP_BOOKING_EMAIL,
+  from: APP_BOOKING_EMAIL,
 };
 
 function buildSmtpForm(rawSmtp: Record<string, unknown> = {}): SmtpFormState {
