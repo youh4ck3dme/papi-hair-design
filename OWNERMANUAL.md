@@ -38,9 +38,9 @@ Prakticky preklad:
 - Nastavenia: `https://booking.papihairdesign.sk/admin/settings`
 - Recepcia: `https://booking.papihairdesign.sk/reception`
 - Instalacia PWA appky: `https://booking.papihairdesign.sk/install`
-- Salon login obrazovka: `https://booking.papihairdesign.sk/papihairsalon2026`
+- Salon login obrazovka: `https://booking.papihairdesign.sk/team-login`
 
-Poznamka: `papihairsalon2026` moze byt na niektorych deploymentoch vypnute. Ked je vypnute, system vas presmeruje na bezne `/auth`.
+Poznamka: legacy adresa `papihairsalon2026` ostava iba ako redirect alias. Ak je salon login vypnuty, system vas presmeruje na bezne `/auth`.
 
 ## Co nainstalovat na novy PC
 

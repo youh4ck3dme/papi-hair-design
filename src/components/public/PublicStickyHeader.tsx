@@ -2,6 +2,7 @@ import { CircleDollarSign, House, Phone, Scissors, UserRound } from "lucide-reac
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { isSalonLoginRoute } from "@/lib/salonLoginRoute";
 import { cn } from "@/lib/utils";
 
 type PublicHeaderSection = "home" | "services" | "pricing" | "account" | null;
@@ -37,7 +38,7 @@ function resolveSection(pathname: string): PublicHeaderSection {
     pathname.startsWith("/my-account") ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/dashboard/history") ||
-    pathname.startsWith("/papihairsalon2026")
+    isSalonLoginRoute(pathname)
   ) {
     return "account";
   }

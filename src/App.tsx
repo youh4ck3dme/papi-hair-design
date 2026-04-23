@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { APP_CANONICAL_HOST } from "@/lib/brandConfig";
+import { LEGACY_SALON_LOGIN_PATH, SALON_LOGIN_PATH } from "@/lib/salonLoginRoute";
 
 import { lazy, Suspense, useEffect } from "react";
 import { Loader2 } from "lucide-react";
@@ -116,8 +117,12 @@ const App = () => {
                 <Route path="/offline" element={<OfflinePage />} />
                 <Route path="/install" element={<InstallPage />} />
                 <Route
-                  path="/papihairsalon2026"
+                  path={SALON_LOGIN_PATH}
                   element={salonLoginEnabled ? <SalonLoginPage /> : <Navigate to="/auth" replace />}
+                />
+                <Route
+                  path={LEGACY_SALON_LOGIN_PATH}
+                  element={<Navigate to={salonLoginEnabled ? SALON_LOGIN_PATH : "/auth"} replace />}
                 />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPage />} />

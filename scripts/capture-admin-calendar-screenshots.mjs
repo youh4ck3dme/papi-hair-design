@@ -37,7 +37,7 @@ async function ensureAdminAccess(page) {
     return;
   }
 
-  if (page.url().includes("/papihairsalon2026")) {
+  if (page.url().includes("/team-login") || page.url().includes("/papihairsalon2026")) {
     await maybeClick(page.getByRole("button", { name: /vstup|team|calendar|profil/i }));
     await page.waitForTimeout(400);
 

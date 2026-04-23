@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import "@/styles/liquid-cookie.css";
 import { applyAnalyticsConsent } from "@/lib/analytics";
 import { createRuntimeId } from "@/lib/runtimeId";
+import { isSalonLoginRoute } from "@/lib/salonLoginRoute";
 
 interface CookiePrefs {
   necessary: true;
@@ -76,7 +77,7 @@ export default function CookieConsent() {
   const [visible, setVisible] = useState(false);
   const [customize, setCustomize] = useState(false);
   const [analytics, setAnalytics] = useState(false);
-  const isHiddenRoute = pathname.startsWith("/papihairsalon2026");
+  const isHiddenRoute = isSalonLoginRoute(pathname);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
