@@ -37,6 +37,7 @@ const SalonLoginPage = lazy(() => import("./pages/SalonLoginPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const BootstrapPage = lazy(() => import("./pages/BootstrapPage"));
 const PricingPage = lazy(() => import("./pages/Pricing"));
+const PlatformPage = lazy(() => import("./pages/PlatformPage"));
 const MyAccountPage = lazy(() => import("./pages/MyAccountPage"));
 const InstallPrompt = lazy(() => import("@/components/InstallPrompt"));
 
@@ -92,6 +93,8 @@ const App = () => {
     import.meta.env.DEV || import.meta.env.VITE_ENABLE_SALON_LOGIN === "true";
   const bootstrapEnabled =
     import.meta.env.DEV || import.meta.env.VITE_ENABLE_BOOTSTRAP === "true";
+  const platformPageEnabled =
+    import.meta.env.DEV || import.meta.env.VITE_ENABLE_PLATFORM_PAGE === "true";
 
   return (
     <ThemeProvider attribute="class" forcedTheme="dark" defaultTheme="dark" enableSystem={false}>
@@ -105,6 +108,10 @@ const App = () => {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/demo/*" element={<RetiredDemoRoute />} />
+              <Route
+                path="/platform"
+                element={platformPageEnabled ? <PlatformPage /> : <Navigate to="/" replace />}
+              />
               <Route element={<PublicChromeLayout />}>
                 <Route path="/offline" element={<OfflinePage />} />
                 <Route path="/install" element={<InstallPage />} />

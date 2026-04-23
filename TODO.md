@@ -26,10 +26,11 @@
 
 ### Až potom riešiť
 1. [x] Tenant-readiness audit
-2. [ ] Zmergeovať production diagnostics baseline do `otvarackapril2026`
+2. [x] Zmergeovať production diagnostics baseline do `otvarackapril2026`
    - branch: `codex/production-diagnostics`
    - stav: lightweight diagnostics vrstva je commitnutá, pushnutá a nasadená na produkciu
    - stav: `recordClientDiagnostic` bol produkčne overený reálnym smoke testom a zapisuje do kolekcie `app_diagnostics`
+   - stav: merge prešiel cez `PR #48`
 3. [ ] Demo tenant
    - poznámka: verejná `/demo` route bola odstránená z produkčnej PAPI appky
    - budúci demo tenant musí byť separátny a neutrálne brandovaný
@@ -205,6 +206,9 @@
 ### Týždňový execution track
 1. [ ] Week 1: managed positioning + platform pricing
    - výstupy: managed messaging, software pricing page blueprint, setup fee + monthly retainer návrh
+   - progress: service pricing ostáva na `/pricing` bez zásahu do PAPI customer surface
+   - progress: buyer-facing scaffold je pripravený na `/platform`, ale defaultne zostáva vypnutý cez `VITE_ENABLE_PLATFORM_PAGE=false`
+   - progress: `TermsPage` bola očistená od starej SaaS/dev-workspace copy, aby produkčný PAPI surface ostal dôveryhodný
 2. [ ] Week 2: billing + externý pilot
    - výstupy: recurring billing decision, pilot onboarding flow, prvý externý pilot shortlist
 3. [ ] Week 3: tenantization + canonical booking surface

@@ -1,129 +1,150 @@
-import { ArrowLeft } from "lucide-react";
+import { useMemo } from "react";
+import { ArrowLeft, ChevronRight, FileText, Mail, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
-export default function TermsOfService() {
-  const navigate = useNavigate();
+import { APP_BOOKING_EMAIL, APP_BRAND_NAME } from "@/lib/brandConfig";
+
+type TermsSection = {
+  title: string;
+  body: string;
+};
+
+export default function TermsPage() {
+  const { t } = useTranslation();
+
+  const sections = useMemo<TermsSection[]>(
+    () => [
+      { title: t("terms.s1Title"), body: t("terms.s1Body") },
+      { title: t("terms.s2Title"), body: t("terms.s2Body") },
+      { title: t("terms.s3Title"), body: t("terms.s3Body") },
+      { title: t("terms.s4Title"), body: t("terms.s4Body") },
+      { title: t("terms.s5Title"), body: t("terms.s5Body") },
+      { title: t("terms.s6Title"), body: t("terms.s6Body") },
+    ],
+    [t],
+  );
 
   return (
-    <div className="min-h-screen bg-white py-20 px-4 font-sans selection:bg-black selection:text-white">
-      <div className="max-w-3xl mx-auto">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 font-black uppercase text-sm hover:text-red-600 transition-colors mb-12 min-h-[44px]"
-        >
-          <ArrowLeft size={16} /> Späť
-        </button>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(201,168,76,0.10),transparent_30%),linear-gradient(180deg,#080706_0%,#0d0b09_48%,#060505_100%)] px-4 py-8 text-white selection:bg-primary/80 selection:text-black">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <Link
+            to="/"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white/78 transition-all hover:border-primary/25 hover:bg-white/[0.06] hover:text-white"
+          >
+            <ArrowLeft size={16} />
+            {t("terms.back")}
+          </Link>
 
-        <h1 className="text-4xl md:text-6xl font-black uppercase mb-8 leading-none">
-          Zmluvné podmienky
-        </h1>
-
-        <div className="border-l-4 border-black pl-4 mb-8 font-bold text-sm text-gray-500 uppercase">
-          Posledná aktualizácia: 9. apríl 2026
+          <Link
+            to="/booking"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8860b,#daa520,#f2cf60)] px-4 py-2 text-sm font-black uppercase tracking-[0.18em] text-black shadow-[0_16px_34px_-22px_rgba(218,165,32,0.9)] transition-transform hover:scale-[1.01]"
+          >
+            {t("index.bookBtn")}
+            <ChevronRight size={16} />
+          </Link>
         </div>
 
-        <div className="space-y-8 font-bold text-gray-800 leading-relaxed">
-          <section>
-            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">1. Všeobecné ustanovenia</h2>
-            <p>
-              Tieto Zmluvné podmienky upravujú práva a povinnosti medzi prevádzkovateľom
-              služby Papi Hair Design ("Poskytovateľ") a osobou využívajúcou službu ("Používateľ").
-              Používaním Služby vyjadrujete súhlas s Zmluvné podmienky.
-            </p>
-          </section>
+        <section className="overflow-hidden rounded-[2.25rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_32px_80px_-52px_rgba(0,0,0,0.95)] backdrop-blur-xl sm:p-8">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-3 rounded-full border border-primary/18 bg-primary/[0.08] px-3 py-1.5">
+              <FileText className="h-4 w-4 text-primary" />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary/85">
+                {APP_BRAND_NAME}
+              </span>
+            </div>
+            <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/66">
+              {t("terms.lastUpdate")}
+            </div>
+          </div>
 
-          <section>
-            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">2. Popis služby</h2>
-            <p>
-              Papi Hair Design je AI-poháňaný pracovný priestor pre vývojárov, ktorý poskytuje
-              nástroje pre generovanie kódu, analýzu, a ďalšie produktívne funkcie.
-              Služba je dostupná vo verziách Free, Pro a Enterprise.
+          <div className="mt-6 max-w-3xl space-y-3">
+            <h1 className="text-[2.4rem] font-semibold tracking-tight text-white sm:text-[3.4rem] sm:leading-[0.95]">
+              {t("terms.title")}
+            </h1>
+            <p className="text-base leading-8 text-white/72 sm:text-lg">
+              {t("terms.subtitle")}
             </p>
-          </section>
+          </div>
+        </section>
 
-          <section>
-            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">3. Predplatné a platby</h2>
-            <div className="space-y-4">
-              <p>
-                Platené predplatné (Pro, Enterprise) sa automaticky obnovuje na konci fakturačného
-                obdobia, pokiaľ ho nezrušíte.
-              </p>
-              <div className="border-4 border-black p-6 bg-gray-50">
-                <div className="font-black uppercase text-sm mb-3">Zrušenie predplatného</div>
-                <p className="text-sm">
-                  Predplatné môžete kedykoľvek zrušiť cez Zákaznícky portál Stripe.
-                  Po zrušení budete mať prístup k plateným funkciám do konca aktuálneho
-                  fakturačného obdobia. Refundácie sa neposkytujú za čiastočne využité obdobia.
-                </p>
+        <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <main className="space-y-4">
+            {sections.map((section, index) => (
+              <section
+                key={section.title}
+                className="rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] p-5 shadow-[0_24px_58px_-40px_rgba(0,0,0,0.95)] backdrop-blur-xl sm:p-6"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/18 bg-primary/[0.08]">
+                    <span className="text-sm font-bold text-primary">{index + 1}</span>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold tracking-tight text-white">
+                      {section.title}
+                    </h2>
+                    <p className="mt-2 text-sm leading-7 text-white/66 sm:text-[15px]">
+                      {section.body}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            ))}
+          </main>
+
+          <aside className="space-y-4 lg:sticky lg:top-8 lg:self-start">
+            <section className="rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] p-5 shadow-[0_24px_58px_-40px_rgba(0,0,0,0.95)] backdrop-blur-xl">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/18 bg-primary/[0.08]">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary/75">
+                    {t("terms.s4Title")}
+                  </p>
+                  <h2 className="mt-1 text-lg font-semibold text-white">
+                    {t("common.privacyPolicy")}
+                  </h2>
+                </div>
               </div>
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">4. Obmedzenie zodpovednosti</h2>
-            <p>
-              Služba je poskytovaná "taká, aká je" (as-is). Poskytovateľ nenesie zodpovednosť
-              za škody spôsobené kódom vygenerovaným AI, výpadkami služby, alebo stratou dát.
-              Používateľ je zodpovedný za overenie a testovanie všetkého vygenerovaného obsahu
-              pred nasadením do produkcie.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">5. Prijateľné použitie</h2>
-            <p className="mb-4">Používateľ sa zaväzuje nepoužívať Službu na:</p>
-            <ul className="space-y-2 ml-4">
-              <li className="flex items-start gap-3">
-                <span className="w-2 h-2 bg-red-600 mt-2 flex-shrink-0" />
-                <span>Generovanie škodlivého kódu (malware, exploity)</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="w-2 h-2 bg-red-600 mt-2 flex-shrink-0" />
-                <span>Porušovanie autorských práv alebo duševného vlastníctva</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="w-2 h-2 bg-red-600 mt-2 flex-shrink-0" />
-                <span>Nezákonné aktivity akéhokoľvek druhu</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="w-2 h-2 bg-red-600 mt-2 flex-shrink-0" />
-                <span>Preťažovanie infraštruktúry zneužívaním API limitov</span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">6. Duševné vlastníctvo</h2>
-            <p>
-              Všetok kód a obsah vygenerovaný pomocou Služby patrí Používateľovi.
-              Poskytovateľ si nečiní žiadne nároky na vygenerovaný obsah.
-              Značka Papi Hair Design a súvisiace vizuálne prvky sú vlastníctvom Poskytovateľa.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">7. Ukončenie</h2>
-            <p>
-              Poskytovateľ si vyhradzuje právo pozastaviť alebo ukončiť prístup Používateľa
-              pri porušení týchto podmienok, bez predchádzajúceho upozornenia.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-black uppercase mb-4 border-b-4 border-black pb-2">8. Kontakt</h2>
-            <p>
-              S otázkami sa obráťte na:
-            </p>
-            <div className="mt-4 border-4 border-black bg-yellow-400 p-6 font-black text-lg">
-              booking@papihairdesign.sk
-            </div>
-            <div className="mt-4">
-              <Link to="/privacy" className="font-black text-sm uppercase hover:text-red-600 transition-colors">
-                Zásady ochrany osobných údajov
+              <p className="mt-4 text-sm leading-7 text-white/65">
+                {t("terms.s4Body")}
+              </p>
+              <Link
+                to="/privacy"
+                className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white/80 transition-all hover:border-primary/25 hover:bg-white/[0.06] hover:text-white"
+              >
+                {t("common.privacyPolicy")}
+                <ChevronRight size={16} />
               </Link>
-            </div>
-          </section>
+            </section>
+
+            <section className="rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] p-5 shadow-[0_24px_58px_-40px_rgba(0,0,0,0.95)] backdrop-blur-xl">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/18 bg-primary/[0.08]">
+                  <Mail className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary/75">
+                    {t("terms.s7Title")}
+                  </p>
+                  <h2 className="mt-1 text-lg font-semibold text-white">
+                    {APP_BOOKING_EMAIL}
+                  </h2>
+                </div>
+              </div>
+              <p className="mt-4 text-sm leading-7 text-white/65">
+                {t("terms.s7Body")}
+              </p>
+              <a
+                href={`mailto:${APP_BOOKING_EMAIL}`}
+                className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#b8860b,#daa520,#f2cf60)] px-4 py-2 text-sm font-black uppercase tracking-[0.14em] text-black transition-transform hover:scale-[1.01]"
+              >
+                {APP_BOOKING_EMAIL}
+              </a>
+            </section>
+          </aside>
         </div>
       </div>
     </div>

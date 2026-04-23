@@ -35,6 +35,8 @@ describe("static pages", () => {
     );
 
     expect(screen.getByText("Zmluvné podmienky")).toBeInTheDocument();
+    expect(screen.getByText(/Rezerváciu môžete zrušiť alebo zmeniť najneskôr 24 hodín pred termínom/i)).toBeInTheDocument();
+    expect(screen.queryByText(/AI-poháňaný pracovný priestor/i)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Zásady ochrany osobných údajov/i })).toHaveAttribute("href", "/privacy");
   });
 
