@@ -27,6 +27,8 @@
 ### Až potom riešiť
 1. [ ] Tenant-readiness audit
 2. [ ] Demo tenant
+   - poznámka: verejná `/demo` route bola odstránená z produkčnej PAPI appky
+   - budúci demo tenant musí byť separátny a neutrálne brandovaný
 3. [ ] Outreach / validation sprint
 4. [ ] Monetizácia / Stripe
 
@@ -103,6 +105,7 @@
    - productized operating system value
    - skutočný micro-SaaS value s MRR
 4. [ ] Pripraviť neutral demo tenant mimo `PAPI Hair Design`
+   - nevkladať späť do produkčnej PAPI appky ako verejnú `/demo` sekciu
 5. [ ] Pripraviť onboarding SOP: nastavenie nového salónu do `30 min`
 6. [ ] Spraviť outreach list prvých `10–20` salónov v Košiciach/SK
 7. [ ] Validovať záujem ešte pred plným billing hardeningom:
@@ -151,6 +154,7 @@
    - demo data
    - demo branding
    - demo users/roles
+   - oddelene od produkčného PAPI brand surface
 6. [ ] Nahrať krátke demo video:
    - landing
    - booking

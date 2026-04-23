@@ -15,7 +15,6 @@ const CookieConsent = lazy(() => import("@/components/CookieConsent"));
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const LiquidPlayground = lazy(() => import("./pages/LiquidPlayground"));
-const DemoPage = lazy(() => import("./pages/DemoPage"));
 const BookingPage = lazy(() => import("./pages/BookingPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const OfflinePage = lazy(() => import("./pages/OfflinePage"));
@@ -79,6 +78,15 @@ function RouteInstallPrompt() {
   return <InstallPrompt />;
 }
 
+function RetiredDemoRoute() {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    globalThis.location.replace("/");
+  }, []);
+
+  return <LazyFallback />;
+}
+
 const App = () => {
   useCanonicalHostRedirect();
   const salonLoginEnabled =
@@ -97,8 +105,8 @@ const App = () => {
             <CookieConsent />
             <Routes>
               <Route path="/" element={<LandingPage />} />
+              <Route path="/demo/*" element={<RetiredDemoRoute />} />
               <Route element={<PublicChromeLayout />}>
-                <Route path="/demo" element={<DemoPage />} />
                 <Route path="/offline" element={<OfflinePage />} />
                 <Route path="/install" element={<InstallPage />} />
                 <Route

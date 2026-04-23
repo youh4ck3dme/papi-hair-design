@@ -31,7 +31,6 @@ const navigationButtons: NavigationButton[] = [
 
 function resolveSection(pathname: string): PublicHeaderSection {
   if (pathname === "/") return "home";
-  if (pathname.startsWith("/demo")) return "home";
   if (pathname.startsWith("/booking")) return "services";
   if (pathname.startsWith("/pricing")) return "pricing";
   if (
