@@ -197,6 +197,82 @@
    - pivotnúť positioning
    - alebo to predať ako asset/product
 
+## Monetization track pre white-label produkt
+### Poznámka
+- toto nie je okamžitá produkčná priorita pred dokončením platform cleanupu
+- je to pripravený revenue blueprint, aby sme po stabilizácii neštartovali od nuly
+
+### Rýchle výhry do 14 dní
+1. [ ] Prepnúť positioning z `self-serve SaaS` na `managed booking & operations produkt`
+   - dopad: vysoký
+   - náročnosť: nízka
+   - dôvod: predávame výsledok a onboarding, nie len ďalšiu appku
+2. [ ] Spraviť samostatnú software pricing page oddelenú od salónového cenníka
+   - dopad: vysoký
+   - náročnosť: nízka
+   - blocker dnes: buyer vidí service pricing, nie platform pricing
+3. [ ] Navrhnúť jednoduchý model `setup fee + mesačný retainer`
+   - návrh: `€199–€490 setup + €29–€79 / mesiac / prevádzka`
+   - dopad: vysoký
+   - náročnosť: nízka
+   - poznámka: lepšie sedí na SK/CZ realitu než enterprise pricing fikcia
+4. [ ] Spustiť prvých `10–20` direct outreachov na salóny alebo agentúry
+   - dopad: vysoký
+   - náročnosť: stredná
+   - poznámka: bez outreachu sú valuácie len hypotéza
+
+### Kroky do 30 dní
+1. [ ] Zapnúť reálny billing flow alebo aspoň overiteľné recurring fakturovanie
+   - dopad: vysoký
+   - náročnosť: stredná
+   - blocker dnes: máme základ, ale nie overiteľný recurring revenue flow
+2. [ ] Získať `1` externý pilot mimo PAPI
+   - dopad: veľmi vysoký
+   - náročnosť: stredná
+   - poznámka: jeden reálny pilot má väčšiu hodnotu než ďalšie docs
+3. [ ] Upratať single-salon hardcody
+   - dopad: stredný
+   - náročnosť: stredná
+   - väzba: nadväzuje na `branding a hardcody` a `tenant-readiness`
+4. [ ] Zavrieť otázku `Bookio/Booqme vs. vlastný systém`
+   - dopad: stredný
+   - náročnosť: nízka
+   - cieľ: jeden produkt, jeden canonical booking surface, žiadny positioning chaos
+
+### Kroky do 90 dní
+1. [ ] Získať `3–5` platiacich salónov
+   - dopad: veľmi vysoký
+   - náročnosť: vysoká
+   - poznámka: tu sa z assetu začína rodiť skutočný biznis
+2. [ ] Zaviesť automatizovaný tenant provisioning
+   - dopad: vysoký
+   - náročnosť: vysoká
+   - väzba: znižuje founder dependency a zvyšuje salability
+3. [ ] Doplniť reporting vrstvu:
+   - bookings
+   - no-shows
+   - active staff
+   - retention
+4. [ ] Pripraviť compliance pack:
+   - DPA
+   - export
+   - offboarding
+   - data termination flow
+
+### White-label monetization guardrails
+1. [ ] Nepredávať to zatiaľ ako hotový self-serve SaaS, kým onboarding, billing a tenant provisioning nie sú reálne uzavreté
+2. [ ] Držať oddelené dve pricing vrstvy:
+   - salon service pricing pre koncových zákazníkov
+   - platform pricing pre buyerov / pilot prevádzky
+3. [ ] Každý revenue krok viazať na dôkaz:
+   - pilot
+   - recurring billing
+   - platiaci tenant
+   - usage reporting
+4. [ ] Nevracať do produkčnej PAPI appky verejný demo feeling
+   - PAPI ostáva reálna prevádzka
+   - neutral demo tenant sa rieši oddelene
+
 ## 30–45 dňový validation sprint
 ### Fáza 1: product readiness
 1. [x] Auditnúť git históriu na únik credentials:
