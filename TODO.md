@@ -143,6 +143,10 @@
    - stav: pridaný repo-side branch guard `scripts/assert-production-branch.mjs`
    - stav: staré deploy triggre pre `main`, `uprava22-2` a `papihairstudiobooking` boli odstránené
    - caveat: mimo repa vie deploy stále spraviť iba človek s priamym Firebase prístupom, ale official CI path je zamknutý
+7. [x] Sprísniť production deploy guard aj na repo slug a Firebase project identitu
+   - stav: CI deploy guard už nepustí production deploy len na základe branch mena
+   - stav: hosting aj functions workflow musia sedieť na `youh4ck3dme/papi-hair-design`
+   - stav: production deploy guard overuje aj Firebase projekt `hairchainger-main-876665-176e8`
 
 ## Repo governance cleanup
 1. [x] Upratať `Firebase-first` vs. staré `Vercel` artefakty v repozitári

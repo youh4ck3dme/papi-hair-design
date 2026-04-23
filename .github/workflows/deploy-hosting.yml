@@ -45,6 +45,9 @@ jobs:
       - name: Verify production branch lock
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_ACTIONS: "true"
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
         run: npm run guard:production-branch
 
       - name: Build web app
