@@ -3,6 +3,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/integrations/firebase/config";
 import { useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/contexts/AuthContext";
+import { DEFAULT_BUSINESS_ID } from "@/lib/businessIds";
 
 /**
  * Hook that checks if onboarding is completed for the current business.
@@ -17,7 +18,7 @@ export function useOnboarding() {
 
   useEffect(() => {
     // Demo ID placeholder or no user should not trigger network heavy checks
-    if (!user || !isOwnerOrAdmin || businessId === "papi-hair-design-main") {
+    if (!user || !isOwnerOrAdmin || businessId === DEFAULT_BUSINESS_ID) {
       setNeedsOnboarding(false);
       setLoading(false);
       return;

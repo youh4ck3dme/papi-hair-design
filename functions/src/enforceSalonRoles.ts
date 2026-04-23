@@ -5,14 +5,11 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { requireAuth, requireMembership } from "./guards";
 import { buildAndWriteSnapshot } from "./publicSnapshotBuilder";
+import { BOOTSTRAP_EMPLOYEE_EMAILS, BOOTSTRAP_OWNER_EMAILS, DEFAULT_BUSINESS_ID } from "./businessConfig";
 
 interface EnforceSalonRolesData {
   business_id?: string;
 }
-
-const DEFAULT_BUSINESS_ID = "papi-hair-design-main";
-const OWNER_EMAIL = "papi@papihairdesign.sk";
-const EMPLOYEE_EMAILS = ["mato@papihairdesign.sk", "miska@papihairdesign.sk"] as const;
 
 async function findAuthUidByEmail(email: string): Promise<string | null> {
   try {
@@ -34,16 +31,21 @@ export const enforceSalonRoles = functions.https.onCall(
     const db = getFirestore();
     const now = new Date().toISOString();
 
-    const ownerProfileId = await findAuthUidByEmail(OWNER_EMAIL);
+    const ownerEmail = [...BOOTSTRAP_OWNER_EMAILS][0] ?? null;
+    if (!ownerEmail) {
+      throw new HttpsError("failed-precondition", "No bootstrap owner email is configured.");
+    }
+
+    const ownerProfileId = await findAuthUidByEmail(ownerEmail);
     if (!ownerProfileId) {
-      throw new HttpsError("failed-precondition", `Owner auth user for ${OWNER_EMAIL} not found.`);
+      throw new HttpsError("failed-precondition", `Owner auth user for ${ownerEmail} not found.`);
     }
 
     const targetProfiles: Array<{ profileId: string; role: "owner" | "employee" }> = [
       { profileId: ownerProfileId, role: "owner" },
     ];
 
-    for (const employeeEmail of EMPLOYEE_EMAILS) {
+    for (const employeeEmail of BOOTSTRAP_EMPLOYEE_EMAILS) {
       const profileId = await findAuthUidByEmail(employeeEmail);
       if (profileId) {
         targetProfiles.push({ profileId, role: "employee" });

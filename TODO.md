@@ -43,7 +43,11 @@
    - verdict: treba odtenantizovať
    - progress: prvý centralizačný pass je hotový cez `src/lib/brandConfig.ts` a `functions/src/brandConfig.ts`
    - progress: canonical host, site URL, contact údaje a ICS brand fallbacky už nie sú roztrúsené po core súboroch
-   - next: oddeliť tenant config od PAPI-specific defaultov a odstrániť zvyšné bootstrap/business hardcody
+   - progress: `branding / hardcodes stage 2` presunul bootstrap owner/employee allowlist a default business fallback do `functions/src/businessConfig.ts`
+   - progress: frontend allowlist už podporuje generické aliasy `VITE_PRIMARY_OWNER_EMAIL` a `VITE_EMPLOYEE_EMAILS` bez rozbitia legacy PAPI env premenných
+   - progress: bootstrap flow a onboarding guard už používajú zdieľaný `DEFAULT_BUSINESS_ID` namiesto priamo vypísaného `papi-hair-design-main`
+   - progress: customer a registration email fallbacky už používajú business-aware branding namiesto natvrdo vpísaného `Papi Hair Design`
+   - next: dotiahnuť zvyšné PAPI-specific hardcody v bootstrap/role enforcement flowe a owner email branding layeri
 2. [ ] Billing flow
    - stav: základ existuje
    - verdict: nie je ready
@@ -53,6 +57,7 @@
 4. [ ] Onboarding
    - stav: funkčný pre PAPI
    - verdict: nie je tenant-safe
+   - progress: onboarding guard a bootstrap page už nevisia na natvrdo vpísanom business ID, ale stále ostávajú single-tenant v samotnom provisioning flowe
 5. [x] Access model
    - stav: silný
    - verdict: treba chrániť a ďalej rozširovať, nie rozbiť pri tenantizácii
@@ -213,6 +218,8 @@
    - výstupy: recurring billing decision, pilot onboarding flow, prvý externý pilot shortlist
 3. [ ] Week 3: tenantization + canonical booking surface
    - výstupy: hardcode cleanup stage 2, single booking truth, tenant-safe bootstrap smer
+   - progress: `branding / hardcodes stage 2` batch je implementovaný a lokálne overený testami/buildom
+   - progress: ešte ho treba dostať cez samostatný PR do `otvarackapril2026`
 4. [ ] Week 4: reporting + compliance + buyer materials
    - výstupy: KPI/reporting scope, compliance pack scope, buyer-facing materials pack
 
@@ -311,7 +318,8 @@
    - výsledok: Firestore rules ostávajú vo väčšine jadrových kolekcií business-aware, vrátane canonical membership documentu `${uid}_${businessId}`
    - výsledok: `page_views` rules boli dotiahnuté, aby zápis šiel len za vlastného usera v rámci jeho business membershipu a čítanie ostalo len pre owner/admin
    - blocker: public booking a demo vrstva stále stoja na `DEFAULT_BUSINESS_ID` / `papi-hair-design-main`, takže onboarding nového tenanta ešte nie je self-serve
-   - blocker: bootstrap, allowlist a role-enforcement flowy sú stále PAPI-specific
+   - blocker: bootstrap, allowlist a role-enforcement flowy sú stále čiastočne PAPI-specific
+   - progress: stage 2 už presunul default business fallback a bootstrap email allowlist do zdieľaného configu, ale flow ešte nie je self-serve tenant provisioning
    - blocker: email branding, calendar export UID a public base URL sú stále brand-specific pre `papihairdesign.sk`, aj keď už sú centralizované v brand config vrstve
 4. [x] Vytvoriť `asset inventory`:
    - čo sa predáva ako produkt

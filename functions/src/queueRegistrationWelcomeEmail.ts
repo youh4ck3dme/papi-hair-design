@@ -2,12 +2,11 @@ import * as functions from "firebase-functions/v2";
 import { type CallableRequest, HttpsError } from "firebase-functions/v2/https";
 import { requireAuth } from "./guards";
 import { queueRegistrationWelcomeEmail as queueRegistrationWelcomeMessage } from "./emailQueue";
+import { DEFAULT_BUSINESS_ID } from "./businessConfig";
 
 interface QueueRegistrationWelcomeEmailData {
   business_id?: string;
 }
-
-const DEFAULT_BUSINESS_ID = "papi-hair-design-main";
 
 export const queueRegistrationWelcomeEmail = functions.https.onCall(
   { region: "europe-west1" },
