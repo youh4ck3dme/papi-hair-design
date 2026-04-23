@@ -165,6 +165,7 @@ Prakticke pravidla:
 
 Aktualny operational baseline:
 - Sentry pre runtime chyby
+- lightweight `app_diagnostics` callable pre kritické klientské runtime chyby a bootstrap zlyhania
 - GitHub Actions pre CI signal
 - manual smoke skripty pre production kriticke toky
 - budget check pre dist size

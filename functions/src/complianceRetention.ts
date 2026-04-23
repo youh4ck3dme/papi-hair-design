@@ -2,6 +2,7 @@ import { Timestamp } from "firebase-admin/firestore";
 
 export const CONSENT_RETENTION_DAYS = 395; // ~13 months
 export const AUDIT_RETENTION_DAYS = 365;
+export const APP_DIAGNOSTICS_RETENTION_DAYS = 30;
 export const ACCESS_TOKEN_GRACE_DAYS = 30;
 export const RATE_LIMIT_RETENTION_HOURS = 24;
 
@@ -35,6 +36,15 @@ export const COMPLIANCE_RETENTION_POLICIES: ComplianceRetentionPolicy[] = [
     field: "created_at",
     fieldType: "isoString",
     retentionDays: AUDIT_RETENTION_DAYS,
+  },
+  {
+    key: "app-diagnostics",
+    label: "App diagnostics",
+    collectionName: "app_diagnostics",
+    kind: "collection",
+    field: "created_at",
+    fieldType: "isoString",
+    retentionDays: APP_DIAGNOSTICS_RETENTION_DAYS,
   },
   {
     key: "appointment-status-audit-subcollections",

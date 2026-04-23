@@ -6,6 +6,7 @@ import "@/styles/phd-design-system.css";
 import "@/i18n";
 import { ensureStorageAndServiceWorker } from "@/lib/indexed-db-available";
 import { initAnalytics } from "@/lib/analytics";
+import { installGlobalDiagnostics, reportClientDiagnostic } from "@/lib/diagnostics";
 import { createServiceWorkerRegisterOptions } from "@/lib/serviceWorkerRegistration";
 import { registerSW } from "virtual:pwa-register";
 
@@ -95,6 +96,8 @@ function initServiceWorker() {
 }
 
 async function bootstrap() {
+  installGlobalDiagnostics();
+
   try {
     const shouldContinue = await cleanupDevServiceWorkers();
     if (!shouldContinue) {
@@ -103,6 +106,15 @@ async function bootstrap() {
     await ensureStorageAndServiceWorker();
   } catch (error) {
     console.error("Failed to validate storage/service-worker preflight:", error);
+    void reportClientDiagnostic({
+      category: "bootstrap_error",
+      message: "Failed to validate storage/service-worker preflight",
+      source: "bootstrap.preflight",
+      stack: error instanceof Error ? error.stack ?? null : null,
+      metadata: {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
   }
 
   void initAnalytics();

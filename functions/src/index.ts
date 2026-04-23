@@ -21,6 +21,7 @@ export { resolveBookingAccountState } from "./resolveBookingAccountState";
 export { createPublicBooking } from "./createPublicBooking";
 export { saveSmtpConfig } from "./saveSmtpConfig";
 export { consentEvent } from "./consentEvent";
+export { recordClientDiagnostic } from "./recordClientDiagnostic";
 export { listBookableProviders } from "./listBookableProviders";
 export { syncOfflineData } from "./syncOfflineData";
 export { importMigrationData } from "./importMigrationData";
