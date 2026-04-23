@@ -36,6 +36,32 @@
 4. [ ] Outreach / validation sprint
 5. [ ] Monetizácia / Stripe
 
+## Platform readiness scorecard
+1. [ ] Branding a hardcody
+   - stav: slabé
+   - verdict: treba odtenantizovať
+2. [ ] Billing flow
+   - stav: základ existuje
+   - verdict: nie je ready
+3. [x] Pricing page
+   - stav: hotová
+   - verdict: je to service pricing, nie platform pricing
+4. [ ] Onboarding
+   - stav: funkčný pre PAPI
+   - verdict: nie je tenant-safe
+5. [x] Access model
+   - stav: silný
+   - verdict: treba chrániť a ďalej rozširovať, nie rozbiť pri tenantizácii
+6. [ ] Demo tenant
+   - stav: ešte nie
+   - verdict: musí byť oddelený od produkčnej PAPI identity
+7. [ ] Buyer materials
+   - stav: technické áno, sales nie
+   - verdict: buyer-facing komerčná vrstva ešte nie je uzavretá
+8. [x] Spísať execution blueprint pre tieto kategórie
+   - výstup: `docs/PLATFORM-BLUEPRINT.md`
+   - cieľ: zrýchliť ďalšie rozhodovanie a držať jednotné poradie prác
+
 ## Delivery and owner context
 1. [x] Zapisat realisticky effort snapshot do kanonickej docs vrstvy
    - stav: orientacny odhad je zapisany v `docs/PROJECT-STATE.md`
