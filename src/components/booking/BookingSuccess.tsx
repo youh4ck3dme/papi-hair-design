@@ -16,6 +16,7 @@ import {
     resolveBookingAccountState,
     type BookingAccountState,
 } from "@/integrations/firebase/resolveBookingAccountState";
+import { APP_BRAND_NAME } from "@/lib/brandConfig";
 import { buildTextDataUrl } from "@/lib/browserDataUrl";
 
 interface BookingSuccessProps {
@@ -97,7 +98,7 @@ export function BookingSuccess({
     const calendarExport = appointmentStart && appointmentEnd
         ? buildBookingCalendarExport({
             appointmentId: bookingResult.appointment_id,
-            businessName: "PAPI Hair Design",
+            businessName: APP_BRAND_NAME,
             serviceName: selectedService?.name_sk ?? t("booking.confirmTitle"),
             location: t("index.address"),
             start: appointmentStart,
@@ -147,7 +148,7 @@ export function BookingSuccess({
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">{t("booking.confirmBrand")}</p>
-                            <p className="font-semibold text-foreground">PAPI HAIR DESIGN</p>
+                            <p className="font-semibold text-foreground">{APP_BRAND_NAME}</p>
                         </div>
                     </div>
                     {selectedService && (

@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { APP_BRAND_NAME } from "@/lib/brandConfig";
 
 export interface AdminCalendarExportRow {
   reference: string;
@@ -90,7 +91,7 @@ export function buildAdminCalendarPrintHtml(dateLabel: string, rows: AdminCalend
         </style>
       </head>
       <body>
-        <h1>PAPI HAIR DESIGN - Denný prehľad</h1>
+        <h1>${escapeHtml(APP_BRAND_NAME)} - Denný prehľad</h1>
         <p>${escapeHtml(dateLabel)}</p>
         <div class="meta">Pocet rezervacii: ${rows.length}</div>
         <table>

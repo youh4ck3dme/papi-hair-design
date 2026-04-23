@@ -1,4 +1,4 @@
-import { APP_BRAND_NAME, APP_ICS_DOMAIN } from "@/lib/brandConfig";
+import { APP_BRAND_NAME, APP_BRAND_SLUG, APP_ICS_DOMAIN } from "@/lib/brandConfig";
 
 export interface CalendarExportInput {
   title: string;
@@ -109,5 +109,5 @@ export function buildBookingCalendarExport(input: BookingCalendarExportInput): C
 
 export function buildBookingIcsFilename(serviceName?: string | null): string {
   const serviceSegment = slugifySegment(serviceName?.trim() || "booking");
-  return `papi-hair-design-${serviceSegment || "booking"}.ics`;
+  return `${APP_BRAND_SLUG}-${serviceSegment || "booking"}.ics`;
 }

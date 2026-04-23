@@ -22,6 +22,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage
 import { doc, setDoc } from "firebase/firestore";
 import { compressProfileImage, readFileAsDataUrl, validateProfileImageFile } from "@/lib/profileImage";
 import { AvatarCropper } from "@/components/admin/AvatarCropper";
+import { APP_BRAND_NAME } from "@/lib/brandConfig";
 
 const allNavItems = [
   { title: "Prehľad", url: "/admin", icon: LayoutDashboard, roles: ["owner", "admin", "employee"] },
@@ -105,7 +106,7 @@ export function AdminSidebar() {
         <div className="admin-premium-toolbar flex items-center gap-2 px-3 py-2.5">
         <LogoIcon size="sm" color="#C9A84C" />
         <div className="overflow-hidden flex flex-col items-center w-full">
-          <p className="text-sm font-black text-white truncate uppercase tracking-tighter">PAPI HAIR DESIGN</p>
+          <p className="text-sm font-black text-white truncate uppercase tracking-tighter">{APP_BRAND_NAME}</p>
           <p className="text-[16px] text-amber-400 leading-none text-center" style={{ fontFamily: "'Great Vibes', cursive" }}>Booking</p>
         </div>
         </div>
@@ -215,7 +216,7 @@ function AdminInnerLayout({ children }: { children: React.ReactNode }) {
               <div className="admin-premium-toolbar mt-2 flex h-10 items-center px-2 md:mt-3 md:h-12 md:px-4">
                 <SidebarTrigger className="mr-2 md:mr-3 min-h-touch min-w-touch flex items-center justify-center" />
                 <div className="flex-1 min-w-0 font-black uppercase text-xs tracking-widest text-muted-foreground">
-                  {navItems.find(n => n.url === location.pathname)?.title ?? "PAPI HAIR DESIGN"}
+                  {navItems.find(n => n.url === location.pathname)?.title ?? APP_BRAND_NAME}
                 </div>
               </div>
             </header>

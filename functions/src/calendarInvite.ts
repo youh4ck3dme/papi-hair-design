@@ -5,7 +5,7 @@ import {
   resolveHistoryContext,
   type HistoryVisibleAppointment,
 } from "./bookingHistoryAccess";
-import { APP_BRAND_NAME, APP_ICS_DOMAIN } from "./brandConfig";
+import { APP_BRAND_NAME, APP_BRAND_SLUG, APP_ICS_DOMAIN } from "./brandConfig";
 import { resolvePublicBookingBaseUrl } from "./publicBookingAccess";
 
 export interface CalendarExportInput {
@@ -236,7 +236,9 @@ export const downloadBookingIcs = onRequest({ region: "europe-west1" }, async (r
       return;
     }
 
-    const filenameBase = slugifySegment(`${business.name ?? "papi-hair-design"}-${appointment.service_name ?? "booking"}`) || "papi-hair-design-booking";
+    const filenameBase =
+      slugifySegment(`${business.name ?? APP_BRAND_SLUG}-${appointment.service_name ?? "booking"}`) ||
+      `${APP_BRAND_SLUG}-booking`;
     res.setHeader("Content-Type", "text/calendar; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${filenameBase}.ics"`);
     res.setHeader("Cache-Control", "private, no-store, max-age=0");
