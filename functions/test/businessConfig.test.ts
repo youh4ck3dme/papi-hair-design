@@ -23,6 +23,7 @@ describe("businessConfig", () => {
     process.env.PRIMARY_BUSINESS_ID = "tenant-main";
     process.env.PRIMARY_BUSINESS_NAME = "Tenant Studio";
     process.env.PRIMARY_OWNER_EMAIL = "Owner@Example.com";
+    delete process.env.VITE_PAPI_EMAIL;
 
     const module = await importBusinessConfig();
 
