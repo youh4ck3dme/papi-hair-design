@@ -260,10 +260,14 @@ service cloud.firestore {
       allow read, write: if false;  // Server-only
     }
 
-    // Page analytics — zapis len prihlaseny pouzivatel, citanie len owner/admin
+    // Page analytics — zapis len clen danej prevadzky za sameho seba, citanie len owner/admin
     match /page_views/{docId} {
-      allow create: if isSignedIn();
-      allow read:   if isSignedIn();
+      allow create: if isSignedIn() &&
+        request.resource.data.user_id == request.auth.uid &&
+        request.resource.data.business_id is string &&
+        hasMembership(request.resource.data.business_id);
+      allow read: if resource.data.business_id is string &&
+        isOwnerOrAdmin(resource.data.business_id);
       allow update, delete: if false;
     }
   }

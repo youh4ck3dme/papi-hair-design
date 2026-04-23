@@ -130,11 +130,17 @@
    - výsledok: `ProtectedRoute` už nepúšťa allowlisted employee email do employee/admin route bez membership dokumentu
    - výsledok: admin callable flowy zostávajú viazané na `requireAuth` + `requireMembership`
    - výsledok: public booking/history callable flowy zostávajú token/rate-limit based a nevyžadujú falošný auth bypass
-3. [ ] Spraviť tenant-readiness audit:
+3. [x] Spraviť tenant-readiness audit:
    - business isolation vo Firestore rules
    - business-aware queries
    - business-aware functions
    - business-aware email flows
+   - výsledok: hlavné admin callable flowy sú business-scoped cez `requireMembership(...)`
+   - výsledok: Firestore rules ostávajú vo väčšine jadrových kolekcií business-aware, vrátane canonical membership documentu `${uid}_${businessId}`
+   - výsledok: `page_views` rules boli dotiahnuté, aby zápis šiel len za vlastného usera v rámci jeho business membershipu a čítanie ostalo len pre owner/admin
+   - blocker: public booking a demo vrstva stále stoja na `DEFAULT_BUSINESS_ID` / `papi-hair-design-main`, takže onboarding nového tenanta ešte nie je self-serve
+   - blocker: bootstrap, allowlist a role-enforcement flowy sú stále PAPI-specific
+   - blocker: email branding, calendar export UID a public base URL sú stále brand-specific pre `papihairdesign.sk`
 4. [ ] Vytvoriť `asset inventory`:
    - čo sa predáva ako produkt
    - čo je špecifické len pre PAPI
