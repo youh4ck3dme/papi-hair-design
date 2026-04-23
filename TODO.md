@@ -215,3 +215,38 @@
    - predaj kódu/assetov
    - predaj produktizovaného systému
    - predaj fungujúceho mikro-SaaS
+
+## White-label expansion backlog
+### Poznámka
+- toto nie je aktualna implementacna priorita
+- ide o buduci expansion shortlist, ked bude tenantization / white-label vrstva realne hotova
+
+### Kandidátne vertikály
+1. [ ] Osetrenie
+2. [ ] Vsetky osetrenia
+3. [ ] Vlasy a styling
+4. [ ] Nechty
+5. [ ] Odstranovanie chlpkov
+6. [ ] Obočie a riasy
+7. [ ] Starostlivost o tvar a plet
+8. [ ] Masazny salon
+9. [ ] Make-up
+10. [ ] Estetika
+11. [ ] Holicstvo
+12. [ ] Kupele a wellness
+13. [ ] Telo a plet
+14. [ ] Tetovanie a piercing
+15. [ ] Holisticke zdravie
+16. [ ] Zubna starostlivost
+17. [ ] Lekarske
+18. [ ] Domaci milacikovia
+19. [ ] Fitness
+20. [ ] Fyzioterapia
+21. [ ] Poradenstvo a terapia
+22. [ ] Ostatne
+
+### Pred rozšírením do ďalších vertikál vždy potvrdiť
+1. [ ] ze booking domain model vie obsluzit inu logiku sluzieb, trvania a staff assignmentu bez hardcodov na hair salon flow
+2. [ ] ze texty, emaily, metadata a onboarding flow nie su salon-specific
+3. [ ] ze admin flow vie fungovat aj pre vertikaly bez klasickych casovych slotov alebo so specialnymi obmedzeniami
+4. [ ] ze reporting, compliance a retention model sedia aj pre citlivejsie vertikaly ako lekarske, zubne alebo terapia
