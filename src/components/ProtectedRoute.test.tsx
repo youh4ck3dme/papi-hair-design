@@ -178,7 +178,7 @@ describe("ProtectedRoute", () => {
     expect(screen.queryByText("BOOTSTRAP_PAGE")).not.toBeInTheDocument();
   });
 
-  it("does not allow allowlisted employee email into employee routes without membership", () => {
+  it("redirects user without employee membership away from employee routes to /booking", () => {
     setAuthState({
       user: { id: "u8", email: "mato@papihairdesign.sk" },
       memberships: [],
