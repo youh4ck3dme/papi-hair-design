@@ -27,14 +27,16 @@ export function validateProductionDeployContext(env = process.env) {
     );
   }
 
+  const runningInGitHubActions = env.GITHUB_ACTIONS === "true";
   const repository = env.GITHUB_REPOSITORY?.trim() || "";
-  if (repository && repository !== ALLOWED_PRODUCTION_REPOSITORY) {
+  if (runningInGitHubActions && !repository) {
+    errors.push("Production deploy requires an explicit GitHub repository slug in CI.");
+  } else if (repository && repository !== ALLOWED_PRODUCTION_REPOSITORY) {
     errors.push(
       `Production deploy is locked to '${ALLOWED_PRODUCTION_REPOSITORY}'. Current repository: '${repository}'.`
     );
   }
 
-  const runningInGitHubActions = env.GITHUB_ACTIONS === "true";
   const projectId =
     env.VITE_FIREBASE_PROJECT_ID?.trim() ||
     env.FIREBASE_PROJECT_ID?.trim() ||

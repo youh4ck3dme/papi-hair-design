@@ -32,6 +32,16 @@ describe("validateProductionDeployContext", () => {
     );
   });
 
+  it("requires an explicit GitHub repository slug in CI", () => {
+    const result = validateProductionDeployContext({
+      GITHUB_REF_NAME: ALLOWED_PRODUCTION_BRANCH,
+      GITHUB_ACTIONS: "true",
+      VITE_FIREBASE_PROJECT_ID: ALLOWED_PRODUCTION_FIREBASE_PROJECT,
+    });
+
+    expect(result.errors).toContain("Production deploy requires an explicit GitHub repository slug in CI.");
+  });
+
   it("rejects deploys to a different Firebase project", () => {
     const result = validateProductionDeployContext({
       GITHUB_REF_NAME: ALLOWED_PRODUCTION_BRANCH,
