@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const CONFIG_ENV_KEYS = [
   "PRIMARY_BUSINESS_ID",
@@ -17,9 +17,17 @@ async function importBusinessConfig() {
   return await import("../src/businessConfig");
 }
 
+function resetConfigEnv() {
+  CONFIG_ENV_KEYS.forEach((key) => delete process.env[key]);
+}
+
 describe("businessConfig", () => {
+  beforeEach(() => {
+    resetConfigEnv();
+  });
+
   afterEach(() => {
-    CONFIG_ENV_KEYS.forEach((key) => delete process.env[key]);
+    resetConfigEnv();
     vi.resetModules();
   });
 
