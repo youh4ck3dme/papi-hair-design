@@ -9,7 +9,9 @@ const ownerPassword =
   process.env.PLAYWRIGHT_ADMIN_PASSWORD?.trim();
 
 if (!ownerEmail || !ownerPassword) {
-  console.error("Missing live smoke credentials. Set PLAYWRIGHT_OWNER_EMAIL and PLAYWRIGHT_ROLE_PASSWORD explicitly.");
+  console.error(
+    "Missing live smoke credentials. Set one owner email env (PLAYWRIGHT_OWNER_EMAIL, VITE_PRIMARY_OWNER_EMAIL, PRIMARY_OWNER_EMAIL, or VITE_PAPI_EMAIL) and one password env (PLAYWRIGHT_ROLE_PASSWORD or PLAYWRIGHT_ADMIN_PASSWORD) explicitly.",
+  );
   process.exit(1);
 }
 
