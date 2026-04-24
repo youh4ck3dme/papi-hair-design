@@ -27,21 +27,29 @@ const bookingCalendarSpy = vi.hoisted(() => ({
   props: null as any,
 }));
 
-const firestoreMocks = vi.hoisted(() => ({
-  getDocsMock: vi.fn(),
-  getDocMock: vi.fn(),
-  addDocMock: vi.fn(),
-  updateDocMock: vi.fn(),
-}));
-const firestoreFixtures = vi.hoisted(() => ({
-  appointments: [] as any[],
-  employeeLookup: [] as any[],
-  services: [] as any[],
-  employees: [] as any[],
-  memberships: [] as any[],
-  schedules: [] as any[],
-  customerHistory: [] as any[],
-}));
+function createFirestoreTestMocks() {
+  return {
+    getDocsMock: vi.fn(),
+    getDocMock: vi.fn(),
+    addDocMock: vi.fn(),
+    updateDocMock: vi.fn(),
+  };
+}
+
+function createFirestoreTestFixtures() {
+  return {
+    appointments: [] as any[],
+    employeeLookup: [] as any[],
+    services: [] as any[],
+    employees: [] as any[],
+    memberships: [] as any[],
+    schedules: [] as any[],
+    customerHistory: [] as any[],
+  };
+}
+
+const firestoreMocks = vi.hoisted(createFirestoreTestMocks);
+const firestoreFixtures = vi.hoisted(createFirestoreTestFixtures);
 
 const adminUpdateBookingStatusMock = vi.hoisted(() => vi.fn());
 const adminCalendarQuickActionMock = vi.hoisted(() => vi.fn());
@@ -202,11 +210,11 @@ vi.mock("@/components/ui/select", () => ({
   SelectContent: ({ children }: any) => <>{children}</>,
   SelectItem: ({ value, children }: any) => (
     <div data-select-item="true" data-value={value}>
-      {children}
+      <span>{children}</span>
     </div>
   ),
   SelectTrigger: ({ children }: any) => <>{children}</>,
-  SelectValue: ({ placeholder }: any) => <>{placeholder ?? null}</>,
+  SelectValue: ({ placeholder }: any) => <span data-select-placeholder>{placeholder ?? null}</span>,
 }));
 
 vi.mock("sonner", () => ({ toast: toastMocks }));
@@ -354,6 +362,18 @@ async function clickPrintToolbarButton(container: HTMLElement) {
   const printButton = printIcon?.closest("button");
   expect(printButton).toBeTruthy();
   fireEvent.click(printButton!);
+}
+
+async function expectCreatedAppointmentRange(startAtIso: string, endAtIso: string) {
+  await waitFor(() => {
+    expect(firestoreMocks.addDocMock).toHaveBeenCalledWith(
+      expect.objectContaining({ __collection: "appointments", constraints: [] }),
+      expect.objectContaining({
+        start_at: startAtIso,
+        end_at: endAtIso,
+      }),
+    );
+  });
 }
 
 describe("CalendarPage", () => {
@@ -781,15 +801,7 @@ describe("CalendarPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Vytvoriť rezerváciu/i }));
 
-    await waitFor(() => {
-      expect(firestoreMocks.addDocMock).toHaveBeenCalledWith(
-        expect.objectContaining({ __collection: "appointments", constraints: [] }),
-        expect.objectContaining({
-          start_at: "2026-01-15T08:00:00.000Z",
-          end_at: "2026-01-15T08:30:00.000Z",
-        }),
-      );
-    });
+    await expectCreatedAppointmentRange("2026-01-15T08:00:00.000Z", "2026-01-15T08:30:00.000Z");
     expect(calendarEventUtilsMocks.fromCalendarWallClockDateToUtcIso).toHaveBeenCalledTimes(2);
   });
 
