@@ -65,6 +65,10 @@ import {
   getBusinessDayUtcRange,
   toCalendarWallClockDate,
 } from "@/lib/calendarEventUtils";
+import {
+  resolveEmployeeCalendarPermissions,
+  type EmployeeCalendarPermissions,
+} from "@/lib/employeeCalendarPermissions";
 
 interface CalEvent {
   id: string; title: string; start: Date; end: Date; status: string; resource: any;
@@ -84,6 +88,13 @@ type CalendarActionMenuTarget =
 const TOOLBAR_ACTION_START_HOUR = 8;
 const TOOLBAR_ACTION_DURATION_MINUTES = 30;
 
+type CalendarPageScope = "admin" | "employee";
+
+interface CalendarPageProps {
+  scope?: CalendarPageScope;
+  employeeCalendarPermissions?: Partial<Record<keyof EmployeeCalendarPermissions, unknown>> | null;
+}
+
 function resolveInitialCalendarView(): BookingCalendarMode {
   if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
     return window.matchMedia("(max-width: 767px)").matches ? "day" : "week";
@@ -91,12 +102,45 @@ function resolveInitialCalendarView(): BookingCalendarMode {
   return "week";
 }
 
-export default function CalendarPage() {
+async function findActiveEmployeeIdForProfile(businessId: string, profileId: string): Promise<string | null> {
+  const empSnap = await getDocs(query(
+    collection(db, "employees"),
+    where("business_id", "==", businessId),
+    where("profile_id", "==", profileId),
+    where("is_active", "==", true),
+    limit(1)
+  ));
+
+  return empSnap.empty ? null : empSnap.docs[0].id;
+}
+
+function countActiveCalendarFilters(canUseFilters: boolean, statusFilter: string, employeeFilter: string): number {
+  if (!canUseFilters) return 0;
+
+  let count = 0;
+  if (statusFilter !== "all") count += 1;
+  if (employeeFilter !== "all") count += 1;
+  return count;
+}
+
+export default function CalendarPage({
+  scope = "admin",
+  employeeCalendarPermissions,
+}: CalendarPageProps = {}) {
   const { businessId, isOwnerOrAdmin, activeMembership } = useBusiness();
-  const { info: businessInfo, loading: infoLoading } = useBusinessInfo(businessId);
+  const { info: businessInfo } = useBusinessInfo(businessId);
   const business = businessInfo?.business;
   const openingHours = businessInfo?.hours;
   const overrides = businessInfo?.overrides;
+  const isEmployeeScope = scope === "employee";
+  const isEmployeeScopedCalendar = isEmployeeScope || !isOwnerOrAdmin;
+  const canUseAdminControls = !isEmployeeScope && isOwnerOrAdmin;
+  const employeeProfileId = activeMembership?.profile_id ?? auth.currentUser?.uid ?? null;
+  const employeePermissions = useMemo(
+    () => resolveEmployeeCalendarPermissions(employeeCalendarPermissions),
+    [employeeCalendarPermissions],
+  );
+  const canViewContactDetails = canUseAdminControls || employeePermissions.canContactClient;
 
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [view, setView] = useState<BookingCalendarMode>(() => resolveInitialCalendarView());
@@ -182,24 +226,20 @@ export default function CalendarPage() {
       );
       let employeeIdForUser: string | null = null;
 
-      if (!isOwnerOrAdmin) {
-        const user = auth.currentUser;
-        if (user) {
-          // Find employee ID for this user
-          const empSnap = await getDocs(query(
-            collection(db, "employees"),
-            where("business_id", "==", businessId),
-            where("profile_id", "==", user.uid),
-            limit(1)
-          ));
+      if (isEmployeeScopedCalendar) {
+        const scopedEmployeeId = employeeProfileId
+          ? await findActiveEmployeeIdForProfile(businessId, employeeProfileId)
+          : null;
+        if (requestId !== eventsRequestRef.current) return;
 
-          if (!empSnap.empty) {
-            const empId = empSnap.docs[0].id;
-            employeeIdForUser = empId;
-            apptsQuery = query(apptsQuery, where("employee_id", "==", empId));
-            blocksQuery = query(blocksQuery, where("employee_id", "==", empId));
-          }
+        if (!scopedEmployeeId) {
+          setEvents([]);
+          return;
         }
+
+        employeeIdForUser = scopedEmployeeId;
+        apptsQuery = query(apptsQuery, where("employee_id", "==", scopedEmployeeId));
+        blocksQuery = query(blocksQuery, where("employee_id", "==", scopedEmployeeId));
       }
 
       const [apptsSnap, blocksSnap] = await Promise.all([getDocs(apptsQuery), getDocs(blocksQuery)]);
@@ -261,7 +301,7 @@ export default function CalendarPage() {
         setLoading(false);
       }
     }
-  }, [businessId, calendarTimezone, isOwnerOrAdmin]);
+  }, [businessId, calendarTimezone, employeeProfileId, isEmployeeScopedCalendar]);
 
 
   useEffect(() => {
@@ -277,19 +317,45 @@ export default function CalendarPage() {
 
     const loadStaticData = async () => {
       try {
-        const [svcSnap, empSnap, memSnap] = await Promise.all([
-          getDocs(query(collection(db, "services"), where("business_id", "==", businessId), where("is_active", "==", true))),
-          getDocs(query(collection(db, "employees"), where("business_id", "==", businessId), where("is_active", "==", true))),
-          getDocs(query(collection(db, "memberships"), where("business_id", "==", businessId)))
-        ]);
+        let emps: any[] = [];
+
+        if (isEmployeeScopedCalendar) {
+          setServices([]);
+          setMemberships([]);
+
+          if (!employeeProfileId) {
+            setEmployees([]);
+            setSchedules({});
+            return;
+          }
+
+          const empSnap = await getDocs(query(
+            collection(db, "employees"),
+            where("business_id", "==", businessId),
+            where("profile_id", "==", employeeProfileId),
+            where("is_active", "==", true),
+            limit(1)
+          ));
+
+          if (isCancelled) return;
+          emps = empSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setEmployees(emps);
+        } else {
+          const [svcSnap, empSnap, memSnap] = await Promise.all([
+            getDocs(query(collection(db, "services"), where("business_id", "==", businessId), where("is_active", "==", true))),
+            getDocs(query(collection(db, "employees"), where("business_id", "==", businessId), where("is_active", "==", true))),
+            getDocs(query(collection(db, "memberships"), where("business_id", "==", businessId)))
+          ]);
+
+          if (isCancelled) return;
+
+          setServices(svcSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+          emps = empSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setEmployees(emps);
+          setMemberships(memSnap.docs.map(d => ({ profile_id: d.data().profile_id, role: d.data().role })));
+        }
 
         if (isCancelled) return;
-
-        setServices(svcSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-
-        const emps = empSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setEmployees(emps);
-        setMemberships(memSnap.docs.map(d => ({ profile_id: d.data().profile_id, role: d.data().role })));
 
         const ids = emps.map(e => e.id).slice(0, 10);
         if (!ids.length) {
@@ -329,13 +395,19 @@ export default function CalendarPage() {
     return () => {
       isCancelled = true;
     };
-  }, [businessId]);
+  }, [businessId, employeeProfileId, isEmployeeScopedCalendar]);
 
   useEffect(() => {
     void loadEvents();
   }, [loadEvents]);
 
   useEffect(() => {
+    if (!canUseAdminControls) {
+      setStatusFilter("all");
+      setEmployeeFilter("all");
+      setFiltersSheetOpen(false);
+      return;
+    }
     if (typeof window === "undefined") return;
     try {
       const raw = window.localStorage.getItem(filtersStorageKey);
@@ -346,15 +418,16 @@ export default function CalendarPage() {
     } catch {
       // Ignore broken localStorage value
     }
-  }, [filtersStorageKey]);
+  }, [canUseAdminControls, filtersStorageKey]);
 
   useEffect(() => {
+    if (!canUseAdminControls) return;
     if (typeof window === "undefined") return;
     window.localStorage.setItem(
       filtersStorageKey,
       JSON.stringify({ status: statusFilter, employee: employeeFilter })
     );
-  }, [employeeFilter, filtersStorageKey, statusFilter]);
+  }, [canUseAdminControls, employeeFilter, filtersStorageKey, statusFilter]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -367,6 +440,10 @@ export default function CalendarPage() {
 
 
   const availableEmployees = useMemo(() => {
+    if (isEmployeeScopedCalendar) {
+      return employees.filter((employee: any) => employee.profile_id === employeeProfileId);
+    }
+
     let list = employees;
     if (!business?.allow_admin_as_provider) {
       list = list.filter((emp: any) => {
@@ -377,9 +454,13 @@ export default function CalendarPage() {
       });
     }
     return list;
-  }, [employees, business, memberships]);
+  }, [business, employeeProfileId, employees, isEmployeeScopedCalendar, memberships]);
 
   const filteredEvents = useMemo(() => {
+    if (!canUseAdminControls) {
+      return events;
+    }
+
     return events.filter((event) => {
       if (statusFilter !== "all" && event.status !== statusFilter) {
         return false;
@@ -389,9 +470,9 @@ export default function CalendarPage() {
       }
       return true;
     });
-  }, [employeeFilter, events, statusFilter]);
+  }, [canUseAdminControls, employeeFilter, events, statusFilter]);
 
-  const activeFilterCount = (statusFilter !== "all" ? 1 : 0) + (employeeFilter !== "all" ? 1 : 0);
+  const activeFilterCount = countActiveCalendarFilters(canUseAdminControls, statusFilter, employeeFilter);
 
   const statusOptions = [
     { id: "all", label: "Všetky stavy" },
@@ -403,11 +484,23 @@ export default function CalendarPage() {
   ] as const;
 
   const visibleResources = useMemo(
-    () =>
-      isOwnerOrAdmin
+    () => {
+      if (isEmployeeScopedCalendar) {
+        return availableEmployees.filter((employee: any) => employee.profile_id === employeeProfileId);
+      }
+
+      return isOwnerOrAdmin
         ? availableEmployees.filter((employee: any) => employeeFilter === "all" || employee.id === employeeFilter)
-        : availableEmployees.filter((employee: any) => employee.profile_id === activeMembership?.profile_id),
-    [activeMembership?.profile_id, availableEmployees, employeeFilter, isOwnerOrAdmin],
+        : availableEmployees.filter((employee: any) => employee.profile_id === activeMembership?.profile_id);
+    },
+    [
+      activeMembership?.profile_id,
+      availableEmployees,
+      employeeFilter,
+      employeeProfileId,
+      isEmployeeScopedCalendar,
+      isOwnerOrAdmin,
+    ],
   );
 
   const actionableEmployees = useMemo(
@@ -501,6 +594,7 @@ export default function CalendarPage() {
   }, []);
 
   const openBookingForSlot = useCallback((slot: SlotInfo) => {
+    if (!canUseAdminControls) return;
     setSelectedSlot(slot);
     setCustomStartTime(fmtDate(slot.start, "HH:mm"));
     setBookForm({
@@ -510,9 +604,10 @@ export default function CalendarPage() {
     });
     setAvailableSlots([]);
     setBookingModal(true);
-  }, []);
+  }, [canUseAdminControls]);
 
   const openBlockForSlot = useCallback((slot: SlotInfo) => {
+    if (!canUseAdminControls) return;
     const defaultEmployeeId =
       slot.resourceId ??
       actionableEmployees[0]?.id ??
@@ -531,7 +626,7 @@ export default function CalendarPage() {
     setQuickActionEndAt(toInputDateTimeLocal(slot.end));
     setQuickActionReason("Blokovaný čas");
     setQuickActionOpen(true);
-  }, [actionableEmployees, availableEmployees, visibleResources]);
+  }, [actionableEmployees, availableEmployees, canUseAdminControls, visibleResources]);
 
   const openDetailForEvent = useCallback((event: BookingCalendarEvent | CalEvent) => {
     const nextSelected =
@@ -543,8 +638,9 @@ export default function CalendarPage() {
   }, [hydrateSelectedEvent]);
 
   const handleSelectSlot = useCallback((slot: SlotInfo) => {
+    if (!canUseAdminControls) return;
     openBookingForSlot(slot);
-  }, [openBookingForSlot]);
+  }, [canUseAdminControls, openBookingForSlot]);
 
   const handleSelectEvent = useCallback((event: BookingCalendarEvent) => {
     openDetailForEvent(event);
@@ -558,16 +654,19 @@ export default function CalendarPage() {
   }, []);
 
   const handleToolbarCreateBooking = useCallback(() => {
+    if (!canUseAdminControls) return;
     const slot = buildToolbarActionSlot(date);
     openBookingForSlot(slot);
-  }, [buildToolbarActionSlot, date, openBookingForSlot]);
+  }, [buildToolbarActionSlot, canUseAdminControls, date, openBookingForSlot]);
 
   const handleToolbarBlock = useCallback(() => {
+    if (!canUseAdminControls) return;
     const slot = buildToolbarActionSlot(date);
     openBlockForSlot(slot);
-  }, [buildToolbarActionSlot, date, openBlockForSlot]);
+  }, [buildToolbarActionSlot, canUseAdminControls, date, openBlockForSlot]);
 
   const openQuickAction = useCallback((action: "move" | "duplicate" | "block", targetEvent?: CalEvent | null) => {
+    if (!canUseAdminControls) return;
     const eventTarget = targetEvent ?? selectedEvent;
     if (!eventTarget) return;
     const employeeId =
@@ -585,11 +684,11 @@ export default function CalendarPage() {
         : "Blokovaný čas",
     );
     setQuickActionOpen(true);
-  }, [selectedEvent]);
+  }, [canUseAdminControls, selectedEvent]);
 
   useEffect(() => {
     const loadCustomerHistory = async () => {
-      if (!detailModal || !selectedEvent?.resource?.customer_id) {
+      if (!canUseAdminControls || !detailModal || !selectedEvent?.resource?.customer_id) {
         setCustomerHistory([]);
         setLoadingHistory(false);
         return;
@@ -633,7 +732,7 @@ export default function CalendarPage() {
     };
 
     void loadCustomerHistory();
-  }, [businessId, detailModal, selectedEvent]);
+  }, [businessId, canUseAdminControls, detailModal, selectedEvent]);
 
   const bookingCalendarEvents: BookingCalendarEvent[] = useMemo(
     () =>
@@ -706,6 +805,7 @@ export default function CalendarPage() {
 
 
   const handleBook = async () => {
+    if (!canUseAdminControls) return;
     if (!bookForm.service_id || !bookForm.employee_id || !bookForm.start_at) { toast.error("Vyplňte všetky polia"); return; }
 
     const selectedIso = new Date(bookForm.start_at).toISOString();
@@ -758,6 +858,7 @@ export default function CalendarPage() {
     newStatus: "pending" | "confirmed" | "cancelled" | "completed" | "no_show",
     eventOverride?: CalEvent | null,
   ) => {
+    if (!canUseAdminControls) return;
     const eventTarget = eventOverride ?? selectedEvent;
     if (!eventTarget) return;
     setUpdatingStatus(true);
@@ -786,6 +887,7 @@ export default function CalendarPage() {
   };
 
   const handleSaveNote = async () => {
+    if (!canUseAdminControls) return;
     if (!selectedEvent) return;
     setUpdatingStatus(true);
     try {
@@ -810,6 +912,7 @@ export default function CalendarPage() {
   };
 
   const handleRunQuickAction = async () => {
+    if (!canUseAdminControls) return;
     if (quickActionType !== "block" && !selectedEvent) return;
     if (!quickActionStartAt || !quickActionEndAt) {
       toast.error("Vyberte čas od aj do.");
@@ -853,6 +956,7 @@ export default function CalendarPage() {
   };
 
   const handleDeleteBlock = async (eventOverride?: CalEvent | null) => {
+    if (!canUseAdminControls) return;
     const eventTarget = eventOverride ?? selectedEvent;
     if (!eventTarget || eventTarget.resource?.event_type !== "time_block") return;
     setQuickActionSaving(true);
@@ -875,14 +979,14 @@ export default function CalendarPage() {
   };
 
   const handleLongPressSlot = useCallback((slot: SlotInfo) => {
-    if (!isOwnerOrAdmin) return;
+    if (!canUseAdminControls) return;
     setActionMenuTarget({ type: "slot", slot });
-  }, [isOwnerOrAdmin]);
+  }, [canUseAdminControls]);
 
   const handleLongPressEvent = useCallback((event: BookingCalendarEvent) => {
-    if (!isOwnerOrAdmin) return;
+    if (!canUseAdminControls) return;
     setActionMenuTarget({ type: "event", event: hydrateSelectedEvent(event) });
-  }, [hydrateSelectedEvent, isOwnerOrAdmin]);
+  }, [canUseAdminControls, hydrateSelectedEvent]);
 
   const closeActionMenu = useCallback(() => {
     setActionMenuTarget(null);
@@ -896,152 +1000,160 @@ export default function CalendarPage() {
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <SidebarTrigger className="h-9 w-9 min-h-[44px] min-w-[44px] md:min-h-9 md:min-w-9 flex items-center justify-center shrink-0 border border-border bg-background hover:bg-accent" />
 
-            <Button
-              type="button"
-              variant="outline"
-              className="h-9 min-h-[44px] shrink-0 gap-2 bg-background/50 md:hidden"
-              onClick={() => setFiltersSheetOpen(true)}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              <span>Filtre{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}</span>
-            </Button>
+            {canUseAdminControls && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 min-h-[44px] shrink-0 gap-2 bg-background/50 md:hidden"
+                  onClick={() => setFiltersSheetOpen(true)}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  <span>Filtre{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}</span>
+                </Button>
 
-            <div className="hidden items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar flex-1 max-w-full md:flex">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-9 min-h-[44px] w-[140px] md:w-[160px] shrink-0 bg-background/50">
-                  <SelectValue placeholder="Všetky stavy" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((statusOption) => (
-                    <SelectItem key={statusOption.id} value={statusOption.id}>
-                      {statusOption.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <div className="hidden items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar flex-1 max-w-full md:flex">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9 min-h-[44px] w-[140px] md:w-[160px] shrink-0 bg-background/50">
+                      <SelectValue placeholder="Všetky stavy" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((statusOption) => (
+                        <SelectItem key={statusOption.id} value={statusOption.id}>
+                          {statusOption.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-              <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-                <SelectTrigger className="h-9 min-h-[44px] w-[140px] md:w-[160px] shrink-0 bg-background/50">
-                  <SelectValue placeholder="Všetci" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Všetci zamestnanci</SelectItem>
-                  {availableEmployees.map((employee: any) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.display_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+                    <SelectTrigger className="h-9 min-h-[44px] w-[140px] md:w-[160px] shrink-0 bg-background/50">
+                      <SelectValue placeholder="Všetci" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Všetci zamestnanci</SelectItem>
+                      {availableEmployees.map((employee: any) => (
+                        <SelectItem key={employee.id} value={employee.id}>
+                          {employee.display_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 min-h-[44px] min-w-[44px] shrink-0 bg-background/50"
-                onClick={() => {
-                  setStatusFilter("all");
-                  setEmployeeFilter("all");
-                }}
-                title="Resetovať filtre"
-              >
-                <FilterX className="h-4 w-4" />
-              </Button>
-            </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 min-h-[44px] min-w-[44px] shrink-0 bg-background/50"
+                    onClick={() => {
+                      setStatusFilter("all");
+                      setEmployeeFilter("all");
+                    }}
+                    title="Resetovať filtre"
+                  >
+                    <FilterX className="h-4 w-4" />
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
             {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground mr-1" />}
-            {compactActionMenu ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="outline" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px]" aria-label="Export a tlač">
-                    <MoreVertical className="h-4 w-4" />
+            {canUseAdminControls && (
+              compactActionMenu ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px]" aria-label="Export a tlač">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportCsv} disabled={exportRows.length === 0}>
+                      <Download className="mr-2 h-4 w-4" /> CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handlePrintDay} disabled={exportRows.length === 0}>
+                      <Printer className="mr-2 h-4 w-4" /> PDF / Tlač
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="outline" size="sm" className="h-8 md:h-9" onClick={handleExportCsv} disabled={exportRows.length === 0}>
+                    <Download className="md:mr-2 h-4 w-4" />
+                    <span className="hidden md:inline">CSV</span>
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleExportCsv} disabled={exportRows.length === 0}>
-                    <Download className="mr-2 h-4 w-4" /> CSV
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handlePrintDay} disabled={exportRows.length === 0}>
-                    <Printer className="mr-2 h-4 w-4" /> PDF / Tlač
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex items-center gap-1">
-                <Button type="button" variant="outline" size="sm" className="h-8 md:h-9" onClick={handleExportCsv} disabled={exportRows.length === 0}>
-                  <Download className="md:mr-2 h-4 w-4" />
-                  <span className="hidden md:inline">CSV</span>
-                </Button>
-                <Button type="button" variant="outline" size="sm" className="h-8 md:h-9" onClick={handlePrintDay} disabled={exportRows.length === 0}>
-                  <Printer className="md:mr-2 h-4 w-4" />
-                  <span className="hidden md:inline">Tlač</span>
-                </Button>
-              </div>
+                  <Button type="button" variant="outline" size="sm" className="h-8 md:h-9" onClick={handlePrintDay} disabled={exportRows.length === 0}>
+                    <Printer className="md:mr-2 h-4 w-4" />
+                    <span className="hidden md:inline">Tlač</span>
+                  </Button>
+                </div>
+              )
             )}
           </div>
         </div>
       </div>
 
-      <Sheet open={filtersSheetOpen} onOpenChange={setFiltersSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl border-border bg-background px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-5">
-          <SheetHeader className="text-left">
-            <SheetTitle>Filtre kalendára</SheetTitle>
-            <SheetDescription>Vyberte stav rezervácie alebo zamestnanca.</SheetDescription>
-          </SheetHeader>
-          <div className="mt-5 grid gap-4">
-            <div className="space-y-2">
-              <Label>Stav</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="min-h-[44px] w-full bg-background/50">
-                  <SelectValue placeholder="Všetky stavy" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((statusOption) => (
-                    <SelectItem key={statusOption.id} value={statusOption.id}>
-                      {statusOption.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      {canUseAdminControls && (
+        <Sheet open={filtersSheetOpen} onOpenChange={setFiltersSheetOpen}>
+          <SheetContent side="bottom" className="rounded-t-2xl border-border bg-background px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-5">
+            <SheetHeader className="text-left">
+              <SheetTitle>Filtre kalendára</SheetTitle>
+              <SheetDescription>Vyberte stav rezervácie alebo zamestnanca.</SheetDescription>
+            </SheetHeader>
+            <div className="mt-5 grid gap-4">
+              <div className="space-y-2">
+                <Label>Stav</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="min-h-[44px] w-full bg-background/50">
+                    <SelectValue placeholder="Všetky stavy" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((statusOption) => (
+                      <SelectItem key={statusOption.id} value={statusOption.id}>
+                        {statusOption.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label>Zamestnanec</Label>
-              <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-                <SelectTrigger className="min-h-[44px] w-full bg-background/50">
-                  <SelectValue placeholder="Všetci" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Všetci zamestnanci</SelectItem>
-                  {availableEmployees.map((employee: any) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.display_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label>Zamestnanec</Label>
+                <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+                  <SelectTrigger className="min-h-[44px] w-full bg-background/50">
+                    <SelectValue placeholder="Všetci" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Všetci zamestnanci</SelectItem>
+                    {availableEmployees.map((employee: any) => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.display_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setStatusFilter("all");
-                  setEmployeeFilter("all");
-                }}
-              >
-                Resetovať
-              </Button>
-              <Button type="button" onClick={() => setFiltersSheetOpen(false)}>
-                Hotovo
-              </Button>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setStatusFilter("all");
+                    setEmployeeFilter("all");
+                  }}
+                >
+                  Resetovať
+                </Button>
+                <Button type="button" onClick={() => setFiltersSheetOpen(false)}>
+                  Hotovo
+                </Button>
+              </div>
             </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+          </SheetContent>
+        </Sheet>
+      )}
 
       <div
         className="bg-card flex-1 rounded-xl border border-border p-1.5 pb-[calc(86px+env(safe-area-inset-bottom))] sm:p-4 md:pb-4 flex flex-col min-h-0 max-w-full overflow-hidden overflow-x-hidden calendar-page-shell"
@@ -1053,11 +1165,11 @@ export default function CalendarPage() {
           setDate={setDate}
           mode={view}
           setMode={setView}
-          onSelectSlot={handleSelectSlot}
+          onSelectSlot={canUseAdminControls ? handleSelectSlot : undefined}
           onSelectEvent={handleSelectEvent}
-          onLongPressSlot={handleLongPressSlot}
-          onLongPressEvent={handleLongPressEvent}
-          selectable={isOwnerOrAdmin}
+          onLongPressSlot={canUseAdminControls ? handleLongPressSlot : undefined}
+          onLongPressEvent={canUseAdminControls ? handleLongPressEvent : undefined}
+          selectable={canUseAdminControls}
           businessHours={{ hours: openingHours, overrides }}
           resources={visibleResources}
           headerActions={(
@@ -1071,23 +1183,27 @@ export default function CalendarPage() {
               >
                 Dnes
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="min-w-0 flex-1 sm:flex-none"
-                onClick={handleToolbarBlock}
-              >
-                Blokácia
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="min-w-0 flex-1 bg-gold text-gold-foreground hover:bg-gold/90 sm:flex-none"
-                onClick={handleToolbarCreateBooking}
-              >
-                Nová rezervácia
-              </Button>
+              {canUseAdminControls && (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="min-w-0 flex-1 sm:flex-none"
+                    onClick={handleToolbarBlock}
+                  >
+                    Blokácia
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="min-w-0 flex-1 bg-gold text-gold-foreground hover:bg-gold/90 sm:flex-none"
+                    onClick={handleToolbarCreateBooking}
+                  >
+                    Nová rezervácia
+                  </Button>
+                </>
+              )}
             </div>
           )}
         />
@@ -1327,26 +1443,28 @@ export default function CalendarPage() {
                   })()}
                 </div>
                 {/* REF row */}
-                <div className="mt-3 flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/25">Ref</span>
-                  <span className="font-mono text-[10px] text-white/40 truncate flex-1 min-w-0">{selectedEvent.id}</span>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try { await navigator.clipboard.writeText(selectedEvent.id); setCopyLabel("Skopírované"); } catch { setCopyLabel("Kópia zlyhala"); }
-                      scheduleCopyLabelReset();
-                    }}
-                    className="shrink-0 flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-white/35 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-colors"
-                  >
-                    <Copy className="w-2.5 h-2.5" /> {copyLabel}
-                  </button>
-                  <a
-                    href={`/dashboard/history?ref=${encodeURIComponent(selectedEvent.id)}`}
-                    className="shrink-0 flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-[#D4AF37]/60 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-colors"
-                  >
-                    <ExternalLink className="w-2.5 h-2.5" /> História
-                  </a>
-                </div>
+                {canUseAdminControls && (
+                  <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/25">Ref</span>
+                    <span className="font-mono text-[10px] text-white/40 truncate flex-1 min-w-0">{selectedEvent.id}</span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try { await navigator.clipboard.writeText(selectedEvent.id); setCopyLabel("Skopírované"); } catch { setCopyLabel("Kópia zlyhala"); }
+                        scheduleCopyLabelReset();
+                      }}
+                      className="shrink-0 flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-white/35 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-colors"
+                    >
+                      <Copy className="w-2.5 h-2.5" /> {copyLabel}
+                    </button>
+                    <a
+                      href={`/dashboard/history?ref=${encodeURIComponent(selectedEvent.id)}`}
+                      className="shrink-0 flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-[#D4AF37]/60 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-colors"
+                    >
+                      <ExternalLink className="w-2.5 h-2.5" /> História
+                    </a>
+                  </div>
+                )}
               </div>
 
               {/* ── Scrollable body ── */}
@@ -1361,20 +1479,24 @@ export default function CalendarPage() {
                       <span className="truncate">{selectedEvent.resource?.customer_name ?? selectedEvent.title}</span>
                     </div>
                   </div>
-                  <div>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/30 mb-1.5">Telefón</p>
-                    <div className="flex items-center gap-1.5 text-sm text-white">
-                      <Phone className="h-3.5 w-3.5 text-[#D4AF37] shrink-0" />
-                      <span>{selectedEvent.resource?.customer_phone ?? "—"}</span>
-                    </div>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/30 mb-1.5">E-mail</p>
-                    <div className="flex items-center gap-1.5 text-sm text-white">
-                      <Mail className="h-3.5 w-3.5 text-[#D4AF37] shrink-0" />
-                      <span className="break-all">{selectedEvent.resource?.customer_email ?? "—"}</span>
-                    </div>
-                  </div>
+                  {canViewContactDetails && (
+                    <>
+                      <div>
+                        <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/30 mb-1.5">Telefón</p>
+                        <div className="flex items-center gap-1.5 text-sm text-white">
+                          <Phone className="h-3.5 w-3.5 text-[#D4AF37] shrink-0" />
+                          <span>{selectedEvent.resource?.customer_phone ?? "—"}</span>
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/30 mb-1.5">E-mail</p>
+                        <div className="flex items-center gap-1.5 text-sm text-white">
+                          <Mail className="h-3.5 w-3.5 text-[#D4AF37] shrink-0" />
+                          <span className="break-all">{selectedEvent.resource?.customer_email ?? "—"}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                   <div className="col-span-2">
                     <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/30 mb-1.5">Termín</p>
                     <div className="flex items-center gap-1.5 text-sm text-white">
@@ -1396,7 +1518,7 @@ export default function CalendarPage() {
                 </div>
 
                 {/* Secondary icon actions */}
-                {isOwnerOrAdmin && (
+                {canUseAdminControls && (
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { action: "move",      Icon: MoveRight, label: "Presunúť"   },
@@ -1416,9 +1538,9 @@ export default function CalendarPage() {
                   </div>
                 )}
 
-                {isOwnerOrAdmin && selectedEvent.resource?.event_type === "time_block" && (
+                {canUseAdminControls && selectedEvent.resource?.event_type === "time_block" && (
                   <button
-                    onClick={handleDeleteBlock}
+                    onClick={() => handleDeleteBlock()}
                     disabled={quickActionSaving}
                     className="w-full flex items-center justify-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 py-2.5 text-sm font-semibold text-rose-400 hover:bg-rose-500/10 transition-all disabled:opacity-40"
                   >
@@ -1427,56 +1549,60 @@ export default function CalendarPage() {
                 )}
 
                 {/* History — compact scrollable */}
-                <div className="rounded-xl border border-[#C0C0C0]/18 bg-white/[0.02] p-4">
-                  <div className="flex items-center justify-between mb-2.5">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/30">História klienta</p>
-                    <a
-                      href={`/dashboard/history?ref=${encodeURIComponent(selectedEvent.id)}`}
-                      className="text-[9px] font-semibold text-[#D4AF37]/60 hover:text-[#D4AF37] flex items-center gap-1 transition-colors"
-                    >
-                      <ExternalLink className="w-3 h-3" /> Všetky
-                    </a>
-                  </div>
-                  {loadingHistory ? (
-                    <p className="text-xs text-white/25 py-1">Načítava sa…</p>
-                  ) : customerHistory.length === 0 ? (
-                    <p className="text-xs text-white/25 py-1">Žiadne záznamy</p>
-                  ) : (
-                    <div className="space-y-1 max-h-40 overflow-y-auto pr-0.5">
-                      {customerHistory.map((hi) => {
-                        const dot: Record<string, string> = {
-                          confirmed: "bg-emerald-400", completed: "bg-white/25",
-                          cancelled: "bg-red-400", pending: "bg-amber-400", no_show: "bg-orange-400",
-                        };
-                        return (
-                          <div key={hi.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5 transition-colors">
-                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot[hi.status] ?? "bg-white/20"}`} />
-                            <span className="flex-1 min-w-0 truncate text-xs text-white/65">{hi.service_name ?? "Služba"}</span>
-                            <span className="shrink-0 text-[10px] text-white/25">{hi.start_at ? fmtDate(new Date(hi.start_at), "d. M. yyyy") : "—"}</span>
-                          </div>
-                        );
-                      })}
+                {canUseAdminControls && (
+                  <div className="rounded-xl border border-[#C0C0C0]/18 bg-white/[0.02] p-4">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/30">História klienta</p>
+                      <a
+                        href={`/dashboard/history?ref=${encodeURIComponent(selectedEvent.id)}`}
+                        className="text-[9px] font-semibold text-[#D4AF37]/60 hover:text-[#D4AF37] flex items-center gap-1 transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Všetky
+                      </a>
                     </div>
-                  )}
-                  <p className="mt-2 text-[9px] text-white/20">{!loadingHistory && `${customerHistory.length} rezervácií`}</p>
-                </div>
+                    {loadingHistory ? (
+                      <p className="text-xs text-white/25 py-1">Načítava sa…</p>
+                    ) : customerHistory.length === 0 ? (
+                      <p className="text-xs text-white/25 py-1">Žiadne záznamy</p>
+                    ) : (
+                      <div className="space-y-1 max-h-40 overflow-y-auto pr-0.5">
+                        {customerHistory.map((hi) => {
+                          const dot: Record<string, string> = {
+                            confirmed: "bg-emerald-400", completed: "bg-white/25",
+                            cancelled: "bg-red-400", pending: "bg-amber-400", no_show: "bg-orange-400",
+                          };
+                          return (
+                            <div key={hi.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5 transition-colors">
+                              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot[hi.status] ?? "bg-white/20"}`} />
+                              <span className="flex-1 min-w-0 truncate text-xs text-white/65">{hi.service_name ?? "Služba"}</span>
+                              <span className="shrink-0 text-[10px] text-white/25">{hi.start_at ? fmtDate(new Date(hi.start_at), "d. M. yyyy") : "—"}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <p className="mt-2 text-[9px] text-white/20">{!loadingHistory && `${customerHistory.length} rezervácií`}</p>
+                  </div>
+                )}
 
                 {/* Notes */}
-                <div className="space-y-2">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/30">Poznámka</p>
-                  <textarea
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#D4AF37]/40 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.08)] transition-all resize-none"
-                    rows={3}
-                    value={noteText}
-                    onChange={(e) => setNoteText(e.target.value)}
-                    placeholder="Interná poznámka k rezervácii…"
-                  />
-                </div>
+                {canUseAdminControls && (
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-white/30">Poznámka</p>
+                    <textarea
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#D4AF37]/40 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.08)] transition-all resize-none"
+                      rows={3}
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      placeholder="Interná poznámka k rezervácii…"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* ── Footer ── */}
-              <div className="border-t border-[#C0C0C0]/12 px-5 py-4 space-y-2.5 shrink-0 bg-black">
-                {isOwnerOrAdmin && (
+              {canUseAdminControls && (
+                <div className="border-t border-[#C0C0C0]/12 px-5 py-4 space-y-2.5 shrink-0 bg-black">
                   <div className="grid gap-2 grid-cols-2">
                     {canAdminConfirmBooking(selectedEvent.status) && (
                       <button onClick={() => handleStatusChange("confirmed")} disabled={updatingStatus}
@@ -1503,16 +1629,16 @@ export default function CalendarPage() {
                       </button>
                     )}
                   </div>
-                )}
-                <button
-                  onClick={handleSaveNote}
-                  disabled={updatingStatus}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-[#D4AF37]/18 bg-[#D4AF37]/6 py-2.5 text-sm font-semibold text-[#D4AF37]/70 hover:bg-[#D4AF37]/12 hover:text-[#D4AF37] transition-all disabled:opacity-40"
-                >
-                  {updatingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Uložiť poznámku
-                </button>
-              </div>
+                  <button
+                    onClick={handleSaveNote}
+                    disabled={updatingStatus}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-[#D4AF37]/18 bg-[#D4AF37]/6 py-2.5 text-sm font-semibold text-[#D4AF37]/70 hover:bg-[#D4AF37]/12 hover:text-[#D4AF37] transition-all disabled:opacity-40"
+                  >
+                    {updatingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Uložiť poznámku
+                  </button>
+                </div>
+              )}
             </>
           )}
         </SheetContent>

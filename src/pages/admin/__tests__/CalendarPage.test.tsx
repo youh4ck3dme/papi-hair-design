@@ -278,6 +278,10 @@ function hasWhere(input: any, field: string): boolean {
   return (input?.constraints ?? []).some((c: any) => c?.type === "where" && c?.field === field);
 }
 
+function getWhereValue(input: any, field: string): unknown {
+  return (input?.constraints ?? []).find((c: any) => c?.type === "where" && c?.field === field)?.value;
+}
+
 function localDateIso(date: Date = new Date()): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -306,6 +310,7 @@ function seedInitialFirestore(options?: {
           customer_email: "jana@example.com",
           customer_phone: "+421900000111",
           customer_id: "cust-1",
+          employee_id: "emp-1",
           start_at: `${dayIso}T09:00:00.000Z`,
           end_at: `${dayIso}T09:30:00.000Z`,
           status: "pending",
@@ -323,10 +328,10 @@ function seedInitialFirestore(options?: {
   firestoreFixtures.customerHistory = [];
 }
 
-function renderCalendarPage() {
+function renderCalendarPage(props: { scope?: "admin" | "employee" } = {}) {
   return render(
     <SidebarProvider>
-      <CalendarPage />
+      <CalendarPage {...props} />
     </SidebarProvider>,
   );
 }
@@ -374,6 +379,21 @@ async function expectCreatedAppointmentRange(startAtIso: string, endAtIso: strin
       }),
     );
   });
+}
+
+function setEmployeeBusinessState(profileId = "profile-1") {
+  businessState.value = {
+    businessId: "biz-1",
+    isOwnerOrAdmin: false,
+    activeMembership: { profile_id: profileId },
+  };
+}
+
+function seedCrossEmployeeList() {
+  firestoreFixtures.employees = [
+    { id: "emp-1", display_name: "Marek", is_active: true, profile_id: "profile-1", color: "#123456" },
+    { id: "emp-2", display_name: "Nika", is_active: true, profile_id: "profile-2", color: "#999999" },
+  ];
 }
 
 describe("CalendarPage", () => {
@@ -483,17 +503,10 @@ describe("CalendarPage", () => {
   });
 
   it("keeps role-based employee visibility for non-admin users", async () => {
-    businessState.value = {
-      businessId: "biz-1",
-      isOwnerOrAdmin: false,
-      activeMembership: { profile_id: "profile-1" },
-    };
+    setEmployeeBusinessState();
 
     seedInitialFirestore({ withEvent: true, employeeProfileId: "profile-1", nonAdmin: true });
-    firestoreFixtures.employees = [
-      { id: "emp-1", display_name: "Marek", is_active: true, profile_id: "profile-1", color: "#123456" },
-      { id: "emp-2", display_name: "Nika", is_active: true, profile_id: "profile-2", color: "#999999" },
-    ];
+    seedCrossEmployeeList();
 
     renderCalendarPage();
 
@@ -628,31 +641,118 @@ describe("CalendarPage", () => {
   });
 
   it("disables selectability for non-admin user", async () => {
-    businessState.value = {
-      businessId: "biz-1",
-      isOwnerOrAdmin: false,
-      activeMembership: { profile_id: "profile-1" },
-    };
+    setEmployeeBusinessState();
     seedInitialFirestore({ employeeProfileId: "profile-1", nonAdmin: true });
 
     renderCalendarPage();
     expect(await screen.findByTestId("selectable-flag")).toHaveTextContent("false");
   });
 
-  it("keeps toolbar actions available for employee-scoped calendar", async () => {
-    businessState.value = {
-      businessId: "biz-1",
-      isOwnerOrAdmin: false,
-      activeMembership: { profile_id: "profile-1" },
-    };
+  it("hides admin toolbar actions for employee-scoped calendar", async () => {
+    setEmployeeBusinessState();
     seedInitialFirestore({ employeeProfileId: "profile-1", nonAdmin: true });
 
     renderCalendarPage();
 
     const actions = await screen.findByTestId("booking-calendar-actions");
     expect(within(actions).getByRole("button", { name: "Dnes" })).toBeInTheDocument();
-    expect(within(actions).getByRole("button", { name: "Blokácia" })).toBeInTheDocument();
-    expect(within(actions).getByRole("button", { name: "Nová rezervácia" })).toBeInTheDocument();
+    expect(within(actions).queryByRole("button", { name: "Blokácia" })).not.toBeInTheDocument();
+    expect(within(actions).queryByRole("button", { name: "Nová rezervácia" })).not.toBeInTheDocument();
+  });
+
+  it("loads employee scope with only the current employee resource and no admin data lists", async () => {
+    setEmployeeBusinessState();
+    seedInitialFirestore({ withEvent: true, employeeProfileId: "profile-1", nonAdmin: true });
+    seedCrossEmployeeList();
+
+    renderCalendarPage({ scope: "employee" });
+
+    await waitFor(() => {
+      expect(bookingCalendarSpy.props?.resources).toHaveLength(1);
+    });
+    expect(bookingCalendarSpy.props?.resources?.[0]?.id).toBe("emp-1");
+    expect(screen.getByTestId("selectable-flag")).toHaveTextContent("false");
+    expect(screen.queryByRole("button", { name: /CSV/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Tlač/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Filtre/i })).not.toBeInTheDocument();
+
+    const appointmentsCalls = firestoreMocks.getDocsMock.mock.calls.filter(
+      ([input]) => input?.__collection === "appointments" && !hasWhere(input, "customer_id"),
+    );
+    expect(appointmentsCalls.some(([input]) => getWhereValue(input, "employee_id") === "emp-1")).toBe(true);
+    expect(
+      firestoreMocks.getDocsMock.mock.calls.filter(
+        ([input]) => input?.__collection === "employees" && !hasWhere(input, "profile_id"),
+      ),
+    ).toHaveLength(0);
+    expect(firestoreMocks.getDocsMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ __collection: "services" }),
+    );
+    expect(firestoreMocks.getDocsMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ __collection: "memberships" }),
+    );
+  });
+
+  it("does not fall back to another employee when the current user has no linked employee", async () => {
+    setEmployeeBusinessState();
+    seedInitialFirestore({ withEvent: true, nonAdmin: true });
+    firestoreFixtures.employeeLookup = [];
+    firestoreFixtures.employees = [
+      { id: "emp-2", display_name: "Nika", is_active: true, profile_id: "profile-2", color: "#999999" },
+    ];
+
+    renderCalendarPage({ scope: "employee" });
+
+    await waitFor(() => {
+      expect(bookingCalendarSpy.props?.resources).toEqual([]);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("events-count")).toHaveTextContent("0");
+    });
+    expect(
+      firestoreMocks.getDocsMock.mock.calls.filter(
+        ([input]) => input?.__collection === "employees" && !hasWhere(input, "profile_id"),
+      ),
+    ).toHaveLength(0);
+    expect(
+      firestoreMocks.getDocsMock.mock.calls.filter(
+        ([input]) => input?.__collection === "appointments" && !hasWhere(input, "customer_id"),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("keeps employee detail read-only by default", async () => {
+    setEmployeeBusinessState();
+    seedInitialFirestore({ withEvent: true, employeeProfileId: "profile-1", nonAdmin: true });
+
+    renderCalendarPage({ scope: "employee" });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("events-count")).toHaveTextContent("1");
+    });
+
+    fireEvent.click(screen.getByText("open-slot"));
+    expect(screen.queryByRole("heading", { name: "Nová rezervácia" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("longpress-slot"));
+    expect(screen.queryByRole("heading", { name: "Udalosť" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("open-event"));
+    expect(await screen.findByRole("heading", { name: "Detail rezervácie" })).toBeInTheDocument();
+    expect(screen.queryByText("+421900000111")).not.toBeInTheDocument();
+    expect(screen.queryByText("jana@example.com")).not.toBeInTheDocument();
+    expect(screen.queryByText("História klienta")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Interná poznámka k rezervácii/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Potvrdiť/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Uložiť poznámku/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Presunúť/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("longpress-event"));
+    expect(screen.queryByRole("heading", { name: "Udalosť" })).not.toBeInTheDocument();
+    expect(adminUpdateBookingStatusMock).not.toHaveBeenCalled();
+    expect(adminCalendarQuickActionMock).not.toHaveBeenCalled();
+    expect(firestoreMocks.addDocMock).not.toHaveBeenCalled();
+    expect(firestoreMocks.updateDocMock).not.toHaveBeenCalled();
   });
 
   it("exports CSV for selected day when events exist", async () => {
