@@ -81,9 +81,30 @@ function Consumer() {
   );
 }
 
-describe("AuthProvider", () => {
-  let authStateCallback: ((user: any) => Promise<void> | void) | null = null;
+let authStateCallback: ((user: any) => Promise<void> | void) | null = null;
 
+const primaryAuthenticatedUser = {
+  uid: "user-1",
+  email: "papi@papihairdesign.sk",
+  isAnonymous: false,
+};
+
+function triggerAuthState(user: { uid: string; email: string | null; isAnonymous: boolean }) {
+  act(() => {
+    authStateCallback?.(user);
+  });
+}
+
+async function expectSettledPrimaryUser(profileName: string) {
+  await waitFor(() => {
+    expect(screen.getByTestId("loading")).toHaveTextContent("false");
+    expect(screen.getByTestId("memberships-loading")).toHaveTextContent("false");
+    expect(screen.getByTestId("user-email")).toHaveTextContent("papi@papihairdesign.sk");
+    expect(screen.getByTestId("profile-name")).toHaveTextContent(profileName);
+  });
+}
+
+describe("AuthProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authStateCallback = null;
@@ -140,21 +161,9 @@ describe("AuthProvider", () => {
 
     expect(authStateCallback).not.toBeNull();
 
-    await act(async () => {
-      await authStateCallback?.({
-        uid: "user-1",
-        email: "papi@papihairdesign.sk",
-        isAnonymous: false,
-      });
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId("loading")).toHaveTextContent("false");
-      expect(screen.getByTestId("memberships-loading")).toHaveTextContent("false");
-      expect(screen.getByTestId("user-email")).toHaveTextContent("papi@papihairdesign.sk");
-      expect(screen.getByTestId("profile-name")).toHaveTextContent("Papi Owner");
-      expect(screen.getByTestId("membership-roles")).toHaveTextContent("owner");
-    });
+    triggerAuthState(primaryAuthenticatedUser);
+    await expectSettledPrimaryUser("Papi Owner");
+    expect(screen.getByTestId("membership-roles")).toHaveTextContent("owner");
 
     expect(functionMocks.normalizeMemberships).toHaveBeenCalledWith({});
     expect(firestoreMocks.getDoc).toHaveBeenCalled();
@@ -198,20 +207,8 @@ describe("AuthProvider", () => {
       </AuthProvider>,
     );
 
-    await act(async () => {
-      await authStateCallback?.({
-        uid: "user-1",
-        email: "papi@papihairdesign.sk",
-        isAnonymous: false,
-      });
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId("loading")).toHaveTextContent("false");
-      expect(screen.getByTestId("memberships-loading")).toHaveTextContent("false");
-      expect(screen.getByTestId("user-email")).toHaveTextContent("papi@papihairdesign.sk");
-      expect(screen.getByTestId("profile-name")).toHaveTextContent("none");
-    });
+    triggerAuthState(primaryAuthenticatedUser);
+    await expectSettledPrimaryUser("none");
 
     expect(blockedMocks.warnBlockedByClientOnce).toHaveBeenCalled();
     expect(toastMocks.warning).toHaveBeenCalledWith("blocked");
@@ -226,13 +223,7 @@ describe("AuthProvider", () => {
       </AuthProvider>,
     );
 
-    await act(async () => {
-      await authStateCallback?.({
-        uid: "user-1",
-        email: "papi@papihairdesign.sk",
-        isAnonymous: false,
-      });
-    });
+    triggerAuthState(primaryAuthenticatedUser);
 
     await waitFor(() => {
       expect(screen.getByTestId("user-email")).toHaveTextContent("papi@papihairdesign.sk");
@@ -262,13 +253,7 @@ describe("AuthProvider", () => {
       </AuthProvider>,
     );
 
-    await act(async () => {
-      authStateCallback?.({
-        uid: "user-1",
-        email: "papi@papihairdesign.sk",
-        isAnonymous: false,
-      });
-    });
+    triggerAuthState(primaryAuthenticatedUser);
 
     expect(screen.getByTestId("loading")).toHaveTextContent("true");
     expect(screen.getByTestId("memberships-loading")).toHaveTextContent("true");

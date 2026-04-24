@@ -16,6 +16,20 @@ type MockAuthState = {
   membershipsLoading: boolean;
 };
 
+const settledAuthState = {
+  loading: false,
+  membershipsLoading: false,
+} as const;
+
+function makeAuthState(overrides: Partial<MockAuthState>): MockAuthState {
+  return {
+    user: null,
+    memberships: [],
+    ...settledAuthState,
+    ...overrides,
+  };
+}
+
 function setAuthState(state: MockAuthState) {
   mockedUseAuth.mockReturnValue(state);
 }
@@ -41,7 +55,7 @@ describe("ProtectedRoute", () => {
   });
 
   it("redirects unauthenticated users to /auth", () => {
-    setAuthState({ user: null, memberships: [], loading: false, membershipsLoading: false });
+    setAuthState(makeAuthState({}));
 
     renderWithRoutes(
       <ProtectedRoute>
@@ -55,12 +69,10 @@ describe("ProtectedRoute", () => {
   });
 
   it("renders children when allowed role is present", () => {
-    setAuthState({
+    setAuthState(makeAuthState({
       user: { id: "u1", email: "admin@test.local" },
       memberships: [{ role: "admin" }],
-      loading: false,
-      membershipsLoading: false,
-    });
+    }));
 
     renderWithRoutes(
       <ProtectedRoute allowedRoles={["owner", "admin"]}>
@@ -73,12 +85,10 @@ describe("ProtectedRoute", () => {
   });
 
   it("redirects employee away from admin-only protected route to /admin/my", () => {
-    setAuthState({
+    setAuthState(makeAuthState({
       user: { id: "u2", email: "employee@test.local" },
       memberships: [{ role: "employee" }],
-      loading: false,
-      membershipsLoading: false,
-    });
+    }));
 
     renderWithRoutes(
       <ProtectedRoute allowedRoles={["owner", "admin"]}>
@@ -92,12 +102,10 @@ describe("ProtectedRoute", () => {
   });
 
   it("redirects admin away from employee-only route to /admin", () => {
-    setAuthState({
+    setAuthState(makeAuthState({
       user: { id: "u3", email: "admin@test.local" },
       memberships: [{ role: "admin" }],
-      loading: false,
-      membershipsLoading: false,
-    });
+    }));
 
     renderWithRoutes(
       <ProtectedRoute allowedRoles={["employee"]}>
@@ -111,12 +119,10 @@ describe("ProtectedRoute", () => {
   });
 
   it("redirects customer away from admin-only route to /booking", () => {
-    setAuthState({
+    setAuthState(makeAuthState({
       user: { id: "u4", email: "customer@test.local" },
       memberships: [{ role: "customer" }],
-      loading: false,
-      membershipsLoading: false,
-    });
+    }));
 
     renderWithRoutes(
       <ProtectedRoute allowedRoles={["owner", "admin"]}>
@@ -129,16 +135,26 @@ describe("ProtectedRoute", () => {
     expect(screen.queryByText("SECRET")).not.toBeInTheDocument();
   });
 
-  it("redirects authenticated user without memberships away from protected admin route to /booking", () => {
-    setAuthState({
+  it.each([
+    {
+      name: "redirects authenticated user without memberships away from protected admin route to /booking",
       user: { id: "u5", email: "visitor@test.local" },
-      memberships: [],
-      loading: false,
-      membershipsLoading: false,
-    });
+      allowedRoles: ["owner", "admin"] as const,
+    },
+    {
+      name: "redirects user without employee membership away from employee routes to /booking",
+      user: { id: "u8", email: "mato@papihairdesign.sk" },
+      allowedRoles: ["employee"] as const,
+    },
+  ])("$name", ({ user, allowedRoles }) => {
+    setAuthState(
+      makeAuthState({
+        user,
+      })
+    );
 
     renderWithRoutes(
-      <ProtectedRoute allowedRoles={["owner", "admin"]}>
+      <ProtectedRoute allowedRoles={[...allowedRoles]}>
         <div>SECRET</div>
       </ProtectedRoute>,
       "/protected"
@@ -149,12 +165,10 @@ describe("ProtectedRoute", () => {
   });
 
   it("redirects allowlisted admin email to /bootstrap when membership is missing", () => {
-    setAuthState({
+    setAuthState(makeAuthState({
       user: { id: "u6", email: "papi@papihairdesign.sk" },
       memberships: [],
-      loading: false,
-      membershipsLoading: false,
-    });
+    }));
 
     renderWithRoutes(
       <ProtectedRoute allowedRoles={["owner", "admin"]}>
@@ -168,12 +182,10 @@ describe("ProtectedRoute", () => {
   });
 
   it("does not force /bootstrap for allowlisted employee with existing membership", () => {
-    setAuthState({
+    setAuthState(makeAuthState({
       user: { id: "u7", email: "mato@papihairdesign.sk" },
       memberships: [{ role: "employee" }],
-      loading: false,
-      membershipsLoading: false,
-    });
+    }));
 
     renderWithRoutes(
       <ProtectedRoute allowedRoles={["owner", "admin", "employee"]}>
@@ -186,32 +198,11 @@ describe("ProtectedRoute", () => {
     expect(screen.queryByText("BOOTSTRAP_PAGE")).not.toBeInTheDocument();
   });
 
-  it("redirects user without employee membership away from employee routes to /booking", () => {
-    setAuthState({
-      user: { id: "u8", email: "mato@papihairdesign.sk" },
-      memberships: [],
-      loading: false,
-      membershipsLoading: false,
-    });
-
-    renderWithRoutes(
-      <ProtectedRoute allowedRoles={["employee"]}>
-        <div>SECRET</div>
-      </ProtectedRoute>,
-      "/protected"
-    );
-
-    expect(screen.getByText("BOOKING_PAGE")).toBeInTheDocument();
-    expect(screen.queryByText("SECRET")).not.toBeInTheDocument();
-  });
-
   it("shows loading UI while memberships are still hydrating", () => {
-    setAuthState({
+    setAuthState(makeAuthState({
       user: { id: "u9", email: "owner@test.local" },
-      memberships: [],
-      loading: false,
       membershipsLoading: true,
-    });
+    }));
 
     renderWithRoutes(
       <ProtectedRoute allowedRoles={["owner", "admin"]}>
