@@ -36,6 +36,7 @@ interface AuthContextType {
   profile: Profile | null;
   memberships: Membership[];
   loading: boolean;
+  membershipsLoading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: (userId?: string) => Promise<void>;
 }
@@ -46,6 +47,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   memberships: [],
   loading: true,
+  membershipsLoading: true,
   signOut: async () => { },
   refreshProfile: async () => { },
 });
@@ -71,6 +73,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
+  const [membershipsLoading, setMembershipsLoading] = useState(true);
 
   const normalizeMemberships = useCallback(async () => {
     try {
@@ -130,34 +133,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentFbUser) => {
+      setLoading(true);
       setFbUser(currentFbUser);
+      const authUser = currentFbUser && !currentFbUser.isAnonymous ? currentFbUser : null;
+      const isAuthenticated = Boolean(authUser);
+      setMembershipsLoading(isAuthenticated);
 
-      if (currentFbUser && !currentFbUser.isAnonymous) {
-        setUser({
-          id: currentFbUser.uid,
-          email: currentFbUser.email ?? null
-        });
-        try {
-          await normalizeMemberships();
-        } catch (err) {
-          console.warn("AuthContext: normalizeMemberships failed, continuing with direct profile refresh:", err);
-        }
-        try {
-          await refreshProfile(currentFbUser.uid);
-        } catch (err) {
-          if (isIgnorableBlockedFirestoreError(err) || isBlockedByClientError(err)) {
-            warnBlockedByClientOnce((message) => toast.warning(message));
-            console.info("AuthContext: non-critical blocked auth refresh request", err);
-          } else {
-            console.error("AuthContext: Failed to refresh profile on auth change:", err);
+      try {
+        if (isAuthenticated) {
+          setUser({
+            id: authUser.uid,
+            email: authUser.email ?? null
+          });
+          try {
+            await normalizeMemberships();
+          } catch (err) {
+            console.warn("AuthContext: normalizeMemberships failed, continuing with direct profile refresh:", err);
           }
+          try {
+            await refreshProfile(authUser.uid);
+          } catch (err) {
+            if (isIgnorableBlockedFirestoreError(err) || isBlockedByClientError(err)) {
+              warnBlockedByClientOnce((message) => toast.warning(message));
+              console.info("AuthContext: non-critical blocked auth refresh request", err);
+            } else {
+              console.error("AuthContext: Failed to refresh profile on auth change:", err);
+            }
+          }
+        } else {
+          setUser(null);
+          setProfile(null);
+          setMemberships([]);
         }
-      } else {
-        setUser(null);
-        setProfile(null);
-        setMemberships([]);
+      } finally {
+        setMembershipsLoading(false);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -176,7 +187,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, fbUser, profile, memberships, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, fbUser, profile, memberships, loading, membershipsLoading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

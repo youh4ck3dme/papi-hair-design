@@ -13,6 +13,7 @@ type MockAuthState = {
   user: { id: string; email?: string | null } | null;
   memberships: Array<{ role: "owner" | "admin" | "employee" | "customer" }>;
   loading: boolean;
+  membershipsLoading: boolean;
 };
 
 function setAuthState(state: MockAuthState) {
@@ -40,7 +41,7 @@ describe("ProtectedRoute", () => {
   });
 
   it("redirects unauthenticated users to /auth", () => {
-    setAuthState({ user: null, memberships: [], loading: false });
+    setAuthState({ user: null, memberships: [], loading: false, membershipsLoading: false });
 
     renderWithRoutes(
       <ProtectedRoute>
@@ -58,6 +59,7 @@ describe("ProtectedRoute", () => {
       user: { id: "u1", email: "admin@test.local" },
       memberships: [{ role: "admin" }],
       loading: false,
+      membershipsLoading: false,
     });
 
     renderWithRoutes(
@@ -75,6 +77,7 @@ describe("ProtectedRoute", () => {
       user: { id: "u2", email: "employee@test.local" },
       memberships: [{ role: "employee" }],
       loading: false,
+      membershipsLoading: false,
     });
 
     renderWithRoutes(
@@ -93,6 +96,7 @@ describe("ProtectedRoute", () => {
       user: { id: "u3", email: "admin@test.local" },
       memberships: [{ role: "admin" }],
       loading: false,
+      membershipsLoading: false,
     });
 
     renderWithRoutes(
@@ -111,6 +115,7 @@ describe("ProtectedRoute", () => {
       user: { id: "u4", email: "customer@test.local" },
       memberships: [{ role: "customer" }],
       loading: false,
+      membershipsLoading: false,
     });
 
     renderWithRoutes(
@@ -129,6 +134,7 @@ describe("ProtectedRoute", () => {
       user: { id: "u5", email: "visitor@test.local" },
       memberships: [],
       loading: false,
+      membershipsLoading: false,
     });
 
     renderWithRoutes(
@@ -147,6 +153,7 @@ describe("ProtectedRoute", () => {
       user: { id: "u6", email: "papi@papihairdesign.sk" },
       memberships: [],
       loading: false,
+      membershipsLoading: false,
     });
 
     renderWithRoutes(
@@ -165,6 +172,7 @@ describe("ProtectedRoute", () => {
       user: { id: "u7", email: "mato@papihairdesign.sk" },
       memberships: [{ role: "employee" }],
       loading: false,
+      membershipsLoading: false,
     });
 
     renderWithRoutes(
@@ -183,6 +191,7 @@ describe("ProtectedRoute", () => {
       user: { id: "u8", email: "mato@papihairdesign.sk" },
       memberships: [],
       loading: false,
+      membershipsLoading: false,
     });
 
     renderWithRoutes(
@@ -193,6 +202,26 @@ describe("ProtectedRoute", () => {
     );
 
     expect(screen.getByText("BOOKING_PAGE")).toBeInTheDocument();
+    expect(screen.queryByText("SECRET")).not.toBeInTheDocument();
+  });
+
+  it("shows loading UI while memberships are still hydrating", () => {
+    setAuthState({
+      user: { id: "u9", email: "owner@test.local" },
+      memberships: [],
+      loading: false,
+      membershipsLoading: true,
+    });
+
+    renderWithRoutes(
+      <ProtectedRoute allowedRoles={["owner", "admin"]}>
+        <div>SECRET</div>
+      </ProtectedRoute>,
+      "/protected"
+    );
+
+    expect(document.querySelector("svg.animate-spin")).toBeInTheDocument();
+    expect(screen.queryByText("BOOKING_PAGE")).not.toBeInTheDocument();
     expect(screen.queryByText("SECRET")).not.toBeInTheDocument();
   });
 });

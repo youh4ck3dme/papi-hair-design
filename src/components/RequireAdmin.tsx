@@ -19,10 +19,10 @@ function AdminRouteLoader() {
 }
 
 export default function RequireAdmin({ children }: { children: ReactNode }) {
-  const { user, memberships, loading } = useAuth();
+  const { user, memberships, loading, membershipsLoading } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  if (loading || membershipsLoading) {
     return <AdminRouteLoader />;
   }
 

@@ -67,11 +67,12 @@ vi.mock("@/lib/firebaseClientErrors", () => ({
 }));
 
 function Consumer() {
-  const { user, profile, memberships, loading, signOut } = useAuth();
+  const { user, profile, memberships, loading, membershipsLoading, signOut } = useAuth();
 
   return (
     <div>
       <div data-testid="loading">{String(loading)}</div>
+      <div data-testid="memberships-loading">{String(membershipsLoading)}</div>
       <div data-testid="user-email">{user?.email ?? "none"}</div>
       <div data-testid="profile-name">{profile?.full_name ?? "none"}</div>
       <div data-testid="membership-roles">{memberships.map((membership) => membership.role).join(",") || "none"}</div>
@@ -149,6 +150,7 @@ describe("AuthProvider", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("loading")).toHaveTextContent("false");
+      expect(screen.getByTestId("memberships-loading")).toHaveTextContent("false");
       expect(screen.getByTestId("user-email")).toHaveTextContent("papi@papihairdesign.sk");
       expect(screen.getByTestId("profile-name")).toHaveTextContent("Papi Owner");
       expect(screen.getByTestId("membership-roles")).toHaveTextContent("owner");
@@ -176,6 +178,7 @@ describe("AuthProvider", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("loading")).toHaveTextContent("false");
+      expect(screen.getByTestId("memberships-loading")).toHaveTextContent("false");
       expect(screen.getByTestId("user-email")).toHaveTextContent("none");
       expect(screen.getByTestId("profile-name")).toHaveTextContent("none");
       expect(screen.getByTestId("membership-roles")).toHaveTextContent("none");
@@ -205,6 +208,7 @@ describe("AuthProvider", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("loading")).toHaveTextContent("false");
+      expect(screen.getByTestId("memberships-loading")).toHaveTextContent("false");
       expect(screen.getByTestId("user-email")).toHaveTextContent("papi@papihairdesign.sk");
       expect(screen.getByTestId("profile-name")).toHaveTextContent("none");
     });
@@ -243,5 +247,53 @@ describe("AuthProvider", () => {
     });
 
     expect(authMocks.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps loading active until memberships query settles after login", async () => {
+    let resolveMembershipQuery: ((value: unknown) => void) | null = null;
+    const membershipQueryPromise = new Promise((resolve) => {
+      resolveMembershipQuery = resolve;
+    });
+    firestoreMocks.getDocs.mockReturnValueOnce(membershipQueryPromise);
+
+    render(
+      <AuthProvider>
+        <Consumer />
+      </AuthProvider>,
+    );
+
+    await act(async () => {
+      authStateCallback?.({
+        uid: "user-1",
+        email: "papi@papihairdesign.sk",
+        isAnonymous: false,
+      });
+    });
+
+    expect(screen.getByTestId("loading")).toHaveTextContent("true");
+    expect(screen.getByTestId("memberships-loading")).toHaveTextContent("true");
+    expect(screen.getByTestId("user-email")).toHaveTextContent("papi@papihairdesign.sk");
+    expect(screen.getByTestId("membership-roles")).toHaveTextContent("none");
+
+    await act(async () => {
+      resolveMembershipQuery?.({
+        docs: [
+          {
+            id: "membership-1",
+            data: () => ({
+              business_id: "biz-1",
+              profile_id: "user-1",
+              role: "owner",
+            }),
+          },
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading")).toHaveTextContent("false");
+      expect(screen.getByTestId("memberships-loading")).toHaveTextContent("false");
+      expect(screen.getByTestId("membership-roles")).toHaveTextContent("owner");
+    });
   });
 });
