@@ -65,6 +65,22 @@ const baseBusiness = {
 const memberships: MembershipRow[] = [];
 const serviceSubcategories: ServiceSubcategoryRow[] = [];
 
+type BookingFormHookResult = ReturnType<typeof useBookingForm>;
+
+async function selectServiceAndExpectEmployees(
+  result: { current: BookingFormHookResult },
+  serviceId: string,
+  employeeNames: string[]
+) {
+  act(() => {
+    result.current.setSelectedServiceId(serviceId);
+  });
+
+  await waitFor(() => {
+    expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual(employeeNames);
+  });
+}
+
 describe("useBookingForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -286,13 +302,7 @@ describe("useBookingForm", () => {
       useBookingForm(services, serviceSubcategories, employees, baseBusiness, employeeServiceMap, memberships)
     );
 
-    act(() => {
-      result.current.setSelectedServiceId("svc-color");
-    });
-
-    await waitFor(() => {
-      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual(["Papi"]);
-    });
+    await selectServiceAndExpectEmployees(result, "svc-color", ["Papi"]);
   });
 
   it("keeps Mato available only for explicitly assigned services", async () => {
@@ -312,21 +322,8 @@ describe("useBookingForm", () => {
       useBookingForm(services, serviceSubcategories, employees, baseBusiness, employeeServiceMap, memberships)
     );
 
-    act(() => {
-      result.current.setSelectedServiceId("svc-cut");
-    });
-
-    await waitFor(() => {
-      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual(["Papi", "Mato"]);
-    });
-
-    act(() => {
-      result.current.setSelectedServiceId("svc-beard");
-    });
-
-    await waitFor(() => {
-      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual(["Papi"]);
-    });
+    await selectServiceAndExpectEmployees(result, "svc-cut", ["Papi", "Mato"]);
+    await selectServiceAndExpectEmployees(result, "svc-beard", ["Papi"]);
   });
 
   it("hides Miska completely in restricted mode when she has no assigned services", async () => {
@@ -340,13 +337,7 @@ describe("useBookingForm", () => {
       useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
     );
 
-    act(() => {
-      result.current.setSelectedServiceId("svc-cut");
-    });
-
-    await waitFor(() => {
-      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual(["Papi"]);
-    });
+    await selectServiceAndExpectEmployees(result, "svc-cut", ["Papi"]);
   });
 
   it("auto-selects the only available managed subcategory and filters services by it", async () => {
@@ -389,16 +380,6 @@ describe("useBookingForm", () => {
       useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
     );
 
-    act(() => {
-      result.current.setSelectedServiceId("svc-cut");
-    });
-
-    await waitFor(() => {
-      expect(result.current.filteredEmployees.map((employee) => employee.display_name)).toEqual([
-        "Papi",
-        "Mato",
-        "Miska",
-      ]);
-    });
+    await selectServiceAndExpectEmployees(result, "svc-cut", ["Papi", "Mato", "Miska"]);
   });
 });

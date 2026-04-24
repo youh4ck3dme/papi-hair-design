@@ -315,6 +315,40 @@ function renderCalendarPage() {
     </SidebarProvider>,
   );
 }
+
+async function withMockedMatchMedia(
+  matches: (query: string) => boolean,
+  run: () => Promise<void>
+) {
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: matches(query),
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })) as unknown as typeof window.matchMedia;
+
+  try {
+    await run();
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+}
+
+async function clickPrintToolbarButton(container: HTMLElement) {
+  await waitFor(() => {
+    expect(screen.getByTestId("events-count")).toHaveTextContent("1");
+  });
+  const printIcon = container.querySelector("svg.lucide-printer");
+  const printButton = printIcon?.closest("button");
+  expect(printButton).toBeTruthy();
+  fireEvent.click(printButton!);
+}
+
 describe("CalendarPage", () => {
   beforeEach(() => {
     bookingCalendarSpy.props = null;
@@ -488,43 +522,22 @@ describe("CalendarPage", () => {
   });
 
   it("defaults to day view on mobile widths", async () => {
-    const originalMatchMedia = window.matchMedia;
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query === "(max-width: 767px)",
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })) as unknown as typeof window.matchMedia;
-
-    try {
+    await withMockedMatchMedia(
+      (query) => query === "(max-width: 767px)",
+      async () => {
       seedInitialFirestore({ withEvent: true });
       renderCalendarPage();
 
       await screen.findByTestId("booking-calendar-mock");
       expect(bookingCalendarSpy.props?.mode).toBe("day");
-    } finally {
-      window.matchMedia = originalMatchMedia;
-    }
+      }
+    );
   });
 
   it("clicking Dnes jumps calendar to current day view", async () => {
-    const originalMatchMedia = window.matchMedia;
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query === "(max-width: 1024px)" ? false : false,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })) as unknown as typeof window.matchMedia;
-
-    try {
+    await withMockedMatchMedia(
+      () => false,
+      async () => {
       seedInitialFirestore({ withEvent: true });
       renderCalendarPage();
 
@@ -534,9 +547,8 @@ describe("CalendarPage", () => {
         expect(bookingCalendarSpy.props?.mode).toBe("day");
       });
       expect(bookingCalendarSpy.props?.date).toBeInstanceOf(Date);
-    } finally {
-      window.matchMedia = originalMatchMedia;
-    }
+      }
+    );
   });
 
   it("opens block dialog from toolbar action", async () => {
@@ -640,13 +652,7 @@ describe("CalendarPage", () => {
     seedInitialFirestore({ withEvent: true });
 
     const { container } = renderCalendarPage();
-    await waitFor(() => {
-      expect(screen.getByTestId("events-count")).toHaveTextContent("1");
-    });
-    const printIcon = container.querySelector("svg.lucide-printer");
-    const printButton = printIcon?.closest("button");
-    expect(printButton).toBeTruthy();
-    fireEvent.click(printButton!);
+    await clickPrintToolbarButton(container);
 
     expect(printHtmlDocumentMock).toHaveBeenCalledTimes(1);
     expect(String(printHtmlDocumentMock.mock.calls[0][0])).toContain("PAPI HAIR DESIGN - Denný prehľad");
@@ -797,13 +803,7 @@ describe("CalendarPage", () => {
     printHtmlDocumentMock.mockReturnValue(false);
 
     const { container } = renderCalendarPage();
-    await waitFor(() => {
-      expect(screen.getByTestId("events-count")).toHaveTextContent("1");
-    });
-    const printIcon = container.querySelector("svg.lucide-printer");
-    const printButton = printIcon?.closest("button");
-    expect(printButton).toBeTruthy();
-    fireEvent.click(printButton!);
+    await clickPrintToolbarButton(container);
 
     expect(printHtmlDocumentMock).toHaveBeenCalledTimes(1);
     expect(toastMocks.error).toHaveBeenCalledWith("Nepodarilo sa pripraviť tlač");
