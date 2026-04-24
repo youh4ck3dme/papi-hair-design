@@ -21,6 +21,8 @@
   "auth": {
     "loginTitle": "Sign In",
     "loginDesc": "Sign in to your account",
+    "adminLoginTitle": "Salon Admin Sign In",
+    "adminLoginDesc": "Sign in as an owner or admin to access the calendar.",
     "loginBtn": "Sign In",
     "registerTitle": "Register",
     "registerDesc": "Create a new account",

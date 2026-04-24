@@ -487,6 +487,30 @@ describe("CalendarPage", () => {
     expect(labels).toEqual(["Dnes", "Blokácia", "Nová rezervácia"]);
   });
 
+  it("defaults to day view on mobile widths", async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(max-width: 767px)",
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+
+    try {
+      seedInitialFirestore({ withEvent: true });
+      renderCalendarPage();
+
+      await screen.findByTestId("booking-calendar-mock");
+      expect(bookingCalendarSpy.props?.mode).toBe("day");
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it("clicking Dnes jumps calendar to current day view", async () => {
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -925,4 +949,3 @@ describe("CalendarPage", () => {
     });
   });
 });
-

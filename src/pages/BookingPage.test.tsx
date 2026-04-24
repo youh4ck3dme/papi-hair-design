@@ -97,6 +97,13 @@ const availabilityState = vi.hoisted(() => ({
     timeGroups: { dopoludnia: [], popoludni: [] },
   },
 }));
+const authState = vi.hoisted(() => ({
+  value: {
+    user: null as { id: string } | null,
+    memberships: [] as Array<{ business_id: string; role: "owner" | "admin" | "employee" | "customer" }>,
+    loading: false,
+  },
+}));
 
 vi.mock("next-themes", () => ({
   useTheme: () => ({ theme: "light", setTheme: vi.fn() }),
@@ -112,6 +119,10 @@ vi.mock("@/hooks/useBookingForm", () => ({
 
 vi.mock("@/hooks/useAvailability", () => ({
   useAvailability: () => availabilityState.value,
+}));
+
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => authState.value,
 }));
 
 vi.mock("@/components/booking/BookingHeader", () => ({
@@ -151,7 +162,9 @@ describe("BookingPage stylist step flow", () => {
     bookingDataState.value = {
       ...bookingDataState.value,
       initialLoading: false,
+      business: { id: "biz-1", name: "PHD" },
     };
+    authState.value = { user: null, memberships: [], loading: false };
   });
 
   it("never skips stylist step and does not render date/time before stylist selection", () => {
@@ -225,5 +238,17 @@ describe("BookingPage stylist step flow", () => {
     const menPill = screen.getByText(/Pánske služby/i);
     expect(menPill.parentElement?.className).toContain("hidden");
     expect(menPill.parentElement?.className).toContain("sm:flex");
+  });
+
+  it("shows a direct admin calendar entry only for owner/admin membership in the booking tenant", () => {
+    authState.value = {
+      user: { id: "owner-1" },
+      memberships: [{ business_id: "biz-1", role: "admin" }],
+      loading: false,
+    };
+
+    render(<BookingPage />);
+
+    expect(screen.getByRole("link", { name: /Otvoriť kalendár prevádzky/i })).toHaveAttribute("href", "/admin/calendar");
   });
 });

@@ -18,12 +18,12 @@ export function useBusiness() {
   const activeMembership = useMemo(() => {
     if (!memberships.length) return null;
     return [...memberships].sort((a, b) => {
-      const byRole = roleRank(a.role) - roleRank(b.role);
-      if (byRole !== 0) return byRole;
-
       const preferredA = a.business_id === PRIMARY_BUSINESS_ID ? 0 : 1;
       const preferredB = b.business_id === PRIMARY_BUSINESS_ID ? 0 : 1;
       if (preferredA !== preferredB) return preferredA - preferredB;
+
+      const byRole = roleRank(a.role) - roleRank(b.role);
+      if (byRole !== 0) return byRole;
 
       return a.business_id.localeCompare(b.business_id);
     })[0];

@@ -21,6 +21,8 @@
   "auth": {
     "loginTitle": "Prihlásenie",
     "loginDesc": "Prihláste sa do svojho účtu",
+    "adminLoginTitle": "Prihlásenie prevádzky",
+    "adminLoginDesc": "Prihláste sa ako majiteľ alebo administrátor pre prístup ku kalendáru.",
     "loginBtn": "Prihlásiť sa",
     "registerTitle": "Registrácia",
     "registerDesc": "Vytvorte si nový účet",

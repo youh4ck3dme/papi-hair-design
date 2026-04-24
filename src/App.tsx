@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 
 const AuthShell = lazy(() => import("@/components/auth/AuthShell"));
 const ProtectedRoute = lazy(() => import("@/components/ProtectedRoute"));
+const RequireAdmin = lazy(() => import("@/components/RequireAdmin"));
 const AdminLayout = lazy(() => import("@/components/AdminLayout").then((m) => ({ default: m.AdminLayout })));
 const PublicChromeLayout = lazy(() => import("@/components/public/PublicChromeLayout").then((m) => ({ default: m.PublicChromeLayout })));
 const CookieConsent = lazy(() => import("@/components/CookieConsent"));
@@ -22,7 +23,6 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const OfflinePage = lazy(() => import("./pages/OfflinePage"));
 const InstallPage = lazy(() => import("./pages/InstallPage"));
 const AuthPage = lazy(() => import("./pages/Auth"));
-const DashboardPage = lazy(() => import("./pages/admin/DashboardPage"));
 const CalendarPage = lazy(() => import("./pages/admin/CalendarPage"));
 const AppointmentsPage = lazy(() => import("./pages/admin/AppointmentsPage"));
 const EmployeesPage = lazy(() => import("./pages/admin/EmployeesPage"));
@@ -137,6 +137,7 @@ const App = () => {
                   <Route path="/pricing" element={<PricingPage />} />
                   <Route path="/my-account" element={<MyAccountPage />} />
                   <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/admin/login" element={<AuthPage adminMode />} />
                   <Route
                     path="/bootstrap"
                     element={bootstrapEnabled ? <BootstrapPage /> : <Navigate to="/auth" replace />}
@@ -155,19 +156,19 @@ const App = () => {
 
                 <Route
                   path="/admin"
-                  element={
-                    <ProtectedRoute allowedRoles={["owner", "admin"]}>
-                      <AdminLayout><DashboardPage /></AdminLayout>
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/admin/calendar" replace />}
+                />
+                <Route
+                  path="/calendar"
+                  element={<Navigate to="/admin/calendar" replace />}
                 />
 
                 <Route
                   path="/admin/calendar"
                   element={
-                    <ProtectedRoute allowedRoles={["owner", "admin"]}>
+                    <RequireAdmin>
                       <AdminLayout><CalendarPage /></AdminLayout>
-                    </ProtectedRoute>
+                    </RequireAdmin>
                   }
                 />
                 <Route

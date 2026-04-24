@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Phone } from "lucide-react";
+import { BriefcaseBusiness, Phone } from "lucide-react";
 import { enGB, sk } from "date-fns/locale";
 import { addDays, format, startOfDay } from "date-fns";
 
@@ -16,6 +16,8 @@ import { PremiumLoadingState } from "@/components/ui/premium-loading-state";
 import { getEffectiveIntervals, type BusinessHours } from "@/lib/availability";
 import { APP_BRAND_NAME, APP_CONTACT_PHONE, APP_CONTACT_PHONE_DISPLAY } from "@/lib/brandConfig";
 import { APP_LOGO_SRC } from "@/lib/branding";
+import { useAuth } from "@/contexts/AuthContext";
+import { ADMIN_CALENDAR_PATH, hasOwnerAdminMembershipForBusiness } from "@/lib/adminRouteSecurity";
 
 import { useBookingData } from "@/hooks/useBookingData";
 import { useAvailability } from "@/hooks/useAvailability";
@@ -23,6 +25,7 @@ import { useBookingForm } from "@/hooks/useBookingForm";
 
 export default function BookingPage() {
   const { i18n } = useTranslation();
+  const { user, memberships: authMemberships, loading: authLoading } = useAuth();
   const currentLang = i18n.language;
   const dateLocale = currentLang === "en" ? enGB : sk;
 
@@ -199,6 +202,11 @@ export default function BookingPage() {
       return nowMinutes >= intervalStart && nowMinutes < intervalEnd;
     });
   }, [business, businessHourEntries, dateOverrides]);
+  const canOpenAdminCalendar =
+    Boolean(user) &&
+    !authLoading &&
+    Boolean(business?.id) &&
+    hasOwnerAdminMembershipForBusiness(authMemberships, business?.id);
 
   if (initialLoading) {
     return (
@@ -312,6 +320,15 @@ export default function BookingPage() {
                     </div>
                   </div>
                 </div>
+                {canOpenAdminCalendar && (
+                  <a
+                    href={ADMIN_CALENDAR_PATH}
+                    className="mx-auto mt-4 inline-flex min-h-[42px] items-center gap-2 rounded-[7px] border border-gold/35 bg-black/24 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-gold transition-colors hover:border-gold/60 hover:bg-gold/[0.10]"
+                  >
+                    <BriefcaseBusiness className="h-4 w-4" strokeWidth={1.8} />
+                    <span>{currentLang === "en" ? "Open salon calendar" : "Otvoriť kalendár prevádzky"}</span>
+                  </a>
+                )}
                 <div className="mt-5 hidden flex-wrap justify-center gap-2.5 sm:flex">
                   {[
                     currentLang === "en" ? "Men's services" : "Pánske služby",

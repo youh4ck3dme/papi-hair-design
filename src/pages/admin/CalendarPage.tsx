@@ -39,7 +39,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { toast } from "sonner";
-import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer, MoreVertical, FilterX, MoveRight, CopyPlus, Lock, Trash2, CalendarPlus } from "lucide-react";
+import { Loader2, User, Clock, Phone, Mail, X, Check, Copy, ExternalLink, Download, Printer, MoreVertical, FilterX, MoveRight, CopyPlus, Lock, Trash2, CalendarPlus, SlidersHorizontal } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
 import { adminUpdateBookingStatus } from "@/integrations/firebase/adminUpdateBookingStatus";
 import { adminCalendarQuickAction } from "@/integrations/firebase/adminCalendarQuickAction";
@@ -84,6 +84,13 @@ type CalendarActionMenuTarget =
 const TOOLBAR_ACTION_START_HOUR = 8;
 const TOOLBAR_ACTION_DURATION_MINUTES = 30;
 
+function resolveInitialCalendarView(): BookingCalendarMode {
+  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+    return window.matchMedia("(max-width: 767px)").matches ? "day" : "week";
+  }
+  return "week";
+}
+
 export default function CalendarPage() {
   const { businessId, isOwnerOrAdmin, activeMembership } = useBusiness();
   const { info: businessInfo, loading: infoLoading } = useBusinessInfo(businessId);
@@ -92,7 +99,7 @@ export default function CalendarPage() {
   const overrides = businessInfo?.overrides;
 
   const [events, setEvents] = useState<CalEvent[]>([]);
-  const [view, setView] = useState<BookingCalendarMode>("week");
+  const [view, setView] = useState<BookingCalendarMode>(() => resolveInitialCalendarView());
   const [date, setDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<any[]>([]);
@@ -118,6 +125,7 @@ export default function CalendarPage() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [employeeFilter, setEmployeeFilter] = useState<string>("all");
+  const [filtersSheetOpen, setFiltersSheetOpen] = useState(false);
   const [compactActionMenu, setCompactActionMenu] = useState(false);
   const [quickActionOpen, setQuickActionOpen] = useState(false);
   const [quickActionType, setQuickActionType] = useState<"move" | "duplicate" | "block">("move");
@@ -382,6 +390,8 @@ export default function CalendarPage() {
       return true;
     });
   }, [employeeFilter, events, statusFilter]);
+
+  const activeFilterCount = (statusFilter !== "all" ? 1 : 0) + (employeeFilter !== "all" ? 1 : 0);
 
   const statusOptions = [
     { id: "all", label: "Všetky stavy" },
@@ -880,13 +890,23 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="space-y-1 md:space-y-2 h-full max-w-full overflow-x-hidden calendar-page-root">
-      <div className="rounded-xl border border-border bg-card/40 p-1 md:p-2 flex flex-col gap-1.5 md:gap-2">
+    <div className="flex h-full min-h-0 max-w-full flex-col gap-1 overflow-hidden overflow-x-hidden calendar-page-root">
+      <div className="shrink-0 rounded-xl border border-border bg-card/40 p-1 md:p-2 flex flex-col gap-1.5 md:gap-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <SidebarTrigger className="h-9 w-9 min-h-[44px] min-w-[44px] md:min-h-9 md:min-w-9 flex items-center justify-center shrink-0 border border-border bg-background hover:bg-accent" />
-            
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar flex-1 max-w-full">
+
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 min-h-[44px] shrink-0 gap-2 bg-background/50 md:hidden"
+              onClick={() => setFiltersSheetOpen(true)}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              <span>Filtre{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}</span>
+            </Button>
+
+            <div className="hidden items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar flex-1 max-w-full md:flex">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-9 min-h-[44px] w-[140px] md:w-[160px] shrink-0 bg-background/50">
                   <SelectValue placeholder="Všetky stavy" />
@@ -964,8 +984,67 @@ export default function CalendarPage() {
         </div>
       </div>
 
+      <Sheet open={filtersSheetOpen} onOpenChange={setFiltersSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl border-border bg-background px-4 pb-[calc(16px+env(safe-area-inset-bottom))] pt-5">
+          <SheetHeader className="text-left">
+            <SheetTitle>Filtre kalendára</SheetTitle>
+            <SheetDescription>Vyberte stav rezervácie alebo zamestnanca.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-5 grid gap-4">
+            <div className="space-y-2">
+              <Label>Stav</Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="min-h-[44px] w-full bg-background/50">
+                  <SelectValue placeholder="Všetky stavy" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((statusOption) => (
+                    <SelectItem key={statusOption.id} value={statusOption.id}>
+                      {statusOption.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Zamestnanec</Label>
+              <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+                <SelectTrigger className="min-h-[44px] w-full bg-background/50">
+                  <SelectValue placeholder="Všetci" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Všetci zamestnanci</SelectItem>
+                  {availableEmployees.map((employee: any) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setEmployeeFilter("all");
+                }}
+              >
+                Resetovať
+              </Button>
+              <Button type="button" onClick={() => setFiltersSheetOpen(false)}>
+                Hotovo
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <div
-        className="bg-card rounded-xl border border-border p-1.5 sm:p-4 pb-24 md:pb-4 flex flex-col min-h-0 max-w-full overflow-x-hidden calendar-page-shell"
+        className="bg-card flex-1 rounded-xl border border-border p-1.5 pb-[calc(86px+env(safe-area-inset-bottom))] sm:p-4 md:pb-4 flex flex-col min-h-0 max-w-full overflow-hidden overflow-x-hidden calendar-page-shell"
         style={{ ["--calendar-shell-offset" as string]: compactActionMenu ? "60px" : "90px" }}
       >
         <BookingCalendar

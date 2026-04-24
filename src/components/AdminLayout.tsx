@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
@@ -23,6 +23,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { compressProfileImage, readFileAsDataUrl, validateProfileImageFile } from "@/lib/profileImage";
 import { AvatarCropper } from "@/components/admin/AvatarCropper";
 import { APP_BRAND_NAME } from "@/lib/brandConfig";
+import { applyAdminPwaMetadata } from "@/lib/pwaMetadata";
 
 const allNavItems = [
   { title: "Prehľad", url: "/admin", icon: LayoutDashboard, roles: ["owner", "admin", "employee"] },
@@ -221,7 +222,7 @@ function AdminInnerLayout({ children }: { children: React.ReactNode }) {
               </div>
             </header>
           )}
-          <main className={`flex-1 overflow-auto max-w-full safe-x ${isCalendarPage ? "p-1.5 sm:p-3" : "p-4 sm:p-6"} ${!isCalendarPage ? "pb-24 lg:pb-6" : ""}`}>
+          <main className={`flex-1 max-w-full safe-x ${isCalendarPage ? "min-h-0 overflow-hidden p-1.5 pb-[calc(82px+env(safe-area-inset-bottom))] sm:p-3 lg:pb-3" : "overflow-auto p-4 pb-24 sm:p-6 lg:pb-6"}`}>
             {children}
           </main>
         </div>
@@ -262,6 +263,10 @@ function AdminInnerLayout({ children }: { children: React.ReactNode }) {
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { loading: onboardingLoading } = useOnboarding();
+
+  useEffect(() => {
+    return applyAdminPwaMetadata();
+  }, []);
 
   if (onboardingLoading) {
     return (

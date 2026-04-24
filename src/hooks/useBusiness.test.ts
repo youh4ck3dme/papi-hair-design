@@ -78,6 +78,25 @@ describe("useBusiness", () => {
     expect(result.current.role).toBe("owner");
   });
 
+  it("prefers primary business before a higher role in another tenant", () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: "u1", email: "a@b.sk", uid: "u1" },
+      session: null,
+      profile: null,
+      memberships: [
+        { id: "m1", business_id: "other-business", profile_id: "u1", role: "owner" },
+        { id: "m2", business_id: "papi-hair-design-main", profile_id: "u1", role: "admin" },
+      ],
+      loading: false,
+      signOut: vi.fn(),
+      refreshProfile: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useBusiness());
+    expect(result.current.businessId).toBe("papi-hair-design-main");
+    expect(result.current.role).toBe("admin");
+  });
+
   it("isEmployee true for employee role", () => {
     mockUseAuth.mockReturnValue({
       user: { id: "u1", email: "a@b.sk", uid: "u1" },
