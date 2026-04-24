@@ -66,6 +66,53 @@ const memberships: MembershipRow[] = [];
 const serviceSubcategories: ServiceSubcategoryRow[] = [];
 
 type BookingFormHookResult = ReturnType<typeof useBookingForm>;
+type EmployeeServiceMap = Record<string, string[]>;
+
+const defaultFormData = {
+  meno: "Test",
+  priezvisko: "User",
+  email: "test@example.com",
+  phone: "905123456",
+  note: "",
+  marketing: false,
+  terms: true,
+  gdpr: true,
+  all: false,
+};
+
+function renderBookingForm(params: {
+  services?: ServiceRow[];
+  subcategories?: ServiceSubcategoryRow[];
+  employees?: EmployeeRow[];
+  business?: typeof baseBusiness;
+  employeeServiceMap?: EmployeeServiceMap;
+  membershipRows?: MembershipRow[];
+} = {}) {
+  const {
+    services = [makeService()],
+    subcategories = serviceSubcategories,
+    employees = [],
+    business = baseBusiness,
+    employeeServiceMap = {},
+    membershipRows = memberships,
+  } = params;
+
+  return renderHook(() =>
+    useBookingForm(services, subcategories, employees, business, employeeServiceMap, membershipRows)
+  );
+}
+
+function setContactFormData(
+  result: { current: BookingFormHookResult },
+  overrides: Partial<typeof defaultFormData> = {}
+) {
+  act(() => {
+    result.current.setFormData({
+      ...defaultFormData,
+      ...overrides,
+    });
+  });
+}
 
 async function selectServiceAndExpectEmployees(
   result: { current: BookingFormHookResult },
@@ -103,7 +150,6 @@ describe("useBookingForm", () => {
   });
 
   it("does not auto-select employee after service selection", async () => {
-    const services = [makeService()];
     const employees = [
       makeEmployee({ id: "emp-1", display_name: "Papi" }),
       makeEmployee({ id: "emp-2", display_name: "Miška", service_mode: "restricted" }),
@@ -112,9 +158,7 @@ describe("useBookingForm", () => {
       "emp-2": ["svc-1"],
     };
 
-    const { result } = renderHook(() =>
-      useBookingForm(services, serviceSubcategories, employees, baseBusiness, employeeServiceMap, memberships)
-    );
+    const { result } = renderBookingForm({ employees, employeeServiceMap });
 
     expect(result.current.selectedEmployeeId).toBeNull();
 
@@ -128,12 +172,9 @@ describe("useBookingForm", () => {
   });
 
   it("clears selected employee when service is reset", async () => {
-    const services = [makeService()];
     const employees = [makeEmployee({ id: "emp-1" })];
 
-    const { result } = renderHook(() =>
-      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
-    );
+    const { result } = renderBookingForm({ employees });
 
     act(() => {
       result.current.setSelectedServiceId("svc-1");
@@ -154,34 +195,19 @@ describe("useBookingForm", () => {
   });
 
   it("sends selected employee_id to createBookingHold on submit", async () => {
-    const services = [makeService()];
     const employees = [
       makeEmployee({ id: "emp-1", display_name: "Papi" }),
       makeEmployee({ id: "emp-2", display_name: "Miška" }),
     ];
 
-    const { result } = renderHook(() =>
-      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
-    );
+    const { result } = renderBookingForm({ employees });
 
     act(() => {
       result.current.setSelectedServiceId("svc-1");
       result.current.setSelectedEmployeeId("emp-2");
     });
 
-    act(() => {
-      result.current.setFormData({
-        meno: "Test",
-        priezvisko: "User",
-        email: "test@example.com",
-        phone: "905123456",
-        note: "",
-        marketing: false,
-        terms: true,
-        gdpr: true,
-        all: false,
-      });
-    });
+    setContactFormData(result);
 
     await waitFor(() => {
       expect(result.current.selectedEmployeeId).toBe("emp-2");
@@ -214,7 +240,6 @@ describe("useBookingForm", () => {
   });
 
   it("guards rapid duplicate submits with a synchronous lock", async () => {
-    const services = [makeService()];
     const employees = [makeEmployee({ id: "emp-1", display_name: "Papi" })];
     let resolveHold: (value: unknown) => void = () => {};
     mockCreateBookingHold.mockImplementationOnce(
@@ -224,25 +249,13 @@ describe("useBookingForm", () => {
         })
     );
 
-    const { result } = renderHook(() =>
-      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
-    );
+    const { result } = renderBookingForm({ employees });
 
     act(() => {
       result.current.setSelectedServiceId("svc-1");
       result.current.setSelectedEmployeeId("emp-1");
-      result.current.setFormData({
-        meno: "Test",
-        priezvisko: "User",
-        email: "test@example.com",
-        phone: "0905 123 456",
-        note: "",
-        marketing: false,
-        terms: true,
-        gdpr: true,
-        all: false,
-      });
     });
+    setContactFormData(result, { phone: "0905 123 456" });
 
     const slot = new Date(2026, 2, 20, 9, 0, 0);
     let firstSubmit: Promise<void> = Promise.resolve();
@@ -269,12 +282,9 @@ describe("useBookingForm", () => {
   });
 
   it("keeps stylist unselected even when exactly one employee is available", async () => {
-    const services = [makeService()];
     const employees = [makeEmployee({ id: "emp-only", display_name: "Only One" })];
 
-    const { result } = renderHook(() =>
-      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
-    );
+    const { result } = renderBookingForm({ employees });
 
     act(() => {
       result.current.setSelectedServiceId("svc-1");
@@ -298,9 +308,7 @@ describe("useBookingForm", () => {
       mato: ["svc-cut"],
     };
 
-    const { result } = renderHook(() =>
-      useBookingForm(services, serviceSubcategories, employees, baseBusiness, employeeServiceMap, memberships)
-    );
+    const { result } = renderBookingForm({ services, employees, employeeServiceMap });
 
     await selectServiceAndExpectEmployees(result, "svc-color", ["Papi"]);
   });
@@ -318,9 +326,7 @@ describe("useBookingForm", () => {
       mato: ["svc-cut"],
     };
 
-    const { result } = renderHook(() =>
-      useBookingForm(services, serviceSubcategories, employees, baseBusiness, employeeServiceMap, memberships)
-    );
+    const { result } = renderBookingForm({ services, employees, employeeServiceMap });
 
     await selectServiceAndExpectEmployees(result, "svc-cut", ["Papi", "Mato"]);
     await selectServiceAndExpectEmployees(result, "svc-beard", ["Papi"]);
@@ -333,9 +339,7 @@ describe("useBookingForm", () => {
       makeEmployee({ id: "papi", display_name: "Papi", service_mode: "all" }),
     ];
 
-    const { result } = renderHook(() =>
-      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
-    );
+    const { result } = renderBookingForm({ services, employees });
 
     await selectServiceAndExpectEmployees(result, "svc-cut", ["Papi"]);
   });
@@ -356,9 +360,7 @@ describe("useBookingForm", () => {
       },
     ];
 
-    const { result } = renderHook(() =>
-      useBookingForm(services, subcategories, [], baseBusiness, {}, memberships)
-    );
+    const { result } = renderBookingForm({ services, subcategories });
 
     await waitFor(() => {
       expect(result.current.subcategoryOptions).toHaveLength(1);
@@ -376,9 +378,7 @@ describe("useBookingForm", () => {
       makeEmployee({ id: "miska", display_name: "Miska", service_mode: "all" }),
     ];
 
-    const { result } = renderHook(() =>
-      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
-    );
+    const { result } = renderBookingForm({ services, employees });
 
     await selectServiceAndExpectEmployees(result, "svc-cut", ["Papi", "Mato", "Miska"]);
   });
