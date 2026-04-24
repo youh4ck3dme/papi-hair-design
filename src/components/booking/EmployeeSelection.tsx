@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ArrowLeft } from "lucide-react";
 import { StepHeader } from "./BookingUI";
 import { EmployeeRow } from "./types";
 
@@ -8,6 +9,7 @@ interface EmployeeSelectionProps {
   isLoading?: boolean;
   selectedEmployeeId: string | null;
   setSelectedEmployeeId: (id: string | null) => void;
+  onBackToService?: () => void;
 }
 
 type EmployeeWithProfileFallback = EmployeeRow & {
@@ -65,6 +67,7 @@ export function EmployeeSelection({
   isLoading = false,
   selectedEmployeeId,
   setSelectedEmployeeId,
+  onBackToService,
 }: EmployeeSelectionProps) {
   const { t } = useTranslation();
   const [imageLoadErrorByEmployeeId, setImageLoadErrorByEmployeeId] = useState<Record<string, boolean>>({});
@@ -112,7 +115,7 @@ export function EmployeeSelection({
               key={employee.id}
               type="button"
               onClick={() => setSelectedEmployeeId(employee.id)}
-              className={`h-full min-h-[150px] rounded-2xl border p-3 flex flex-col items-center justify-center text-center transition-all duration-200 ${
+              className={`h-full min-h-[150px] min-w-0 rounded-2xl border p-3 flex flex-col items-center justify-center text-center transition-all duration-200 ${
                 isSelected
                   ? "border-[#C9A84C] bg-black shadow-[0_0_20px_rgba(201,168,76,0.35)] ring-1 ring-[#C9A84C]/50 scale-[1.02]"
                   : "border-[#C0C0C0]/20 bg-black hover:border-[#C9A84C]/40 hover:shadow-[0_0_12px_rgba(201,168,76,0.15)]"
@@ -123,7 +126,7 @@ export function EmployeeSelection({
               <img
                 src={avatarSrc}
                 alt={displayName}
-                className="h-14 w-14 rounded-full border border-border/60 object-cover mb-3"
+                className="h-14 w-14 flex-shrink-0 rounded-full border border-border/60 object-cover mb-3"
                 loading="lazy"
                 onError={(event) => {
                   if (imageLoadErrorByEmployeeId[employee.id]) return;
@@ -132,8 +135,10 @@ export function EmployeeSelection({
                   setImageLoadErrorByEmployeeId((current) => ({ ...current, [employee.id]: true }));
                 }}
               />
-              <p className="line-clamp-2 text-sm font-black uppercase tracking-wide text-foreground">{displayName}</p>
-              <p className={`mt-1 text-xs font-semibold ${isSelected ? "text-[#C9A84C]" : "text-white/40"}`}>
+              <p className="w-full min-w-0 truncate text-sm font-black uppercase tracking-wide text-foreground" title={displayName}>
+                {displayName}
+              </p>
+              <p className={`mt-1 w-full min-w-0 truncate text-xs font-semibold ${isSelected ? "text-[#C9A84C]" : "text-white/40"}`}>
                 {isSelected
                   ? t("booking.selected", { defaultValue: "Vybraný" })
                   : t("booking.tapToSelect", { defaultValue: "Klikni pre výber" })}
@@ -151,6 +156,16 @@ export function EmployeeSelection({
 
   return (
     <div className="animate-fade-in px-4" data-testid="booking-step-employee">
+      {onBackToService && (
+        <button
+          type="button"
+          onClick={onBackToService}
+          className="mb-3 inline-flex min-h-[40px] items-center gap-2 rounded-[7px] border border-border/70 bg-background/80 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/35 hover:text-primary"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          <span>{t("booking.backToService")}</span>
+        </button>
+      )}
       <StepHeader num="3" title={t("booking.step3")} />
       {content}
     </div>

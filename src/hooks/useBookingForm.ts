@@ -1,9 +1,17 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
-import { contactSchema, ServiceRow, EmployeeRow, BookingResult, MembershipRow } from "@/components/booking/types";
+import {
+    contactSchema,
+    ServiceRow,
+    EmployeeRow,
+    BookingResult,
+    MembershipRow,
+    type ContactErrors,
+    type ContactFormData,
+} from "@/components/booking/types";
 import { createBookingHold } from "@/integrations/firebase/createBookingHold";
 import { confirmBooking } from "@/integrations/firebase/confirmBooking";
 import {
@@ -15,6 +23,26 @@ import {
 import { createRuntimeId } from "@/lib/runtimeId";
 
 const makeIdempotencyKey = () => createRuntimeId("booking");
+
+function createSubmissionSignature(input: {
+    businessId: string;
+    serviceId: string;
+    employeeId: string | null | undefined;
+    startAt: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone?: string;
+}) {
+    return JSON.stringify([
+        input.businessId,
+        input.serviceId,
+        input.employeeId ?? "",
+        input.startAt,
+        input.customerName,
+        input.customerEmail.toLowerCase(),
+        input.customerPhone ?? "",
+    ]);
+}
 
 const normalizeEmployeeName = (value: string | null | undefined) =>
     (value ?? "")
@@ -40,14 +68,16 @@ export function useBookingForm(
     const [subcategory, setSubcategory] = useState<string | null>(null);
     const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<ContactFormData>({
         meno: "", priezvisko: "", email: "", phone: "", note: "",
         marketing: false, terms: false, gdpr: false, all: false,
     });
-    const [contactErrors, setContactErrors] = useState<Record<string, string>>({});
+    const [contactErrors, setContactErrors] = useState<ContactErrors>({});
     const [submitting, setSubmitting] = useState(false);
     const [bookingDone, setBookingDone] = useState(false);
     const [bookingResult, setBookingResult] = useState<BookingResult | null>(null);
+    const submitLockRef = useRef(false);
+    const submissionAttemptRef = useRef<{ signature: string; idempotencyKey: string } | null>(null);
     const { profile } = useAuth();
     const businessId = typeof business?.id === "string" ? business.id : "";
 
@@ -202,7 +232,7 @@ export function useBookingForm(
 
         const result = contactSchema.safeParse(formData);
         if (!result.success) {
-            const errs: Record<string, string> = {};
+            const errs: ContactErrors = {};
             result.error.errors.forEach((e) => { if (e.path[0]) errs[e.path[0] as string] = e.message; });
             setContactErrors(errs);
             return;
@@ -212,62 +242,99 @@ export function useBookingForm(
             return;
         }
         setContactErrors({});
-        setSubmitting(true);
 
         const slotDate = availableSlots.find((s) => format(s, "HH:mm") === selectedTime);
         if (!slotDate) {
             toast.error(t("booking.toastSlotTaken"));
-            setSubmitting(false);
             return;
         }
 
+        if (submitLockRef.current) {
+            return;
+        }
+
+        submitLockRef.current = true;
+        setSubmitting(true);
+
+        const parsedContact = result.data;
+        const customerName = `${parsedContact.meno} ${parsedContact.priezvisko}`.trim();
+        const customerEmail = parsedContact.email;
+        const customerPhone = parsedContact.phone;
+
         try {
             if (!selectedServiceId) {
-                setSubmitting(false);
                 return;
             }
-            const idempotencyKey = makeIdempotencyKey();
             if (!businessId) {
                 toast.error(t("booking.toastServerError"));
-                setSubmitting(false);
                 return;
             }
+
+            const startAt = slotDate.toISOString();
+            const signature = createSubmissionSignature({
+                businessId,
+                serviceId: selectedServiceId,
+                employeeId: selectedEmployeeId,
+                startAt,
+                customerName,
+                customerEmail,
+                customerPhone,
+            });
+            if (submissionAttemptRef.current?.signature !== signature) {
+                submissionAttemptRef.current = {
+                    signature,
+                    idempotencyKey: makeIdempotencyKey(),
+                };
+            }
+            const idempotencyKey = submissionAttemptRef.current.idempotencyKey;
 
             const hold = await createBookingHold({
                 business_id: businessId,
                 service_id: selectedServiceId,
                 employee_id: selectedEmployeeId ?? undefined,
-                start_at: slotDate.toISOString(),
-                customer_name: `${formData.meno} ${formData.priezvisko}`.trim(),
-                customer_email: formData.email,
-                customer_phone: formData.phone || undefined,
+                start_at: startAt,
+                customer_name: customerName,
+                customer_email: customerEmail,
+                customer_phone: customerPhone,
                 idempotency_key: idempotencyKey,
             });
 
             if (!hold.success || !hold.appointment_id) {
                 toast.error(hold.error || t("booking.toastServerError"));
-                setSubmitting(false);
+                return;
+            }
+
+            if (!hold.confirm_token) {
+                setBookingResult({
+                    appointment_id: hold.appointment_id,
+                    history_reference: hold.appointment_id,
+                    customer_email: customerEmail,
+                    customer_name: customerName,
+                    customer_record_status: hold.customer_record_status ?? null,
+                });
+                setBookingDone(true);
+                toast.success(t("booking.toastSuccess"));
                 return;
             }
 
             const confirm = await confirmBooking({
                 appointment_id: hold.appointment_id,
-                confirm_token: hold.confirm_token!,
+                confirm_token: hold.confirm_token,
                 idempotency_key: idempotencyKey,
             });
 
             if (!confirm.success) {
                 toast.error(confirm.error || t("booking.toastServerError"));
-                setSubmitting(false);
                 return;
             }
 
             const data: BookingResult = {
+                appointment_id: confirm.appointment_id ?? hold.appointment_id,
                 claim_token: confirm.claim_token ?? undefined,
                 history_access_token: confirm.history_access_token ?? null,
                 history_reference: confirm.history_reference ?? hold.appointment_id,
-                customer_email: confirm.customer_email ?? formData.email,
-                customer_name: confirm.customer_name ?? `${formData.meno} ${formData.priezvisko}`.trim(),
+                customer_email: confirm.customer_email ?? customerEmail,
+                customer_name: confirm.customer_name ?? customerName,
                 customer_record_status: confirm.customer_record_status ?? hold.customer_record_status ?? null,
             };
 
@@ -276,8 +343,10 @@ export function useBookingForm(
             toast.success(t("booking.toastSuccess"));
         } catch {
             toast.error(t("booking.toastServerError"));
+        } finally {
+            submitLockRef.current = false;
+            setSubmitting(false);
         }
-        setSubmitting(false);
     };
 
     return {
@@ -292,6 +361,7 @@ export function useBookingForm(
         formData,
         setFormData,
         contactErrors,
+        setContactErrors,
         submitting,
         bookingDone,
         bookingResult,

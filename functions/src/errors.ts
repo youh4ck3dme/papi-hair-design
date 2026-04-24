@@ -7,6 +7,7 @@ export type BookingErrorCode =
   | "slot_unavailable"
   | "appointment_not_found"
   | "invalid_confirm_token"
+  | "invalid_idempotency_key"
   | "hold_expired";
 
 interface BookingErrorOptions {

@@ -183,10 +183,73 @@ describe("useBookingForm", () => {
         business_id: "biz-1",
         service_id: "svc-1",
         employee_id: "emp-2",
+        customer_phone: "+421905123456",
       })
     );
+    const holdPayload = mockCreateBookingHold.mock.calls[0][0];
+    expect(holdPayload.idempotency_key).toEqual(expect.stringMatching(/^booking_/));
     expect(mockConfirmBooking).toHaveBeenCalledTimes(1);
+    expect(mockConfirmBooking).toHaveBeenCalledWith(
+      expect.objectContaining({
+        idempotency_key: holdPayload.idempotency_key,
+      })
+    );
     expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("guards rapid duplicate submits with a synchronous lock", async () => {
+    const services = [makeService()];
+    const employees = [makeEmployee({ id: "emp-1", display_name: "Papi" })];
+    let resolveHold: (value: unknown) => void = () => {};
+    mockCreateBookingHold.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveHold = resolve;
+        })
+    );
+
+    const { result } = renderHook(() =>
+      useBookingForm(services, serviceSubcategories, employees, baseBusiness, {}, memberships)
+    );
+
+    act(() => {
+      result.current.setSelectedServiceId("svc-1");
+      result.current.setSelectedEmployeeId("emp-1");
+      result.current.setFormData({
+        meno: "Test",
+        priezvisko: "User",
+        email: "test@example.com",
+        phone: "0905 123 456",
+        note: "",
+        marketing: false,
+        terms: true,
+        gdpr: true,
+        all: false,
+      });
+    });
+
+    const slot = new Date(2026, 2, 20, 9, 0, 0);
+    let firstSubmit: Promise<void> = Promise.resolve();
+    let secondSubmit: Promise<void> = Promise.resolve();
+
+    act(() => {
+      firstSubmit = result.current.handleSubmit("09:00", [slot], "emp-1");
+      secondSubmit = result.current.handleSubmit("09:00", [slot], "emp-1");
+    });
+
+    expect(mockCreateBookingHold).toHaveBeenCalledTimes(1);
+    resolveHold({
+      success: true,
+      appointment_id: "appt-1",
+      confirm_token: "confirm-1",
+    });
+
+    await act(async () => {
+      await Promise.all([firstSubmit, secondSubmit]);
+    });
+
+    expect(mockConfirmBooking).toHaveBeenCalledTimes(1);
+    expect(toastSuccess).toHaveBeenCalledTimes(1);
   });
 
   it("keeps stylist unselected even when exactly one employee is available", async () => {

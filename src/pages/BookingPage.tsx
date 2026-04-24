@@ -52,6 +52,7 @@ export default function BookingPage() {
     formData,
     setFormData,
     contactErrors,
+    setContactErrors,
     submitting,
     bookingDone,
     bookingResult,
@@ -409,6 +410,13 @@ export default function BookingPage() {
                           isLoading={initialLoading}
                           selectedEmployeeId={selectedEmployeeId}
                           setSelectedEmployeeId={setSelectedEmployeeId}
+                          onBackToService={() => {
+                            setSelectedEmployeeId(null);
+                            setSelectedTime(null);
+                            requestAnimationFrame(() => {
+                              scrollToSection(serviceSectionRef.current);
+                            });
+                          }}
                         />
                       </div>
                     </div>
@@ -445,6 +453,7 @@ export default function BookingPage() {
                       formData={formData}
                       setFormData={setFormData}
                       contactErrors={contactErrors}
+                      setContactErrors={setContactErrors}
                       handleCheckAll={handleCheckAll}
                       handleConsentChange={handleConsentChange}
                       selectedService={selectedService}

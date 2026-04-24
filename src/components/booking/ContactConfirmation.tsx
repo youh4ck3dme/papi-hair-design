@@ -3,13 +3,14 @@ import { format } from "date-fns";
 import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { StepHeader } from "./BookingUI";
-import { ServiceRow } from "./types";
+import { ServiceRow, type ContactErrors, type ContactFormData } from "./types";
 import { APP_BRAND_NAME } from "@/lib/brandConfig";
 
 interface ContactConfirmationProps {
-    formData: any;
-    setFormData: (data: any) => void;
-    contactErrors: Record<string, string>;
+    formData: ContactFormData;
+    setFormData: React.Dispatch<React.SetStateAction<ContactFormData>>;
+    contactErrors: ContactErrors;
+    setContactErrors?: React.Dispatch<React.SetStateAction<ContactErrors>>;
     handleCheckAll: () => void;
     handleConsentChange: (field: "marketing" | "terms" | "gdpr") => void;
     selectedService: ServiceRow | null;
@@ -50,6 +51,7 @@ export function ContactConfirmation({
     formData,
     setFormData,
     contactErrors,
+    setContactErrors,
     handleCheckAll,
     handleConsentChange,
     selectedService,
@@ -60,6 +62,17 @@ export function ContactConfirmation({
     handleSubmit,
 }: ContactConfirmationProps) {
     const { t } = useTranslation();
+    const updateField = (field: keyof ContactFormData, value: string) => {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+        if (!contactErrors[field] || !setContactErrors) return;
+
+        setContactErrors((prev) => {
+            if (!prev[field]) return prev;
+            const next = { ...prev };
+            delete next[field];
+            return next;
+        });
+    };
 
     return (
         <div className="animate-fade-in pb-12 px-4" data-testid="booking-step-details">
@@ -102,37 +115,65 @@ export function ContactConfirmation({
                     <div key={input.field}>
                         <InputRow icon={input.icon}>
                             <input
+                                id={`booking-${input.field}`}
+                                name={input.field}
                                 type={input.type}
                                 placeholder={input.placeholder}
                                 className="flex-1 py-3 px-4 outline-none bg-card text-foreground placeholder:text-muted-foreground/60 text-sm"
                                 value={formData[input.field]}
-                                onChange={(e) => setFormData({ ...formData, [input.field]: e.target.value })}
+                                onChange={(e) => updateField(input.field, e.target.value)}
+                                aria-label={input.placeholder}
+                                aria-invalid={Boolean(contactErrors[input.field])}
+                                aria-describedby={contactErrors[input.field] ? `booking-${input.field}-error` : undefined}
+                                autoComplete={
+                                    input.field === "meno"
+                                        ? "given-name"
+                                        : input.field === "priezvisko"
+                                          ? "family-name"
+                                          : "email"
+                                }
                             />
                         </InputRow>
                         {contactErrors[input.field] && (
-                            <p className="mt-1 ml-3 text-sm font-medium text-destructive">{contactErrors[input.field]}</p>
+                            <p id={`booking-${input.field}-error`} className="mt-1 ml-3 text-sm font-medium text-destructive">
+                                {contactErrors[input.field]}
+                            </p>
                         )}
                     </div>
                 ))}
 
                 {/* Phone */}
-                <InputRow icon={Phone}>
-                    <div className="flex items-center px-3 border-r border-border/60 bg-muted/40">
-                        <div className="w-5 h-3.5 rounded-[2px] overflow-hidden flex flex-col border border-muted-foreground/20 flex-shrink-0">
-                            <div className="h-1/3 bg-white" />
-                            <div className="h-1/3 bg-zinc-400" />
-                            <div className="h-1/3 bg-zinc-700" />
+                <div>
+                    <InputRow icon={Phone}>
+                        <div className="flex items-center px-3 border-r border-border/60 bg-muted/40">
+                            <div className="w-5 h-3.5 rounded-[2px] overflow-hidden flex flex-col border border-muted-foreground/20 flex-shrink-0">
+                                <div className="h-1/3 bg-white" />
+                                <div className="h-1/3 bg-zinc-400" />
+                                <div className="h-1/3 bg-zinc-700" />
+                            </div>
+                            <span className="ml-1.5 text-sm font-semibold text-muted-foreground">+421</span>
                         </div>
-                        <span className="ml-1.5 text-sm font-semibold text-muted-foreground">+421</span>
-                    </div>
-                    <input
-                        type="tel"
-                        placeholder="9XX XXX XXX"
-                        className="flex-1 py-3 px-4 outline-none bg-card text-foreground text-sm placeholder:text-muted-foreground/60"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    />
-                </InputRow>
+                        <input
+                            id="booking-phone"
+                            name="phone"
+                            type="tel"
+                            placeholder="9XX XXX XXX"
+                            className="flex-1 py-3 px-4 outline-none bg-card text-foreground text-sm placeholder:text-muted-foreground/60"
+                            value={formData.phone}
+                            onChange={(e) => updateField("phone", e.target.value)}
+                            aria-label={t("history.phoneField", { defaultValue: "Telefón" })}
+                            aria-invalid={Boolean(contactErrors.phone)}
+                            aria-describedby={contactErrors.phone ? "booking-phone-error" : undefined}
+                            autoComplete="tel-national"
+                            inputMode="tel"
+                        />
+                    </InputRow>
+                    {contactErrors.phone && (
+                        <p id="booking-phone-error" className="mt-1 ml-3 text-sm font-medium text-destructive">
+                            {contactErrors.phone}
+                        </p>
+                    )}
+                </div>
 
                 {/* Note */}
                 <div className="flex border rounded-xl overflow-hidden transition-all duration-200 border-border/60 focus-within:border-primary focus-within:shadow-sm focus-within:shadow-primary/10 bg-card min-h-[96px]">
@@ -143,7 +184,8 @@ export function ContactConfirmation({
                         placeholder={t("booking.note")}
                         className="flex-1 py-3 px-4 outline-none resize-none bg-card text-foreground placeholder:text-muted-foreground/60 text-sm"
                         value={formData.note}
-                        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                        onChange={(e) => updateField("note", e.target.value)}
+                        aria-label={t("booking.note")}
                     />
                 </div>
             </div>

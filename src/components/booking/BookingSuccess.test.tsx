@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BookingSuccess } from "./BookingSuccess";
@@ -40,6 +40,10 @@ vi.mock("react-i18next", () => ({
       const translations: Record<string, string> = {
         "booking.confirmTitle": "Rezervácia potvrdená",
         "booking.confirmDesc": "Potvrdenie bolo odoslané na váš e-mail.",
+        "booking.emailConfirmationTitle": "Potvrdenie bolo odoslané na email",
+        "booking.emailConfirmationDesc": "Skontrolujte si doručenú poštu aj priečinok spam.",
+        "booking.emailCopy": "Kopírovať",
+        "booking.emailCopied": "Skopírované",
         "booking.confirmBrand": "Salón",
         "booking.confirmService": "Služba",
         "booking.confirmDate": "Dátum",
@@ -223,6 +227,33 @@ describe("BookingSuccess", () => {
       { wrapper }
     );
     expect(screen.getByRole("button", { name: /Nová rezervácia/i })).toBeInTheDocument();
+  });
+
+  it("renders confirmation email with copy action", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+
+    render(
+      <BookingSuccess
+        bookingResult={makeResult({ customer_email: "test@test.sk" })}
+        selectedService={null}
+        selectedFullDate={null}
+        selectedTime={null}
+        dateLocale={undefined}
+      />,
+      { wrapper }
+    );
+
+    expect(screen.getByText("test@test.sk")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Kopírovať/i }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith("test@test.sk");
+    });
+    expect(screen.getByRole("button", { name: /Skopírované/i })).toBeInTheDocument();
   });
 
   it("shows login-first account CTA when booking email already has an account", async () => {
