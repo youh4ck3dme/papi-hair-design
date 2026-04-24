@@ -209,37 +209,44 @@ vi.mock("@/components/ui/select", () => ({
   SelectValue: ({ placeholder }: any) => <>{placeholder ?? null}</>,
 }));
 
-vi.mock("sonner", () => ({
-  toast: toastMocks,
-}));
+vi.mock("sonner", () => ({ toast: toastMocks }));
+
+function mergeQueryConstraints(base: any, constraints: any[]) {
+  const inherited = Array.isArray(base?.constraints) ? base.constraints : [];
+  const collection = typeof base?.__collection === "string" ? base.__collection : "unknown";
+  return {
+    __collection: collection,
+    constraints: inherited.concat(constraints),
+  };
+}
 
 vi.mock("firebase/firestore", async () => {
-  const actual = await vi.importActual("firebase/firestore");
-  return {
-    ...actual,
+  const actual = await vi.importActual<typeof import("firebase/firestore")>("firebase/firestore");
+  class LocalTimestamp {
+    private readonly value: Date;
+
+    constructor(value: Date) {
+      this.value = value;
+    }
+
+    toDate() {
+      return this.value;
+    }
+  }
+
+  return Object.assign({}, actual, {
     collection: (_db: unknown, name: string) => ({ __collection: name, constraints: [] }),
     where: (field: string, op: string, value: unknown) => ({ type: "where", field, op, value }),
     orderBy: (field: string, direction: string) => ({ type: "orderBy", field, direction }),
     limit: (value: number) => ({ type: "limit", value }),
-    query: (base: any, ...constraints: any[]) => ({
-      __collection: base?.__collection ?? "unknown",
-      constraints: [...(base?.constraints ?? []), ...constraints],
-    }),
+    query: (base: any, ...constraints: any[]) => mergeQueryConstraints(base, constraints),
     doc: (_db: unknown, name: string, id: string) => ({ __collection: name, id }),
     getDocs: firestoreMocks.getDocsMock,
     getDoc: firestoreMocks.getDocMock,
     addDoc: firestoreMocks.addDocMock,
     updateDoc: firestoreMocks.updateDocMock,
-    Timestamp: class Timestamp {
-      private d: Date;
-      constructor(d: Date) {
-        this.d = d;
-      }
-      toDate() {
-        return this.d;
-      }
-    },
-  };
+    Timestamp: LocalTimestamp,
+  });
 });
 
 function makeSnapshot(items: any[]) {
