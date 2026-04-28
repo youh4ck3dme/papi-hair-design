@@ -229,7 +229,9 @@ describe("useBookingForm", () => {
       })
     );
     const holdPayload = mockCreateBookingHold.mock.calls[0][0];
-    expect(holdPayload.idempotency_key).toEqual(expect.stringMatching(/^booking_/));
+    expect(holdPayload.idempotency_key).toEqual(
+      expect.stringMatching(/^([0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i)
+    );
     expect(mockConfirmBooking).toHaveBeenCalledTimes(1);
     expect(mockConfirmBooking).toHaveBeenCalledWith(
       expect.objectContaining({

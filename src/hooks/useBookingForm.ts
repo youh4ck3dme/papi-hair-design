@@ -22,7 +22,21 @@ import {
 } from "@/lib/serviceSubcategories";
 import { createRuntimeId } from "@/lib/runtimeId";
 
-const makeIdempotencyKey = () => createRuntimeId("booking");
+const makeIdempotencyKey = () => {
+    const webCrypto = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
+
+    if (webCrypto?.randomUUID) {
+        return webCrypto.randomUUID();
+    }
+
+    if (webCrypto?.getRandomValues) {
+        const bytes = new Uint8Array(16);
+        webCrypto.getRandomValues(bytes);
+        return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    }
+
+    return createRuntimeId("booking");
+};
 
 function createSubmissionSignature(input: {
     businessId: string;
