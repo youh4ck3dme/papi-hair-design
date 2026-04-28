@@ -16,6 +16,7 @@ import { LogoIcon } from "@/components/LogoIcon";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { LiquidGlassNav, type LiquidGlassNavItem } from "@/components/LiquidGlassNav";
+import { AppSplashScreen } from "@/components/AppSplashScreen";
 import { cn } from "@/lib/utils";
 import { db, storage } from "@/integrations/firebase/config";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -269,11 +270,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (onboardingLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AppSplashScreen />;
   }
 
   return (

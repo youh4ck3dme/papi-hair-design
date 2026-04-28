@@ -211,7 +211,7 @@ describe("ProtectedRoute", () => {
       "/protected"
     );
 
-    expect(document.querySelector("svg.animate-spin")).toBeInTheDocument();
+    expect(screen.getByTestId("app-splash-screen")).toBeInTheDocument();
     expect(screen.queryByText("BOOKING_PAGE")).not.toBeInTheDocument();
     expect(screen.queryByText("SECRET")).not.toBeInTheDocument();
   });

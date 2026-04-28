@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2 } from "lucide-react";
+import { AppSplashScreen } from "@/components/AppSplashScreen";
 import { isAdminAllowlisted } from "@/lib/adminAllowlist";
 import { SALON_LOGIN_PATH } from "@/lib/salonLoginRoute";
 
@@ -26,11 +26,7 @@ export default function ProtectedRoute({ children, requireAdmin = false, allowed
     requireAdmin || !!allowedRoles?.some((role) => role === "owner" || role === "admin");
 
   if (loading || membershipsLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AppSplashScreen />;
   }
 
   if (!user) {

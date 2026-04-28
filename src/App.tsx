@@ -5,13 +5,13 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { ThemeProvider } from "next-themes";
 import { APP_CANONICAL_HOST } from "@/lib/brandConfig";
 import { LEGACY_SALON_LOGIN_PATH, SALON_LOGIN_PATH } from "@/lib/salonLoginRoute";
+import { AppSplashScreen } from "@/components/AppSplashScreen";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import RequireAdmin from "@/components/RequireAdmin";
 
 import { lazy, Suspense, useEffect } from "react";
-import { Loader2 } from "lucide-react";
 
 const AuthShell = lazy(() => import("@/components/auth/AuthShell"));
-const ProtectedRoute = lazy(() => import("@/components/ProtectedRoute"));
-const RequireAdmin = lazy(() => import("@/components/RequireAdmin"));
 const AdminLayout = lazy(() => import("@/components/AdminLayout").then((m) => ({ default: m.AdminLayout })));
 const PublicChromeLayout = lazy(() => import("@/components/public/PublicChromeLayout").then((m) => ({ default: m.PublicChromeLayout })));
 const CookieConsent = lazy(() => import("@/components/CookieConsent"));
@@ -42,11 +42,53 @@ const PlatformPage = lazy(() => import("./pages/PlatformPage"));
 const MyAccountPage = lazy(() => import("./pages/MyAccountPage"));
 const InstallPrompt = lazy(() => import("@/components/InstallPrompt"));
 
-const LazyFallback = () => (
-  <div className="flex min-h-screen items-center justify-center">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
+const LazyFallback = () => <AppSplashScreen />;
+
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
+  cancelIdleCallback?: (id: number) => void;
+};
+
+function scheduleRoutePreload(load: () => Promise<unknown>) {
+  if (typeof window === "undefined") return undefined;
+
+  const preload = () => {
+    void load().catch(() => undefined);
+  };
+  const idleWindow = window as IdleWindow;
+
+  if (idleWindow.requestIdleCallback) {
+    const id = idleWindow.requestIdleCallback(preload, { timeout: 1200 });
+    return () => idleWindow.cancelIdleCallback?.(id);
+  }
+
+  const id = window.setTimeout(preload, 250);
+  return () => window.clearTimeout(id);
+}
+
+function RoutePreloader() {
+  const location = useLocation();
+
+  useEffect(() => scheduleRoutePreload(() => import("./pages/BookingPage")), []);
+
+  useEffect(() => {
+    const shouldPreloadAdminCalendar =
+      location.pathname === "/admin" ||
+      location.pathname === "/calendar" ||
+      location.pathname === "/admin/calendar";
+
+    if (!shouldPreloadAdminCalendar) return undefined;
+
+    return scheduleRoutePreload(() =>
+      Promise.all([
+        import("@/components/AdminLayout"),
+        import("./pages/admin/CalendarPage"),
+      ]),
+    );
+  }, [location.pathname]);
+
+  return null;
+}
 
 function useCanonicalHostRedirect() {
   useEffect(() => {
@@ -105,6 +147,7 @@ const App = () => {
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Suspense fallback={<LazyFallback />}>
             <RouteInstallPrompt />
+            <RoutePreloader />
             <CookieConsent />
             <Routes>
               <Route path="/" element={<LandingPage />} />

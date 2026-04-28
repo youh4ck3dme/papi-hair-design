@@ -12,7 +12,7 @@ import { DateTimeSelection } from "@/components/booking/DateTimeSelection";
 import { ContactConfirmation } from "@/components/booking/ContactConfirmation";
 import { BookingSuccess } from "@/components/booking/BookingSuccess";
 import { PublicAtmosphereBackground } from "@/components/public/PublicAtmosphereBackground";
-import { PremiumLoadingState } from "@/components/ui/premium-loading-state";
+import { AppSplashScreen } from "@/components/AppSplashScreen";
 import { getEffectiveIntervals, type BusinessHours } from "@/lib/availability";
 import { APP_BRAND_NAME, APP_CONTACT_PHONE, APP_CONTACT_PHONE_DISPLAY } from "@/lib/brandConfig";
 import { APP_LOGO_SRC } from "@/lib/branding";
@@ -209,26 +209,7 @@ export default function BookingPage() {
     hasOwnerAdminMembershipForBusiness(authMemberships, business?.id);
 
   if (initialLoading) {
-    return (
-      <main className="relative min-h-[100svh] overflow-hidden bg-black text-foreground safe-x">
-        <PublicAtmosphereBackground />
-        <div className="relative z-10 flex min-h-[100svh] items-center px-4 py-8 sm:px-6">
-          <div className="mx-auto w-full max-w-[780px]">
-            <PremiumLoadingState
-              variant="public"
-              eyebrow={currentLang === "en" ? "Booking" : "Rezervácia"}
-              title={currentLang === "en" ? "Preparing the booking calendar" : "Pripravujeme rezervačný kalendár"}
-              description={
-                currentLang === "en"
-                  ? "We are loading services, stylists and available times so your reservation can stay smooth from the first tap."
-                  : "Načítavame služby, kaderníkov a dostupné termíny, aby vaša rezervácia pokračovala plynulo od prvého kroku."
-              }
-              testId="booking-loading-state"
-            />
-          </div>
-        </div>
-      </main>
-    );
+    return <AppSplashScreen testId="booking-loading-state" />;
   }
 
   if (bookingDone && bookingResult) {

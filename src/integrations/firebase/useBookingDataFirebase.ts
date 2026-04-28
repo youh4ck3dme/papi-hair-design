@@ -172,6 +172,21 @@ export function useBookingDataFirebase() {
     const [initialLoading, setInitialLoading] = useState(true);
 
     useEffect(() => {
+        let isCancelled = false;
+
+        const scheduleEmployeePhotoEnrichment = (baseEmployees: EmployeeRow[]) => {
+            setEmployees(baseEmployees);
+            void enrichEmployeesWithProfilePhoto(baseEmployees)
+                .then((enrichedEmployees) => {
+                    if (!isCancelled) {
+                        setEmployees(enrichedEmployees);
+                    }
+                })
+                .catch(() => {
+                    // Profile photos are non-critical for initial booking render.
+                });
+        };
+
         const load = async () => {
             setInitialLoading(true);
             try {
@@ -230,7 +245,7 @@ export function useBookingDataFirebase() {
                     const snapshotEmployees = (snap.employees ?? [])
                         .map((d: any) => ({ ...d, id: d.id } as EmployeeRow))
                         .sort((a: any, b: any) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"));
-                    setEmployees(await enrichEmployeesWithProfilePhoto(snapshotEmployees));
+                    scheduleEmployeePhotoEnrichment(snapshotEmployees);
                     setBusinessHourEntries(
                         (snap.business_hours ?? [])
                             .map((h: any) => ({
@@ -343,7 +358,7 @@ export function useBookingDataFirebase() {
                     const liveEmployees = empSnap.docs
                         .map(d => ({ ...d.data(), id: d.id } as EmployeeRow))
                         .sort((a, b) => (a.display_name ?? "").localeCompare(b.display_name ?? "", "sk"));
-                    setEmployees(await enrichEmployeesWithProfilePhoto(liveEmployees));
+                    scheduleEmployeePhotoEnrichment(liveEmployees);
 
                     setBusinessHourEntries(
                         bhSnap.docs
@@ -399,10 +414,16 @@ export function useBookingDataFirebase() {
             } catch (error_) {
                 console.warn("useBookingDataFirebase: failed to load Firestore data", error_);
             } finally {
-                setInitialLoading(false);
+                if (!isCancelled) {
+                    setInitialLoading(false);
+                }
             }
         };
         load();
+
+        return () => {
+            isCancelled = true;
+        };
     }, []);
 
     return {

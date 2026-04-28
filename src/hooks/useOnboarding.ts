@@ -14,7 +14,7 @@ export function useOnboarding() {
   const { businessId, isOwnerOrAdmin } = useBusiness();
   const { user } = useAuth();
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // The primary PAPI business is already provisioned, so skip tenant-onboarding checks there.

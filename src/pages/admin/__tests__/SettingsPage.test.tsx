@@ -221,7 +221,7 @@ describe("SettingsPage", () => {
     render(<SettingsPage />);
 
     expect(screen.getAllByTestId("settings-loading-state").length).toBeGreaterThan(0);
-    expect(screen.getAllByTestId("settings-loading-state")[0]).toHaveTextContent("Načítavame nastavenia salónu");
+    expect(screen.getAllByTestId("settings-loading-state")[0]).not.toHaveTextContent("Načítavame nastavenia salónu");
   });
 
   it("saves the profile and refreshes auth data", async () => {

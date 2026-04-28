@@ -3,8 +3,8 @@ import { CalendarClock, LogIn, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+import { AppSplashScreen } from "@/components/AppSplashScreen";
 import { PublicAtmosphereBackground } from "@/components/public/PublicAtmosphereBackground";
-import { PremiumLoadingState } from "@/components/ui/premium-loading-state";
 import { APP_LOGO_SRC } from "@/lib/branding";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -200,18 +200,7 @@ export default function MyAccountPage() {
               <div className="px-6 pt-8 md:px-10">
                 <div className="public-premium-panel p-5 sm:p-6">
                   {loading ? (
-                    <PremiumLoadingState
-                      variant="public"
-                      compact
-                      eyebrow={isEnglish ? "Account" : "Účet"}
-                      title={isEnglish ? "Preparing your client zone" : "Pripravujeme váš klientsky priestor"}
-                      description={
-                        isEnglish
-                          ? "We are checking your session, memberships and booking history access."
-                          : "Overujeme vaše prihlásenie, členstvá a prístup k histórii rezervácií."
-                      }
-                      testId="my-account-loading-state"
-                    />
+                    <AppSplashScreen compact testId="my-account-loading-state" />
                   ) : (
                     <div className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-stretch">
                       <div className="rounded-[24px] border border-gold/12 bg-black/25 p-5">

@@ -3,10 +3,10 @@ import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { ServicePriceCatalog } from "@/components/pricing/ServicePriceCatalog";
-import { useBookingData } from "@/hooks/useBookingData";
+import { usePricingData } from "@/hooks/usePricingData";
 
 export default function Pricing() {
-  const { services, initialLoading } = useBookingData();
+  const { services, initialLoading } = usePricingData();
   const navigate = useNavigate();
 
   return (
