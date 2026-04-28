@@ -1,11 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import Pricing from "./Pricing";
 
-vi.mock("@/hooks/useBookingData", () => ({
-  useBookingData: () => ({
+const pricingDataState = vi.hoisted(() => ({
+  defaultValue: {
     initialLoading: false,
     services: [
       {
@@ -51,10 +51,22 @@ vi.mock("@/hooks/useBookingData", () => ({
         subcategory_id: null,
       },
     ],
-  }),
+  },
+  value: {} as {
+    initialLoading: boolean;
+    services: Array<any>;
+  },
+}));
+
+vi.mock("@/hooks/usePricingData", () => ({
+  usePricingData: () => pricingDataState.value,
 }));
 
 describe("Pricing", () => {
+  beforeEach(() => {
+    pricingDataState.value = pricingDataState.defaultValue;
+  });
+
   it("renders three public service categories from admin services", () => {
     render(
       <MemoryRouter>
@@ -79,5 +91,22 @@ describe("Pricing", () => {
 
     expect(screen.getByText("Depilácia nosa aj uši")).toBeInTheDocument();
     expect(screen.getByText("5 €")).toBeInTheDocument();
+  });
+
+  it("uses the unified splash while pricing data is loading", () => {
+    pricingDataState.value = {
+      ...pricingDataState.value,
+      initialLoading: true,
+      services: [],
+    };
+
+    render(
+      <MemoryRouter>
+        <Pricing />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("pricing-loading-state")).toBeInTheDocument();
+    expect(screen.getByTestId("pricing-loading-state")).not.toHaveTextContent("Načítavame");
   });
 });

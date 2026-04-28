@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 
+import { AppSplashScreen } from "@/components/AppSplashScreen";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   buildAdminLoginPath,
@@ -10,20 +10,12 @@ import {
 } from "@/lib/adminRouteSecurity";
 import { DEFAULT_BUSINESS_ID } from "@/lib/businessIds";
 
-function AdminRouteLoader() {
-  return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background" role="status" aria-label="Načítavam prístup">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    </div>
-  );
-}
-
 export default function RequireAdmin({ children }: { children: ReactNode }) {
   const { user, memberships, loading, membershipsLoading } = useAuth();
   const location = useLocation();
 
   if (loading || membershipsLoading) {
-    return <AdminRouteLoader />;
+    return <AppSplashScreen />;
   }
 
   const returnTo = sanitizeAdminReturnTo(`${location.pathname}${location.search}${location.hash}`);

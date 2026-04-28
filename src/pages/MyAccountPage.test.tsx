@@ -56,7 +56,7 @@ describe("MyAccountPage", () => {
     expect(historyButton.className).toContain("rounded-[7px]");
   });
 
-  it("renders a richer loading state while auth context is still resolving", () => {
+  it("renders the unified splash while auth context is still resolving", () => {
     authState.value = {
       ...authState.value,
       loading: true,
@@ -70,8 +70,9 @@ describe("MyAccountPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByTestId("my-account-loading-state")).toHaveTextContent("Pripravujeme váš klientsky priestor");
-    expect(screen.getByTestId("my-account-loading-state")).toHaveTextContent("Overujeme vaše prihlásenie");
+    expect(screen.getByTestId("my-account-loading-state")).toBeInTheDocument();
+    expect(screen.getByTestId("my-account-loading-state")).not.toHaveTextContent("Pripravujeme váš klientsky priestor");
+    expect(screen.getByTestId("my-account-loading-state")).not.toHaveTextContent("Overujeme vaše prihlásenie");
   });
 
   it("navigates to register flow from the register panel", () => {

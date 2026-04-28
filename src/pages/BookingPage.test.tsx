@@ -204,7 +204,7 @@ describe("BookingPage stylist step flow", () => {
     expect(screen.getByRole("heading", { name: /Rezervujte si termín/i })).toBeInTheDocument();
   });
 
-  it("renders a premium loading state while booking data is bootstrapping", () => {
+  it("renders the unified splash while booking data is bootstrapping", () => {
     bookingDataState.value = {
       ...bookingDataState.value,
       initialLoading: true,
@@ -212,8 +212,9 @@ describe("BookingPage stylist step flow", () => {
 
     render(<BookingPage />);
 
-    expect(screen.getByTestId("booking-loading-state")).toHaveTextContent("Pripravujeme rezervačný kalendár");
-    expect(screen.getByTestId("booking-loading-state")).toHaveTextContent("Načítavame služby, kaderníkov a dostupné termíny");
+    expect(screen.getByTestId("booking-loading-state")).toBeInTheDocument();
+    expect(screen.getByTestId("booking-loading-state")).not.toHaveTextContent("Pripravujeme rezervačný kalendár");
+    expect(screen.getByTestId("booking-loading-state")).not.toHaveTextContent("Načítavame služby");
   });
 
   it("renders the PAPI consultation info block with direct call actions", () => {

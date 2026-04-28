@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { AvatarCropper } from "@/components/admin/AvatarCropper";
-import { PremiumLoadingState } from "@/components/ui/premium-loading-state";
+import { AppSplashScreen } from "@/components/AppSplashScreen";
 import { toast } from "sonner";
 import { Loader2, Save, Mail, Users, Shield, RefreshCw, KeyRound, Camera, Trash2 } from "lucide-react";
 import { BusinessHoursEditor } from "@/components/admin/BusinessHoursEditor";
@@ -519,15 +519,7 @@ export default function SettingsPage() {
 
   const initials = getProfileInitials(profileForm.full_name || profile?.full_name || "?");
   const businessSettingsLoadingState = (
-    <PremiumLoadingState
-      variant="admin"
-      compact
-      eyebrow="Settings"
-      title="Načítavame nastavenia salónu"
-      description="Pripravujeme firemné údaje, booking voľby a infra nastavenia, aby ste mohli pokračovať bez zbytočného čakania."
-      testId="settings-loading-state"
-      className="min-h-[240px]"
-    />
+    <AppSplashScreen compact testId="settings-loading-state" className="min-h-[240px]" />
   );
 
   return (

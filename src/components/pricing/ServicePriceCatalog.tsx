@@ -1,7 +1,8 @@
-import { Clock3, Loader2 } from "lucide-react";
+import { Clock3 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { AppSplashScreen } from "@/components/AppSplashScreen";
 import type { ServiceRow } from "@/components/booking/types";
 import {
   buildPricingCatalog,
@@ -37,11 +38,7 @@ export function ServicePriceCatalog({
   const isDrawer = variant === "drawer";
 
   if (initialLoading) {
-    return (
-      <div className="flex min-h-[220px] items-center justify-center text-text-caption">
-        <Loader2 className="h-5 w-5 animate-spin text-gold" />
-      </div>
-    );
+    return <AppSplashScreen compact testId="pricing-loading-state" />;
   }
 
   return (
