@@ -53,8 +53,11 @@ jobs:
         run: cd functions && npm test
 
       - name: Deploy to Firebase
+        env:
+          FUNCTION_TARGETS: >-
+            functions:claimBooking,functions:resolveBookingAccountState,functions:createPublicBooking,functions:saveSmtpConfig,functions:consentEvent,functions:recordClientDiagnostic,functions:listBookableProviders,functions:syncOfflineData,functions:importMigrationData,functions:normalizeMemberships,functions:createBookingHold,functions:confirmBooking,functions:getPublicAvailabilityConflicts,functions:adminUpdateBookingStatus,functions:adminCalendarQuickAction,functions:lookupBookingHistory,functions:cancelCustomerBooking,functions:queueRegistrationWelcomeEmail,functions:downloadBookingIcs,functions:cleanupExpiredHolds,functions:cleanupComplianceData,functions:rebuildPublicSnapshot,functions:bootstrapAdminAccess,functions:enforceSalonRoles,functions:createCheckoutSession,functions:onProfileWriteSyncEmployeePhoto,functions:onBusinessWrite,functions:onServiceWrite,functions:onServiceSubcategoryWrite,functions:onEmployeeWrite,functions:onBusinessHoursWrite,functions:onDateOverrideWrite,functions:onEmployeeServiceWrite
         run: |
           firebase deploy \
             --token "${{ secrets.FIREBASE_TOKEN }}" \
             --project "${{ secrets.VITE_FIREBASE_PROJECT_ID }}" \
-            --only functions,firestore
+            --only "firestore,${FUNCTION_TARGETS}"
