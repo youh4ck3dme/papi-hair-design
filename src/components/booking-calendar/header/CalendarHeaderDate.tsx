@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
-import { format, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, startOfMonth } from "date-fns";
+import {
+  format,
+  addDays,
+  addWeeks,
+  addMonths,
+  subDays,
+  subWeeks,
+  subMonths,
+  startOfMonth,
+  startOfWeek,
+  endOfWeek,
+} from "date-fns";
 import { sk } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +24,29 @@ import { Calendar } from "@/components/ui/calendar";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useBookingCalendarContext } from "../calendar-context";
 import { cn } from "@/lib/utils";
+
+function formatCalendarHeaderLabel(date: Date, mode: "day" | "week" | "month"): string {
+  if (mode === "month") {
+    return format(date, "LLLL yyyy", { locale: sk });
+  }
+
+  if (mode === "week") {
+    const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
+
+    if (weekStart.getFullYear() !== weekEnd.getFullYear()) {
+      return `${format(weekStart, "d. MMMM yyyy", { locale: sk })} - ${format(weekEnd, "d. MMMM yyyy", { locale: sk })}`;
+    }
+
+    if (weekStart.getMonth() !== weekEnd.getMonth()) {
+      return `${format(weekStart, "d. MMMM", { locale: sk })} - ${format(weekEnd, "d. MMMM yyyy", { locale: sk })}`;
+    }
+
+    return `${format(weekStart, "d.", { locale: sk })} - ${format(weekEnd, "d. MMMM yyyy", { locale: sk })}`;
+  }
+
+  return format(date, "d. MMMM yyyy", { locale: sk });
+}
 
 export function CalendarHeaderDate() {
   const { mode, date, setDate, setMode } = useBookingCalendarContext();
@@ -79,7 +113,7 @@ export function CalendarHeaderDate() {
               isMonthMode ? "text-left text-base md:text-sm" : "text-center",
             )}
           >
-            {format(date, isMonthMode ? "LLLL yyyy" : "d. MMMM yyyy", { locale: sk })}
+            {formatCalendarHeaderLabel(date, mode)}
           </span>
         </Button>
         <Button

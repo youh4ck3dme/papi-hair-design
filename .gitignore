@@ -75,7 +75,7 @@ run_view.txt
 /firebase-config.json
 /jobs.json
 /projects.json
-/booking-papihairdesign-sk/projects.json
+/booking-papihairdesign-sk/
 build-output.txt
 typecheck-output.txt
 .codex-dev.log
