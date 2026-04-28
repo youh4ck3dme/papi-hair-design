@@ -7,7 +7,8 @@ import {
   isSameMonth,
   isSameDay,
   format,
-  isWithinInterval,
+  startOfDay,
+  subMilliseconds,
 } from "date-fns";
 import { useMemo } from "react";
 import { sk } from "date-fns/locale";
@@ -45,20 +46,27 @@ export function CalendarBodyMonth() {
   const dayEventMap = useMemo(() => {
     const map = new Map<string, typeof filteredEvents>();
     for (const event of filteredEvents) {
-      const isVisible =
-        isWithinInterval(event.start, {
-          start: calendarStart,
-          end: calendarEnd,
-        }) ||
-        isWithinInterval(event.end, { start: calendarStart, end: calendarEnd });
+      const effectiveEnd =
+        event.end.getTime() > event.start.getTime()
+          ? subMilliseconds(event.end, 1)
+          : event.end;
+      const isVisible = event.start <= calendarEnd && effectiveEnd >= calendarStart;
       if (!isVisible) continue;
 
-      const dayKey = format(event.start, "yyyy-MM-dd");
-      const eventsForDay = map.get(dayKey);
-      if (eventsForDay) {
-        eventsForDay.push(event);
-      } else {
-        map.set(dayKey, [event]);
+      const visibleStart = event.start < calendarStart ? calendarStart : event.start;
+      const visibleEnd = effectiveEnd > calendarEnd ? calendarEnd : effectiveEnd;
+
+      for (const eventDay of eachDayOfInterval({
+        start: startOfDay(visibleStart),
+        end: startOfDay(visibleEnd),
+      })) {
+        const dayKey = format(eventDay, "yyyy-MM-dd");
+        const eventsForDay = map.get(dayKey);
+        if (eventsForDay) {
+          eventsForDay.push(event);
+        } else {
+          map.set(dayKey, [event]);
+        }
       }
     }
     return map;

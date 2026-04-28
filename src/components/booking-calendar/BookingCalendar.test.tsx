@@ -149,6 +149,15 @@ describe("booking-calendar components", () => {
     expect((setDate.mock.calls[0][0] as Date).getDate()).toBe(22);
   });
 
+  it("shows the full Monday-Sunday range in week mode", () => {
+    renderWithProvider(<CalendarHeaderDate />, {
+      mode: "week",
+      date: new Date(2026, 0, 15, 10, 0),
+    });
+
+    expect(screen.getByText("12. - 18. januára 2026")).toBeInTheDocument();
+  });
+
   it("moves date one month forward in month mode", () => {
     const date = new Date(2026, 0, 15, 10, 0);
     const { setDate } = renderWithProvider(<CalendarHeaderDate />, { mode: "month", date });
@@ -706,6 +715,40 @@ describe("booking-calendar components", () => {
 
     fireEvent.click(screen.getByText("+1 ďalších"));
     expect(setMode).toHaveBeenCalledWith("day");
+  });
+
+  it("shows overnight month events on each day they overlap", () => {
+    const overnightEvent = makeEvent({
+      id: "overnight",
+      title: "Overnight block",
+      start: new Date(2026, 0, 15, 23, 30),
+      end: new Date(2026, 0, 16, 0, 30),
+    });
+
+    renderWithProvider(<CalendarBodyMonth />, {
+      mode: "month",
+      date: new Date(2026, 0, 15),
+      events: [overnightEvent],
+    });
+
+    expect(screen.getAllByText("Overnight block")).toHaveLength(2);
+  });
+
+  it("does not duplicate month events that end exactly at midnight", () => {
+    const midnightEndingEvent = makeEvent({
+      id: "midnight-end",
+      title: "Ends at midnight",
+      start: new Date(2026, 0, 15, 23, 0),
+      end: new Date(2026, 0, 16, 0, 0),
+    });
+
+    renderWithProvider(<CalendarBodyMonth />, {
+      mode: "month",
+      date: new Date(2026, 0, 15),
+      events: [midnightEndingEvent],
+    });
+
+    expect(screen.getAllByText("Ends at midnight")).toHaveLength(1);
   });
 
   it("renders booking calendar shell with header and body", () => {
