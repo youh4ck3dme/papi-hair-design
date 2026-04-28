@@ -1,10 +1,59 @@
 import { z } from "zod";
 
+export interface ContactFormData {
+    meno: string;
+    priezvisko: string;
+    email: string;
+    phone: string;
+    note: string;
+    marketing: boolean;
+    terms: boolean;
+    gdpr: boolean;
+    all: boolean;
+}
+
+export type ContactErrors = Record<string, string>;
+
+export function normalizeSlovakPhone(value: unknown): string | undefined {
+    if (value == null) return undefined;
+
+    const raw = String(value).trim();
+    if (!raw) return undefined;
+    if (!/^[+\d\s().-]+$/.test(raw)) return undefined;
+
+    let digits = raw.replace(/\D/g, "");
+    if (raw.startsWith("00")) {
+        digits = digits.slice(2);
+    }
+
+    let nationalNumber = digits;
+    if (nationalNumber.startsWith("421")) {
+        nationalNumber = nationalNumber.slice(3);
+    } else if (nationalNumber.startsWith("0")) {
+        nationalNumber = nationalNumber.slice(1);
+    }
+
+    if (!/^\d{9}$/.test(nationalNumber)) return undefined;
+
+    return `+421${nationalNumber}`;
+}
+
 export const contactSchema = z.object({
-    meno: z.string().min(2, "Meno musí mať aspoň 2 znaky"),
-    priezvisko: z.string().min(2, "Priezvisko musí mať aspoň 2 znaky"),
-    email: z.string().email("Neplatný email"),
-    phone: z.string().optional(),
+    meno: z.string().trim().min(2, "Meno musí mať aspoň 2 znaky"),
+    priezvisko: z.string().trim().min(2, "Priezvisko musí mať aspoň 2 znaky"),
+    email: z.string().trim().email("Neplatný email"),
+    phone: z.string().optional().transform((value, ctx) => {
+        const normalized = normalizeSlovakPhone(value);
+        if ((value ?? "").trim().length > 0 && !normalized) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Telefón musí byť platné slovenské číslo",
+            });
+            return z.NEVER;
+        }
+
+        return normalized;
+    }),
 });
 
 export interface ServiceRow {
@@ -40,6 +89,7 @@ export interface MembershipRow {
 }
 
 export interface BookingResult {
+  appointment_id?: string;
   claim_token?: string;
   customer_email?: string;
   customer_name?: string;

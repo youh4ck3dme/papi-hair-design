@@ -23,11 +23,36 @@ interface ConfirmBookingInput {
 
 type CustomerRecordStatus = "existing" | "created" | null;
 
+function normalizeIdempotencyKey(rawKey: string | undefined): string | undefined {
+  const normalized = typeof rawKey === "string" ? rawKey.trim() : "";
+  return normalized.length > 0 ? normalized.slice(0, 200) : undefined;
+}
+
+function resolveCustomerRecordStatus(value: unknown): CustomerRecordStatus {
+  return value === "existing" ? "existing" : value === "created" ? "created" : null;
+}
+
+function buildConfirmedResponse(params: {
+  appointmentId: string;
+  status: unknown;
+  appointment: Record<string, any>;
+}) {
+  return {
+    success: true,
+    appointment_id: params.appointmentId,
+    status: typeof params.status === "string" ? params.status : "confirmed",
+    customer_email: params.appointment.customer_email ?? null,
+    customer_name: params.appointment.customer_name ?? null,
+    customer_record_status: resolveCustomerRecordStatus(params.appointment.customer_record_status),
+  };
+}
+
 export const confirmBooking = functions.https.onCall(
   { region: "europe-west1" },
   async (request: CallableRequest<ConfirmBookingInput>) => {
     const { appointment_id, confirm_token, idempotency_key } = request.data;
     const db = getFirestore();
+    const idemKey = normalizeIdempotencyKey(idempotency_key);
 
     // Rate limit by IP
     const ip = getClientIp(request.rawRequest) || "unknown";
@@ -50,64 +75,104 @@ export const confirmBooking = functions.https.onCall(
     }
 
     const docRef = db.collection("appointments").doc(appointment_id);
-    const snap = await docRef.get();
-    if (!snap.exists) {
-      throwBookingError({
-        status: "not-found",
-        code: "appointment_not_found",
-        message: "Rezervácia nebola nájdená",
-      });
-    }
-
-    const appt = snap.data() as Record<string, any>;
-    if (appt.status !== "hold_created") {
-      // Already confirmed or finished; return success idempotently
-      return {
-        success: true,
-        appointment_id,
-        status: appt.status,
-        customer_email: appt.customer_email ?? null,
-        customer_name: appt.customer_name ?? null,
-        customer_record_status:
-          appt.customer_record_status === "existing"
-            ? "existing"
-            : appt.customer_record_status === "created"
-              ? "created"
-              : null,
-      };
-    }
-
-    if (appt.confirm_token !== confirm_token) {
-      throwBookingError({
-        status: "permission-denied",
-        code: "invalid_confirm_token",
-        message: "Neplatný potvrdzovací token",
-      });
-    }
-
-    if (appt.hold_expires_at) {
-      const expires = new Date(appt.hold_expires_at).getTime();
-      if (Date.now() > expires) {
-        await docRef.update({ status: "expired", expired_at: new Date().toISOString() });
+    const transition = await db.runTransaction(async (transaction) => {
+      const snap = await transaction.get(docRef);
+      if (!snap.exists) {
         throwBookingError({
-          status: "failed-precondition",
-          code: "hold_expired",
-          message: "Rezervácia už vypršala",
+          status: "not-found",
+          code: "appointment_not_found",
+          message: "Rezervácia nebola nájdená",
         });
       }
+
+      const appt = snap.data() as Record<string, any>;
+      const existingIdemKey = typeof appt.idempotency_key === "string" ? appt.idempotency_key : undefined;
+      if (appt.status !== "hold_created") {
+        if (existingIdemKey && existingIdemKey !== idemKey) {
+          throwBookingError({
+            status: "permission-denied",
+            code: "invalid_idempotency_key",
+            message: "Neplatný idempotency kľúč",
+          });
+        }
+
+        return {
+          confirmedNow: false,
+          expired: false,
+          appointment: appt,
+          status: appt.status,
+        };
+      }
+
+      if (appt.confirm_token !== confirm_token) {
+        throwBookingError({
+          status: "permission-denied",
+          code: "invalid_confirm_token",
+          message: "Neplatný potvrdzovací token",
+        });
+      }
+
+      if (existingIdemKey && idemKey && existingIdemKey !== idemKey) {
+        throwBookingError({
+          status: "permission-denied",
+          code: "invalid_idempotency_key",
+          message: "Neplatný idempotency kľúč",
+        });
+      }
+
+      const nowIso = new Date().toISOString();
+      if (appt.hold_expires_at) {
+        const expires = new Date(appt.hold_expires_at).getTime();
+        if (Date.now() > expires) {
+          transaction.update(docRef, { status: "expired", expired_at: nowIso });
+          return {
+            confirmedNow: false,
+            expired: true,
+            appointment: appt,
+            status: "expired",
+          };
+        }
+      }
+
+      const updates: Record<string, any> = {
+        status: "confirmed",
+        hold_expires_at: null,
+        confirm_token: null,
+        confirmed_at: nowIso,
+      };
+      if (idemKey) {
+        updates.idempotency_key = idemKey;
+      }
+
+      transaction.update(docRef, updates);
+      return {
+        confirmedNow: true,
+        expired: false,
+        appointment: {
+          ...appt,
+          ...updates,
+        },
+        status: "confirmed",
+      };
+    });
+
+    if (transition.expired) {
+      throwBookingError({
+        status: "failed-precondition",
+        code: "hold_expired",
+        message: "Rezervácia už vypršala",
+      });
     }
 
-    const updates: Record<string, any> = {
-      status: "confirmed",
-      hold_expires_at: null,
-      confirm_token: null, // Invalidate the token
-      confirmed_at: new Date().toISOString(),
-    };
-    if (idempotency_key) {
-      updates.idempotency_key = idempotency_key;
+    const appt = transition.appointment;
+    if (!transition.confirmedNow) {
+      return buildConfirmedResponse({
+        appointmentId: appointment_id,
+        status: transition.status,
+        appointment: appt,
+      });
     }
 
-    await docRef.update(updates);
     try {
       if (typeof appt.business_id === "string") {
         await appendAppointmentStatusAuditEntry(db, {

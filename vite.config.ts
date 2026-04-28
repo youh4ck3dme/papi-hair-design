@@ -79,6 +79,21 @@ export default defineConfig(({ mode }) => {
           runtimeCaching: [
             {
               urlPattern: ({ request, url }) =>
+                request.destination === "" &&
+                (
+                  /(^|\.)firestore\.googleapis\.com$/i.test(url.hostname) ||
+                  /(^|\.)cloudfunctions\.net$/i.test(url.hostname) ||
+                  /(^|\.)firebaseio\.com$/i.test(url.hostname) ||
+                  /(^|\.)identitytoolkit\.googleapis\.com$/i.test(url.hostname) ||
+                  /(^|\.)securetoken\.googleapis\.com$/i.test(url.hostname)
+                ),
+              handler: "NetworkOnly",
+              options: {
+                cacheName: "authenticated-admin-data-network-only",
+              },
+            },
+            {
+              urlPattern: ({ request, url }) =>
                 url.origin === self.location.origin &&
                 ["script", "style", "image", "font"].includes(request.destination),
               handler: "CacheFirst",

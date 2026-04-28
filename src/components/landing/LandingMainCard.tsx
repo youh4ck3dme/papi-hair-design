@@ -47,6 +47,7 @@ export function LandingMainCard({ onOpenPrice }: LandingMainCardProps) {
   return (
     <div
       className="public-premium-shell relative mb-6 flex w-full flex-col items-center p-6 pt-16 backdrop-blur-2xl backdrop-saturate-[120%] md:p-10"
+      data-testid="landing-main-card"
     >
       <div className="public-premium-topglow" aria-hidden="true" />
       <div className="pointer-events-none absolute left-5 top-5 h-8 w-8 rounded-tl-lg border-l border-t border-gold/30" aria-hidden="true" />

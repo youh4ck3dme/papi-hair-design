@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, CalendarCheck2, Clock4, Loader2, Scissors } from "lucide-react";
+import { Check, CalendarCheck2, Clock4, Copy, Loader2, Scissors } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { BookingResult, ServiceRow } from "./types";
@@ -38,6 +38,8 @@ export function BookingSuccess({
     const { user } = useAuth();
     const [accountState, setAccountState] = useState<BookingAccountState | null>(null);
     const [accountStateLoading, setAccountStateLoading] = useState(false);
+    const [emailCopied, setEmailCopied] = useState(false);
+    const customerEmail = bookingResult.customer_email?.trim() ?? "";
 
     const accountHint = useMemo<BookingAccountState | null>(() => {
         if (accountState) return accountState;
@@ -116,6 +118,30 @@ export function BookingSuccess({
             : null;
     const icsDownloadName = buildBookingIcsFilename(selectedService?.name_sk);
 
+    const handleCopyEmail = async () => {
+        if (!customerEmail) return;
+
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(customerEmail);
+            } else if (typeof document !== "undefined") {
+                const textarea = document.createElement("textarea");
+                textarea.value = customerEmail;
+                textarea.setAttribute("readonly", "");
+                textarea.style.position = "fixed";
+                textarea.style.opacity = "0";
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand("copy");
+                document.body.removeChild(textarea);
+            }
+
+            setEmailCopied(true);
+        } catch {
+            setEmailCopied(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-background" data-testid="booking-success">
             <PublicStickyHeader currentOverride="services" />
@@ -139,6 +165,30 @@ export function BookingSuccess({
                         {t("booking.confirmDesc")}
                     </p>
                 </div>
+
+                {customerEmail && (
+                    <div className="rounded-2xl border border-border/70 bg-card/70 p-4 text-left">
+                        <p className="text-sm font-semibold text-foreground">{t("booking.emailConfirmationTitle")}</p>
+                        <p className="mt-1 text-sm leading-6 text-muted-foreground">{t("booking.emailConfirmationDesc")}</p>
+                        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <code className="min-w-0 flex-1 truncate rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
+                                {customerEmail}
+                            </code>
+                            <button
+                                type="button"
+                                onClick={handleCopyEmail}
+                                className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary/35 hover:text-primary"
+                            >
+                                {emailCopied ? (
+                                    <Check className="h-4 w-4" aria-hidden="true" />
+                                ) : (
+                                    <Copy className="h-4 w-4" aria-hidden="true" />
+                                )}
+                                <span>{emailCopied ? t("booking.emailCopied") : t("booking.emailCopy")}</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Summary card */}
                 <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/8 via-primary/4 to-transparent p-4 text-left space-y-3">

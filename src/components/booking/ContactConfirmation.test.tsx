@@ -86,7 +86,8 @@ describe("ContactConfirmation", () => {
     fireEvent.change(screen.getByPlaceholderText(/meno/i), {
       target: { value: "Jana" },
     });
-    expect(setFormData).toHaveBeenCalledWith(expect.objectContaining({ meno: "Jana" }));
+    const updater = setFormData.mock.calls[0][0];
+    expect(updater(baseFormData)).toEqual(expect.objectContaining({ meno: "Jana" }));
   });
 
   it("shows field error when contactErrors contains an entry", () => {
@@ -98,6 +99,29 @@ describe("ContactConfirmation", () => {
       { wrapper }
     );
     expect(screen.getByText("Neplatný email")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/email/i)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByPlaceholderText(/email/i)).toHaveAttribute("aria-describedby", "booking-email-error");
+  });
+
+  it("clears a field-specific error when that field changes", () => {
+    const setContactErrors = vi.fn();
+    render(
+      <ContactConfirmation
+        {...defaultProps}
+        contactErrors={{ email: "Neplatný email", meno: "Meno musí mať aspoň 2 znaky" }}
+        setContactErrors={setContactErrors}
+      />,
+      { wrapper }
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/email/i), {
+      target: { value: "jana@example.sk" },
+    });
+
+    const updater = setContactErrors.mock.calls[0][0];
+    expect(updater({ email: "Neplatný email", meno: "Meno musí mať aspoň 2 znaky" })).toEqual({
+      meno: "Meno musí mať aspoň 2 znaky",
+    });
   });
 
   it("renders submit button and calls handleSubmit when clicked", () => {

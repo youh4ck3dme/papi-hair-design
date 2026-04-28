@@ -1,4 +1,5 @@
 import * as functions from "firebase-functions/v2";
+import * as crypto from "crypto";
 import { getFirestore } from "firebase-admin/firestore";
 import {
   type CallableRequest,
@@ -23,6 +24,7 @@ interface CreateBookingHoldInput {
 type CustomerRecordStatus = "existing" | "created";
 
 const HOLD_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const SLOT_LOCK_BUCKET_MS = 15 * 60 * 1000;
 
 function createIdempotencyKey(rawKey: string | undefined): string {
   const normalized = typeof rawKey === "string" ? rawKey.trim() : "";
@@ -30,6 +32,69 @@ function createIdempotencyKey(rawKey: string | undefined): string {
     return normalized.slice(0, 200);
   }
   return createOpaqueToken().token;
+}
+
+function createDocumentKey(prefix: string, rawValue: string): string {
+  return `${prefix}_${crypto.createHash("sha256").update(rawValue).digest("hex")}`;
+}
+
+function createSlotLockIds(params: {
+  businessId: string;
+  employeeId: string;
+  startDate: Date;
+  endDate: Date;
+}): string[] {
+  const startMs = params.startDate.getTime();
+  const endMs = params.endDate.getTime();
+  if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) return [];
+
+  const ids: string[] = [];
+  let cursor = Math.floor(startMs / SLOT_LOCK_BUCKET_MS) * SLOT_LOCK_BUCKET_MS;
+  while (cursor < endMs) {
+    ids.push(
+      createDocumentKey(
+        "slot",
+        JSON.stringify([
+          params.businessId,
+          params.employeeId,
+          new Date(cursor).toISOString(),
+        ])
+      )
+    );
+    cursor += SLOT_LOCK_BUCKET_MS;
+  }
+
+  return ids;
+}
+
+function isAppointmentBlocking(appointment: Record<string, any>, now: number): boolean {
+  if (appointment.status === "cancelled" || appointment.status === "expired") {
+    return false;
+  }
+
+  if (
+    appointment.status === "hold_created" &&
+    appointment.hold_expires_at &&
+    new Date(appointment.hold_expires_at).getTime() < now
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function toReusedHoldResponse(docId: string, appointment: Record<string, any>) {
+  const customerRecordStatus = appointment.customer_record_status;
+  return {
+    success: true,
+    appointment_id: docId,
+    reused: true,
+    confirm_token: typeof appointment.confirm_token === "string" ? appointment.confirm_token : undefined,
+    customer_record_status:
+      customerRecordStatus === "existing" || customerRecordStatus === "created"
+        ? customerRecordStatus
+        : undefined,
+  };
 }
 
 export const createBookingHold = functions.https.onCall(
@@ -83,7 +148,8 @@ export const createBookingHold = functions.https.onCall(
     const customerPhone = normalizePhone(customer_phone);
     const confirmToken = createOpaqueToken().token;
 
-    // Idempotency: return existing hold for the same key
+    // Backward-compatible idempotency lookup for appointments created before
+    // booking_idempotency documents were introduced.
     const existingSnap = await db
       .collection("appointments")
       .where("idempotency_key", "==", idemKey)
@@ -91,17 +157,7 @@ export const createBookingHold = functions.https.onCall(
       .get();
     if (!existingSnap.empty) {
       const doc = existingSnap.docs[0];
-      const customerRecordStatus = doc.data().customer_record_status;
-      return {
-        success: true,
-        appointment_id: doc.id,
-        reused: true,
-        confirm_token: doc.data().confirm_token,
-        customer_record_status:
-          customerRecordStatus === "existing" || customerRecordStatus === "created"
-            ? customerRecordStatus
-            : undefined,
-      };
+      return toReusedHoldResponse(doc.id, doc.data());
     }
 
     // Load service and auto-assign eligible employee
@@ -135,102 +191,188 @@ export const createBookingHold = functions.https.onCall(
       });
     }
 
-    // Conflict detection with index-safe query shape.
-    // We query a bounded candidate set and apply overlap/status checks in memory.
-    const conflictCandidatesSnap = await db
-      .collection("appointments")
-      .where("employee_id", "==", assignedEmployee.id)
-      .where("start_at", "<", endDate.toISOString())
-      .limit(50)
-      .get();
-
     const startMs = startDate.getTime();
     const endMs = endDate.getTime();
-    const hasActiveConflict = conflictCandidatesSnap.docs.some((docSnap) => {
-      const conflict = docSnap.data();
-      if (conflict.status === "cancelled") return false;
-      if (
-        conflict.status === "hold_created" &&
-        conflict.hold_expires_at &&
-        new Date(conflict.hold_expires_at).getTime() < now
-      ) {
-        return false;
+    const slotLockIds = createSlotLockIds({
+      businessId: business_id,
+      employeeId: assignedEmployee.id,
+      startDate,
+      endDate,
+    });
+    if (!slotLockIds.length) {
+      throwBookingError({
+        status: "invalid-argument",
+        code: "invalid_start_at",
+        message: "Neplatný rozsah rezervácie",
+      });
+    }
+
+    const nowIso = new Date().toISOString();
+    const idempotencyRef = db
+      .collection("booking_idempotency")
+      .doc(createDocumentKey("booking", idemKey));
+    const appointmentRef = db.collection("appointments").doc();
+    const slotLockRefs = slotLockIds.map((id) => db.collection("booking_slot_locks").doc(id));
+
+    return db.runTransaction(async (transaction) => {
+      const idempotencySnap = await transaction.get(idempotencyRef);
+      if (idempotencySnap.exists) {
+        const existingAppointmentId = idempotencySnap.data()?.appointment_id;
+        if (typeof existingAppointmentId === "string" && existingAppointmentId) {
+          const existingAppointmentSnap = await transaction.get(
+            db.collection("appointments").doc(existingAppointmentId)
+          );
+          if (existingAppointmentSnap.exists) {
+            return toReusedHoldResponse(existingAppointmentSnap.id, existingAppointmentSnap.data() ?? {});
+          }
+        }
       }
 
-      const conflictStart = new Date(conflict.start_at).getTime();
-      const conflictEnd = new Date(conflict.end_at).getTime();
-      if (Number.isNaN(conflictStart) || Number.isNaN(conflictEnd)) return false;
-
-      return conflictStart < endMs && conflictEnd > startMs;
-    });
-
-    if (hasActiveConflict) {
-      throwBookingError({
-        status: "already-exists",
-        code: "slot_unavailable",
-        message: "Vybraný termín už nie je dostupný",
+      const slotLockSnaps = await Promise.all(slotLockRefs.map((ref) => transaction.get(ref)));
+      const lockedAppointmentIds = Array.from(
+        new Set(
+          slotLockSnaps
+            .map((snap) => snap.data()?.appointment_id)
+            .filter((value): value is string => typeof value === "string" && value.length > 0)
+        )
+      );
+      const lockedAppointmentSnaps = await Promise.all(
+        lockedAppointmentIds.map((appointmentId) =>
+          transaction.get(db.collection("appointments").doc(appointmentId))
+        )
+      );
+      const hasActiveSlotLock = lockedAppointmentSnaps.some((snap) => {
+        if (!snap.exists) return false;
+        return isAppointmentBlocking(snap.data() ?? {}, now);
       });
-    }
 
-    // Find or create customer
-    const customersSnap = await db
-      .collection("customers")
-      .where("business_id", "==", business_id)
-      .where("email", "==", customerEmail)
-      .limit(1)
-      .get();
-    let customerId: string;
-    let customerRecordStatus: CustomerRecordStatus;
-    if (!customersSnap.empty) {
-      customerId = customersSnap.docs[0].id;
-      customerRecordStatus = "existing";
-      await db.collection("customers").doc(customerId).update({
-        full_name: customer_name.trim(),
-        phone: customerPhone,
-        updated_at: new Date().toISOString(),
+      if (hasActiveSlotLock) {
+        throwBookingError({
+          status: "already-exists",
+          code: "slot_unavailable",
+          message: "Vybraný termín už nie je dostupný",
+        });
+      }
+
+      // Conflict detection with index-safe query shape for legacy appointments
+      // that do not have slot lock documents yet.
+      const conflictCandidatesSnap = await transaction.get(
+        db
+          .collection("appointments")
+          .where("employee_id", "==", assignedEmployee.id)
+          .where("start_at", "<", endDate.toISOString())
+          .limit(50)
+      );
+
+      const hasActiveConflict = conflictCandidatesSnap.docs.some((docSnap) => {
+        const conflict = docSnap.data();
+        if (!isAppointmentBlocking(conflict, now)) return false;
+
+        const conflictStart = new Date(conflict.start_at).getTime();
+        const conflictEnd = new Date(conflict.end_at).getTime();
+        if (Number.isNaN(conflictStart) || Number.isNaN(conflictEnd)) return false;
+
+        return conflictStart < endMs && conflictEnd > startMs;
       });
-    } else {
-      customerRecordStatus = "created";
-      const newCust = await db.collection("customers").add({
+
+      if (hasActiveConflict) {
+        throwBookingError({
+          status: "already-exists",
+          code: "slot_unavailable",
+          message: "Vybraný termín už nie je dostupný",
+        });
+      }
+
+      const customersSnap = await transaction.get(
+        db
+          .collection("customers")
+          .where("business_id", "==", business_id)
+          .where("email", "==", customerEmail)
+          .limit(1)
+      );
+
+      let customerId: string;
+      let customerRecordStatus: CustomerRecordStatus;
+      if (!customersSnap.empty) {
+        const customerRef = customersSnap.docs[0].ref;
+        customerId = customerRef.id;
+        customerRecordStatus = "existing";
+        transaction.update(customerRef, {
+          full_name: customer_name.trim(),
+          phone: customerPhone,
+          updated_at: nowIso,
+        });
+      } else {
+        const newCustomerRef = db.collection("customers").doc();
+        customerId = newCustomerRef.id;
+        customerRecordStatus = "created";
+        transaction.set(newCustomerRef, {
+          business_id,
+          full_name: customer_name.trim(),
+          email: customerEmail,
+          phone: customerPhone,
+          created_at: nowIso,
+        });
+      }
+
+      const appointmentPayload = {
         business_id,
-        full_name: customer_name.trim(),
-        email: customerEmail,
-        phone: customerPhone,
-        created_at: new Date().toISOString(),
+        customer_id: customerId,
+        customer_name: customer_name.trim(),
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+        employee_id: assignedEmployee.id,
+        employee_name: assignedEmployee.display_name || "?",
+        employee_color: assignedEmployee.color || null,
+        service_id,
+        service_name: service.name_sk || "?",
+        service_price: service.price || null,
+        start_at: startDate.toISOString(),
+        end_at: endDate.toISOString(),
+        status: "hold_created",
+        customer_record_status: customerRecordStatus,
+        hold_expires_at: holdExpiresAt.toISOString(),
+        confirm_token: confirmToken,
+        idempotency_key: idemKey,
+        created_at: nowIso,
+      };
+
+      transaction.set(appointmentRef, appointmentPayload);
+      slotLockRefs.forEach((slotLockRef, index) => {
+        const bucketStartMs =
+          Math.floor(startMs / SLOT_LOCK_BUCKET_MS) * SLOT_LOCK_BUCKET_MS +
+          index * SLOT_LOCK_BUCKET_MS;
+        transaction.set(slotLockRef, {
+          business_id,
+          employee_id: assignedEmployee.id,
+          appointment_id: appointmentRef.id,
+          bucket_start_at: new Date(bucketStartMs).toISOString(),
+          start_at: startDate.toISOString(),
+          end_at: endDate.toISOString(),
+          status: "hold_created",
+          hold_expires_at: holdExpiresAt.toISOString(),
+          idempotency_key: idemKey,
+          created_at: nowIso,
+          updated_at: nowIso,
+        });
       });
-      customerId = newCust.id;
-    }
+      transaction.set(idempotencyRef, {
+        business_id,
+        appointment_id: appointmentRef.id,
+        idempotency_key: idemKey,
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
 
-    const appointmentRef = await db.collection("appointments").add({
-      business_id,
-      customer_id: customerId,
-      customer_name: customer_name.trim(),
-      customer_email: customerEmail,
-      customer_phone: customerPhone,
-      employee_id: assignedEmployee.id,
-      employee_name: assignedEmployee.display_name || "?",
-      employee_color: assignedEmployee.color || null,
-      service_id,
-      service_name: service.name_sk || "?",
-      service_price: service.price || null,
-      start_at: startDate.toISOString(),
-      end_at: endDate.toISOString(),
-      status: "hold_created",
-      customer_record_status: customerRecordStatus,
-      hold_expires_at: holdExpiresAt.toISOString(),
-      confirm_token: confirmToken,
-      idempotency_key: idemKey,
-      created_at: new Date().toISOString(),
+      return {
+        success: true,
+        appointment_id: appointmentRef.id,
+        hold_expires_at: holdExpiresAt.toISOString(),
+        confirm_token: confirmToken,
+        idempotency_key: idemKey,
+        reused: false,
+        customer_record_status: customerRecordStatus,
+      };
     });
-
-    return {
-      success: true,
-      appointment_id: appointmentRef.id,
-      hold_expires_at: holdExpiresAt.toISOString(),
-      confirm_token: confirmToken,
-      idempotency_key: idemKey,
-      reused: false,
-      customer_record_status: customerRecordStatus,
-    };
   }
 );

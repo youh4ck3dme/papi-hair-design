@@ -26,24 +26,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { LogoIcon } from "@/components/LogoIcon";
-import { isAdminAllowlisted } from "@/lib/adminAllowlist";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { DEFAULT_BUSINESS_ID } from "@/lib/businessIds";
 import { queueRegistrationWelcomeEmail } from "@/integrations/firebase/queueRegistrationWelcomeEmail";
+import {
+  ADMIN_CALENDAR_PATH,
+  hasOwnerAdminMembershipForBusiness,
+  sanitizeAdminReturnTo,
+  type TenantMembership,
+} from "@/lib/adminRouteSecurity";
 
 const PUBLIC_BOOKING_PATH = "/booking";
+type PostAuthPath = typeof ADMIN_CALENDAR_PATH | "/admin/my" | typeof PUBLIC_BOOKING_PATH;
 
-async function resolvePostAuthPath(
-  uid: string | undefined,
-  email: string | null | undefined
-): Promise<"/admin" | "/admin/my" | "/booking"> {
-  if (isAdminAllowlisted(email)) {
-    return "/admin";
-  }
-
+async function loadMembershipsForUser(uid: string | undefined): Promise<TenantMembership[]> {
   if (!uid) {
-    return "/booking";
+    return [];
   }
 
   const membershipsSnap = await getDocs(query(
@@ -52,24 +51,33 @@ async function resolvePostAuthPath(
     limit(10),
   ));
 
-  const roles = membershipsSnap.docs
-    .map((docSnap) => docSnap.data().role)
+  return membershipsSnap.docs.map((docSnap) => docSnap.data() as TenantMembership);
+}
+
+function resolvePostAuthPathFromMemberships(memberships: readonly TenantMembership[]): PostAuthPath {
+  if (hasOwnerAdminMembershipForBusiness(memberships, DEFAULT_BUSINESS_ID)) return ADMIN_CALENDAR_PATH;
+
+  const roles = memberships
+    .map((membership) => membership.role)
     .filter((role): role is "owner" | "admin" | "employee" | "customer" =>
       role === "owner" || role === "admin" || role === "employee" || role === "customer"
     );
 
-  if (roles.includes("owner") || roles.includes("admin")) return "/admin";
   if (roles.includes("employee")) return "/admin/my";
 
-  return "/booking";
+  return PUBLIC_BOOKING_PATH;
 }
 
 async function redirectAfterAuthWithMembership(
   navigate: ReturnType<typeof useNavigate>,
   uid: string | undefined,
-  email: string | null | undefined
+  adminReturnTo?: string | null,
 ): Promise<void> {
-  const target = await resolvePostAuthPath(uid, email);
+  const memberships = await loadMembershipsForUser(uid);
+  const target =
+    adminReturnTo && hasOwnerAdminMembershipForBusiness(memberships, DEFAULT_BUSINESS_ID)
+      ? sanitizeAdminReturnTo(adminReturnTo)
+      : resolvePostAuthPathFromMemberships(memberships);
   navigate(target, { replace: true });
 }
 
@@ -224,13 +232,14 @@ function getFormSubmitHandler(
 // useAuthForm hook
 // ---------------------------------------------------------------------------
 
-function useAuthForm() {
+function useAuthForm({ adminMode = false }: { adminMode?: boolean } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const urlMode = searchParams.get("mode");
   const urlEmail = searchParams.get("email") ?? "";
   const claimToken = searchParams.get("claim")?.trim() ?? "";
+  const adminReturnTo = adminMode ? sanitizeAdminReturnTo(searchParams.get("returnTo")) : null;
   const fullNameHint = searchParams.get("name")?.trim() ?? "";
   const accountHintRaw = searchParams.get("account")?.trim() ?? "";
   const accountHint: AccountHint =
@@ -239,7 +248,7 @@ function useAuthForm() {
       : null;
 
   const [mode, setMode] = useState<AuthMode>(
-    urlMode === "register" ? "register" : urlMode === "forgot" ? "forgot" : "login"
+    !adminMode && urlMode === "register" ? "register" : urlMode === "forgot" ? "forgot" : "login"
   );
   const [pendingAction, setPendingAction] = useState<AuthMode | "google" | null>(null);
   const [form, setForm] = useState({ email: urlEmail, password: "" });
@@ -291,7 +300,7 @@ function useAuthForm() {
         await redirectAfterAuthWithMembership(
           navigate,
           credential.user.uid,
-          credential.user.email ?? submittedForm.email
+          adminReturnTo,
         );
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : t("auth.toastLoginFail"));
@@ -299,7 +308,7 @@ function useAuthForm() {
         setPendingAction(null);
       }
     },
-    [applyAuthPersistence, claimToken, form, navigate, rememberMe, syncProfile, t]
+    [adminReturnTo, applyAuthPersistence, claimToken, form, navigate, rememberMe, syncProfile, t]
   );
 
   const handleRegister = useCallback(
@@ -334,7 +343,7 @@ function useAuthForm() {
         await redirectAfterAuthWithMembership(
           navigate,
           credential.user.uid,
-          credential.user.email ?? submittedForm.email
+          adminReturnTo,
         );
       } catch (err: unknown) {
         if (isExistingAccountError(err)) {
@@ -348,7 +357,7 @@ function useAuthForm() {
         setPendingAction(null);
       }
     },
-    [applyAuthPersistence, claimToken, form, navigate, rememberMe, syncProfile, t]
+    [adminReturnTo, applyAuthPersistence, claimToken, form, navigate, rememberMe, syncProfile, t]
   );
 
   const handleGoogleLogin = useCallback(async () => {
@@ -372,20 +381,19 @@ function useAuthForm() {
         result = await signInWithPopup(auth, provider);
       }
 
-      const userEmail = result.user.email;
       await syncProfile(result.user);
 
       const claimed = await tryClaimBooking(claimToken);
       if (claimed) {
         toast.success(t("auth.toastLoginOkBooking"));
       }
-      await redirectAfterAuthWithMembership(navigate, result.user.uid, userEmail);
+      await redirectAfterAuthWithMembership(navigate, result.user.uid, adminReturnTo);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t("auth.toastGoogleFail"));
     } finally {
       setPendingAction(null);
     }
-  }, [applyAuthPersistence, claimToken, navigate, rememberMe, syncProfile, t]);
+  }, [adminReturnTo, applyAuthPersistence, claimToken, navigate, rememberMe, syncProfile, t]);
 
   const handleForgot = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -418,6 +426,14 @@ function useAuthForm() {
     register: { title: t("auth.registerTitle"), description: t("auth.registerDesc"), submitText: t("auth.registerBtn") },
     forgot: { title: t("auth.forgotTitle"), description: t("auth.forgotDesc"), submitText: t("auth.forgotBtn") },
   }[mode];
+  const resolvedCopy =
+    adminMode && mode === "login"
+      ? {
+          ...copy,
+          title: t("auth.adminLoginTitle"),
+          description: t("auth.adminLoginDesc"),
+        }
+      : copy;
 
   const claimNotice = buildClaimNotice(mode, accountHint, t);
 
@@ -433,7 +449,7 @@ function useAuthForm() {
     setRememberMePersisted,
     handleFormSubmit,
     handleGoogleLogin,
-    copy,
+    copy: resolvedCopy,
     claimNotice,
     t,
   };
@@ -458,10 +474,12 @@ function AuthModeLinks({
   mode,
   onModeChange,
   t,
+  adminMode = false,
 }: Readonly<{
   mode: AuthMode;
   onModeChange: (m: AuthMode) => void;
   t: (k: string) => string;
+  adminMode?: boolean;
 }>) {
   if (mode === "login") {
     return (
@@ -473,12 +491,14 @@ function AuthModeLinks({
         >
           {t("auth.forgotLink")}
         </button>
-        <p className="text-muted-foreground">
-          {t("auth.noAccount")}{" "}
-          <button type="button" onClick={() => onModeChange("register")} className="text-primary hover:underline">
-            {t("auth.registerBtn")}
-          </button>
-        </p>
+        {!adminMode && (
+          <p className="text-muted-foreground">
+            {t("auth.noAccount")}{" "}
+            <button type="button" onClick={() => onModeChange("register")} className="text-primary hover:underline">
+              {t("auth.registerBtn")}
+            </button>
+          </p>
+        )}
       </>
     );
   }
@@ -507,7 +527,7 @@ function AuthModeLinks({
 // Page
 // ---------------------------------------------------------------------------
 
-export default function AuthPage() {
+export default function AuthPage({ adminMode = false }: { adminMode?: boolean }) {
   const {
     mode,
     setMode,
@@ -523,7 +543,7 @@ export default function AuthPage() {
     copy,
     claimNotice,
     t,
-  } = useAuthForm();
+  } = useAuthForm({ adminMode });
 
   const showGoogle = mode === "login";
   const submitButtonLabel =
@@ -664,7 +684,7 @@ export default function AuthPage() {
             )}
 
             <div className="text-center text-sm space-y-2">
-              <AuthModeLinks mode={mode} onModeChange={setMode} t={t} />
+              <AuthModeLinks mode={mode} onModeChange={setMode} t={t} adminMode={adminMode} />
             </div>
           </CardContent>
         </Card>

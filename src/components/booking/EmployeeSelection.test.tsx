@@ -102,4 +102,19 @@ describe("EmployeeSelection", () => {
 
     expect(screen.getAllByTestId("employee-card-skeleton")).toHaveLength(3);
   });
+
+  it("renders optional back-to-service button", () => {
+    const onBackToService = vi.fn();
+    render(
+      <EmployeeSelection
+        employees={[makeEmployee()]}
+        selectedEmployeeId={null}
+        setSelectedEmployeeId={vi.fn()}
+        onBackToService={onBackToService}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /späť na službu/i }));
+    expect(onBackToService).toHaveBeenCalledTimes(1);
+  });
 });

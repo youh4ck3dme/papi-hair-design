@@ -57,19 +57,38 @@ run("booking hold + confirm (requires Firestore emulator)", () => {
       start_at: new Date().toISOString(),
       customer_name: "Test User",
       customer_email: "test@example.com",
+      idempotency_key: "booking-test-key",
     };
 
     const wrappedHold = fft.wrap(createBookingHold);
     const hold = await wrappedHold({ data });
     expect(hold.success).toBe(true);
     expect(hold.appointment_id).toBeTruthy();
+    expect(hold.confirm_token).toBeTruthy();
+
+    const holdAgain = await wrappedHold({ data });
+    expect(holdAgain.success).toBe(true);
+    expect(holdAgain.reused).toBe(true);
+    expect(holdAgain.appointment_id).toBe(hold.appointment_id);
 
     const wrappedConfirm = fft.wrap(confirmBooking);
-    const confirm = await wrappedConfirm({ data: { appointment_id: hold.appointment_id } });
+    const confirm = await wrappedConfirm({
+      data: {
+        appointment_id: hold.appointment_id,
+        confirm_token: hold.confirm_token,
+        idempotency_key: "booking-test-key",
+      },
+    });
     expect(confirm.success).toBe(true);
     expect(confirm.status).toBe("confirmed");
 
-    const confirmAgain = await wrappedConfirm({ data: { appointment_id: hold.appointment_id } });
+    const confirmAgain = await wrappedConfirm({
+      data: {
+        appointment_id: hold.appointment_id,
+        confirm_token: hold.confirm_token,
+        idempotency_key: "booking-test-key",
+      },
+    });
     expect(confirmAgain.success).toBe(true);
     expect(confirmAgain.status).toBe("confirmed");
   });

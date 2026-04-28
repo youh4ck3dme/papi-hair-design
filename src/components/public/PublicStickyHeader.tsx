@@ -1,12 +1,17 @@
-import { CircleDollarSign, House, Phone, Scissors, UserRound } from "lucide-react";
+import { BriefcaseBusiness, CircleDollarSign, House, Phone, Scissors, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { useAuth } from "@/contexts/AuthContext";
+import { ADMIN_CALENDAR_PATH, buildAdminLoginPath, hasOwnerAdminMembershipForBusiness } from "@/lib/adminRouteSecurity";
+import { DEFAULT_BUSINESS_ID } from "@/lib/businessIds";
 import { APP_CONTACT_PHONE } from "@/lib/brandConfig";
 import { isSalonLoginRoute } from "@/lib/salonLoginRoute";
 import { cn } from "@/lib/utils";
 
 type PublicHeaderSection = "home" | "services" | "pricing" | "account" | null;
+
+export const EMBEDDED_PUBLIC_HEADER_CLASSNAME = "px-0 pb-0 pt-0";
 
 interface PublicStickyHeaderProps {
   onPriceAction?: () => void;
@@ -78,9 +83,12 @@ export function PublicStickyHeader({
   const navigate = useNavigate();
   const location = useLocation();
   const { i18n } = useTranslation();
+  const { user, memberships, loading } = useAuth();
 
   const isEnglish = i18n.language === "en";
   const activeSection = currentOverride ?? resolveSection(location.pathname);
+  const canOpenAdminCalendar =
+    Boolean(user) && !loading && hasOwnerAdminMembershipForBusiness(memberships, DEFAULT_BUSINESS_ID);
 
   const handleLanguageToggle = () => {
     const nextLanguage = isEnglish ? "sk" : "en";
@@ -96,6 +104,10 @@ export function PublicStickyHeader({
     }
 
     navigate(resolveTargetPath(button.target));
+  };
+
+  const handleAdminEntryClick = () => {
+    navigate(canOpenAdminCalendar ? ADMIN_CALENDAR_PATH : buildAdminLoginPath(ADMIN_CALENDAR_PATH));
   };
 
   return (
@@ -167,6 +179,16 @@ export function PublicStickyHeader({
             <span className="text-xs font-black uppercase tracking-[0.16em] text-gold/90">
               {isEnglish ? "EN" : "SK"}
             </span>
+          </button>
+        </div>
+        <div className="mt-2 flex justify-center">
+          <button
+            type="button"
+            className="inline-flex min-h-[34px] items-center gap-2 rounded-full border border-gold/18 bg-black/25 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-gold/72 transition-colors hover:border-gold/40 hover:bg-gold/[0.07] hover:text-gold"
+            onClick={handleAdminEntryClick}
+          >
+            <BriefcaseBusiness className="h-3.5 w-3.5" strokeWidth={1.8} />
+            <span>{canOpenAdminCalendar ? "Otvoriť kalendár prevádzky" : "Pre prevádzku"}</span>
           </button>
         </div>
       </div>

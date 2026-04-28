@@ -17,7 +17,7 @@ function resolveFallbackByRole(userRoles: Set<"owner" | "admin" | "employee" | "
 }
 
 export default function ProtectedRoute({ children, requireAdmin = false, allowedRoles }: ProtectedRouteProps) {
-  const { user, memberships, loading } = useAuth();
+  const { user, memberships, loading, membershipsLoading } = useAuth();
   const { pathname } = useLocation();
   const userRoles = new Set(memberships.map((m) => m.role));
   const isAllowlistedAdmin = isAdminAllowlisted(user?.email);
@@ -25,7 +25,7 @@ export default function ProtectedRoute({ children, requireAdmin = false, allowed
   const requestsAdminPrivileges =
     requireAdmin || !!allowedRoles?.some((role) => role === "owner" || role === "admin");
 
-  if (loading) {
+  if (loading || membershipsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

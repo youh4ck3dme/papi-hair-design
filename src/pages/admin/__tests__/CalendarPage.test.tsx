@@ -27,21 +27,29 @@ const bookingCalendarSpy = vi.hoisted(() => ({
   props: null as any,
 }));
 
-const firestoreMocks = vi.hoisted(() => ({
-  getDocsMock: vi.fn(),
-  getDocMock: vi.fn(),
-  addDocMock: vi.fn(),
-  updateDocMock: vi.fn(),
-}));
-const firestoreFixtures = vi.hoisted(() => ({
-  appointments: [] as any[],
-  employeeLookup: [] as any[],
-  services: [] as any[],
-  employees: [] as any[],
-  memberships: [] as any[],
-  schedules: [] as any[],
-  customerHistory: [] as any[],
-}));
+function createFirestoreTestMocks() {
+  return {
+    getDocsMock: vi.fn(),
+    getDocMock: vi.fn(),
+    addDocMock: vi.fn(),
+    updateDocMock: vi.fn(),
+  };
+}
+
+function createFirestoreTestFixtures() {
+  return {
+    appointments: [] as any[],
+    employeeLookup: [] as any[],
+    services: [] as any[],
+    employees: [] as any[],
+    memberships: [] as any[],
+    schedules: [] as any[],
+    customerHistory: [] as any[],
+  };
+}
+
+const firestoreMocks = vi.hoisted(createFirestoreTestMocks);
+const firestoreFixtures = vi.hoisted(createFirestoreTestFixtures);
 
 const adminUpdateBookingStatusMock = vi.hoisted(() => vi.fn());
 const adminCalendarQuickActionMock = vi.hoisted(() => vi.fn());
@@ -202,44 +210,51 @@ vi.mock("@/components/ui/select", () => ({
   SelectContent: ({ children }: any) => <>{children}</>,
   SelectItem: ({ value, children }: any) => (
     <div data-select-item="true" data-value={value}>
-      {children}
+      <span>{children}</span>
     </div>
   ),
   SelectTrigger: ({ children }: any) => <>{children}</>,
-  SelectValue: ({ placeholder }: any) => <>{placeholder ?? null}</>,
+  SelectValue: ({ placeholder }: any) => <span data-select-placeholder>{placeholder ?? null}</span>,
 }));
 
-vi.mock("sonner", () => ({
-  toast: toastMocks,
-}));
+vi.mock("sonner", () => ({ toast: toastMocks }));
+
+function mergeQueryConstraints(base: any, constraints: any[]) {
+  const inherited = Array.isArray(base?.constraints) ? base.constraints : [];
+  const collection = typeof base?.__collection === "string" ? base.__collection : "unknown";
+  return {
+    __collection: collection,
+    constraints: inherited.concat(constraints),
+  };
+}
 
 vi.mock("firebase/firestore", async () => {
-  const actual = await vi.importActual("firebase/firestore");
-  return {
-    ...actual,
+  const actual = await vi.importActual<typeof import("firebase/firestore")>("firebase/firestore");
+  class LocalTimestamp {
+    private readonly value: Date;
+
+    constructor(value: Date) {
+      this.value = value;
+    }
+
+    toDate() {
+      return this.value;
+    }
+  }
+
+  return Object.assign({}, actual, {
     collection: (_db: unknown, name: string) => ({ __collection: name, constraints: [] }),
     where: (field: string, op: string, value: unknown) => ({ type: "where", field, op, value }),
     orderBy: (field: string, direction: string) => ({ type: "orderBy", field, direction }),
     limit: (value: number) => ({ type: "limit", value }),
-    query: (base: any, ...constraints: any[]) => ({
-      __collection: base?.__collection ?? "unknown",
-      constraints: [...(base?.constraints ?? []), ...constraints],
-    }),
+    query: (base: any, ...constraints: any[]) => mergeQueryConstraints(base, constraints),
     doc: (_db: unknown, name: string, id: string) => ({ __collection: name, id }),
     getDocs: firestoreMocks.getDocsMock,
     getDoc: firestoreMocks.getDocMock,
     addDoc: firestoreMocks.addDocMock,
     updateDoc: firestoreMocks.updateDocMock,
-    Timestamp: class Timestamp {
-      private d: Date;
-      constructor(d: Date) {
-        this.d = d;
-      }
-      toDate() {
-        return this.d;
-      }
-    },
-  };
+    Timestamp: LocalTimestamp,
+  });
 });
 
 function makeSnapshot(items: any[]) {
@@ -315,6 +330,52 @@ function renderCalendarPage() {
     </SidebarProvider>,
   );
 }
+
+async function withMockedMatchMedia(
+  matches: (query: string) => boolean,
+  run: () => Promise<void>
+) {
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: matches(query),
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })) as unknown as typeof window.matchMedia;
+
+  try {
+    await run();
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+}
+
+async function clickPrintToolbarButton(container: HTMLElement) {
+  await waitFor(() => {
+    expect(screen.getByTestId("events-count")).toHaveTextContent("1");
+  });
+  const printIcon = container.querySelector("svg.lucide-printer");
+  const printButton = printIcon?.closest("button");
+  expect(printButton).toBeTruthy();
+  fireEvent.click(printButton!);
+}
+
+async function expectCreatedAppointmentRange(startAtIso: string, endAtIso: string) {
+  await waitFor(() => {
+    expect(firestoreMocks.addDocMock).toHaveBeenCalledWith(
+      expect.objectContaining({ __collection: "appointments", constraints: [] }),
+      expect.objectContaining({
+        start_at: startAtIso,
+        end_at: endAtIso,
+      }),
+    );
+  });
+}
+
 describe("CalendarPage", () => {
   beforeEach(() => {
     bookingCalendarSpy.props = null;
@@ -487,20 +548,23 @@ describe("CalendarPage", () => {
     expect(labels).toEqual(["Dnes", "Blokácia", "Nová rezervácia"]);
   });
 
-  it("clicking Dnes jumps calendar to current day view", async () => {
-    const originalMatchMedia = window.matchMedia;
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query === "(max-width: 1024px)" ? false : false,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })) as unknown as typeof window.matchMedia;
+  it("defaults to day view on mobile widths", async () => {
+    await withMockedMatchMedia(
+      (query) => query === "(max-width: 767px)",
+      async () => {
+      seedInitialFirestore({ withEvent: true });
+      renderCalendarPage();
 
-    try {
+      await screen.findByTestId("booking-calendar-mock");
+      expect(bookingCalendarSpy.props?.mode).toBe("day");
+      }
+    );
+  });
+
+  it("clicking Dnes jumps calendar to current day view", async () => {
+    await withMockedMatchMedia(
+      () => false,
+      async () => {
       seedInitialFirestore({ withEvent: true });
       renderCalendarPage();
 
@@ -510,9 +574,8 @@ describe("CalendarPage", () => {
         expect(bookingCalendarSpy.props?.mode).toBe("day");
       });
       expect(bookingCalendarSpy.props?.date).toBeInstanceOf(Date);
-    } finally {
-      window.matchMedia = originalMatchMedia;
-    }
+      }
+    );
   });
 
   it("opens block dialog from toolbar action", async () => {
@@ -616,13 +679,7 @@ describe("CalendarPage", () => {
     seedInitialFirestore({ withEvent: true });
 
     const { container } = renderCalendarPage();
-    await waitFor(() => {
-      expect(screen.getByTestId("events-count")).toHaveTextContent("1");
-    });
-    const printIcon = container.querySelector("svg.lucide-printer");
-    const printButton = printIcon?.closest("button");
-    expect(printButton).toBeTruthy();
-    fireEvent.click(printButton!);
+    await clickPrintToolbarButton(container);
 
     expect(printHtmlDocumentMock).toHaveBeenCalledTimes(1);
     expect(String(printHtmlDocumentMock.mock.calls[0][0])).toContain("PAPI HAIR DESIGN - Denný prehľad");
@@ -744,15 +801,7 @@ describe("CalendarPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Vytvoriť rezerváciu/i }));
 
-    await waitFor(() => {
-      expect(firestoreMocks.addDocMock).toHaveBeenCalledWith(
-        expect.objectContaining({ __collection: "appointments", constraints: [] }),
-        expect.objectContaining({
-          start_at: "2026-01-15T08:00:00.000Z",
-          end_at: "2026-01-15T08:30:00.000Z",
-        }),
-      );
-    });
+    await expectCreatedAppointmentRange("2026-01-15T08:00:00.000Z", "2026-01-15T08:30:00.000Z");
     expect(calendarEventUtilsMocks.fromCalendarWallClockDateToUtcIso).toHaveBeenCalledTimes(2);
   });
 
@@ -773,13 +822,7 @@ describe("CalendarPage", () => {
     printHtmlDocumentMock.mockReturnValue(false);
 
     const { container } = renderCalendarPage();
-    await waitFor(() => {
-      expect(screen.getByTestId("events-count")).toHaveTextContent("1");
-    });
-    const printIcon = container.querySelector("svg.lucide-printer");
-    const printButton = printIcon?.closest("button");
-    expect(printButton).toBeTruthy();
-    fireEvent.click(printButton!);
+    await clickPrintToolbarButton(container);
 
     expect(printHtmlDocumentMock).toHaveBeenCalledTimes(1);
     expect(toastMocks.error).toHaveBeenCalledWith("Nepodarilo sa pripraviť tlač");
@@ -925,4 +968,3 @@ describe("CalendarPage", () => {
     });
   });
 });
-

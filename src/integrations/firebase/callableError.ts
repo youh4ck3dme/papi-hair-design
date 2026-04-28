@@ -21,6 +21,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   hold_expired: "Potvrdzovací čas vypršal. Vytvorte novú rezerváciu.",
   appointment_not_found: "Rezerváciu sa nepodarilo nájsť.",
   invalid_confirm_token: "Overovací token nie je platný. Spustite proces rezervácie znovu.",
+  invalid_idempotency_key: "Rezervácia už bola spracovaná inou požiadavkou. Spustite proces rezervácie znovu.",
 };
 
 export function toCallableErrorMessage(error: unknown, fallback: string): string {

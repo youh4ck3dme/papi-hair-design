@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import AuthPage from "./Auth";
@@ -102,6 +102,8 @@ vi.mock("react-i18next", () => ({
         {
           "auth.loginTitle": "Prihlásenie",
           "auth.loginDesc": "Prihláste sa do svojho účtu",
+          "auth.adminLoginTitle": "Prihlásenie prevádzky",
+          "auth.adminLoginDesc": "Prihláste sa ako majiteľ alebo administrátor pre prístup ku kalendáru.",
           "auth.loginBtn": "Prihlásiť sa",
           "auth.registerTitle": "Registrácia",
           "auth.registerDesc": "Vytvorte si nový účet",
@@ -152,6 +154,18 @@ function renderAuth(initialEntry = "/auth") {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <AuthPage />
+    </MemoryRouter>,
+  );
+}
+
+function renderAdminAuth(initialEntry = "/admin/login") {
+  return render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <Routes>
+        <Route path="/admin/login" element={<AuthPage adminMode />} />
+        <Route path="/admin/calendar" element={<div>ADMIN_CALENDAR</div>} />
+        <Route path="/booking" element={<div>BOOKING_PAGE</div>} />
+      </Routes>
     </MemoryRouter>,
   );
 }
@@ -256,6 +270,35 @@ describe("AuthPage", () => {
 
     expect(screen.getByRole("button", { name: "Prihlasujeme vás..." })).toBeDisabled();
     expect(screen.getByText("Overujeme vaše členstvá a po úspešnom prihlásení vás presmerujeme na správne miesto.")).toBeInTheDocument();
+  });
+
+  it("redirects admin login to a sanitized admin return path only with same-tenant owner/admin membership", async () => {
+    authFns.signInWithEmailAndPassword.mockResolvedValue({
+      user: { uid: "owner-1", email: "owner@example.sk", displayName: null, photoURL: null },
+    });
+    firestoreFns.getDocs.mockResolvedValue({
+      docs: [
+        {
+          data: () => ({
+            profile_id: "owner-1",
+            business_id: "papi-hair-design-main",
+            role: "owner",
+          }),
+        },
+      ],
+    });
+
+    renderAdminAuth("/admin/login?returnTo=%2Fadmin%2Fcalendar%3Fview%3Dday");
+
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "owner@example.sk" } });
+    fireEvent.change(screen.getByLabelText("Heslo"), { target: { value: "Secret123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Prihlásiť sa" }));
+
+    expect(screen.getByText("Prihlásenie prevádzky")).toBeInTheDocument();
+    expect(screen.queryByText("Nemáte účet?")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("ADMIN_CALENDAR")).toBeInTheDocument();
+    });
   });
 
   it("links anonymous booking guest through Google provider first", async () => {
