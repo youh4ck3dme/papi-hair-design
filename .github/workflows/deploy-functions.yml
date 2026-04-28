@@ -8,6 +8,7 @@ on:
       - 'firestore.rules'
       - 'firestore.indexes.json'
       - 'scripts/assert-production-branch.mjs'
+      - 'scripts/list-firebase-functions.mjs'
       - '.github/workflows/deploy-functions.yml'
   workflow_dispatch:
 
@@ -54,7 +55,8 @@ jobs:
 
       - name: Deploy to Firebase
         run: |
+          FUNCTION_TARGETS="$(node scripts/list-firebase-functions.mjs)"
           firebase deploy \
             --token "${{ secrets.FIREBASE_TOKEN }}" \
             --project "${{ secrets.VITE_FIREBASE_PROJECT_ID }}" \
-            --only functions,firestore
+            --only "firestore,${FUNCTION_TARGETS}"
