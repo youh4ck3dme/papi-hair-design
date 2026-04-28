@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 
 type PublicHeaderSection = "home" | "services" | "pricing" | "account" | null;
 
+export const EMBEDDED_PUBLIC_HEADER_CLASSNAME = "px-0 pb-0 pt-0";
+
 interface PublicStickyHeaderProps {
   onPriceAction?: () => void;
   currentOverride?: PublicHeaderSection;
